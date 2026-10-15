@@ -12,7 +12,7 @@ import {
   type MapStyle,
 } from '@/components/maps';
 import { useUnits } from '@/hooks/useUnits';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { hasMeaningfulRoute, firstValidIndex } from '@/lib/geo';
 import type { DriveDetail } from '@/types/driving';
@@ -21,6 +21,7 @@ import type { RoutePoint, SpeedSegment } from './types';
 import { SPEED_SEGMENT_LOW_MPS, SPEED_SEGMENT_MED_MPS, SPEED_SEGMENT_HIGH_MPS } from './constants';
 import { convertSpeedFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { chartTokens } from '@/lib/tokens';
 
 /* Auto-fit map bounds to trail. Special-cases two cluster degeneracies that
  * leaflet otherwise zooms past the maxZoom for: (1) trail with N identical
@@ -78,6 +79,7 @@ export function RouteMapSection({
 }: RouteMapSectionProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat();
   const { unitPrefs } = useUnits();
   const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
 
@@ -137,7 +139,7 @@ export function RouteMapSection({
       <GlassPanel className="overflow-hidden">
         <div className="p-4 pb-0">
           <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-3">
-            <MapPin className="h-4 w-4 text-cyan-400" /> {t('driveDetail.route', 'Route')}
+            <MapPin className="h-4 w-4 text-[var(--text-secondary)]" /> {t('driveDetail.route', 'Route')}
           </h3>
         </div>
         {safeTrail.length > 0 ? (
@@ -156,7 +158,7 @@ export function RouteMapSection({
                     key={`fsd-${index}`}
                     positions={positions}
                     pathOptions={{
-                      color: '#c084fc',
+                      color: chartTokens.series[4],
                       weight: 6,
                       opacity: 0.9,
                       dashArray: '8 10',
@@ -164,17 +166,17 @@ export function RouteMapSection({
                   />
                 ))}
                 {hasRoute && startPos && (
-                  <CircleMarker center={startPos} radius={8} pathOptions={{ color: '#10b981', fillColor: '#10b981', fillOpacity: 1, weight: 2 }}>
-                    <Popup><span className="text-xs font-bold">{t('driveDetail.start', 'Start')}</span><br /><span className="text-xs">{formatDateTime(drive.startTs)}</span></Popup>
+                  <CircleMarker center={startPos} radius={8} pathOptions={{ color: chartTokens.series[1], fillColor: chartTokens.series[1], fillOpacity: 1, weight: 2 }}>
+                    <Popup><span className="text-xs font-bold">{t('driveDetail.start', 'Start')}</span><br /><time className="text-xs" dateTime={drive.startTs} title={drive.startTs}>{formatDateTime(drive.startTs)}</time></Popup>
                   </CircleMarker>
                 )}
                 {hasRoute && endPos && (
-                  <CircleMarker center={endPos} radius={8} pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 1, weight: 2 }}>
-                    <Popup><span className="text-xs font-bold">{t('driveDetail.end', 'End')}</span><br /><span className="text-xs">{drive.endTs ? formatDateTime(drive.endTs) : t('driveDetail.inProgress', 'In progress')}</span></Popup>
+                  <CircleMarker center={endPos} radius={8} pathOptions={{ color: chartTokens.series[3], fillColor: chartTokens.series[3], fillOpacity: 1, weight: 2 }}>
+                    <Popup><span className="text-xs font-bold">{t('driveDetail.end', 'End')}</span><br /><time className="text-xs" dateTime={drive.endTs ?? undefined} title={drive.endTs ?? undefined}>{drive.endTs ? formatDateTime(drive.endTs) : t('driveDetail.inProgress', 'In progress')}</time></Popup>
                   </CircleMarker>
                 )}
                 {!hasRoute && anchorPoint && (
-                  <CircleMarker center={anchorPoint} radius={8} pathOptions={{ color: '#22d3ee', fillColor: '#22d3ee', fillOpacity: 0.9, weight: 2 }}>
+                  <CircleMarker center={anchorPoint} radius={8} pathOptions={{ color: chartTokens.series[0], fillColor: chartTokens.series[0], fillOpacity: 0.9, weight: 2 }}>
                     <Popup><span className="text-xs font-bold">{t('driveDetail.lastKnown', 'Last known location')}</span></Popup>
                   </CircleMarker>
                 )}
@@ -197,7 +199,7 @@ export function RouteMapSection({
             </div>
             {fsdSegments.length > 0 && (
               <div className="flex items-center gap-2 border-t border-[var(--border-default)] px-4 py-2 text-xs text-[var(--text-muted)]">
-                <span className="w-5 border-t-2 border-dashed border-purple-400" aria-hidden="true" />
+                <svg width="20" height="2" aria-hidden="true"><path d="M0 1H20" stroke={chartTokens.series[4]} strokeWidth={2} strokeDasharray="4 2" /></svg>
                 {t(
                   'driveDetail.fsd.mapEvidence',
                   'Approximate area where the FSD counter increased - not an exact FSD-active segment.',
@@ -207,10 +209,10 @@ export function RouteMapSection({
             <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-xs">
               {hasRoute && safeTrail.length > 1 && (
                 <div className="flex flex-wrap items-center gap-3 text-[var(--text-muted)]">
-                  <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-emerald-500" /> &lt;{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_LOW_MPS))}</span>
-                  <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-cyan-400" /> {fmtNumber(toSpeedDisplay(SPEED_SEGMENT_LOW_MPS))}–{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_MED_MPS))}</span>
-                  <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-amber-500" /> {fmtNumber(toSpeedDisplay(SPEED_SEGMENT_MED_MPS))}–{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_HIGH_MPS))}</span>
-                  <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-red-500" /> &gt;{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_HIGH_MPS))}</span>
+                  <span className="flex items-center gap-1"><svg width="12" height="4" aria-hidden="true"><rect width="12" height="4" rx="2" fill={chartTokens.series[1]} /></svg> &lt;{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_LOW_MPS))}</span>
+                  <span className="flex items-center gap-1"><svg width="12" height="4" aria-hidden="true"><rect width="12" height="4" rx="2" fill={chartTokens.series[0]} /></svg> {fmtNumber(toSpeedDisplay(SPEED_SEGMENT_LOW_MPS))}–{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_MED_MPS))}</span>
+                  <span className="flex items-center gap-1"><svg width="12" height="4" aria-hidden="true"><rect width="12" height="4" rx="2" fill={chartTokens.series[2]} /></svg> {fmtNumber(toSpeedDisplay(SPEED_SEGMENT_MED_MPS))}–{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_HIGH_MPS))}</span>
+                  <span className="flex items-center gap-1"><svg width="12" height="4" aria-hidden="true"><rect width="12" height="4" rx="2" fill={chartTokens.series[3]} /></svg> ≥{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_HIGH_MPS))}</span>
                   <span>{speedUnit}</span>
                 </div>
               )}

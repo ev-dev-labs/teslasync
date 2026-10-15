@@ -6,6 +6,19 @@ import { Modal, PanelTitle, Text } from '@/components/ui';
 import { useDataState } from '@/hooks/useDataState';
 
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import type { AutomationExecutionDetail as ExecutionDetail } from '@/api/types';
+
+interface SectionAvailability {
+  status: 'available' | 'unavailable' | 'failed' | 'not_applicable';
+  truncated: boolean;
+  complete: boolean;
+  total: number;
+}
+
+type DetailWithAvailability = ExecutionDetail & {
+  action_results_availability?: SectionAvailability;
+  fsm_transitions_availability?: SectionAvailability;
+};
 
 export function AutomationExecutionDetail({ id, onClose }: {
   id: number | null;
@@ -14,7 +27,17 @@ export function AutomationExecutionDetail({ id, onClose }: {
   const { formatDurationMs } = useNumberFormatting();
   const { t } = useTranslation();
   const query = useAutomationExecutionDetail(id);
-  const detail = query.data;
+  const detail: DetailWithAvailability | null | undefined = query.data;
+  const actions = detail?.actions_executed ?? [];
+  const transitions = detail?.fsm_transitions ?? [];
+  const availabilityMessage = (meta: SectionAvailability | undefined) => {
+    if (meta?.status === 'failed') return t('automations.historyPage.availability.failed', 'This history section could not be loaded.');
+    if (meta?.status === 'not_applicable') return t('automations.historyPage.availability.notApplicable', 'No vehicle is associated with this execution.');
+    if (meta?.status !== 'available') return t('automations.historyPage.availability.unavailable', 'History availability is unknown.');
+    if (meta.truncated) return t('automations.historyPage.availability.truncated', 'Only part of this history is shown.');
+    if (!meta.complete) return t('automations.historyPage.availability.incomplete', 'This execution window is still open; history may be incomplete.');
+    return null;
+  };
   const source = useDataState({ ...query, data: detail ?? undefined });
   return (
     <Modal
@@ -56,12 +79,13 @@ export function AutomationExecutionDetail({ id, onClose }: {
               <Text>{detail.actions_succeeded}/{detail.actions_total}</Text>
             </div>
           </div>
-          {detail.error && <Text variant="bodySm" className="break-words text-rose-300">{detail.error}</Text>}
-          {detail.actions_executed && detail.actions_executed.length > 0 && (
-            <section>
+          {detail.error && <Text variant="bodySm" className="break-words">{detail.error}</Text>}
+            <section className="rounded-lg border border-[var(--border-subtle)] p-3">
               <PanelTitle>{t('automations.historyPage.actionResults', 'Action results')}</PanelTitle>
+              {availabilityMessage(detail.action_results_availability) && <Text variant="bodySm">{availabilityMessage(detail.action_results_availability)}</Text>}
+              {actions.length === 0 && detail.action_results_availability?.status === 'available' && detail.action_results_availability.complete && !detail.action_results_availability.truncated && <Text variant="bodySm">{t('automations.historyPage.availability.noActionResults', 'No action results are recorded for this execution.')}</Text>}
               <ul className="mt-2 space-y-2">
-                {detail.actions_executed.map((action, index) => (
+                {actions.map((action, index) => (
                   <li key={index} className="overflow-x-auto rounded-lg bg-[var(--surface-2)] p-3">
                     <Text variant="bodySm" className="whitespace-pre-wrap break-words">
                       {JSON.stringify(action, null, 2)}
@@ -70,12 +94,14 @@ export function AutomationExecutionDetail({ id, onClose }: {
                 ))}
               </ul>
             </section>
-          )}
-          {detail.fsm_transitions && detail.fsm_transitions.length > 0 && (
-            <section>
+            <section className="rounded-lg border border-[var(--border-subtle)] p-3">
               <PanelTitle>{t('automations.historyPage.transitions', 'Vehicle state transitions')}</PanelTitle>
+              {availabilityMessage(detail.fsm_transitions_availability) && <Text variant="bodySm">{availabilityMessage(detail.fsm_transitions_availability)}</Text>}
+              {transitions.length === 0 && detail.fsm_transitions_availability?.status === 'available' && detail.fsm_transitions_availability.complete && !detail.fsm_transitions_availability.truncated && (
+                <Text variant="bodySm">{t('automations.historyPage.availability.noTransitions', 'No vehicle state transitions were recorded during this execution window.')}</Text>
+              )}
               <ul className="mt-2 space-y-2">
-                {detail.fsm_transitions.map((transition) => (
+                {transitions.map((transition) => (
                   <li key={transition.id} className="rounded-lg bg-[var(--surface-2)] p-3">
                     <DateTime value={transition.ts} in="user" />
                     <Text variant="bodySm" className="break-words">{transition.fsm_name}: {transition.from_state} → {transition.to_state}</Text>
@@ -83,7 +109,6 @@ export function AutomationExecutionDetail({ id, onClose }: {
                 ))}
               </ul>
             </section>
-          )}
         </div>
       ) : id != null ? (
         <EmptyState

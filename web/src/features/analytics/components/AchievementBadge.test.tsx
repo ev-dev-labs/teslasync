@@ -26,14 +26,17 @@
  * SummaryStats / FleetCostKpis convention). The component has no interactive
  * controls, so there is no userEvent surface to exercise.
  */
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 
 import { AchievementBadge, type AchievementData } from './AchievementBadge';
 
+const translations = vi.hoisted(() => new Map<string, string>());
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, fallback?: string) => (typeof fallback === 'string' ? fallback : key),
+    t: (key: string, fallback?: string) =>
+      translations.get(key) ?? (typeof fallback === 'string' ? fallback : key),
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
   initReactI18next: { type: '3rdParty', init: () => undefined },
@@ -55,6 +58,54 @@ function makeAchievement(overrides: Partial<AchievementData> = {}): AchievementD
 }
 
 describe('AchievementBadge', () => {
+  beforeEach(() => translations.clear());
+
+  describe('achievement identity localization', () => {
+    it.each([
+      'first-drive', 'century', 'thousand', 'ten-thousand', 'fifty-thousand',
+      'hundred-thousand', 'first-charge', 'megawatt', 'gigawatt', 'hundred-saved',
+      'thousand-saved', 'five-thousand-saved', 'ton-co2', 'tree-planter',
+      'marathon', 'earth-orbit', 'supercharger',
+    ])('localizes the known ID %s for visible and accessible names without changing source data', (id) => {
+      translations.set(`lifetime.achievementNames.${id}`, 'Localized milestone');
+      const achievement = makeAchievement({
+        id, name: 'Source milestone', description: 'Save $100 or drive 100 km',
+        target: 123, current: 42, progress: 0.856,
+      });
+      const original = { ...achievement };
+      render(<AchievementBadge achievement={achievement} />);
+
+      expect(screen.getByText('Localized milestone')).toBeInTheDocument();
+      expect(screen.getByRole('img', { name: 'Localized milestone' })).toBeInTheDocument();
+      expect(screen.getByText('Save $100 or drive 100 km')).toBeInTheDocument();
+      expect(screen.getByText('86%')).toBeInTheDocument();
+      expect(achievement).toEqual(original);
+    });
+
+    it('retains source text when a known identity has no translation', () => {
+      render(<AchievementBadge achievement={makeAchievement({ id: 'century', name: 'Source century' })} />);
+      expect(screen.getByText('Source century')).toBeInTheDocument();
+      expect(screen.getByRole('img', { name: 'Source century' })).toBeInTheDocument();
+    });
+
+    it.each(['custom-milestone', 'toString', '__proto__'])('does not translate unknown ID %s or arbitrary weekday text', (id) => {
+      translations.set(`lifetime.achievementNames.${id}`, 'Not source text');
+      translations.set('common.days.long.monday', 'Localized Monday');
+      render(<AchievementBadge achievement={makeAchievement({ id, name: 'Monday', description: 'My Monday trip' })} />);
+      expect(screen.getByText('Monday')).toBeInTheDocument();
+      expect(screen.getByRole('img', { name: 'Monday' })).toBeInTheDocument();
+      expect(screen.getByText('My Monday trip')).toBeInTheDocument();
+      expect(screen.queryByText('Not source text')).not.toBeInTheDocument();
+    });
+
+    it('preserves the missing-name fallback even for a known ID', () => {
+      translations.set('lifetime.achievementNames.century', 'Localized milestone');
+      render(<AchievementBadge achievement={makeAchievement({ id: 'century', name: '' })} />);
+      expect(screen.getByText('—')).toBeInTheDocument();
+      expect(screen.getByRole('img', { name: 'Drive 10,000 km' })).toBeInTheDocument();
+    });
+  });
+
   describe('unlocked state', () => {
     it('shows the success tile, the "✓ Unlocked" caption, and no ring or percentage', () => {
       const { container } = render(

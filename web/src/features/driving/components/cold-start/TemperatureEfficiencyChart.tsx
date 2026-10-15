@@ -8,7 +8,7 @@ import {
   YAxis, ZAxis, axisTick,
 } from '@/components/charts';
 import { EmptyState, QueryError } from '@/components/feedback';
-import { formatDate } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
 
@@ -27,30 +27,27 @@ interface TemperatureEfficiencyChartProps {
 export function TemperatureEfficiencyChart({ points, state, className }: TemperatureEfficiencyChartProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  const { formatDate } = useDateFormat();
   const { convertEfficiency, efficiencyUnit, unitPrefs } = useColdStartDisplay();
   const rows = useMemo(
     () =>
       points.map((point) => ({
-        date: formatDate(point.startTs, { locale: unitPrefs.locale }),
+        date: formatDate(point.startTs),
         classification: point.classification,
         group:
           point.classification === 'cold'
             ? t('coldStart.temperature.cold', 'Cold')
             : t('coldStart.temperature.warm', 'Warm'),
-        temperature: Math.round(
-          convertTempFromSI(point.outsideTempAvgC, unitPrefs.temperature) * 10,
-        ) / 10,
-        consumption: Math.round(convertEfficiency(point.whPerKm) * 10) / 10,
-        distance: Math.round(
-          convertDistanceFromSI(point.distanceM, unitPrefs.distance) * 10,
-        ) / 10,
+        temperature: convertTempFromSI(point.outsideTempAvgC, unitPrefs.temperature),
+        consumption: convertEfficiency(point.whPerKm),
+        distance: convertDistanceFromSI(point.distanceM, unitPrefs.distance),
       })),
     [
       convertEfficiency,
+      formatDate,
       points,
       t,
       unitPrefs.distance,
-      unitPrefs.locale,
       unitPrefs.temperature,
     ],
   );
@@ -137,6 +134,7 @@ export function TemperatureEfficiencyChart({ points, state, className }: Tempera
                   tick={axisTick}
                   tickLine={false}
                   axisLine={false}
+                  tickFormatter={(value) => fmtNumber(value)}
                 />
                 <YAxis
                   type="number"
@@ -146,6 +144,7 @@ export function TemperatureEfficiencyChart({ points, state, className }: Tempera
                   tick={axisTick}
                   tickLine={false}
                   axisLine={false}
+                  tickFormatter={(value) => fmtNumber(value)}
                   width={62}
                 />
                 <ZAxis

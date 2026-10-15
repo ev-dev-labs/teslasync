@@ -18,8 +18,10 @@ import {
 } from '@/components/charts';
 import { ChartCard } from '@/components/layout';
 import { useUnits } from '@/hooks/useUnits';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { formatTime } from '@/lib/dateFormat';
 import { chartTokens } from '@/lib/tokens';
+import { asFiniteNumber } from '@/lib/typeGuards';
 import type { SlotResult } from '../lib/types';
 
 interface EnergyFlowChartProps {
@@ -33,15 +35,22 @@ const CHART_HEIGHT = 320;
 export function EnergyFlowChart({ slots, slotMinutes }: EnergyFlowChartProps) {
   const { t } = useTranslation();
   const { formatPower } = useUnits();
+  const { fmtPercent } = useNumberFormatting();
+  const powerLabel = (value: unknown) => formatPower(asFiniteNumber(value));
+  const percentLabel = (value: unknown) => {
+    const number = asFiniteNumber(value);
+    return number === null ? '—' : fmtPercent(number);
+  };
 
   const rows = slots.map((s) => ({
     time: s.startIso,
-    solarW: Math.round(s.solarW),
-    loadW: Math.round(s.loadW),
-    vehicleChargeW: Math.round(s.vehicleChargeW),
-    batteryPowerW: Math.round(s.batteryPowerW),
-    gridImportW: Math.round(s.gridImportW),
-    gridExportW: Math.round(-s.gridExportW),
+    solarW: asFiniteNumber(s.solarW),
+    loadW: asFiniteNumber(s.loadW),
+    vehicleChargeW: asFiniteNumber(s.vehicleChargeW),
+    batteryPowerW: asFiniteNumber(s.batteryPowerW),
+    gridImportW: asFiniteNumber(s.gridImportW),
+    gridExportW: asFiniteNumber(s.gridExportW) === null ? null : -s.gridExportW,
+    batterySocPct: asFiniteNumber(s.batterySocPct),
   }));
 
   return (
@@ -58,12 +67,13 @@ export function EnergyFlowChart({ slots, slotMinutes }: EnergyFlowChartProps) {
       fullscreen
       dataColumns={[
         { key: 'time', label: t('powershare.time', 'Time') },
-        { key: 'solarW', label: t('homeEnergy.flow.solar', 'Solar') },
-        { key: 'loadW', label: t('homeEnergy.flow.load', 'Household load') },
-        { key: 'vehicleChargeW', label: t('homeEnergy.flow.vehicles', 'Vehicle charging') },
-        { key: 'batteryPowerW', label: t('homeEnergy.flow.battery', 'Powerwall (+charge/-discharge)') },
-        { key: 'gridImportW', label: t('homeEnergy.flow.gridImport', 'Grid import') },
-        { key: 'gridExportW', label: t('homeEnergy.flow.gridExport', 'Grid export (shown negative)') },
+        { key: 'solarW', label: t('homeEnergy.flow.solar', 'Solar'), format: powerLabel },
+        { key: 'loadW', label: t('homeEnergy.flow.load', 'Household load'), format: powerLabel },
+        { key: 'vehicleChargeW', label: t('homeEnergy.flow.vehicles', 'Vehicle charging'), format: powerLabel },
+        { key: 'batteryPowerW', label: t('homeEnergy.flow.battery', 'Powerwall (+charge/-discharge)'), format: powerLabel },
+        { key: 'gridImportW', label: t('homeEnergy.flow.gridImport', 'Grid import'), format: powerLabel },
+        { key: 'gridExportW', label: t('homeEnergy.flow.gridExport', 'Grid export (shown negative)'), format: powerLabel },
+        { key: 'batterySocPct', label: t('homeEnergy.powerwall.soc', 'State of charge'), format: percentLabel },
       ]}
     >
       {({ hiddenSeries }) => (
@@ -72,7 +82,9 @@ export function EnergyFlowChart({ slots, slotMinutes }: EnergyFlowChartProps) {
           {chartGrid}
           <XAxis dataKey="time" tickFormatter={(v: string) => formatTime(v)} {...axisTick} />
           <YAxis tickFormatter={(v: number) => formatPower(v)} {...axisTick} />
-          <Tooltip content={<ChartTooltip />} />
+          <Tooltip content={<ChartTooltip formatter={(value, _name, entry) =>
+            entry.dataKey === 'batterySocPct' ? percentLabel(value) : powerLabel(value)
+          } />} />
           <ReferenceLine y={0} stroke="var(--border-strong)" />
           <Area
             {...AREA_DEFAULTS}

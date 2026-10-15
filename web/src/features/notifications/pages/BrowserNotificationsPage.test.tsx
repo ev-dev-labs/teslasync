@@ -3,7 +3,7 @@
  *
  * The page exposes a single default export. It is a thin orchestrator whose one
  * job is to LIFT the browser-permission state (`useWebPush`) and the per-event
- * push preferences (`useNotificationListener`) up to the page, then fan the
+ * push preferences (`useBrowserNotificationPrefs`) up to the page, then fan the
  * exact same values into two independent children so the KPI band and the
  * permission panel never desync after a toggle. It also owns two self-contained
  * panels (tab signals, sounds) and the page chrome.
@@ -75,7 +75,10 @@ vi.mock('@/components/motion', () => ({
 
 // ── source-of-truth hooks ──
 vi.mock('@/hooks/useWebPush', () => ({ useWebPush: vi.fn() }));
-vi.mock('@/hooks/useNotificationListener', () => ({ useNotificationListener: vi.fn() }));
+vi.mock('@/hooks/useNotificationListener', () => ({
+  useBrowserNotificationPrefs: vi.fn(),
+  useNotificationListener: vi.fn(),
+}));
 
 // ── section spies: reflect the props the page hands down as data-attributes ──
 type KpisProps = {
@@ -151,12 +154,12 @@ vi.mock('../components/NotificationSoundsPanel', () => ({
 }));
 
 import { useWebPush } from '@/hooks/useWebPush';
-import { useNotificationListener } from '@/hooks/useNotificationListener';
+import { useBrowserNotificationPrefs, useNotificationListener } from '@/hooks/useNotificationListener';
 import { ToastProvider } from '@/components/feedback/Toast';
 import BrowserNotificationsPage from './BrowserNotificationsPage';
 
 const mockWebPush = useWebPush as unknown as ReturnType<typeof vi.fn>;
-const mockListener = useNotificationListener as unknown as ReturnType<typeof vi.fn>;
+const mockListener = vi.mocked(useBrowserNotificationPrefs);
 
 let requestPermissionMock: ReturnType<typeof vi.fn>;
 let setPrefsMock: ReturnType<typeof vi.fn>;
@@ -236,6 +239,12 @@ describe('BrowserNotificationsPage — scaffolding + a11y', () => {
 });
 
 describe('BrowserNotificationsPage — single source of truth', () => {
+  it('reads shared preferences without installing another delivery listener', () => {
+    renderPage();
+    expect(mockListener).toHaveBeenCalled();
+    expect(useNotificationListener).not.toHaveBeenCalled();
+  });
+
   it('feeds the granted permission + supported flag to BOTH children identically', () => {
     configure({ permission: 'granted', isSupported: true });
     renderPage();

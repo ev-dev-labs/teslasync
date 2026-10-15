@@ -53,6 +53,75 @@ afterEach(() => {
 });
 
 describe('Charging site twin scoped modernization', () => {
+  it('compares every draft field with the published snapshot without recalculating or changing SI', async () => {
+    renderPage();
+    expect(screen.queryByText(/Unsaved changes/)).not.toBeInTheDocument();
+    fireEvent.click(runButton());
+    await waitFor(() => expect(screen.getByText('Caller order first')).toBeVisible());
+    const submitted = structuredClone(state.run.mock.calls[0][0]);
+    for (const [label, value, original] of [
+      [/Charger count/, '9', '8'],
+      [/Per-charger power/, '11501', '11500'],
+      [/Panel limit/, '100001', '100000'],
+      [/Arrival rate/, '0.0009', '0.0008'],
+      [/Mean service/, '7201', '7200'],
+      [/Fleet growth/, '11', '10'],
+      [/Arrival distribution/, 'fixed', 'poisson'],
+      [/Service distribution/, 'deterministic', 'exponential'],
+      [/Solar power/, '0', ''],
+      [/Storage energy/, '0', ''],
+      [/Charger count/, '', '8'],
+    ] as const) {
+      fireEvent.change(screen.getByLabelText(label), { target: { value } });
+      expect(screen.getByText(/Unsaved changes/)).toBeVisible();
+      expect(screen.getByText('Caller order first')).toBeVisible();
+      expect(state.run).toHaveBeenCalledTimes(1);
+      expect(state.run.mock.calls[0][0]).toEqual(submitted);
+      fireEvent.change(screen.getByLabelText(label), { target: { value: original } });
+      expect(screen.queryByText(/Unsaved changes/)).not.toBeInTheDocument();
+    }
+  });
+
+  it('keeps changed drafts labeled during pending work and stale completion until a matching success', async () => {
+    let settle!: (value: ChargingSiteTwinResponse) => void;
+    state.run.mockResolvedValueOnce(site)
+      .mockImplementationOnce(() => new Promise(resolve => { settle = resolve; }))
+      .mockResolvedValueOnce({ ...site, mitigations: [{ ...site.mitigations[0], mitigation: 'Matching result' }] });
+    renderPage();
+    fireEvent.click(runButton());
+    await waitFor(() => expect(screen.getByText('Caller order first')).toBeVisible());
+    fireEvent.change(screen.getByLabelText(/Panel limit/), { target: { value: '120000' } });
+    fireEvent.click(runButton());
+    await waitFor(() => expect(state.run).toHaveBeenCalledTimes(2));
+    expect(screen.getByText(/Unsaved changes/)).toBeVisible();
+    expect(screen.getByText('Caller order first')).toBeVisible();
+    fireEvent.change(screen.getByLabelText(/Panel limit/), { target: { value: '130000' } });
+    await act(async () => { settle({ ...site, mitigations: [{ ...site.mitigations[0], mitigation: 'Earlier draft result' }] }); });
+    await waitFor(() => expect(screen.getByText('Earlier draft result')).toBeVisible());
+    expect(screen.getByText(/Unsaved changes/)).toBeVisible();
+    expect(state.run).toHaveBeenCalledTimes(2);
+    expect(state.run.mock.calls[1][0].panel_limit_w).toBe(120000);
+    fireEvent.click(runButton());
+    await waitFor(() => expect(screen.getByText('Matching result')).toBeVisible());
+    expect(screen.queryByText(/Unsaved changes/)).not.toBeInTheDocument();
+    expect(state.run.mock.calls[2][0].panel_limit_w).toBe(130000);
+  });
+
+  it('does not replace the published input snapshot on rejection', async () => {
+    state.run.mockResolvedValueOnce(site).mockRejectedValueOnce(new Error('recalculation unavailable'));
+    renderPage();
+    fireEvent.click(runButton());
+    await waitFor(() => expect(screen.getByText('Caller order first')).toBeVisible());
+    fireEvent.change(screen.getByLabelText(/Panel limit/), { target: { value: '120000' } });
+    fireEvent.click(runButton());
+    await waitFor(() => expect(screen.getByTestId('advanced-intelligence-site-brief')).toHaveTextContent('Retained result'));
+    expect(screen.getByText(/Unsaved changes/)).toBeVisible();
+    expect(screen.getByText('Caller order first')).toBeVisible();
+    fireEvent.change(screen.getByLabelText(/Panel limit/), { target: { value: '100000' } });
+    expect(screen.queryByText(/Unsaved changes/)).not.toBeInTheDocument();
+    expect(state.run).toHaveBeenCalledTimes(2);
+  });
+
   it('keeps every initial section and ten fields without inventing a completed mitigation result', () => {
     renderPage();
     for (const title of ['Site scenario', 'Utilization and constraints', 'Ranked mitigations and assumptions']) {
@@ -172,13 +241,22 @@ describe('Charging site twin scoped modernization', () => {
     const view = renderPage();
     fireEvent.click(runButton());
     await waitFor(() => expect(screen.getByText('Caller order first')).toBeVisible());
+    fireEvent.change(screen.getByLabelText(/Panel limit/), { target: { value: '120000' } });
+    expect(screen.getByText(/Unsaved changes/)).toBeVisible();
     fireEvent.click(runButton());
     await waitFor(() => expect(state.run).toHaveBeenCalledTimes(2));
     state.vehicleId = 8;
     view.rerender(<ChargingSiteTwinPage />);
     expect(screen.queryByText('Caller order first')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Unsaved changes/)).not.toBeInTheDocument();
     await act(async () => { settle(site); });
     expect(screen.queryByText('Caller order first')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Unsaved changes/)).not.toBeInTheDocument();
     expect(screen.getByTestId('advanced-intelligence-site-brief')).toHaveTextContent('Vehicle #8');
+    state.vehicleId = 7;
+    view.rerender(<ChargingSiteTwinPage />);
+    expect(screen.queryByText('Caller order first')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Unsaved changes/)).not.toBeInTheDocument();
+    expect(state.run).toHaveBeenCalledTimes(2);
   });
 });

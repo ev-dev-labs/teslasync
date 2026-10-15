@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import TeslaApiUsagePage from './TeslaApiUsagePage'
 import { ROUTE_REGISTRY } from '@/lib/routeRegistry'
@@ -52,6 +52,55 @@ describe('Tesla API usage route page', () => {
     expect(screen.getByTestId('selected-history')).toBeInTheDocument()
     expect(screen.getByText('How the estimate is calculated')).toBeInTheDocument()
   })
+
+  it('retries only the failed billing cycle and recovers without remounting history', () => {
+    const refetch = vi.fn()
+    const failed = {
+      data: undefined, isLoading: false, isFetching: false,
+      error: new Error('unavailable'), isError: true, fetchStatus: 'idle', refetch,
+    }
+    usage.mockReturnValue(failed)
+    const { rerender } = render(<TeslaApiUsagePage />)
+    const history = screen.getByTestId('selected-history')
+    const cycle = screen.getByRole('region', { name: 'Current cycle and prior periods' })
+    fireEvent.click(within(cycle).getByRole('button', { name: 'Retry' }))
+    expect(refetch).toHaveBeenCalledTimes(1)
+
+    usage.mockReturnValue({ ...failed, isFetching: true, fetchStatus: 'fetching' })
+    rerender(<TeslaApiUsagePage />)
+    expect(within(cycle).getByRole('button', { name: 'Retry' })).toBeDisabled()
+    expect(within(cycle).getByRole('button', { name: 'Retry' })).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByTestId('selected-history')).toBe(history)
+
+    usage.mockReturnValue({ ...failed, fetchStatus: 'paused' })
+    rerender(<TeslaApiUsagePage />)
+    expect(within(cycle).getByRole('button', { name: 'Retry' })).toBeDisabled()
+    expect(within(cycle).getByRole('button', { name: 'Retry' })).not.toHaveAttribute('aria-busy')
+    expect(screen.getByTestId('selected-history')).toBe(history)
+
+    usage.mockReturnValue({
+      data: { current: { estimated_usd: 0 }, history: [] },
+      isLoading: false, isFetching: false, error: null, fetchStatus: 'idle', refetch,
+    })
+    rerender(<TeslaApiUsagePage />)
+    expect(screen.getByTestId('cycle')).toHaveTextContent(/^0$/)
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument()
+    expect(screen.getByTestId('selected-history')).toBe(history)
+    expect(screen.getByText('How the estimate is calculated')).toBeInTheDocument()
+  })
+
+  it.each([
+    [{ isLoading: true, isPending: true, isFetching: true, fetchStatus: 'fetching' }, 'loading'],
+    [{ isLoading: false, isPending: true, isFetching: false, fetchStatus: 'paused' }, 'empty'],
+    [{ isLoading: false, isPending: false, isFetching: false, fetchStatus: 'idle' }, 'empty'],
+  ])('does not invent an error or zero for a cycle without data: %s', (state, expected) => {
+    usage.mockReturnValue({ ...state, data: undefined, error: null, refetch: vi.fn() })
+    render(<TeslaApiUsagePage />)
+    expect(screen.getByTestId('cycle')).toHaveTextContent(expected)
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument()
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument()
+    expect(screen.getByTestId('selected-history')).toBeInTheDocument()
+  })
 })
 
 
@@ -82,7 +131,7 @@ describe('Tesla API usage preservation boundaries', () => {
     const error = new Error('refresh unavailable')
     const refetch = vi.fn()
     usage.mockReturnValue({ data, isLoading: false, error, isError: true, isFetching: false, refetch })
-    render(<TeslaApiUsagePage />)
+    const { rerender } = render(<TeslaApiUsagePage />)
     expect(cycleProps).toHaveBeenLastCalledWith({ apiUsage: data, error, loading: false })
     expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('role', 'status')
     expect(screen.getByText(/Previously loaded data remains visible/)).toBeInTheDocument()
@@ -90,6 +139,13 @@ describe('Tesla API usage preservation boundaries', () => {
     expect(refetch).toHaveBeenCalledTimes(1)
     expect(screen.getByTestId('selected-history')).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'How the estimate is calculated' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument()
+
+    usage.mockReturnValue({ data, isLoading: false, error: null, isError: false, isFetching: false, refetch })
+    rerender(<TeslaApiUsagePage />)
+    expect(screen.getByTestId('cycle')).toHaveTextContent('4')
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument()
+    expect(screen.getByTestId('selected-history')).toBeInTheDocument()
   })
 
   it('preserves retained content and explains a paused refresh without inventing an error', () => {

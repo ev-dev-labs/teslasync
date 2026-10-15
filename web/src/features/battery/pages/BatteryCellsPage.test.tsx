@@ -49,6 +49,7 @@ vi.mock('@/components/charts', async (importOriginal) => {
   return {
     ...actual,
     ...chartTestDoubles,
+    EmbeddedChart: h.embeddedChart.mockImplementation(chartTestDoubles.EmbeddedChart),
     renderAnnotationLines: h.annotationLines.mockImplementation(actual.renderAnnotationLines),
   };
 });
@@ -65,6 +66,7 @@ const h = vi.hoisted(() => ({
   query: undefined as unknown,
   annotationLines: vi.fn<typeof import('@/components/charts')['renderAnnotationLines']>(),
   chartCard: vi.fn<typeof import('@/components/layout')['ChartCard']>(),
+  embeddedChart: vi.fn<typeof import('@/components/charts')['EmbeddedChart']>(),
   temp: '°C' as '°C' | '°F',
   selected: {
     vehicleId: 7 as number | null,
@@ -545,6 +547,63 @@ describe('BatteryCellsPage', () => {
     expect(table.getByRole('cell', { name: '—' })).toBeInTheDocument();
     expect(table.queryByRole('cell', { name: '0.00' })).not.toBeInTheDocument();
     expect(h.chartCard.mock.calls.at(-1)?.[0].data?.[0].spreadRaw).toBeNull();
+  });
+
+  it('formats accessible numeric columns without changing or dropping source rows', () => {
+    const values = [0, -12.5, 0.25, Number.NaN, Number.POSITIVE_INFINITY];
+    const cells: CellReading[] = values.map((voltage, index) => ({
+      cell_number: index + 1, voltage, delta_from_avg: voltage, status: 'normal',
+    }));
+    const history = values.map((value, index) => ({
+      timestamp: `2024-06-01T${String(index + 12).padStart(2, '0')}:00:00Z`,
+      min_voltage: value, avg_voltage: value, max_voltage: value, imbalance_mv: value,
+    }));
+    h.query = makeQuery({ data: makeData({ cells, history }) });
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Switch to bar view' }));
+
+    const latestChart = (title: string) => {
+      const props = h.embeddedChart.mock.calls.findLast(([props]) => props.title === title)?.[0];
+      expect(props).toBeDefined();
+      return props!;
+    };
+    for (const title of ['Cell voltage heatmap', 'Cell voltage bar chart']) {
+      const props = latestChart(title);
+      expect(props.data).toEqual(cells.map(({ cell_number, voltage }) => ({ cell_number, voltage })));
+      const format = props.dataColumns?.find(column => column.key === 'voltage')?.format;
+      expect(format).toBeDefined();
+      expect(values.map(value => format!(value))).toEqual(['0.0000', '-12.5000', '0.2500', '—', '—']);
+      expect(format!(null)).toBe('—');
+      expect(format!(undefined)).toBe('—');
+      expect(format!('not a number')).toBe('—');
+    }
+    const voltageHistory = latestChart('Cell voltage over time');
+    expect(voltageHistory.data).toEqual(history.map(({ timestamp, min_voltage, avg_voltage, max_voltage }) => ({
+      timestamp, min_voltage, avg_voltage, max_voltage,
+    })));
+    for (const key of ['min_voltage', 'avg_voltage', 'max_voltage']) {
+      const format = voltageHistory.dataColumns?.find(column => column.key === key)?.format;
+      expect(values.map(value => format!(value))).toEqual(['0.0000', '-12.5000', '0.2500', '—', '—']);
+      expect(format!(undefined)).toBe('—');
+    }
+    const imbalance = latestChart('Imbalance trend');
+    expect(imbalance.data).toEqual(history.map(({ timestamp, imbalance_mv }) => ({ timestamp, imbalance_mv })));
+    const formatImbalance = imbalance.dataColumns?.find(column => column.key === 'imbalance_mv')?.format;
+    expect(values.map(value => formatImbalance!(value))).toEqual(['0.00', '-12.50', '0.25', '—', '—']);
+    expect(formatImbalance!(null)).toBe('—');
+    const distribution = latestChart('Voltage distribution');
+    expect(distribution.data).toEqual(buildHistogram(cells));
+    const formatCount = distribution.dataColumns?.find(column => column.key === 'count')?.format;
+    expect(formatCount!(0)).toBe('0');
+    expect(formatCount!(1234)).toBe('1,234');
+    expect(formatCount!(undefined)).toBe('—');
+    const spread = h.chartCard.mock.calls.at(-1)?.[0];
+    expect(spread?.exportable).toBe(true);
+    expect(spread?.data).toHaveLength(history.length);
+    expect(spread?.data?.map(row => row.spreadRaw)).toEqual([0, 0, 0, null, null]);
+    const formatSpread = spread?.dataColumns?.find(column => column.key === 'spreadRaw')?.format;
+    expect(values.map(value => formatSpread!(value))).toEqual(['0.00', '-12.50', '0.25', '—', '—']);
+    expect(formatSpread!(undefined)).toBe('—');
   });
 
   it('retains reported pack and temperature values without certifying health when cells are unavailable', () => {

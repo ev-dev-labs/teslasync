@@ -7,8 +7,9 @@ import type { DriveDetail } from '@/types/driving';
 import { formatDateShort, formatDateTime, formatTime } from '@/lib/dateFormat';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { DriveIdentityCard } from '../components/drive-compare/DriveIdentityCard';
+import { AdvantageBreakdown } from '../components/drive-compare/AdvantageBreakdown';
 import { HeadToHeadGrid } from '../components/drive-compare/HeadToHeadGrid';
-import { compareDrives } from '../lib/driveCompare';
+import { compareDrives, summarizeComparison } from '../lib/driveCompare';
 
 const {
   pageTitleMock,
@@ -76,11 +77,11 @@ vi.mock('@/components/forms', () => ({
 
 vi.mock('@/components/ui', () => ({
   GlassPanel: ({ children, ...props }: { children: ReactNode }) => <section {...props}>{children}</section>,
-  Badge: ({ children }: { children: ReactNode }) => <span>{children}</span>,
+  Badge: ({ children, className }: { children: ReactNode; className?: string }) => <span className={className}>{children}</span>,
   MetricLabel: ({ children }: { children: ReactNode }) => <span>{children}</span>,
   MetricValue: ({ children }: { children: ReactNode }) => <span>{children}</span>,
   PanelTitle: ({ children }: { children: ReactNode }) => <h2>{children}</h2>,
-  Text: ({ children }: { children: ReactNode }) => <span>{children}</span>,
+  Text: ({ children, className }: { children: ReactNode; className?: string }) => <span className={className}>{children}</span>,
   HelpTooltip: () => null,
   Select: ({
     'aria-label': ariaLabel,
@@ -259,6 +260,55 @@ beforeEach(() => {
 });
 
 describe('DriveComparePage', () => {
+  it('keeps every identity field and the complete route readable without a disclosure', () => {
+    const drive = {
+      ...driveA,
+      startAddress: 'A very long starting address with complete building and street information',
+      endAddress: 'A very long destination address with complete building and street information',
+    };
+    render(<DriveIdentityCard side="a" drive={drive} state={{
+      isLoading: false, error: null, emptyMessage: null, onRetry: vi.fn(),
+    }} />);
+    const card = screen.getByTestId('drive-compare-identity-a');
+    for (const [label, value] of [
+      ['Distance', '10000 m'],
+      ['Duration', '1800 s'],
+      ['Battery', '80.00% → 70.00%'],
+      ['Conditions', '20 C · Completed'],
+    ]) {
+      const field = within(card).getByText(label).parentElement;
+      expect(field).toHaveTextContent(value);
+      expect(within(field!).getByText(value)).toHaveClass('whitespace-normal', 'break-words');
+      expect(field?.parentElement).toHaveClass('grid-cols-1', 'sm:grid-cols-2');
+    }
+    const route = within(card).getByText(`${drive.startAddress} → ${drive.endAddress}`);
+    expect(route.parentElement).toHaveClass('[&>span]:whitespace-normal', '[&>span]:overflow-visible');
+    expect(card.querySelector('button, [role="button"]')).toBeNull();
+  });
+
+  it('wraps complete advantage explanations and keeps winner, tie and unavailable outcomes', () => {
+    const rows = compareDrives(driveA, { ...driveB, score: null });
+    render(<AdvantageBreakdown rows={rows} summary={summarizeComparison(rows)} state={{
+      isLoading: false, error: null, emptyMessage: null, onRetry: vi.fn(),
+    }} />);
+    const panel = screen.getByTestId('drive-compare-breakdown');
+    for (const explanation of [
+      '100.00 Wh/km edge',
+      'No measurable edge',
+      'Needs valid data from both drives',
+      'Regen is scored only on trips of at least 1 km; total energy and battery drop never award a winner.',
+    ]) {
+      expect(within(panel).getByText(explanation)).toHaveClass('whitespace-normal', 'break-words');
+    }
+    for (const outcome of ['Drive B', 'Even', 'Not comparable']) {
+      const badge = within(panel).getByText(outcome);
+      expect(badge).toHaveClass('max-w-full', 'whitespace-normal', 'break-words');
+      expect(badge.parentElement).toHaveClass('flex-col', 'sm:flex-row', 'sm:flex-wrap');
+    }
+    expect(panel).toHaveTextContent('2 of 3 fair metrics have data on both drives.');
+    expect(panel.querySelector('button, [role="button"]')).toBeNull();
+  });
+
   it.each([
     { name: 'missing endpoints', start: undefined, end: null, expected: '— → —' },
     { name: 'invalid endpoints', start: NaN, end: Infinity, expected: '— → —' },

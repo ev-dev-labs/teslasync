@@ -29,7 +29,7 @@ export function ParkingMethodCaveats({
     coverage.overlappingGaps + coverage.zeroLengthGaps;
   const observationEnd =
     coverage.observationEndMs != null
-      ? formatDateTime(new Date(coverage.observationEndMs))
+      ? formatDateTime(new Date(coverage.observationEndMs), { tz: coverage.timeZone })
       : '—';
 
   return (
@@ -42,7 +42,7 @@ export function ParkingMethodCaveats({
         <Text as="p" variant="bodySm">
           {t(
             'parking.coverage.utcWindow',
-            'The server filters drive starts from {{start}} through {{end}} as UTC calendar dates; parking before the first returned drive cannot be reconstructed.',
+            'The server filters drive starts from {{start}} (inclusive) to {{end}} (exclusive) as exact instants; parking before the first returned drive cannot be reconstructed.',
             { start: rangeStart, end: rangeEnd },
           )}
         </Text>

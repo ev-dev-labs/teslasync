@@ -279,6 +279,37 @@ beforeEach(() => {
   settingsRef.unit_of_temp = 'C';
 });
 
+it('does not fabricate efficiency for daily distance-only aggregates', () => {
+  renderTab(makeQuery({ data: populated({
+    daily_trend: [
+      { date: '2026-01-01', drives: 2, distance: 10 },
+      { date: '2026-01-02', drives: 1, distance: 5, efficiency: 150 },
+    ],
+  }) }));
+  expect(dailyRows()).toHaveLength(2);
+  expect(effTrendRows()).toEqual([
+    { date: '2026-01-02', drives: 1, distance: 5, efficiency: 150 },
+  ]);
+});
+
+it('keeps daily efficiency visibly unavailable despite populated charging totals', () => {
+  const data = populated({
+    daily_trend: [
+      { date: '2026-01-01', drives: 2, distance: 10 },
+      { date: '2026-01-02', drives: 1, distance: 5, efficiency: null },
+    ],
+  });
+  data.total_energy_kwh = 500;
+  data.avg_efficiency_wh_km = 150;
+  renderTab(makeQuery({ data }));
+  const panel = screen.getByRole('figure', { name: 'Efficiency trend' });
+  expect(within(panel).getByText('Evidence unavailable: No efficiency trend data')).toBeInTheDocument();
+  expect(within(panel).queryByRole('img')).toBeNull();
+  expect(screen.queryByTestId('chart-area')).toBeNull();
+  expect(dailyRows()).toHaveLength(2);
+  expect(data.drive_analytics.daily_trend[1].efficiency).toBeNull();
+});
+
 // ── Loading ───────────────────────────────────────────────────────────────────
 
 describe('DrivingTab — loading', () => {
@@ -347,7 +378,7 @@ describe('DrivingTab — empty', () => {
     expect(screen.getAllByRole('status')).toHaveLength(8);
     expect(screen.getByText('No speed data')).toBeInTheDocument();
     expect(screen.getByText('No daily trend data')).toBeInTheDocument();
-    expect(screen.getByText('No efficiency trend data')).toBeInTheDocument();
+    expect(screen.getByText('Evidence unavailable: No efficiency trend data')).toBeInTheDocument();
     expect(screen.getByText('No temperature stats')).toBeInTheDocument();
 
     // No chart on the empty branch.
@@ -529,6 +560,18 @@ describe('DrivingTab — Fahrenheit preference', () => {
 // ── Efficiency-trend filter branch ─────────────────────────────────────────────
 
 describe('DrivingTab — efficiency trend filter', () => {
+  it.each([null, 0, -1, Number.NaN, Number.POSITIVE_INFINITY])(
+    'does not plot daily efficiency without usable distance (%s)', distance => {
+      renderTab(makeQuery({ data: populated({
+        daily_trend: [{ date: '2026-01-01', drives: 1, distance, efficiency: 150 }],
+      }) }));
+      const panel = screen.getByRole('figure', { name: 'Efficiency trend' });
+      expect(within(panel).getByText('Evidence unavailable: No efficiency trend data')).toBeInTheDocument();
+      expect(screen.queryByTestId('chart-area')).toBeNull();
+      expect(dailyRows()).toHaveLength(1);
+    },
+  );
+
   it('keeps only positive-efficiency rows while daily trend keeps them all', () => {
     renderTab(
       makeQuery({
@@ -561,7 +604,7 @@ describe('DrivingTab — efficiency trend filter', () => {
     // The daily trend still renders (it has a row)…
     expect(screen.getAllByTestId('chart-composed').length).toBeGreaterThanOrEqual(1);
     // …while the efficiency-trend panel collapses to its empty state.
-    expect(screen.getByText('No efficiency trend data')).toBeInTheDocument();
+    expect(screen.getByText('Evidence unavailable: No efficiency trend data')).toBeInTheDocument();
     expect(screen.queryByTestId('chart-area')).toBeNull();
   });
 });
@@ -583,14 +626,14 @@ describe('DrivingTab — null safety', () => {
     // Charts still render — the rows exist, the values are just null.
     expect(screen.getAllByTestId('chart-composed')).toHaveLength(2);
     expect(screen.getByTestId('chart-scatter')).toBeInTheDocument();
-    expect(screen.getByTestId('chart-area')).toBeInTheDocument();
+    expect(screen.queryByTestId('chart-area')).toBeNull();
 
     // Every null projection collapses to 0, never NaN.
     expect(hourlyRows()[0].distance).toBe(0);
     expect(dailyRows()[0].distance).toBe(0);
     expect(scatterRows()[0]).toEqual({ temp: 0, efficiency: 0, distance: 0 });
-    // The surviving efficiency (200 Wh/km) is preserved through the projection.
-    expect(effTrendRows()[0].efficiency).toBe(200);
+    // An efficiency number without usable driving distance is not plotted.
+    expect(screen.getByText('Evidence unavailable: No efficiency trend data')).toBeInTheDocument();
     expect(Number.isNaN(dailyRows()[0].distance as number)).toBe(false);
   });
 });

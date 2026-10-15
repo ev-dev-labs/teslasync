@@ -8,6 +8,7 @@ import type { TripReplayMapProps } from '../components/TripReplayMap';
 import type { TripReplayCharts } from '../components/TripReplayCharts';
 import type { TripReplayElevation } from '../components/TripReplayElevation';
 import { chartTokens } from '@/lib/tokens';
+import { getGlobalLocale, setGlobalLocale } from '@/lib/numberFormat';
 
 const { useDriveMock, captured } = vi.hoisted(() => ({
   useDriveMock: vi.fn(),
@@ -16,7 +17,7 @@ const { useDriveMock, captured } = vi.hoisted(() => ({
     playback: null as PlaybackControlsProps | null,
     charts: null as ComponentProps<typeof TripReplayCharts> | null,
     elevation: null as ComponentProps<typeof TripReplayElevation> | null,
-    summary: null as { drive?: DriveDetail } | null,
+    summary: null as { drive?: DriveDetail; formatDriveTime: (min: number) => string } | null,
     sparkline: null as { data: number[]; color: string } | null,
   },
 }));
@@ -50,7 +51,7 @@ vi.mock('@/features/trips/components/TripReplayElevation', () => ({
   },
 }));
 vi.mock('../components/operationalbrief-all/TripReplaySummaryBrief', () => ({
-  TripReplaySummaryBrief: (props: { drive?: DriveDetail }) => {
+  TripReplaySummaryBrief: (props: { drive?: DriveDetail; formatDriveTime: (min: number) => string }) => {
     captured.summary = props;
     return <div data-testid="summary" />;
   },
@@ -74,7 +75,7 @@ function position(index: number, overrides: Partial<DrivePosition> = {}): DriveP
   return {
     latitude: 1 + index / 100, longitude: 2 + index / 100,
     timestamp: new Date(Date.UTC(2024, 0, 1, 0, index)).toISOString(),
-    speed: 10, power: 5, batteryLevel: 80, elevation: null,
+    speed: 10, power: 5000, batteryLevel: 80, elevation: null,
     insideTemp: null, outsideTemp: null, idealRange: null, ratedRange: null,
     odometer: null, fanStatus: null, isClimateOn: null, ...overrides,
   };
@@ -129,6 +130,98 @@ afterEach(() => {
 });
 
 describe('TripReplayPage local modernization regressions', () => {
+  it('distinguishes live summary enrichment, stored GPS and inferred telemetry power per winning source', () => {
+    currentDrive.live = true;
+    currentDrive.endTs = null;
+    currentDrive.positions = [
+      position(0, { power: null, batteryLevel: 0, outsideTemp: null }),
+      position(1, { power: 0 }),
+    ];
+    currentDrive.telemetry = [{
+      ...position(0, { timestamp: '2023-12-31T23:59:50Z', power: 1500 }),
+      driverTemp: null, passengerTemp: null, estRange: null, soc: null, usableSoc: null,
+      tirePressureFl: null, tirePressureFr: null, tirePressureRl: null, tirePressureRr: null,
+    }];
+    mount();
+    expect(screen.getByTestId('replay-summary-source')).toHaveAttribute('data-provenance', 'live');
+    expect(screen.getByTestId('replay-route-source')).toHaveAttribute('data-provenance', 'historical');
+    expect(screen.getByTestId('replay-derived-source')).toHaveAttribute('data-provenance', 'inferred');
+    expect(screen.getByTestId('replay-source-speed')).toHaveTextContent('Source: Position · Historical');
+    expect(screen.getByTestId('replay-source-batteryLevel')).toHaveTextContent('Source: Position · Historical');
+    expect(screen.getByTestId('replay-source-power')).toHaveTextContent('Source: Telemetry · Estimated');
+    expect(screen.getByTestId('replay-source-power')).toHaveTextContent('Age: 10 s');
+    expect(screen.getByTestId('replay-source-outsideTemp')).toHaveTextContent('Source: Unknown · Unknown source');
+    expect(captured.map?.positions[0]).toMatchObject({ power: 1500, batteryLevel: 0 });
+    expect(captured.summary?.drive).toBe(currentDrive);
+    act(() => captured.map?.onSeekToIndex(1));
+    expect(screen.getByTestId('replay-source-power')).toHaveTextContent('Source: Position · Historical');
+    expect(captured.map?.positions[1].power).toBe(0);
+  });
+
+  it('does not infer live provenance from an unfinished drive or a successful refresh', () => {
+    currentDrive.endTs = null;
+    mount();
+    expect(screen.getByTestId('replay-summary-source')).toHaveAttribute('data-provenance', 'unknown');
+    expect(screen.getByTestId('replay-source-speed')).toHaveAttribute('data-provenance', 'historical');
+  });
+
+  it('updates populated replay and summary durations when the display locale changes', () => {
+    const originalLocale = getGlobalLocale();
+    try {
+      setGlobalLocale('en-US');
+      mount();
+      expect(captured.playback?.total).toBe('03:00');
+      expect(captured.summary?.formatDriveTime(59.6)).toBe('1h 0m');
+      act(() => setGlobalLocale('ar-EG'));
+      expect(captured.playback?.elapsed).toBe('٠٠:٠٠');
+      expect(captured.playback?.total).toBe('٠٣:٠٠');
+      expect(captured.summary?.formatDriveTime(59.6)).toBe('١h ٠m');
+      expect(captured.map?.positions).toHaveLength(4);
+      expect(captured.charts?.data).toHaveLength(4);
+      expect(captured.summary?.drive).toBe(currentDrive);
+    } finally {
+      act(() => setGlobalLocale(originalLocale));
+    }
+  });
+
+  it('exposes independent source instants and signed GPS-frame age without imposing a tolerance', () => {
+    currentDrive.positions = [
+      position(0, { power: null, elevation: null, ratedRange: 0, outsideTemp: null }),
+      position(1),
+    ];
+    currentDrive.telemetry = [{
+      ...position(0, { timestamp: '2023-12-31T23:55:00Z', power: 1500, elevation: 40 }),
+      driverTemp: null, passengerTemp: null, estRange: null, soc: null, usableSoc: null,
+      tirePressureFl: null, tirePressureFr: null, tirePressureRl: null, tirePressureRr: null,
+    }];
+    mount();
+    expect(screen.getByTestId('replay-source-speed')).toHaveTextContent('Timestamp: 2024-01-01T00:00:00.000Z · Age: 0 s');
+    expect(screen.getByTestId('replay-source-power')).toHaveTextContent('Timestamp: 2023-12-31T23:55:00.000Z · Age: 300 s');
+    expect(screen.getByTestId('replay-source-elevation')).toHaveTextContent('Age: 300 s');
+    expect(screen.getByTestId('replay-source-ratedRange')).toHaveTextContent('Age: 0 s');
+    expect(screen.getByTestId('replay-source-ratedRange')).not.toHaveTextContent('Unknown');
+    expect(screen.getByTestId('replay-source-outsideTemp')).toHaveTextContent('Temperature · Unknown');
+    expect(screen.getByTestId('replay-source-outsideTemp')).toHaveTextContent('Timestamp: Unknown · Age: Unknown');
+    expect(captured.map?.positions[0].power).toBe(1500);
+    act(() => captured.map?.onSeekToIndex(1));
+    expect(screen.getByTestId('replay-source-power')).toHaveTextContent('Timestamp: 2024-01-01T00:01:00.000Z · Age: 0 s');
+  });
+
+  it('retains the existing later-row tie break and reveals future telemetry as negative age', () => {
+    currentDrive.positions = [position(0, { power: null }), position(1)];
+    currentDrive.telemetry = [-10, 10].map((seconds) => ({
+      ...position(0, {
+        timestamp: new Date(Date.UTC(2024, 0, 1, 0, 0, seconds)).toISOString(),
+        power: seconds * 1000,
+      }),
+      driverTemp: null, passengerTemp: null, estRange: null, soc: null, usableSoc: null,
+      tirePressureFl: null, tirePressureFr: null, tirePressureRl: null, tirePressureRr: null,
+    }));
+    mount();
+    expect(captured.map?.positions[0].power).toBe(10000);
+    expect(screen.getByTestId('replay-source-power')).toHaveTextContent('Timestamp: 2024-01-01T00:00:10.000Z · Age: -10 s');
+  });
+
   it('rejects missing, nonfinite and out-of-bounds coordinates without fabricating a route', () => {
     const missingLatitude = position(0);
     Reflect.deleteProperty(missingLatitude, 'latitude');
@@ -172,14 +265,33 @@ describe('TripReplayPage local modernization regressions', () => {
   });
 
   it('keeps measured zero speed and restrained paint without changing raw SI or specialist power', () => {
-    currentDrive.positions[0] = position(0, { speed: 0, power: -8.7654 });
+    currentDrive.positions[0] = position(0, { speed: 0, power: -8765.4 });
     mount();
     expect(captured.sparkline).toEqual({ data: [0, 10, 10, 10], color: chartTokens.series[0], height: 24, width: 400 });
-    expect(captured.map?.positions[0]).toMatchObject({ speed: 0, power: -8.7654 });
+    expect(captured.map?.positions[0]).toMatchObject({ speed: 0, power: -8765.4 });
     expect(captured.summary?.drive).toBe(currentDrive);
     expect(currentDrive.distanceM).toBe(1234.5678);
     expect(currentDrive.energyUsedWh).toBe(123.4567);
     expect(captured.playback?.getPreviewAt?.(0)?.power).toContain('-8.77');
+  });
+
+  it.each([null, NaN, Infinity, -Infinity])('keeps unavailable power %s separate from measured zero', (power) => {
+    currentDrive.positions = [position(0, { power }), position(1, { power: 0 })];
+    mount();
+    expect(captured.map?.positions.map(p => p.power)).toEqual([null, 0]);
+    expect(captured.charts?.data.map(p => p.power)).toEqual([null, 0]);
+    expect(captured.playback?.getPreviewAt?.(0)?.power).toBeUndefined();
+    expect(captured.playback?.getPreviewAt?.(1)?.power).toBe('0 kW');
+  });
+
+  it('formats signed fractional watts at the display boundary without changing raw replay samples', () => {
+    currentDrive.positions = [position(0, { power: 1250.5 }), position(1, { power: -2500.25 })];
+    mount();
+    expect(captured.map?.positions.map(p => p.power)).toEqual([1250.5, -2500.25]);
+    expect(captured.charts?.data.map(p => p.power)).toEqual([1.2505, -2.50025]);
+    expect(captured.charts?.powerUnit).toBe('kW');
+    expect(captured.playback?.getPreviewAt?.(0)?.power).toBe('1.25 kW');
+    expect(captured.playback?.getPreviewAt?.(1)?.power).toBe('-2.5 kW');
   });
 
   it('restores each drive identity with equal sample counts and cancels the previous URL write', () => {
@@ -203,7 +315,53 @@ describe('TripReplayPage local modernization regressions', () => {
     expect(captured.summary?.drive).toBe(currentDrive);
     expect(screen.getByText(/No GPS data available for this drive/)).toBeInTheDocument();
     expect(screen.queryByTestId('transport')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Play' })).toBeDisabled();
+    expect(screen.getByRole('region', { name: 'Route map and live position' })).toBeInTheDocument();
+    expect(screen.getByTestId('replay-current-stats')).toBeInTheDocument();
+    expect(captured.map).toBeNull();
+    expect(captured.charts?.data).toEqual([]);
+    expect(captured.elevation?.data).toEqual([]);
+    expect(captured.summary?.drive?.distanceM).toBe(1234.5678);
+    expect(captured.summary?.drive?.energyUsedWh).toBe(123.4567);
     expect(screen.getByRole('link', { name: 'Back to Drive' })).toHaveAttribute('href', '/drives/7');
     expect(screen.getByRole('button', { name: 'Refresh replay data' })).toHaveClass('min-h-11', 'min-w-11');
+  });
+
+  it.each([
+    { name: 'single frame', samples: [position(0)] },
+    { name: 'identical timestamps', samples: [position(0), position(0)] },
+    { name: 'missing timestamp', samples: [position(0, { timestamp: '' }), position(1)] },
+    { name: 'invalid timestamps', samples: [position(0, { timestamp: 'invalid' }), position(1, { timestamp: 'invalid' })] },
+    { name: 'reverse timestamps', samples: [position(1), position(0)] },
+  ])('disables impossible playback for $name without discarding observations or totals', ({ samples }) => {
+    currentDrive.positions = samples;
+    mount('/drives/7/replay?play=1');
+    expect(screen.getByRole('button', { name: 'Play' })).toBeDisabled();
+    expect(screen.queryByTestId('transport')).not.toBeInTheDocument();
+    expect(captured.playback).toBeNull();
+    expect(captured.map?.positions).toHaveLength(samples.length);
+    expect(captured.charts?.data).toHaveLength(samples.length);
+    expect(captured.elevation?.data).toHaveLength(samples.length);
+    expect(captured.summary?.drive).toBe(currentDrive);
+    if (!Number.isFinite(Date.parse(samples[0].timestamp))) {
+      expect(captured.charts?.data[0].time).toBeNaN();
+    }
+    act(() => vi.advanceTimersByTime(1000));
+    expect(captured.map?.currentIndex).toBe(0);
+  });
+
+  it('normalizes nonfinite observations to gaps without fabricating zeros or elevation totals', () => {
+    currentDrive.positions = [
+      position(0, { speed: Infinity, elevation: NaN, ratedRange: Infinity, outsideTemp: -Infinity }),
+      position(1, { speed: 0, elevation: 0, ratedRange: 0, outsideTemp: 0 }),
+    ];
+    mount();
+    expect(captured.map?.positions[0]).toMatchObject({
+      speed: null, elevation: null, ratedRange: null, outsideTemp: null,
+    });
+    expect(captured.charts?.data.map(point => point.speed)).toEqual([null, 0]);
+    expect(captured.elevation?.data.map(point => point.elevation)).toEqual([null, 0]);
+    expect(captured.map?.positions[1]).toMatchObject({ ratedRange: 0, outsideTemp: 0 });
+    expect(screen.getByTestId('transport')).toBeInTheDocument();
   });
 });

@@ -34,6 +34,21 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import type { ComponentProps, ReactNode } from 'react';
 
+const datePreferences = vi.hoisted(() => ({
+  locale: 'en-US',
+  tz: undefined as string | undefined,
+}));
+
+vi.mock('@/hooks/useDateFormat', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/dateFormat')>('@/lib/dateFormat');
+  return {
+    useDateFormat: () => ({
+      formatRelative: (value: string | Date | null | undefined) =>
+        actual.formatRelative(value, datePreferences),
+    }),
+  };
+});
+
 // jsdom lacks matchMedia; guard against any transitive reader at module load.
 vi.hoisted(() => {
   if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
@@ -91,6 +106,8 @@ const observers: { element: Element; callback: ResizeObserverCallback }[] = [];
 
 beforeEach(() => {
   localStorage.clear();
+  datePreferences.locale = 'en-US';
+  datePreferences.tz = undefined;
   observers.length = 0;
   vi.stubGlobal('ResizeObserver', class {
     constructor(private callback: ResizeObserverCallback) {}
@@ -102,6 +119,8 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
@@ -229,6 +248,73 @@ describe('VehicleCostTable — table rendering', () => {
     });
     expect(screen.getByText('Vehicle #7')).toBeInTheDocument();
     expect(screen.getByText('Vehicle #8')).toBeInTheDocument();
+  });
+});
+
+describe('VehicleCostTable — locale-aware last seen', () => {
+  it('updates relative labels after a locale change on desktop and in mobile details', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-07-04T12:00:00Z'));
+    const user = userEvent.setup();
+    const vehicles = [makeRow({ last_seen_at: '2026-07-04T10:00:00Z' })];
+    const { rerender } = renderTable({ vehicles });
+    expect(screen.getByText(formatRelative(vehicles[0].last_seen_at, datePreferences))).toBeInTheDocument();
+
+    datePreferences.locale = 'de-DE';
+    rerender(
+      <MemoryRouter>
+        <VehicleCostTable vehicles={vehicles} loading={false} error={null} onRetry={vi.fn()} />
+      </MemoryRouter>,
+    );
+    const expected = new Intl.RelativeTimeFormat('de-DE', { style: 'narrow', numeric: 'always' })
+      .format(-2, 'hour');
+    expect(screen.getByText(expected)).toBeInTheDocument();
+    expect(screen.queryByText('2h ago')).not.toBeInTheDocument();
+
+    resize(375);
+    expect(screen.getByText(expected)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Quick view' }));
+    expect(within(screen.getByRole('dialog')).getByText(expected)).toBeInTheDocument();
+  });
+
+  it('formats old timestamps in the selected locale and zone without changing their instant', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-07-04T12:00:00Z'));
+    datePreferences.locale = 'de-DE';
+    datePreferences.tz = 'America/Los_Angeles';
+    const instant = '2020-01-01T00:30:00Z';
+    const vehicles = [
+      makeRow({ last_seen_at: instant }),
+      makeRow({ vehicle_id: 2, last_seen_at: '2019-12-31T16:30:00-08:00' }),
+    ];
+    const { rerender } = renderTable({ vehicles });
+    const expected = new Intl.DateTimeFormat('de-DE', {
+      timeZone: 'America/Los_Angeles', year: 'numeric', month: 'short', day: 'numeric',
+    }).format(new Date(instant));
+    expect(screen.getAllByText(expected)).toHaveLength(2);
+
+    datePreferences.tz = 'UTC';
+    rerender(
+      <MemoryRouter>
+        <VehicleCostTable vehicles={vehicles} loading={false} error={null} onRetry={vi.fn()} />
+      </MemoryRouter>,
+    );
+    const utcExpected = new Intl.DateTimeFormat('de-DE', {
+      timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric',
+    }).format(new Date(instant));
+    expect(utcExpected).not.toBe(expected);
+    expect(screen.getAllByText(utcExpected)).toHaveLength(2);
+  });
+
+  it.each([null, undefined, '', 'not-a-date'])('keeps last-seen %s unknown on desktop and mobile', async (value) => {
+    const user = userEvent.setup();
+    const row = makeRow();
+    Object.assign(row, { last_seen_at: value });
+    renderTable({ vehicles: [row] });
+    const cells = within(screen.getAllByRole('row')[1]).getAllByRole('cell');
+    expect(cells[5]).toHaveTextContent('—');
+    resize(375);
+    expect(screen.getByText('—')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Quick view' }));
+    expect(within(screen.getByRole('dialog')).getByText('—')).toBeInTheDocument();
   });
 });
 

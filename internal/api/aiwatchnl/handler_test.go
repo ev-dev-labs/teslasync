@@ -222,6 +222,10 @@ func TestHandler_RejectsBadBody(t *testing.T) {
 		wantOK bool
 	}{
 		{"valid_message", `{"message":"how is my car doing?"}`, true},
+		{"metric_preferences", `{"unit_of_length":"km","unit_of_temp":"C"}`, true},
+		{"imperial_preferences", `{"unit_of_length":"mi","unit_of_temp":"F"}`, true},
+		{"invalid_distance_preference", `{"unit_of_length":"miles"}`, false},
+		{"invalid_temperature_preference", `{"unit_of_temp":"K"}`, false},
 		{"empty_object_uses_default_prompt", `{}`, true},
 		{"empty_body_uses_default_prompt", ``, true},
 		{"whitespace_message_uses_default_prompt", `{"message":"   "}`, true},
@@ -277,7 +281,7 @@ func TestBuildUserMessage(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := buildUserMessage(tc.input)
+			got := buildUserMessage(request{Message: tc.input})
 			for _, must := range tc.mustInclude {
 				if !strings.Contains(strings.ToLower(got), strings.ToLower(must)) {
 					t.Errorf("buildUserMessage(%q) missing %q: %q", tc.input, must, got)
@@ -287,9 +291,30 @@ func TestBuildUserMessage(t *testing.T) {
 	}
 }
 
+func TestBuildUserMessage_DisplayPreferences(t *testing.T) {
+	t.Parallel()
+	got := buildUserMessage(request{UnitOfLength: "mi", UnitOfTemp: "F"})
+	for _, expected := range []string{"canonical range_m", "UnitOfLength=mi", "UnitOfTemp=F", "glance summary"} {
+		if !strings.Contains(got, expected) {
+			t.Errorf("prompt missing %q: %s", expected, got)
+		}
+	}
+}
+
+func TestProjectSignals_MeterRangeDisplay(t *testing.T) {
+	t.Parallel()
+	for _, meters := range []float64{0, 1609.344, 300000} {
+		env := &nl.WatchContextEnvelope{}
+		projectSignals(env, map[string]interface{}{"RatedRange": meters})
+		if env.RangeKm != meters/1000 || env.RangeMi != meters/1609.344 {
+			t.Errorf("%v meters projected as km=%v mi=%v", meters, env.RangeKm, env.RangeMi)
+		}
+	}
+}
+
 // TestProjectSignals_DualUnitProjection asserts the
 // projection mirrors the canonical /watch/summary handler's
-// shape: SI canonical fields PLUS pre-computed display-unit
+// shape: canonical meters converted to pre-computed display-unit
 // pairs (range_km + range_mi; inside/outside _c + _f) per the
 // cToFPtr temperature precedent
 // (internal/ai/tools/drive_coaching.go). Tools MUST NOT rely on
@@ -300,7 +325,7 @@ func TestProjectSignals_DualUnitProjection(t *testing.T) {
 
 	signals := map[string]interface{}{
 		"BatteryLevel":     float64(82),
-		"RatedRange":       float64(225.0), // miles canonical wire
+		"RatedRange":       float64(362102.4), // canonical meters
 		"InsideTemp":       float64(22.0),
 		"OutsideTemp":      float64(-5.0),
 		"TimeToFullCharge": float64(1.5), // hours
@@ -315,11 +340,11 @@ func TestProjectSignals_DualUnitProjection(t *testing.T) {
 	if v, ok := env.SOCPercent.(int); !ok || v != 82 {
 		t.Errorf("SOCPercent = %v (type %T), want int(82)", env.SOCPercent, env.SOCPercent)
 	}
-	if v, ok := env.RangeMi.(float64); !ok || v != 225.0 {
+	if v, ok := env.RangeMi.(float64); !ok || v < 224.999 || v > 225.001 {
 		t.Errorf("RangeMi = %v, want 225.0", env.RangeMi)
 	}
 	if v, ok := env.RangeKm.(float64); !ok || v < 362.0 || v > 363.0 {
-		t.Errorf("RangeKm = %v, want ~362.1 (225 mi × 1.60934)", env.RangeKm)
+		t.Errorf("RangeKm = %v, want ~362.1 (362102.4 m ÷ 1000)", env.RangeKm)
 	}
 	if v, ok := env.InsideTempC.(float64); !ok || v != 22.0 {
 		t.Errorf("InsideTempC = %v, want 22.0", env.InsideTempC)

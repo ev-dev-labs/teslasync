@@ -12,8 +12,8 @@ import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { chartTokens } from '@/lib/tokens';
+import { isFiniteNumber } from '@/lib/numberFormat';
 import type { VehicleState } from '@/api/types';
-import { batteryColor } from '../vehicle-detail/helpers';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 
 /** Compatibility extraction preserves the gauge/readouts BEFORE the bar plot.
@@ -22,27 +22,27 @@ import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 export function VehicleBatteryChart({ state, height: heightOverride }: { state: VehicleState; height?: number }) {
   const placement = useCardPlacement();
   const height = heightOverride ?? containerPolicy(placement?.width ?? 0).chartHeight;
-  const { precision: displayPrecision, fmtInt, fmtNumber } = useNumberFormatting();
+  const { precision: displayPrecision, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
-  // Inherited chart coercions retained verbatim; this layout cohort does not
-  // change numeric semantics, settings, units or precision.
-  const batteryLevel = state.battery_level ?? 0;
+  const batteryLevel = isFiniteNumber(state.battery_level) &&
+    state.battery_level >= 0 && state.battery_level <= 100 ? state.battery_level : null;
   const batteryChartData = useMemo(() => [
     { name: t('common.current', 'Current'), value: batteryLevel },
-    { name: t('common.remaining', 'Remaining'), value: Math.max(0, 100 - batteryLevel) },
+    { name: t('common.remaining', 'Remaining'), value: batteryLevel == null ? null : 100 - batteryLevel },
   ], [batteryLevel, t]);
   const sourceMetrics: readonly StatMetric[] = [
-    { metricId: 'percent', occurrenceId: 'battery', label: t('common.battery', 'Battery'), rawValue: state.battery_level,
-      display: { formatter: raw => ({ value: `${fmtInt(raw)}%`, unit: '' }) } },
+    { metricId: 'percent', occurrenceId: 'battery', label: t('common.battery', 'Battery'),
+      rawValue: batteryLevel ?? (state.battery_level == null ? state.battery_level : Number.NaN),
+      display: { formatter: raw => ({ value: `${fmtNumber(raw, displayPrecision)}%`, unit: '' }) } },
     { metricId: 'distance', occurrenceId: 'range', label: t('common.range', 'Range'), rawValue: state.rated_range,
       display: { formatter: raw => ({ value: `${fmtNumber(convertDistanceFromSI(raw, unitPrefs.distance), displayPrecision)} ${unitPrefs.distance}`, unit: '' }) } },
   ];
   const metrics = useOperationalMetrics(sourceMetrics);
   const batteryColumns = useMemo<ChartDataColumn[]>(() => [
     { key: 'name', label: t('common.category', 'Category') },
-    { key: 'value', label: t('common.percentage', '%'), format: (v) => `${v}%` },
-  ], [t]);
+    { key: 'value', label: t('common.percentage', '%'), format: (v) => isFiniteNumber(v) ? `${fmtNumber(v, displayPrecision)}%` : '—' },
+  ], [t, fmtNumber, displayPrecision]);
   return (
     <GlassPanel className="h-full min-w-0 p-6">
       <PanelTitle className="mb-4 flex items-center gap-2">
@@ -51,7 +51,9 @@ export function VehicleBatteryChart({ state, height: heightOverride }: { state: 
       </PanelTitle>
       <div className="mb-4 flex min-w-0 flex-wrap items-center gap-4">
         <LinearGauge value={batteryLevel} max={100} label={t('common.battery', 'Battery')}
-          unit="%" color={batteryColor(batteryLevel)} size={100} className="w-32 shrink-0" />
+          preserveReadingAndScale unit="%" decimals={displayPrecision}
+          tone={batteryLevel == null ? 'neutral' : batteryLevel > 60 ? 'success' : batteryLevel > 25 ? 'warning' : 'danger'}
+          size={100} className="w-32 shrink-0" />
         <div className="min-w-0 flex-1 basis-48">
           <OperationalBrief compact testId="vehicle-battery-readouts"
             eyebrow={t('vehicles.evidenceBrief.eyebrow', 'Vehicle evidence')}

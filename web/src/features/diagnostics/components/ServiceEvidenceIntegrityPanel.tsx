@@ -46,7 +46,7 @@ export function ServiceEvidenceIntegrityPanel({
   return (
     <GlassPanel className={className ?? 'p-4 sm:p-5'}>
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <Fingerprint className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <Fingerprint className="h-4 w-4 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
         {t('serviceEvidencePack.integrity.title', 'Integrity & export')}
       </PanelTitle>
       <div className="space-y-3">
@@ -65,6 +65,8 @@ export function ServiceEvidenceIntegrityPanel({
           type="button"
           variant="primary"
           size="sm"
+          wrapLabel
+          className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
           icon={<Fingerprint className="h-4 w-4" />}
           loading={generating}
           disabled={!canGenerate || generating}
@@ -84,23 +86,31 @@ export function ServiceEvidenceIntegrityPanel({
         {pack && (
           <div className="space-y-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <Text as="code" variant="code" className="break-all">
+              <Text as="code" variant="code" className="min-w-0 break-all">
                 {pack.integrity.digestHex}
               </Text>
               <CopyButton
                 text={pack.integrity.digestHex}
                 withToast
                 label={t('serviceEvidencePack.integrity.copyDigest', 'Copy digest')}
-                className="shrink-0"
+                className="min-h-11 min-w-11 max-w-full shrink-0 md:min-h-9 md:min-w-0"
               />
             </div>
-            <Caption>
+            <Caption className="break-words">
               {t('serviceEvidencePack.integrity.meta', 'Schema {{version}} · generated {{when}}', {
                 version: pack.schemaVersion,
                 when: formatDateTime(pack.generatedAt),
               })}
             </Caption>
-            <Button type="button" variant="secondary" size="sm" icon={<Download className="h-4 w-4" />} onClick={onExport}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              wrapLabel
+              className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
+              icon={<Download className="h-4 w-4" />}
+              onClick={onExport}
+            >
               {t('serviceEvidencePack.integrity.export', 'Download JSON')}
             </Button>
           </div>

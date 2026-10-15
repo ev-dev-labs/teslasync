@@ -81,7 +81,7 @@ export function ArrivalReliabilityWindowComparisons({
     <section data-testid="arrival-window-comparisons">
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
-          <Clock3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Clock3 className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
           {t(
             'arrivalReliability.windows.title',
             'Supported route-window comparisons',
@@ -130,6 +130,7 @@ export function ArrivalReliabilityWindowComparisons({
                 <NestedDrivingBrief title={t('arrivalReliability.brief.windowQuantities', 'Route-window timing quantities')}
                   description={rankLabel(index, window)}
                   loading={state.isLoading} unavailable={state.error != null}
+                  retained={state.refreshError != null || state.isRefreshBlocked}
                   period={{ kind: 'unknown',
                     label: `${window.routeLabel} · ${t('arrivalReliability.windows.localWindow', '{{window}} in {{timeZone}}', { window: windowLabel(window), timeZone })}`,
                     reason: t('arrivalReliability.windows.support', '{{count}} samples · route allowance {{allowance}}', {

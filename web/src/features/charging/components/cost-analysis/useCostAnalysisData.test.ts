@@ -1,15 +1,13 @@
 /**
  * useCostAnalysisData — the Cost Analysis page's derivation hook.
  *
- * This hook is pure (a stack of `useMemo`s over the raw ChargingSession list),
- * so the suite drives it with `renderHook` and asserts the eight derived
- * outputs it returns — no DOM, network, or provider required.
+ * The suite drives the derivations with `renderHook`, retaining real date
+ * formatting and timezone resolution over controlled saved preferences.
  *
  * Beyond the happy path it pins the four correctness bugs this file fixed, each
  * chosen so the assertion FAILS loudly against the pre-fix code:
- *   - coreStats.costPerDist / gasComparison.costPer* converted distance twice
- *     (metres→miles then metres→display), inflating the per-distance figures
- *     ~1609×. `toDistanceDisplay` now receives raw SI metres exactly once.
+ *   - Charging-session odometer deltas are not driven-distance evidence;
+ *     distance-based totals, rates and comparisons remain unavailable.
  *   - lifetimeMetrics.freeEnergy summed raw Wh but is rendered as kWh — a
  *     1000× overstatement; it is now converted to kWh.
  *   - lifetimeMetrics.minSessionCost folded a literal 0 into `Math.min`, pinning
@@ -18,11 +16,10 @@
  * Nullable raw measurements retain missingness; unavailable numeric view
  * fields use NaN for the existing formatters, never an invented zero.
  *
- * `toDistanceDisplay` is supplied as the real metres→miles converter so the
- * distance assertions exercise the exact production contract.
+ * Raw odometer observations remain separate from driven-distance metrics.
  */
 import { renderHook } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import type { ChargingSession } from '@/api/types';
 import {
   KWH_PER_GALLON,
@@ -30,6 +27,30 @@ import {
   KG_CO2_PER_TREE_YEAR,
 } from './constants';
 import { useCostAnalysisData } from './useCostAnalysisData';
+
+const preferences = vi.hoisted(() => ({
+  locale: 'en-US',
+  tz_display_default: 'user' as 'user' | 'vehicle' | 'utc',
+  timezone_user: 'UTC',
+  vehicleTimezone: 'America/New_York',
+}));
+
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({ settings: preferences, locale: preferences.locale }),
+}));
+vi.mock('@/hooks/useSelectedVehicle', () => ({
+  useSelectedVehicle: () => ({ vehicle: { timezone: preferences.vehicleTimezone } }),
+}));
+vi.mock('@/lib/timezone', async importOriginal => (
+  await importOriginal<typeof import('@/lib/timezone')>()
+));
+
+beforeEach(() => {
+  preferences.locale = 'en-US';
+  preferences.tz_display_default = 'user';
+  preferences.timezone_user = 'UTC';
+  preferences.vehicleTimezone = 'America/New_York';
+});
 
 const METERS_PER_MILE = 1609.344;
 
@@ -66,9 +87,9 @@ function makeSession(overrides: Partial<ChargingSession> = {}): ChargingSession 
 
 /**
  * Canonical three-session fixture used across the happy-path blocks:
- *   A — Jan, Supercharger, 100 mi, 10 kWh, $5, 60 min, 10:00
- *   B — Feb, Home,         100 mi, 20 kWh, $4, 90 min, 14:00
- *   C — Feb, Public DC,      0 mi, 15 kWh, $0 (free), 30 min, 22:30
+ *   A — Jan, Supercharger, 100 mi odometer delta, 10 kWh, $5, 60 min, 10:00
+ *   B — Feb, Home,         100 mi odometer delta, 20 kWh, $4, 90 min, 14:00
+ *   C — Feb, Public DC,    unknown odometer delta, 15 kWh, $0, 30 min, 22:30
  */
 const MILE_100_M = METERS_PER_MILE * 100; // 160934.4 m
 
@@ -183,7 +204,7 @@ describe('useCostAnalysisData — denomination', () => {
         { sessionId: 2, amount: -2, currency: 'EUR' },
       ],
     });
-    expect(result.operationalTotals).toEqual({ count: 2, energyKwh: 20, durationMinutes: 120, distanceM: 0 });
+    expect(result.operationalTotals).toEqual({ count: 2, energyKwh: 20, durationMinutes: 120, distanceM: NaN });
     expect(result.coreStats).toBeNull();
     expect(result.gasComparison).toBeNull();
     expect(result.lifetimeMetrics).toBeNull();
@@ -247,7 +268,7 @@ describe('useCostAnalysisData — coreStats', () => {
     expect(stats!.totalEnergy).toBe(45);
     expect(stats!.avgCostPerKwh).toBeCloseTo(0.2, 6);
     expect(stats!.totalDuration).toBe(180);
-    expect(stats!.totalDistanceM).toBeCloseTo(2 * MILE_100_M, 3);
+    expect(stats!.totalDistanceM).toBeNaN();
 
     const gallons = 45 / KWH_PER_GALLON;
     expect(stats!.gallonsEquiv).toBeCloseTo(gallons, 6);
@@ -259,21 +280,17 @@ describe('useCostAnalysisData — coreStats', () => {
     );
   });
 
-  it('computes costPerDist from SI metres exactly once (no double conversion)', () => {
-    // 200 mi driven for $9 ⇒ $0.045/mi. The pre-fix double conversion produced
-    // ~$72/mi (off by the 1609.344 metres-per-mile factor).
+  it('does not use charging odometer deltas as a driven-distance denominator', () => {
     const stats = render({ sessions: THREE }).current.coreStats!;
-    expect(stats.costPerDist).toBeCloseTo(0.045, 6);
-    expect(stats.costPerDist).toBeLessThan(1);
+    expect(stats.costPerDist).toBeNaN();
   });
 
-  it('honours the display-unit converter for costPerDist (km path)', () => {
-    // metres→km ⇒ 321.869 km for $9 ⇒ ~$0.02796/km, distinct from the mi path.
+  it('keeps costPerDist unavailable regardless of display units (km path)', () => {
     const stats = render({
       sessions: THREE,
       toDistanceDisplay: (m) => m / 1000,
     }).current.coreStats!;
-    expect(stats.costPerDist).toBeCloseTo(9 / (2 * MILE_100_M / 1000), 6);
+    expect(stats.costPerDist).toBeNaN();
   });
 });
 
@@ -295,6 +312,102 @@ describe('useCostAnalysisData — monthlyData & costPerKwhTrend', () => {
     // gasEquiv is energy-driven (mpg cancels): 35 kWh → gallons → $.
     expect(feb.gasEquiv).toBeCloseTo((35 / KWH_PER_GALLON) * 3.5, 6);
     expect(feb.savings).toBeCloseTo(feb.gasEquiv - feb.cost, 6);
+  });
+
+  describe('useCostAnalysisData — accounting timezone and saved locale', () => {
+    it('uses the saved timezone at month/day boundaries and the saved locale for trend labels', () => {
+      preferences.locale = 'de-DE';
+      preferences.timezone_user = 'America/Los_Angeles';
+      const sessions = [
+        makeSession({ id: 1, started_at: '2024-02-01T07:59:59Z' }),
+        makeSession({ id: 2, started_at: '2024-02-01T08:00:00Z' }),
+      ];
+      const result = render({ sessions }).current;
+      expect(result.accountingTimezone).toBe('America/Los_Angeles');
+      expect(result.monthlyData.map(bucket => [bucket.month, bucket.sessions])).toEqual([
+        ['2024-01', 1], ['2024-02', 1],
+      ]);
+      expect(result.hourlyData.filter(bucket => bucket.sessions).map(bucket => bucket.hour)).toEqual([0, 23]);
+      expect(result.costPerKwhTrend.map(point => point.date)).toEqual(sessions.map(session => (
+        new Date(session.started_at).toLocaleDateString('de-DE', {
+          timeZone: 'America/Los_Angeles', month: 'short', day: 'numeric',
+        })
+      )));
+      expect(result.coreStats?.count).toBe(2);
+      expect(result.coreStats?.totalCost).toBe(10);
+      expect(result.dateCoverage).toEqual({ totalCount: 2, datedCount: 2, undatedCount: 0 });
+    });
+
+    it('recomputes dates and buckets when saved locale/timezone preferences change', () => {
+      const sessions = [makeSession({ started_at: '2024-02-01T00:30:00Z' })];
+      const { result, rerender } = renderHook(() => useCostAnalysisData({
+        sessions, gasPrice: 3.5, mpg: 30, electricityRate: 0.13,
+        toDistanceDisplay: toMiles, isMiles: true,
+      }));
+      expect(result.current.monthlyData[0].month).toBe('2024-02');
+      preferences.locale = 'fr-FR';
+      preferences.timezone_user = 'America/Los_Angeles';
+      rerender();
+      expect(result.current.accountingTimezone).toBe('America/Los_Angeles');
+      expect(result.current.monthlyData[0].month).toBe('2024-01');
+      expect(result.current.hourlyData[16].sessions).toBe(1);
+      expect(result.current.costPerKwhTrend[0].date).toBe(
+        new Date(sessions[0].started_at).toLocaleDateString('fr-FR', {
+          timeZone: 'America/Los_Angeles', month: 'short', day: 'numeric',
+        }),
+      );
+      preferences.tz_display_default = 'vehicle';
+      rerender();
+      expect(result.current.accountingTimezone).toBe('America/New_York');
+      expect(result.current.hourlyData[19].sessions).toBe(1);
+      preferences.tz_display_default = 'utc';
+      rerender();
+      expect(result.current.accountingTimezone).toBe('UTC');
+      expect(result.current.monthlyData[0].month).toBe('2024-02');
+    });
+
+    it('keeps the exact 22:00 inclusive / 06:00 exclusive off-peak boundaries', () => {
+      preferences.timezone_user = 'Asia/Tokyo';
+      const sessions = [
+        '2024-01-15T12:59:59Z', // 21:59
+        '2024-01-15T13:00:00Z', // 22:00
+        '2024-01-15T20:59:59Z', // 05:59
+        '2024-01-15T21:00:00Z', // 06:00
+      ].map((started_at, id) => makeSession({ id, started_at }));
+      const result = render({ sessions }).current;
+      expect(result.touInsights?.offPeakPct).toBe(50);
+      expect(result.hourlyData.reduce((sum, bucket) => sum + bucket.sessions, 0)).toBe(4);
+      expect(result.coreStats?.count).toBe(4);
+    });
+
+    it('handles DST without shifting elapsed durations or losing repeated-hour sessions', () => {
+      preferences.timezone_user = 'America/New_York';
+      const result = render({ sessions: [
+        makeSession({ id: 1, started_at: '2024-11-03T05:30:00Z', ended_at: '2024-11-03T06:30:00Z' }),
+        makeSession({ id: 2, started_at: '2024-11-03T06:30:00Z', ended_at: '2024-11-03T07:30:00Z' }),
+      ] }).current;
+      expect(result.hourlyData[1].sessions).toBe(2);
+      expect(result.coreStats?.totalDuration).toBe(120);
+      expect(result.monthlyData[0].sessions).toBe(2);
+    });
+
+    it.each([null, undefined, '', 'not-a-date'])(
+      'discloses an unbucketable start %s without losing financial or session counts',
+      started_at => {
+        const missing = { ...makeSession({ id: 2 }), started_at } as ChargingSession;
+        const result = render({ sessions: [sessionA, missing] }).current;
+        expect(result.dateCoverage).toEqual({ totalCount: 2, datedCount: 1, undatedCount: 1 });
+        expect(result.coreStats?.count).toBe(2);
+        expect(result.coreStats?.totalCost).toBe(10);
+        expect(result.operationalTotals.count).toBe(2);
+        expect(result.rawMeasurements[1].durationMinutes).toBeNull();
+        expect(result.monthlyData.reduce((sum, bucket) => sum + bucket.sessions, 0)).toBe(1);
+        expect(result.hourlyData.reduce((sum, bucket) => sum + bucket.sessions, 0)).toBe(1);
+        expect(result.chargerTypeData.reduce((sum, bucket) => sum + bucket.sessions, 0)).toBe(2);
+        expect(result.costPerKwhTrend).toHaveLength(1);
+        expect(result.touInsights?.offPeakPct).toBe(0);
+      },
+    );
   });
 
   it('builds an ascending per-session $/kWh trend', () => {
@@ -340,6 +453,73 @@ describe('useCostAnalysisData — chargerTypeData & hourlyData', () => {
 });
 
 describe('useCostAnalysisData — touInsights', () => {
+  it('identifies fixed off-peak boundaries as an assumption in the accounting timezone', () => {
+    preferences.timezone_user = 'America/Los_Angeles';
+    const result = render({ sessions: undefined }).current;
+    expect(result.touAssumptions).toEqual({
+      source: 'assumption',
+      startHourInclusive: 22,
+      endHourExclusive: 6,
+      timezone: 'America/Los_Angeles',
+    });
+    expect(result.touInsights).toBeNull();
+  });
+
+  it('ranks recorded per-session spend, not utility rates or energy-normalized costs', () => {
+    const result = render({ sessions: [
+      makeSession({ id: 1, started_at: '2024-01-15T10:00:00Z', cost_decimal: 0.5, total_energy_added_wh: 250 }),
+      makeSession({ id: 2, started_at: '2024-01-15T14:00:00Z', cost_decimal: 1.25, total_energy_added_wh: 10_000 }),
+    ] }).current;
+    expect(result.touInsights).toMatchObject({
+      comparisonBasis: 'recorded-spend-per-session',
+      cheapest: { hour: 10, avgCost: 0.5 },
+      priciest: { hour: 14, avgCost: 1.25 },
+      datedSessionCount: 2,
+      undatedSessionCount: 0,
+    });
+    // Lower session spend does not imply a lower energy-paired rate.
+    expect(result.hourlyData[10].coverage.rate).toBe(2);
+    expect(result.hourlyData[14].coverage.rate).toBe(0.125);
+  });
+
+  it.each([null, undefined, NaN, Infinity, -Infinity])(
+    'does not rank an hour with missing/invalid spend %s as measured zero',
+    cost_decimal => {
+      const result = render({ sessions: [
+        makeSession({ id: 1, started_at: '2024-01-15T10:00:00Z', cost_decimal }),
+        makeSession({ id: 2, started_at: '2024-01-15T14:00:00Z', cost_decimal: 0 }),
+      ] }).current;
+      expect(result.hourlyData[10].avgCost).toBeNaN();
+      expect(result.hourlyData[10].coverage.unknownCostCount).toBe(1);
+      expect(result.touInsights?.cheapest).toMatchObject({ hour: 14, avgCost: 0 });
+      expect(result.touInsights?.priciest).toMatchObject({ hour: 14, avgCost: 0 });
+    },
+  );
+
+  it('retains signed fractional spend and does not require energy for a spend comparison', () => {
+    const result = render({ sessions: [
+      makeSession({ id: 1, started_at: '2024-01-15T10:00:00Z', cost_decimal: -0.125, total_energy_added_wh: null }),
+      makeSession({ id: 2, started_at: '2024-01-15T10:30:00Z', cost_decimal: -0.375, total_energy_added_wh: NaN }),
+      makeSession({ id: 3, started_at: '2024-01-15T14:00:00Z', cost_decimal: 0.125, total_energy_added_wh: 0 }),
+    ] }).current;
+    expect(result.touInsights?.cheapest).toMatchObject({ hour: 10, avgCost: -0.25 });
+    expect(result.touInsights?.priciest).toMatchObject({ hour: 14, avgCost: 0.125 });
+    expect(result.hourlyData[10].coverage.rate).toBeNull();
+    expect(result.hourlyData[14].coverage.rate).toBeNull();
+  });
+
+  it('excludes undated sessions from the assumed-window share instead of treating them as on-peak', () => {
+    const result = render({ sessions: [
+      makeSession({ id: 1, started_at: '2024-01-15T22:00:00Z', cost_decimal: 0 }),
+      makeSession({ id: 2, started_at: '2024-01-15T06:00:00Z', cost_decimal: null }),
+      makeSession({ id: 3, started_at: 'invalid' }),
+    ] }).current;
+    expect(result.touInsights).toMatchObject({
+      offPeakPct: 50, datedSessionCount: 2, undatedSessionCount: 1,
+    });
+    expect(result.coreStats?.count).toBe(3);
+  });
+
   it('surfaces cheapest, priciest and busiest hours', () => {
     const tou = render({ sessions: THREE }).current.touInsights;
     expect(tou).not.toBeNull();
@@ -353,21 +533,167 @@ describe('useCostAnalysisData — touInsights', () => {
 });
 
 describe('useCostAnalysisData — gasComparison', () => {
-  it('derives gallons from real miles and per-distance cost from the display unit', () => {
+  it('retains charging costs but does not model driving savings from charging odometers', () => {
     const gas = render({ sessions: THREE }).current.gasComparison;
     expect(gas).not.toBeNull();
-    // 200 mi / 30 mpg = 6.667 gal × $3.50 = $23.33.
-    expect(gas!.gasCost).toBeCloseTo((200 / 30) * 3.5, 4);
+    expect(gas!.gasCost).toBeNaN();
     expect(gas!.evCost).toBeCloseTo(45 * 0.13, 6);
     expect(gas!.actualCost).toBe(9);
-    expect(gas!.savings).toBeCloseTo((200 / 30) * 3.5 - 9, 4);
-    // $/mi figures must be sane single-conversion values (~$0.12 / $0.045),
-    // not the ~$0.0145 / ~$72 the double-converted code produced.
-    expect(gas!.costPerMileGas).toBeCloseTo(((200 / 30) * 3.5) / 200, 6);
-    expect(gas!.costPerMileEV).toBeCloseTo(0.045, 6);
-    // Two months in range ⇒ monthly = period/2, yearly = ×12.
-    expect(gas!.monthlySavings).toBeCloseTo(((200 / 30) * 3.5 - 45 * 0.13) / 2, 4);
-    expect(gas!.yearlySavings).toBeCloseTo(gas!.monthlySavings * 12, 4);
+    expect(gas!.savings).toBeNaN();
+    expect(gas!.costPerMileGas).toBeNaN();
+    expect(gas!.costPerMileEV).toBeNaN();
+    expect(gas!.monthlySavings).toBeNaN();
+    expect(gas!.yearlySavings).toBeNaN();
+  });
+});
+
+describe('useCostAnalysisData — savings and observed-window disclosures', () => {
+  it('separates rate-modeled savings from recorded-spend savings without changing populated calculations', () => {
+    const result = render({ sessions: THREE }).current;
+    const gasCost = (45 / KWH_PER_GALLON) * 3.5;
+    expect(result.coreStats?.savingsDisclosure).toEqual({
+      basis: 'energy-content-equivalence',
+      modeledEvCost: 45 * 0.13,
+      modeledSavings: gasCost - 45 * 0.13,
+      actualSavings: gasCost - 9,
+    });
+    expect(result.coreStats?.gasCost).toBe(gasCost);
+    expect(result.coreStats?.savings).toBe(gasCost - 9);
+    for (const month of result.monthlyData) {
+      expect(month.savingsDisclosure.modeledEvCost).toBe(month.energy * 0.13);
+      expect(month.savingsDisclosure.modeledSavings).toBe(month.gasEquiv - month.energy * 0.13);
+      expect(month.savingsDisclosure.actualSavings).toBe(month.savings);
+      expect(month.accountingMonthCompleteness).toBe('unknown');
+    }
+    expect(result.gasComparison).toMatchObject({
+      basis: 'driven-distance',
+      unavailableReason: 'no-verified-driven-distance',
+      modeledSavings: null, actualSavings: null, projectionStatus: 'unavailable',
+      gasCost: NaN, savings: NaN, monthlySavings: NaN, yearlySavings: NaN,
+      actualCost: 9, evCost: 45 * 0.13,
+    });
+  });
+
+  it('changes only the modeled savings when the assumed electricity rate changes', () => {
+    const low = render({ sessions: THREE, electricityRate: 0.1 }).current;
+    const high = render({ sessions: THREE, electricityRate: 0.4 }).current;
+    expect(low.coreStats?.savingsDisclosure.modeledSavings)
+      .not.toBe(high.coreStats?.savingsDisclosure.modeledSavings);
+    expect(low.coreStats?.savingsDisclosure.actualSavings).toBe(high.coreStats?.savings);
+    expect(low.monthlyData.map(month => month.savings))
+      .toEqual(high.monthlyData.map(month => month.savings));
+  });
+
+  it('keeps modeled savings available with unknown spend, but never invents actual savings', () => {
+    const result = render({ sessions: [makeSession({ cost_decimal: null })] }).current;
+    expect(result.coreStats?.savingsDisclosure).toMatchObject({
+      modeledEvCost: 1.3, actualSavings: null,
+    });
+    expect(result.coreStats?.savingsDisclosure.modeledSavings)
+      .toBeCloseTo((10 / KWH_PER_GALLON) * 3.5 - 1.3);
+    expect(result.monthlyData[0].savingsDisclosure.actualSavings).toBeNull();
+    expect(result.coreStats?.savings).toBeNaN();
+  });
+
+  it('discloses unavailable model inputs independently of recorded-spend savings', () => {
+    const invalidRate = render({ sessions: THREE, electricityRate: Infinity }).current;
+    expect(invalidRate.coreStats?.savingsDisclosure.modeledEvCost).toBeNull();
+    expect(invalidRate.coreStats?.savingsDisclosure.modeledSavings).toBeNull();
+    expect(invalidRate.coreStats?.savingsDisclosure.actualSavings).toBe(invalidRate.coreStats?.savings);
+    const missingEnergy = render({ sessions: [makeSession({ total_energy_added_wh: null })] }).current;
+    expect(missingEnergy.coreStats?.savingsDisclosure).toMatchObject({
+      modeledEvCost: null, modeledSavings: null, actualSavings: null,
+    });
+  });
+
+  it('reports loaded start bounds and observed months, not complete or continuously covered months', () => {
+    preferences.timezone_user = 'America/Los_Angeles';
+    const result = render({ sessions: [
+      makeSession({ id: 1, started_at: '2024-04-01T07:00:00Z' }),
+      makeSession({ id: 2, started_at: 'invalid' }),
+      makeSession({ id: 3, started_at: '2024-02-01T07:59:59Z' }),
+    ] }).current;
+    expect(result.observedWindow).toEqual({
+      source: 'loaded-session-starts',
+      firstSessionStart: '2024-02-01T07:59:59.000Z',
+      lastSessionStart: '2024-04-01T07:00:00.000Z',
+      observedMonthCount: 2,
+      accountingMonthCompleteness: 'unknown',
+    });
+    expect(result.dateCoverage).toEqual({ totalCount: 3, datedCount: 2, undatedCount: 1 });
+    expect(result.monthlyData.map(month => month.month)).toEqual(['2024-01', '2024-04']);
+    expect(result.monthlyData.every(month => month.accountingMonthCompleteness === 'unknown')).toBe(true);
+    expect(result.coreStats?.count).toBe(3);
+  });
+
+  it.each([undefined, [], [makeSession({ started_at: 'invalid' })]])(
+    'does not fabricate an observed window when no valid start is loaded (%s)', sessions => {
+      expect(render({ sessions }).current.observedWindow).toEqual({
+        source: 'loaded-session-starts',
+        firstSessionStart: null, lastSessionStart: null, observedMonthCount: 0,
+        accountingMonthCompleteness: 'unknown',
+      });
+    },
+  );
+});
+
+describe('useCostAnalysisData — charging odometer evidence', () => {
+  it.each([null, undefined, NaN, Infinity, -Infinity])(
+    'retains missing/invalid odometer %s as unknown for either endpoint',
+    value => {
+      for (const endpoints of [
+        { start_odometer_m: value, end_odometer_m: 100 },
+        { start_odometer_m: 100, end_odometer_m: value },
+      ]) {
+        const result = render({ sessions: [makeSession(endpoints)] }).current;
+        expect(result.rawMeasurements[0].distanceM).toBeNull();
+        expect(result.operationalTotals.distanceM).toBeNaN();
+        expect(result.coreStats?.totalDistanceM).toBeNaN();
+        expect(result.coreStats?.costPerDist).toBeNaN();
+        expect(result.gasComparison?.gasCost).toBeNaN();
+      }
+    },
+  );
+
+  it.each([
+    [0, 0, 0],
+    [100, 100, 0],
+    [100, 125, 25],
+    [100, 75, -25],
+    [100, 100.125, 0.125],
+    [100, 99.875, -0.125],
+  ])('retains the measured delta %s → %s as %s, without inferring driving', (start, end, delta) => {
+    const toDistanceDisplay = vi.fn(toMiles);
+    const result = render({
+      sessions: [makeSession({ start_odometer_m: start, end_odometer_m: end })],
+      toDistanceDisplay,
+    }).current;
+    expect(result.rawMeasurements[0].distanceM).toBe(delta);
+    expect(result.operationalTotals.distanceM).toBeNaN();
+    expect(result.coreStats?.totalDistanceM).toBeNaN();
+    expect(result.coreStats?.costPerDist).toBeNaN();
+    expect(result.gasComparison).toMatchObject({
+      gasCost: NaN, savings: NaN, monthlySavings: NaN, yearlySavings: NaN,
+      costPerMileGas: NaN, costPerMileEV: NaN,
+      actualCost: 5, evCost: 1.3,
+    });
+    expect(toDistanceDisplay).not.toHaveBeenCalled();
+  });
+
+  it('retains an overflowing delta as unknown rather than driving evidence', () => {
+    const result = render({ sessions: [makeSession({
+      start_odometer_m: -Number.MAX_VALUE,
+      end_odometer_m: Number.MAX_VALUE,
+    })] }).current;
+    expect(result.rawMeasurements[0].distanceM).toBeNull();
+    expect(result.coreStats?.costPerDist).toBeNaN();
+  });
+
+  it('does not turn invalid session dates into zero monthly driving savings', () => {
+    const result = render({ sessions: [makeSession({ started_at: 'invalid' })] }).current;
+    expect(result.monthlyData).toEqual([]);
+    expect(result.gasComparison?.monthlySavings).toBeNaN();
+    expect(result.gasComparison?.yearlySavings).toBeNaN();
   });
 });
 
@@ -548,10 +874,12 @@ describe('useCostAnalysisData — hardening', () => {
 
     it('retains measured zero and signed calculator prices, but rejects invalid prices', () => {
       const zero = render({ sessions: [sessionA], gasPrice: 0, electricityRate: 0 }).current;
-      expect(zero.gasComparison?.gasCost).toBe(0);
+      expect(zero.coreStats?.gasCost).toBe(0);
+      expect(zero.gasComparison?.gasCost).toBeNaN();
       expect(zero.gasComparison?.evCost).toBe(0);
       const signed = render({ sessions: [sessionA], gasPrice: -0.5, electricityRate: -0.125 }).current;
-      expect(signed.gasComparison?.gasCost).toBeCloseTo(-100 / 30 * 0.5);
+      expect(signed.coreStats?.gasCost).toBeCloseTo(-10 / KWH_PER_GALLON * 0.5);
+      expect(signed.gasComparison?.gasCost).toBeNaN();
       expect(signed.gasComparison?.evCost).toBe(-1.25);
       const invalid = render({ sessions: [sessionA], gasPrice: Infinity, electricityRate: NaN }).current;
       expect(invalid.coreStats?.gasCost).toBeNaN();

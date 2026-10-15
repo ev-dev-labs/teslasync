@@ -46,8 +46,8 @@ interface DiffPreset {
 export const DIFF_PRESETS: DiffPreset[] = [
   { id: 'now-vs-1h',           labelKey: 'signalDiff.preset.nowVs1h',           defaultLabel: 'Now vs 1h ago',                  compute: () => { const n = new Date(); return { atA: new Date(n.getTime() - 3600 * 1000), atB: n }; } },
   { id: 'now-vs-1d',           labelKey: 'signalDiff.preset.nowVs1d',           defaultLabel: 'Now vs 1 day ago',               compute: () => { const n = new Date(); return { atA: new Date(n.getTime() - 86400 * 1000), atB: n }; } },
-  { id: 'before-after-charge', labelKey: 'signalDiff.preset.beforeAfterCharge', defaultLabel: 'Before vs after last charge',   compute: () => { const n = new Date(); return { atA: new Date(n.getTime() - 4 * 3600 * 1000), atB: n }; } },
-  { id: 'last-drive',          labelKey: 'signalDiff.preset.lastDrive',         defaultLabel: 'Last drive start vs end',       compute: () => { const n = new Date(); return { atA: new Date(n.getTime() - 90 * 60 * 1000), atB: new Date(n.getTime() - 5 * 60 * 1000) }; } },
+  { id: 'before-after-charge', labelKey: 'signalDiff.preset.beforeAfterCharge', defaultLabel: 'Now vs 4h ago',                 compute: () => { const n = new Date(); return { atA: new Date(n.getTime() - 4 * 3600 * 1000), atB: n }; } },
+  { id: 'last-drive',          labelKey: 'signalDiff.preset.lastDrive',         defaultLabel: '90 min ago vs 5 min ago',       compute: () => { const n = new Date(); return { atA: new Date(n.getTime() - 90 * 60 * 1000), atB: new Date(n.getTime() - 5 * 60 * 1000) }; } },
   { id: 'today-vs-yesterday',  labelKey: 'signalDiff.preset.todayVsYesterday',  defaultLabel: 'Today vs yesterday (same time)', compute: () => { const n = new Date(); return { atA: new Date(n.getTime() - 86400 * 1000), atB: n }; } },
 ];
 

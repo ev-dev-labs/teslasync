@@ -71,6 +71,29 @@ beforeEach(() => {
 });
 
 describe('UTC range and local-time assumptions', () => {
+  it('keeps local midnight grouping and the night window independent of display labels', () => {
+    const drives = [
+      makeDrive('2026-07-06T18:00:00Z', '2026-07-06T18:29:00Z'),
+      makeDrive('2026-07-06T18:30:00Z', '2026-07-06T18:31:00Z'),
+      makeDrive('', null),
+      makeDrive('not-a-date', null),
+    ];
+    const summary = summarizeParking(drives, options({
+      nowMs: Date.parse('2026-07-07T00:30:00Z'),
+      rangeStart: '2026-07-06', rangeEnd: '2026-07-07',
+      timeZone: 'Asia/Kolkata',
+    }));
+    expect(summary.coverage).toMatchObject({
+      validDrives: 2, invalidStart: 2, timeZone: 'Asia/Kolkata',
+    });
+    expect(summary.hourly[23]).toMatchObject({ stints: 1, totalMs: 60_000 });
+    expect(summary.hourly[0]).toMatchObject({ stints: 1, totalMs: 359 * 60_000 });
+    expect(summary.weekdays[1].stints).toBe(1);
+    expect(summary.weekdays[2].stints).toBe(1);
+    expect(summary.nightMs).toBe(360 * 60_000);
+    expect(summary.daytimeMs).toBe(0);
+  });
+
   it('parses date-only picker values as a UTC half-open range', () => {
     expect(parseParkingUtcRange('2026-01-02', '2026-01-02')).toEqual({
       startMs: Date.parse('2026-01-02T00:00:00.000Z'),
@@ -139,6 +162,26 @@ describe('nightOverlapMs', () => {
 });
 
 describe('parking reconstruction and exclusions', () => {
+  it('preserves valid signed source values and fractional dwell without mutating records', () => {
+    const drive = makeDrive(
+      '2026-01-06T08:00:00.000Z',
+      '2026-01-06T08:00:00.250Z',
+      'Home',
+      { outsideTempAvgC: -12.5, avgPowerW: -250.75, durationS: 0.25 },
+    );
+    const summary = summarizeParking([drive], options({
+      nowMs: Date.parse('2026-01-06T08:00:00.750Z'),
+      rangeStart: '2026-01-06',
+      rangeEnd: '2026-01-06',
+    }));
+    expect(summary.totalDrivingMs).toBe(250);
+    expect(summary.totalParkedMs).toBe(500);
+    expect(summary.parkedShare).toBeCloseTo(2 / 3);
+    expect(drive).toMatchObject({
+      outsideTempAvgC: -12.5, avgPowerW: -250.75, durationS: 0.25,
+    });
+  });
+
   it('builds ordered gaps and a current trailing stint from an injected clock', () => {
     const morning = makeDrive(
       '2026-01-06T08:00:00.000Z',
@@ -287,6 +330,159 @@ describe('parking reconstruction and exclusions', () => {
       location: 'Inferred',
       durationMs: 3 * HOUR_MS,
       ongoing: false,
+    });
+  });
+
+  it.each([null, 'Outer destination'])(
+    'uses the occupied max-end boundary for nested drives with destination %s',
+    (destination) => {
+      const outer = makeDrive(
+        '2026-01-06T08:00:00.000Z',
+        '2026-01-06T14:00:00.000Z',
+        destination,
+      );
+      const nested = makeDrive(
+        '2026-01-06T09:00:00.000Z',
+        '2026-01-06T10:00:00.000Z',
+        'Nested destination',
+      );
+      const alsoNested = makeDrive(
+        '2026-01-06T11:00:00.000Z',
+        '2026-01-06T12:00:00.000Z',
+        'Another nested destination',
+      );
+      const later = makeDrive(
+        '2026-01-06T16:00:00.000Z',
+        '2026-01-06T17:00:00.000Z',
+        'Home',
+      );
+      const invalid = makeDrive(
+        '2026-01-06T15:00:00.000Z',
+        'invalid-end',
+      );
+      const summary = summarizeParking(
+        [later, alsoNested, invalid, nested, outer],
+        options({
+          nowMs: Date.parse('2026-01-06T20:00:00.000Z'),
+          rangeStart: '2026-01-06',
+          rangeEnd: '2026-01-06',
+        }),
+      );
+
+      expect(summary.stints).toEqual([
+        {
+          sourceDriveId: outer.id,
+          location: destination,
+          startMs: Date.parse(outer.endTs!),
+          endMs: Date.parse(later.startTs),
+          durationMs: 2 * HOUR_MS,
+          ongoing: false,
+          rightCensored: false,
+        },
+        {
+          sourceDriveId: later.id,
+          location: 'Home',
+          startMs: Date.parse(later.endTs!),
+          endMs: Date.parse('2026-01-06T20:00:00.000Z'),
+          durationMs: 3 * HOUR_MS,
+          ongoing: true,
+          rightCensored: true,
+        },
+      ]);
+      expect(summary.totalDrivingMs).toBe(7 * HOUR_MS);
+      expect(summary.totalParkedMs).toBe(5 * HOUR_MS);
+      expect(summary.parkedShare).toBeCloseTo(5 / 12);
+      expect(summary.rankedStints.map((stint) => stint.sourceDriveId)).toEqual([
+        later.id,
+        outer.id,
+      ]);
+      expect(summary.locations.map((location) => location.location)).toEqual([
+        'Home',
+        destination,
+      ]);
+      expect(summary.coverage).toMatchObject({
+        validDrives: 4,
+        excludedDrives: 1,
+        invalidEnd: 1,
+        overlappingGaps: 2,
+        zeroLengthGaps: 0,
+        knownLocationStints: destination == null ? 1 : 2,
+        missingLocationStints: destination == null ? 1 : 0,
+        rightCensoredStints: 1,
+        ongoingStints: 1,
+      });
+    },
+  );
+
+  it('does not fabricate trailing parking after a drive nested in an open drive', () => {
+    const open = makeDrive(
+      '2026-01-06T08:00:00.000Z',
+      null,
+      null,
+      { live: true },
+    );
+    const nested = makeDrive(
+      '2026-01-06T09:00:00.000Z',
+      '2026-01-06T10:00:00.000Z',
+      'Nested destination',
+    );
+    const summary = summarizeParking(
+      [nested, open],
+      options({
+        nowMs: Date.parse('2026-01-06T13:00:00.000Z'),
+        rangeStart: '2026-01-06',
+        rangeEnd: '2026-01-06',
+      }),
+    );
+
+    expect(summary.stints).toEqual([]);
+    expect(summary.locations).toEqual([]);
+    expect(summary.totalParkedMs).toBe(0);
+    expect(summary.totalDrivingMs).toBe(5 * HOUR_MS);
+    expect(summary.coverage).toMatchObject({
+      validDrives: 2,
+      openDrives: 1,
+      overlappingGaps: 1,
+      rightCensoredStints: 0,
+      ongoingStints: 0,
+    });
+  });
+
+  it('censors nested trailing records at the range edge using the outer end', () => {
+    const outer = makeDrive(
+      '2026-01-06T08:00:00.000Z',
+      '2026-01-06T18:00:00.000Z',
+      null,
+    );
+    const nested = makeDrive(
+      '2026-01-06T09:00:00.000Z',
+      '2026-01-06T10:00:00.000Z',
+      'Unresolved nested destination',
+    );
+    const summary = summarizeParking(
+      [nested, outer],
+      options({
+        rangeStart: '2026-01-06',
+        rangeEnd: '2026-01-06',
+      }),
+    );
+
+    expect(summary.stints).toEqual([{
+      sourceDriveId: outer.id,
+      location: null,
+      startMs: Date.parse(outer.endTs!),
+      endMs: Date.parse('2026-01-07T00:00:00.000Z'),
+      durationMs: 6 * HOUR_MS,
+      ongoing: false,
+      rightCensored: true,
+    }]);
+    expect(summary.totalDrivingMs).toBe(10 * HOUR_MS);
+    expect(summary.coverage).toMatchObject({
+      overlappingGaps: 1,
+      missingLocationStints: 1,
+      knownLocationStints: 0,
+      rightCensoredStints: 1,
+      ongoingStints: 0,
     });
   });
 });

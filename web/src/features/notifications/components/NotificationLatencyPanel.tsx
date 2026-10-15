@@ -8,10 +8,10 @@ import {
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from '@/components/charts';
 import { OperationalBrief, DataProvenanceBadge, type StatMetric } from '@/components/data-display';
-import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { DataSourceNotice, resolveDataSourceStatus, EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { Badge, DataTable, GlassPanel, PanelTitle, SectionTitle, Table, Text, type Column } from '@/components/ui';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { chartTokens } from '@/lib/tokens';
 
@@ -21,10 +21,11 @@ import { useDataState } from '@/hooks/useDataState';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 
 export function NotificationLatencyPanel() {
+  const { formatDateTime, tz } = useDateFormat();
   const { fmtNumber, fmtPercent, fmtScientificNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const logsQuery = useNotificationDeliveryLogs();
-  const source = useDataState(logsQuery);
+  const source = useDataState(logsQuery, { provenance: 'historical' });
   const summary = useMemo(
     () => analyzeNotificationLatency(logsQuery.data ?? []),
     [logsQuery.data],
@@ -43,7 +44,7 @@ export function NotificationLatencyPanel() {
             {t('notificationLatency.slowest.meta', '{{severity}} · {{status}} · {{date}}', {
               severity: record.severity,
               status: record.status,
-              date: formatDateTime(record.createdAt),
+              date: `${formatDateTime(record.createdAt)} (${tz})`,
             })}
           </Text>
         </div>
@@ -66,7 +67,7 @@ export function NotificationLatencyPanel() {
       align: 'right',
       render: record => <Text variant="body" mono className="font-medium">{latencyLabel(record.latencyMs)}</Text>,
     },
-  ], [latencyLabel, t]);
+  ], [latencyLabel, t, formatDateTime, tz]);
   const histogramData = useMemo(
     () => summary.histogram.map((bin) => ({
       range: bin.upperMs == null
@@ -81,33 +82,40 @@ export function NotificationLatencyPanel() {
     })),
     [summary.histogram, t, fmtNumber],
   );
-  const isLoading = !source.hasData && !source.fatalError;
+  const sourceDescriptor = { id: 'notification-latency', label: t('notificationLatency.title', 'Notification latency'), query: logsQuery };
+  const isLoading = resolveDataSourceStatus(sourceDescriptor) === 'loading';
+  const isBlocked = !source.hasData && source.isRefreshBlocked;
+  const blockedFeedback = <DataSourceNotice sources={[sourceDescriptor]} />;
   const isError = Boolean(source.fatalError);
   const latencyProvenance = t('notificationLatency.brief.provenance', 'Percentiles use recorded delivery latency or created-to-sent timestamps for attempts with usable measurements. The recorded sample is not a guaranteed complete analysis window.');
   const metrics: StatMetric[] = [
     { metricId: 'latency', occurrenceId: 'latency-p50', rawValue: source.hasData && summary.p50Ms != null ? summary.p50Ms / 1000 : null,
       label: t('notificationLatency.kpis.p50', 'p50 latency'),
       display: { formatter: raw => ({ value: fmtNumber(raw * 1000), unit: 'ms' }) },
-      context: <><Rabbit className="h-5 w-5" aria-hidden="true" />{t('notificationLatency.kpis.trimmed', 'trimmed mean {{value}}', { value: latencyLabel(summary.trimmedMeanMs) })}</> },
+      context: <><Rabbit className="h-5 w-5 text-[var(--text-muted)]" aria-hidden="true" />{t('notificationLatency.kpis.trimmed', 'trimmed mean {{value}}', { value: latencyLabel(summary.trimmedMeanMs) })}</> },
     { metricId: 'latency', occurrenceId: 'latency-p95', rawValue: source.hasData && summary.p95Ms != null ? summary.p95Ms / 1000 : null,
       label: t('notificationLatency.kpis.p95', 'p95 latency'),
       display: { formatter: raw => ({ value: fmtNumber(raw * 1000), unit: 'ms' }) },
-      context: <><TimerReset className="h-5 w-5" aria-hidden="true" />{t('notificationLatency.kpis.samples', '{{count}} measured deliveries', { count: summary.count })}</> },
+      context: <><TimerReset className="h-5 w-5 text-[var(--text-muted)]" aria-hidden="true" />{t('notificationLatency.kpis.samples', '{{count}} attempts with usable latency', {
+        count: summary.count,
+        defaultValue_one: '{{count}} attempt with usable latency',
+        defaultValue_other: '{{count}} attempts with usable latency',
+      })}</> },
     { metricId: 'latency', occurrenceId: 'latency-p99', rawValue: source.hasData && summary.p99Ms != null ? summary.p99Ms / 1000 : null,
       label: t('notificationLatency.kpis.p99', 'p99 latency'),
       display: { formatter: raw => ({ value: fmtNumber(raw * 1000), unit: 'ms' }) },
-      context: <><Hourglass className="h-5 w-5" aria-hidden="true" />{t('notificationLatency.kpis.tail', '{{value}} slower than 4 seconds', {
+      context: <><Hourglass className="h-5 w-5 text-[var(--text-muted)]" aria-hidden="true" />{t('notificationLatency.kpis.tail', '{{value}} slower than 4 seconds', {
         value: summary.tailShare != null ? fmtPercent(summary.tailShare * 100) : '—',
       })}</> },
     { metricId: 'number', occurrenceId: 'latency-apdex', rawValue: source.hasData ? summary.apdex : null,
       label: t('notificationLatency.kpis.apdex', 'Delivery Apdex'),
       display: { formatter: raw => ({ value: fmtScientificNumber(raw, 3), unit: '' }) },
-      context: <><Gauge className="h-5 w-5" aria-hidden="true" />{t('notificationLatency.kpis.apdexThreshold', 'T = 1 s · tolerating through 4 s')}</> },
+      context: <><Gauge className="h-5 w-5 text-[var(--text-muted)]" aria-hidden="true" />{t('notificationLatency.kpis.apdexThreshold', 'T = 1 s · tolerating through 4 s')}</> },
   ];
   const operationalMetrics = useOperationalMetrics(metrics).map((metric, index) => ({
     ...metric,
     tone: index === 2 && (summary.tailShare ?? 0) > 0.05 ? 'warning' as const
-      : index === 3 ? (summary.apdex ?? 0) >= 0.85 ? 'success' as const : 'warning' as const
+      : index === 3 && summary.apdex != null ? summary.apdex >= 0.85 ? 'success' as const : 'warning' as const
         : 'neutral' as const,
   }));
 
@@ -116,7 +124,7 @@ export function NotificationLatencyPanel() {
       <div className="max-w-3xl">
         <SectionTitle>{t('notificationLatency.title', 'Notification latency')}</SectionTitle>
         <Text as="p" color="secondary">
-          {t('notificationLatency.subtitle', 'Measure all recorded delivery attempts using recorded latency or created-to-sent timestamps, including percentiles, Apdex, cohorts, and tail records')}
+          {latencyProvenance}
         </Text>
       </div>
       <StaleRefreshWarning state={source} label={t('notificationLatency.title', 'Notification latency')} />
@@ -129,6 +137,8 @@ export function NotificationLatencyPanel() {
             <GlassPanel className="col-span-full p-4 sm:p-5">
               <QueryError error={source.fatalError} onRetry={() => logsQuery.refetch()} />
             </GlassPanel>
+          ) : isBlocked ? (
+            <GlassPanel className="p-4 sm:p-5">{blockedFeedback}</GlassPanel>
           ) : (
             <OperationalBrief compact loading={isLoading} testId="notification-latency-brief"
               eyebrow={t('notificationLatency.title', 'Notification latency')}
@@ -152,6 +162,11 @@ export function NotificationLatencyPanel() {
         {isError ? (
           <GlassPanel className="p-4 sm:p-5">
             <QueryError error={source.fatalError} onRetry={() => logsQuery.refetch()} />
+          </GlassPanel>
+        ) : isBlocked ? (
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle>{t('notificationLatency.histogram.title', 'Latency distribution')}</PanelTitle>
+            {blockedFeedback}
           </GlassPanel>
         ) : (
           <ChartContainer
@@ -196,16 +211,18 @@ export function NotificationLatencyPanel() {
       <FadeIn delay={0.2}>
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
-            <BellRing className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <BellRing className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
             {t('notificationLatency.cohorts.title', 'Severity and status cohorts')}
           </PanelTitle>
           {isError ? (
             <QueryError error={source.fatalError} onRetry={() => { void logsQuery.refetch(); }} />
+          ) : isBlocked ? (
+            blockedFeedback
           ) : isLoading ? (
             <Skeleton height={96} />
           ) : summary.count === 0 ? (
             <EmptyState
-              icon={<BellRing className="h-8 w-8" />}
+              icon={<BellRing className="h-8 w-8 text-[var(--text-muted)]" />}
               message={t(
                 'notificationLatency.cohorts.empty',
                 'No measured channel deliveries yet. Configure a channel and send a test notification to measure latency.',
@@ -237,6 +254,8 @@ export function NotificationLatencyPanel() {
                             <Text as="p" variant="caption">
                               {t('notificationLatency.cohorts.samples', '{{count}} samples · {{tail}} tail', {
                                 count: cohort.count,
+                                defaultValue_one: '{{count}} sample · {{tail}} tail',
+                                defaultValue_other: '{{count}} samples · {{tail}} tail',
                                 tail: fmtPercent(cohort.tailShare * 100),
                               })}
                             </Text>
@@ -258,16 +277,18 @@ export function NotificationLatencyPanel() {
       <FadeIn delay={0.3}>
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
-            <Hourglass className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <Hourglass className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
             {t('notificationLatency.slowest.title', 'Slowest delivery records')}
           </PanelTitle>
           {isError ? (
             <QueryError error={source.fatalError} onRetry={() => { void logsQuery.refetch(); }} />
+          ) : isBlocked ? (
+            blockedFeedback
           ) : isLoading ? (
             <Skeleton height={180} />
           ) : summary.slowest.length === 0 ? (
             <EmptyState /* no-action: slow records appear automatically when delivery latency is observed. */
-              icon={<Hourglass className="h-8 w-8" />}
+              icon={<Hourglass className="h-8 w-8 text-[var(--text-muted)]" />}
               message={t('notificationLatency.slowest.empty', 'No slow delivery records are available.')}
             />
           ) : (

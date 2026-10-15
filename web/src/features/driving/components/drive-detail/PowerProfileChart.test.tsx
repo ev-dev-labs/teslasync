@@ -6,6 +6,17 @@ import { ChartTimeRangeProvider } from '@/components/charts';
 import { PowerProfileChart } from './PowerProfileChart';
 import { pointFixture, statsFixture, driveFixture } from './detailTestFixtures';
 import type { ChartDataPoint } from './types';
+import type { ReactNode } from 'react';
+import { chartTokens } from '@/lib/tokens';
+vi.mock('@/components/charts', async () => ({
+  ...await vi.importActual<typeof import('@/components/charts')>('@/components/charts'),
+  ResponsiveContainer: ({ children }: { children: ReactNode }) => <>{children}</>,
+  AreaChart: ({ children, data }: { children: ReactNode; data: ChartDataPoint[] }) =>
+    <div data-testid="power-plot" data-values={JSON.stringify(data.map((point) => point.power))}>{children}</div>,
+  Area: ({ stroke }: { stroke: string }) => <span data-testid="power-series" data-stroke={stroke} />,
+  ReferenceLine: ({ y, stroke }: { y?: number; stroke: string }) =>
+    <span data-testid="power-reference" data-y={y} data-stroke={stroke} />,
+}));
 vi.mock('react-i18next', async () => ({
   ...await vi.importActual<typeof import('react-i18next')>('react-i18next'),
   useTranslation: () => ({ t: (key: string, fallback?: string) => fallback ?? key, i18n: { language: 'en' } }),
@@ -28,6 +39,14 @@ function show(points: ChartDataPoint[]) {
 const value = (label: string) => within(screen.getByRole('rowheader', { name: label }).closest('tr')!).getByRole('cell').textContent;
 
 describe('Observed power evidence', () => {
+  it('uses shared power and zero-line paint without losing fractional regenerative signs', () => {
+    show([pointFixture({ power: -5.25 }), pointFixture({ power: 12.5 })]);
+    expect(screen.getByTestId('power-series')).toHaveAttribute('data-stroke', chartTokens.series[2]);
+    expect(screen.getByTestId('power-reference')).toHaveAttribute('data-y', '0');
+    expect(screen.getByTestId('power-reference')).toHaveAttribute('data-stroke', chartTokens.axisStroke);
+    expect(screen.getByTestId('power-plot')).toHaveAttribute('data-values', '[-5.25,12.5]');
+    expect(value('Maximum regen')).toBe('-5 kW');
+  });
   it('suppresses image export until two finite power observations are available', () => {
     const { container, unmount } = show([pointFixture({ power: 0 }), pointFixture({ power: NaN })]);
     expect(container.querySelector('[data-chart-state]')).toHaveAttribute('data-chart-state', 'empty');

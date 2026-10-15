@@ -2,6 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { FSMHealthPanel, computeFlapIds } from './FSMHealthPanel';
 import type { FSMTransition } from '@/types/fsm';
+import { deriveDataState } from '@/api/dataState';
 
 // Resolve the (key, fallback, opts) i18n signature the panel uses, interpolating
 // `{{count}}` from the options object exactly like i18next would in production.
@@ -117,8 +118,9 @@ describe('FSMHealthPanel', () => {
 
     const allClear = screen.getByTestId('fsm-health-all-clear');
     expect(allClear).toBeInTheDocument();
-    expect(within(allClear).getByRole('status')).toHaveTextContent(/All FSMs healthy/i);
-    expect(screen.queryByTestId('fsm-health-panel')).not.toBeInTheDocument();
+    expect(allClear).toHaveAttribute('role', 'status');
+    expect(allClear).toHaveTextContent(/detected in loaded rows/i);
+    expect(screen.getByText(/not authoritative current FSM health/i)).toBeInTheDocument();
     expect(screen.queryByTestId('fsm-health-alert-flap')).not.toBeInTheDocument();
   });
 
@@ -149,7 +151,7 @@ describe('FSMHealthPanel', () => {
 
     const alert = screen.getByTestId('fsm-health-alert-stuck');
     expect(within(alert).getByText('Stuck sessions')).toBeInTheDocument();
-    expect(within(alert).getByText(/1 session\(s\) stuck in pending\/active/)).toBeInTheDocument();
+    expect(within(alert).getByText(/1 potentially stuck session\(s\).*pending\/active/)).toBeInTheDocument();
   });
 
   it('does NOT flag a session as stuck once a later transition resolves it', () => {
@@ -168,7 +170,7 @@ describe('FSMHealthPanel', () => {
     expect(screen.getByTestId('fsm-health-all-clear')).toBeInTheDocument();
   });
 
-  it('reports pod recoveries as an informational alert', () => {
+  it('reports recovery transitions without inventing a pod restart cause', () => {
     render(
       <FSMHealthPanel
         transitions={[
@@ -180,10 +182,10 @@ describe('FSMHealthPanel', () => {
     );
 
     const alert = screen.getByTestId('fsm-health-alert-recovery');
-    expect(within(alert).getByText('Pod recoveries')).toBeInTheDocument();
-    expect(within(alert).getByText(/2 session\(s\) recovered after pod restart/)).toBeInTheDocument();
+    expect(within(alert).getByText('Recovery transitions')).toBeInTheDocument();
+    expect(within(alert).getByText(/2 transitions to recovered.*cause is not established/)).toBeInTheDocument();
     // Informational alerts use the blue accent, not the amber warning accent.
-    expect(alert.className).toContain('border-blue-500/20');
+    expect(alert.className).toContain('border-[var(--semantic-info-border)]');
   });
 
   it('renders multiple distinct alerts side by side', () => {
@@ -205,7 +207,7 @@ describe('FSMHealthPanel', () => {
     expect(within(alert).getByText(/12 transitions flagged as state flapping/)).toBeInTheDocument();
   });
 
-  it('renders the all-clear state without throwing when every timestamp is malformed', () => {
+  it('shows unknown time-based evidence when every timestamp is malformed', () => {
     const render_ = () =>
       render(
         <FSMHealthPanel
@@ -216,6 +218,72 @@ describe('FSMHealthPanel', () => {
         />,
       );
     expect(render_).not.toThrow();
-    expect(screen.getByTestId('fsm-health-all-clear')).toBeInTheDocument();
+    expect(screen.queryByTestId('fsm-health-all-clear')).not.toBeInTheDocument();
+    expect(screen.getByText(/invalid timestamps/i)).toBeInTheDocument();
+  });
+
+  it('keeps missing evidence unknown rather than reporting empty or healthy', () => {
+    render(<FSMHealthPanel transitions={[]} />);
+    expect(screen.getByRole('status')).toHaveTextContent(/has not loaded.*health is unknown/i);
+    expect(screen.queryByTestId('fsm-health-all-clear')).not.toBeInTheDocument();
+  });
+
+  it('shows a loading status only for active loading without retained data', () => {
+    render(<FSMHealthPanel transitions={[]} isLoading sourceState={deriveDataState({ isPending: true, fetchStatus: 'fetching' })} />);
+    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+    expect(screen.queryByTestId('fsm-health-all-clear')).not.toBeInTheDocument();
+    expect(screen.queryByText(/No transitions in the loaded result/i)).not.toBeInTheDocument();
+  });
+
+  it('distinguishes paused-without-data from loading, empty, and failure', () => {
+    render(<FSMHealthPanel transitions={[]} sourceState={deriveDataState({ isPending: true, fetchStatus: 'paused' })} />);
+    expect(screen.getByRole('status')).toHaveTextContent(/evidence is paused.*health is unknown/i);
+    expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('fsm-health-all-clear')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('distinguishes a successful empty result from zero heuristic findings', () => {
+    const { rerender } = render(<FSMHealthPanel transitions={[]} sourceState={deriveDataState({ data: [], isSuccess: true })} />);
+    expect(screen.getByRole('status')).toHaveTextContent(/No transitions in the loaded result.*does not establish FSM health/i);
+    expect(screen.queryByTestId('fsm-health-all-clear')).not.toBeInTheDocument();
+
+    const rows = [makeTransition()];
+    rerender(<FSMHealthPanel transitions={rows} sourceState={deriveDataState({ data: rows, isSuccess: true })} />);
+    expect(screen.getByTestId('fsm-health-all-clear')).toHaveTextContent(/No flapping.*in loaded rows/i);
+    expect(screen.queryByText(/No transitions in the loaded result/i)).not.toBeInTheDocument();
+  });
+
+  it('retains findings on refresh failure and removes the warning after recovery', () => {
+    const rows = burst(6);
+    const { rerender } = render(<FSMHealthPanel transitions={rows} sourceState={deriveDataState({ data: rows, error: new Error('Refresh failed') })} />);
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByTestId('fsm-health-alert-flap')).toHaveTextContent(/6 transitions flagged/i);
+    expect(screen.getByText(/not authoritative current FSM health/i)).toBeInTheDocument();
+
+    rerender(<FSMHealthPanel transitions={rows} sourceState={deriveDataState({ data: rows, isSuccess: true })} />);
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getByTestId('fsm-health-alert-flap')).toHaveTextContent(/6 transitions flagged/i);
+  });
+
+  it('retains zero findings during a paused refresh without declaring current health', () => {
+    const rows = [makeTransition()];
+    render(<FSMHealthPanel transitions={rows} sourceState={deriveDataState({ data: rows, fetchStatus: 'paused' })} />);
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(screen.getByTestId('fsm-health-all-clear')).toHaveTextContent(/in loaded rows/i);
+    expect(screen.queryByText(/All FSMs healthy/i)).not.toBeInTheDocument();
+  });
+
+  it('keeps retained rows visible during active refreshing', () => {
+    const rows = burst(6);
+    render(<FSMHealthPanel transitions={rows} isLoading sourceState={deriveDataState({ data: rows, isFetching: true, fetchStatus: 'fetching' })} />);
+    expect(screen.getByTestId('fsm-health-alert-flap')).toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument();
+  });
+
+  it('does not give a zero-finding verdict for partially malformed timestamps', () => {
+    render(<FSMHealthPanel transitions={[makeTransition(), makeTransition({ ts: 'invalid' })]} />);
+    expect(screen.getByText(/invalid timestamps/i)).toBeInTheDocument();
+    expect(screen.queryByTestId('fsm-health-all-clear')).not.toBeInTheDocument();
   });
 });

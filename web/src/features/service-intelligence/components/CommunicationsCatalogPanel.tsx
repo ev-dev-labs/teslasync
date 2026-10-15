@@ -91,7 +91,7 @@ export function CommunicationsCatalogPanel({
         'Administrator controls for the normalized manufacturer-communications index.',
       )}
       actions={<div className="flex flex-wrap items-center gap-2">
-        <Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <Database className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
       </div>}
     >
       <SourceContent
@@ -120,7 +120,7 @@ export function CommunicationsCatalogPanel({
             freshness={<Caption>
               {t('serviceIntelligence.catalog.lastSuccess', 'Last successful import')}{' '}
               {latest?.completed_at ? (
-                  <DateTime value={latest.completed_at} variant="full" />
+                  <DateTime value={latest.completed_at} variant="full" clock={{ hour: '2-digit', minute: '2-digit', second: '2-digit' }} />
                 ) : (
                   t('serviceIntelligence.catalog.never', 'Never')
                 )}
@@ -180,9 +180,9 @@ export function CommunicationsCatalogPanel({
           )}
 
           {latest && (
-            <div className="rounded-lg border border-cyan-400/15 bg-cyan-400/5 p-3">
+            <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
               <div className="flex flex-wrap items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                <ShieldCheck className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
                 <Text variant="body" weight="semibold">
                   {artifactFilename(latest.artifact_url)}
                 </Text>
@@ -250,6 +250,7 @@ export function CommunicationsCatalogPanel({
                         wrapLabel
                         type="button"
                         size="sm"
+                        className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
                         variant={isLatest ? 'secondary' : 'outline'}
                         loading={isImporting}
                         disabled={importing}

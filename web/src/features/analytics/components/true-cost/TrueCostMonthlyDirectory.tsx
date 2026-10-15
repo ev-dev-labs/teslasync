@@ -3,6 +3,7 @@ import { ListOrdered } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { DataTable, type Column, Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { EmptyState } from '@/components/feedback';
 import type { TcoMonthlyDirectoryRow, TcoMonthlyDisposition } from '../../lib/trueCost';
 import { TrueCostSectionBody } from './TrueCostSectionBody';
 import type { TrueCostSectionProps } from './types';
@@ -134,17 +135,42 @@ export function TrueCostMonthlyDirectory({
           {t('tco.directory.subtitle', 'Every runtime row receives one terminal disposition; each numeric field is validated independently.')}
         </Text>
         <TrueCostSectionBody state={state}>
-          <DataTable
-            enableValueFilters
-            tableId="analytics:true-cost-monthly-evidence"
-            columns={columns}
-            data={[...analysis.monthly]}
-            keyExtractor={(row) => row.sourceIndex}
-            density="compact"
-            pagination={{ defaultPageSize: 12, pageSizeOptions: [12, 24, 48] }}
-            mobileColumns={['source', 'month', 'disposition']}
-            emptyMessage={t('tco.directory.empty', 'No monthly positive-cost rows were returned.')}
-          />
+          {analysis.monthlyAccounting.arrayAvailability !== 'valid' ? (
+            <EmptyState
+              message={analysis.monthlyAccounting.arrayAvailability === 'invalid'
+                ? t('tco.methodology.invalidMonthly', 'The monthly_breakdown field is malformed; no monthly rows were fabricated.')
+                : t('tco.savings.unavailable', 'Unavailable')}
+            />
+          ) : (
+            <DataTable
+              enableValueFilters
+              tableId="analytics:true-cost-monthly-evidence"
+              columns={columns}
+              data={[...analysis.monthly]}
+              keyExtractor={(row) => row.sourceIndex}
+              density="compact"
+              pagination={{ defaultPageSize: 12, pageSizeOptions: [12, 24, 48] }}
+              mobileColumns={columns.map((column) => column.key)}
+              mobilePresentation={{
+                roles: { month: 'title', evCost: 'primary', source: 'meta', disposition: 'badge' },
+                displayValue: (row, key) => {
+                  switch (key) {
+                    case 'source': return row.sourceIndex + 1;
+                    case 'month': return row.month ? display.formatMonth(row.month) : '—';
+                    case 'disposition': return dispositionLabel(row.disposition, t);
+                    case 'evCost': return display.formatCurrency(row.evCost.value);
+                    case 'gasCost': return display.formatCurrency(row.gasCost.value);
+                    case 'energy': return display.formatEnergy(row.energyWh.value);
+                    case 'apiSavings': return display.formatSignedCurrency(row.apiSavings.value);
+                    case 'apiCumulative': return display.formatSignedCurrency(row.apiCumulative.value);
+                    case 'derivedDelta': return display.formatSignedCurrency(row.derivedFuelDelta);
+                    default: return null;
+                  }
+                },
+              }}
+              emptyMessage={t('tco.directory.empty', 'No monthly positive-cost rows were returned.')}
+            />
+          )}
         </TrueCostSectionBody>
       </GlassPanel>
     </section>

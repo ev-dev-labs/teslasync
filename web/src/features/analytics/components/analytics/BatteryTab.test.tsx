@@ -20,8 +20,8 @@
  *     numberFormat + real useUnits/formatEnergy code paths, all four charts
  *     render, each series binds its dataKey, and the range series is projected
  *     into the user's distance unit.
- *   - null-safe→ a latest row full of nulls collapses to safe zeros, never NaN
- *     or a crash.
+ *   - null-safe→ absent measurements remain unknown, including chart gaps;
+ *     SOC-only rows preserve the four battery sections without fake health.
  *   - units    → flipping the user's distance preference to miles re-projects
  *     both the "Est. Range" card and the range chart via the REAL
  *     convertDistanceFromSI, and relabels the accessible chart title.
@@ -273,6 +273,17 @@ describe('BatteryTab — loading', () => {
 // ── Empty ───────────────────────────────────────────────────────────────────
 
 describe('BatteryTab — empty', () => {
+  it('does not substitute charging totals for missing battery measurements', () => {
+    const data = analytics([]);
+    data.total_energy_kwh = 500;
+    data.avg_efficiency_wh_km = 150;
+    renderTab(makeQuery({ data }));
+    expect(screen.getAllByText('No battery trend data available')).toHaveLength(4);
+    expect(screen.getAllByText('—')).toHaveLength(5);
+    expect(screen.queryByTestId('chart-area')).toBeNull();
+    expect(screen.queryByText('500.00 kWh')).toBeNull();
+  });
+
   it('keeps all five labelled cards (em-dash) and shows an empty state per panel', () => {
     renderTab(makeQuery({ data: analytics([]) }));
 
@@ -400,14 +411,14 @@ describe('BatteryTab — null safety', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
-  it('keeps a latest row full of nulls unknown without changing chart projection', () => {
+  it('keeps a latest row full of nulls unknown without fabricating chart zeros', () => {
     const nulled = row({
       date: '2026-03-01',
-      health_score: null as unknown as number,
-      capacity_wh: null as unknown as number,
-      degradation_pct: null as unknown as number,
-      range_km: null as unknown as number,
-      cycle_count: null as unknown as number,
+      health_score: null,
+      capacity_wh: null,
+      degradation_pct: null,
+      range_km: null,
+      cycle_count: null,
     });
     renderTab(makeQuery({ data: analytics([nulled]) }));
 
@@ -418,9 +429,29 @@ describe('BatteryTab — null safety', () => {
     )).toHaveLength(5);
     expect(screen.queryByText('0.00 kWh')).toBeNull();
 
-    // Charts still render (the row exists) and the range projection is 0, not NaN.
-    expect(screen.getByTestId('chart-area')).toBeInTheDocument();
-    expect(rangeRows()[0].range).toBe(0);
+    expect(screen.queryByTestId('chart-area')).toBeNull();
+    expect(screen.getAllByText('No battery trend data available')).toHaveLength(4);
+  });
+
+  it('shows SOC and its bucket bounds without asserting health or cycles', () => {
+    renderTab(makeQuery({ data: analytics([row({
+      health_score: null, capacity_wh: null, degradation_pct: null,
+      range_km: null, cycle_count: null, soc_pct: 0, source: 'daily_soc',
+      coverage_start: '2026-03-01T00:00:00Z',
+      coverage_end: '2026-03-02T00:00:00Z',
+    })]) }));
+    expect(screen.getByText(/SoC: 0.00%/)).toHaveTextContent('2026-03-01T00:00:00Z');
+    expect(screen.getByText(/SoC: 0.00%/)).toHaveTextContent('2026-03-02T00:00:00Z');
+    expect(screen.getAllByText('No battery trend data available')).toHaveLength(4);
+    expect(screen.getByRole('heading', { name: 'Degradation & cycles' })).toBeInTheDocument();
+  });
+
+  it('keeps missing capacity and range as gaps beside populated observations', () => {
+    renderTab(makeQuery({ data: analytics([
+      row(), row({ capacity_wh: null, range_km: null }),
+    ]) }));
+    expect(rangeRows()[1].range).toBeNull();
+    expect(rangeRows()[1].capacity).toBeNull();
   });
 });
 

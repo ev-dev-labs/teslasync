@@ -2,11 +2,11 @@ import { AlertTriangle, Clock3, ExternalLink, Gauge, Route, ShieldCheck } from '
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
-import { Badge, GlassPanel, PanelTitle, Table, Text } from '@/components/ui';
+import { Badge, Button, GlassPanel, PanelTitle, Table, Text } from '@/components/ui';
 import { AlertBanner } from '@/components/feedback';
 import { Skeleton } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import type { DriveFsdInsight, FsdAttributionConfidence } from '@/types/fsd';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -15,6 +15,7 @@ interface SupervisedDrivingPanelProps {
   insight: DriveFsdInsight | undefined;
   isLoading: boolean;
   error?: unknown;
+  onRetry?: () => void;
   isOngoing?: boolean;
 }
 
@@ -32,10 +33,12 @@ export function SupervisedDrivingPanel({
   insight,
   isLoading,
   error,
+  onRetry,
   isOngoing = false,
 }: SupervisedDrivingPanelProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat();
   const { formatDistance } = useUnits();
 
   if (isLoading) {
@@ -55,8 +58,14 @@ export function SupervisedDrivingPanel({
       >
         {t(
           'driveDetail.fsd.loadFailedBody',
-          'The rest of this drive remains available. Retry the page to load the cumulative-counter evidence.',
+          'The rest of this drive remains available. Retry supervised-driving evidence independently.',
         )}
+        {onRetry ? (
+          <Button type="button" variant="ghost" size="sm" wrapLabel
+            className="mt-3 min-h-11 md:min-h-9" onClick={onRetry}>
+            {t('driveDetail.fsd.retry', 'Retry supervised-driving evidence')}
+          </Button>
+        ) : null}
       </AlertBanner></GlassPanel>
     );
   }
@@ -146,7 +155,7 @@ export function SupervisedDrivingPanel({
             </th>
             <td>
               {firstEvidence && lastEvidence
-                ? `${formatDateTime(firstEvidence)} - ${formatDateTime(lastEvidence)}`
+                ? <><time dateTime={firstEvidence} title={firstEvidence}>{formatDateTime(firstEvidence)}</time>{' - '}<time dateTime={lastEvidence} title={lastEvidence}>{formatDateTime(lastEvidence)}</time></>
                 : t('driveDetail.fsd.noPositiveEvidence', 'No positive counter increase')}
             </td>
           </tr></tbody>

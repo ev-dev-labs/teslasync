@@ -69,6 +69,7 @@ import { request, ApiError } from '@/api/client'
 import type { ParsedEndpoint } from '../components/EndpointSidebar'
 import ResponseViewer, { SnippetPanel, type HistoryEntry, type ApiResponse } from '../components/ResponseViewer'
 import { executeRequest } from '../components/continuation-admin-1/playgroundRequest'
+import * as errorReporter from '@/lib/errorReporter'
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>
 
@@ -247,6 +248,62 @@ describe('findReplayEndpoint', () => {
 /* ─── page ─────────────────────────────────────────────────────────────── */
 
 describe('ApiPlaygroundPage', () => {
+  it.each([
+    { name: 'malformed JSON', raw: '{"secret":"synthetic-secret",' },
+    { name: 'invalid root', raw: JSON.stringify({ secret: 'synthetic-secret' }) },
+    { name: 'all-invalid rows', raw: JSON.stringify([null, { method: 'GET', path: '/vehicles', status: 200 }]) },
+  ])('recovers from $name history with feedback and usable request execution', async ({ raw }) => {
+    mockedRequest.mockResolvedValueOnce(SPEC_YAML)
+    sessionStorage.setItem('teslasync-api-playground-history', raw)
+    const report = vi.spyOn(errorReporter, 'reportFrontendError').mockImplementation(() => {})
+    const fetchMock = vi.fn().mockResolvedValue(fakeResponse({ body: { recovered: true } }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderPage()
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Saved request history could not be loaded')
+    expect(screen.getByRole('alert')).toHaveTextContent('empty history')
+    expect(screen.getByTestId('api-playground-history-summary').querySelector('[data-operational-metric="recent"]')).toHaveTextContent('0')
+    expect(report).toHaveBeenCalledWith(expect.any(Error), 'react')
+    expect(report.mock.calls[0][0]).toHaveProperty('message', 'API playground saved history could not be loaded')
+    expect(sessionStorage.getItem('teslasync-api-playground-history')).toBe(raw)
+    fireEvent.click(await screen.findByText('/vehicles'))
+    expect(fetchMock).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    expect(await screen.findByRole('region', { name: 'Response body' })).toHaveTextContent('"recovered": true')
+    const saved = JSON.parse(sessionStorage.getItem('teslasync-api-playground-history') ?? '[]') as HistoryEntry[]
+    expect(saved).toEqual([{
+      method: 'GET', path: '/vehicles', status: 200, duration: expect.any(Number), timestamp: expect.any(String),
+    }])
+  })
+
+  it('retains mixed-valid history, reports invalid rows and replays metadata without auto-sending', async () => {
+    mockedRequest.mockResolvedValueOnce(SPEC_YAML)
+    sessionStorage.setItem('teslasync-api-playground-history', JSON.stringify([
+      null,
+      { ...mkEntry('GET', '/vehicles/4/state?token=synthetic-secret'), body: 'synthetic-body', headers: { Authorization: 'synthetic-token' } },
+      { method: 'POST', path: '/alerts', status: 0 },
+    ]))
+    const report = vi.spyOn(errorReporter, 'reportFrontendError').mockImplementation(() => {})
+    const fetchMock = vi.fn().mockResolvedValue(fakeResponse())
+    vi.stubGlobal('fetch', fetchMock)
+    renderPage()
+    fireEvent.click(await screen.findByText('/vehicles'))
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(report).toHaveBeenCalledWith(expect.objectContaining({ message: 'API playground history contains invalid entries' }), 'react')
+    fireEvent.click(screen.getByTitle(/GET \/vehicles\/4\/state → 200/))
+    expect(screen.getByPlaceholderText('integer')).toBeInTheDocument()
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(screen.queryByText(/synthetic-secret|synthetic-body|synthetic-token/)).toBeNull()
+    fireEvent.change(screen.getByPlaceholderText('integer'), { target: { value: '5' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    await screen.findByRole('region', { name: 'Response body' })
+    const saved = JSON.parse(sessionStorage.getItem('teslasync-api-playground-history') ?? '[]') as HistoryEntry[]
+    expect(saved).toHaveLength(2)
+    expect(saved[1].path).toBe('/vehicles/4/state')
+    expect(saved.every(entry => Object.keys(entry).sort().join(',') === 'duration,method,path,status,timestamp')).toBe(true)
+  })
+
   it('keeps specification and saved local history as separate real operational briefs', async () => {
     mockedRequest.mockResolvedValueOnce(SPEC_YAML)
     renderPage()

@@ -215,6 +215,63 @@ describe('useLiveSignalStream — chart slice', () => {
 
 // ───────────────────────────── tail slice ──────────────────────────────────
 describe('useLiveSignalStream — tail slice', () => {
+  it.each([
+    { signals: { speed: 0 } },
+    { cold: [{ name: 'speed', value: 0 }] },
+    { tables: { drive: { speed: 0 } } },
+  ])('keeps frame provenance separate from observation freshness for %j', (payload) => {
+    const { result } = setup({ chartSignals: ['speed'] });
+    const frameTimestamp = '2025-12-31T23:59:30.123+00:00';
+
+    emit({ ...payload, timestamp: frameTimestamp });
+
+    expect(tailEntry(result.current.tailEntries, 'speed')).toMatchObject({
+      timestamp: frameTimestamp,
+      frameTimestamp,
+      timestampProvenance: 'frame',
+      receivedAt: BASE_ISO,
+      observationTimestamp: null,
+      value: '0',
+      type: 'number',
+    });
+  });
+
+  it('labels missing frame time as receipt time without inventing an observation', () => {
+    const { result } = setup({ chartSignals: ['speed'] });
+
+    emit({ signals: { speed: 0, charging: false } });
+
+    expect(result.current.tailEntries).toHaveLength(2);
+    expect(tailEntry(result.current.tailEntries, 'charging')).toMatchObject({
+      timestamp: BASE_ISO,
+      frameTimestamp: null,
+      timestampProvenance: 'received',
+      receivedAt: BASE_ISO,
+      observationTimestamp: null,
+      value: 'false',
+      type: 'boolean',
+    });
+    expect(result.current.chartData[0]).toMatchObject({
+      timestamp: BASE_ISO,
+      timestampProvenance: 'received',
+      frameTimestamp: null,
+      observationTimestamp: null,
+      speed: 0,
+    });
+  });
+
+  it('preserves invalid raw frame time without promoting it to an observation', () => {
+    const { result } = setup();
+    emit({ timestamp: 'invalid-raw-time', signals: { gear: 'D' } });
+    expect(result.current.tailEntries[0]).toMatchObject({
+      timestamp: 'invalid-raw-time',
+      frameTimestamp: 'invalid-raw-time',
+      timestampProvenance: 'frame',
+      observationTimestamp: null,
+      value: 'D',
+    });
+  });
+
   it('flattens a bare `signals` frame, typing values and skipping meta/nested keys', () => {
     const { result } = setup({ chartSignals: [] });
 

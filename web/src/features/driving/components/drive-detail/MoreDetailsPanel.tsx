@@ -18,10 +18,13 @@ export function MoreDetailsPanel({ drive, stats, chartData }: { drive: DriveDeta
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs, formatEnergy } = useUnits();
-  const { energyWh: used, regenWh: recovered } = driveEnergyEvidence(drive, stats);
+  const evidence = driveEnergyEvidence(drive, stats);
+  const { energyWh: used, regenWh: recovered } = evidence;
   const odometer = driveOdometerEvidence(drive, stats, unitPrefs.distance, chartData);
   const reported = t('driveDetail.report.persisted', 'Persisted drive aggregate');
   const sampled = t('driveDetail.report.sampled', 'Recorded telemetry samples');
+  const odometerSource = odometer.source === 'aggregate' ? reported : odometer.source === 'sampled' ? sampled
+    : t('driveDetail.report.odometerMixed', 'Recorded endpoints with telemetry fallback');
   const missing = t('common.unknown', 'Unknown');
   const rangePair = stats.startRange != null
     ? `${fmtNumber(stats.startRange)} → ${stats.endRange != null ? fmtNumber(stats.endRange) : '—'} ${unitPrefs.distance}` : '—';
@@ -50,13 +53,13 @@ export function MoreDetailsPanel({ drive, stats, chartData }: { drive: DriveDeta
     {
       id: 'used', label: t('driveDetail.energyConsumed', 'Energy consumed'),
       value: used != null ? formatEnergy(used) : '—',
-      source: drive.energyUsedWh != null ? reported
+      source: evidence.energySource === 'observed' ? reported
         : used != null ? t('driveDetail.report.energyEstimate', 'Estimate: absolute average power × duration; not metered energy') : missing,
     },
     {
       id: 'regen', label: t('driveDetail.energyRecovered', 'Energy recovered'),
       value: recovered != null ? formatEnergy(recovered) : '—',
-      source: drive.regenEnergyWh != null ? reported
+      source: evidence.regenSource === 'observed' ? reported
         : recovered != null ? t('driveDetail.report.regenEstimate', 'Estimate: negative-power sample mean × duration; assumes uniform sampling') : missing,
     },
     {
@@ -65,8 +68,7 @@ export function MoreDetailsPanel({ drive, stats, chartData }: { drive: DriveDeta
         : t('driveDetail.odometer', 'Odometer (from → to)'),
       value: odometer.start != null || odometer.end != null
         ? `${odometer.start != null ? fmtNumber(odometer.start) : '—'} → ${odometer.end != null ? fmtNumber(odometer.end) : '—'} ${unitPrefs.distance}` : '—',
-      source: odometer.source === 'aggregate' ? reported : odometer.source === 'sampled' ? sampled
-        : t('driveDetail.report.odometerMixed', 'Recorded endpoints with telemetry fallback'),
+      source: odometerSource,
     },
     ...(chartData != null ? rangeRows : [{
       id: 'range', label: t('driveDetail.rangeStartEnd', 'Range (start → end)'),
@@ -109,6 +111,10 @@ export function MoreDetailsPanel({ drive, stats, chartData }: { drive: DriveDeta
             </tr>
           ))}</tbody>
         </Table>
+        {evidence.powerObservationCount != null && evidence.powerSampleCount != null && <Text as="p" variant="caption">
+          {sampled}: {fmtNumber(evidence.powerObservationCount, 0)} / {fmtNumber(evidence.powerSampleCount, 0)}
+          {' · '}{t('driveDetail.report.powerMethod', 'Power samples preserve sign: positive draw, negative regeneration. Peak values require observations.')}
+        </Text>}
         <Text as="p" variant="caption">
           {t('driveDetail.report.noNet', 'Consumed and recovered energy retain their original source semantics. No additional net-energy total is inferred.')}
         </Text>

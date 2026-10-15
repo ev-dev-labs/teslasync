@@ -1,4 +1,5 @@
 import { Building2, Pencil, Plus, Trash2 } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { Button, Text, StatusPill } from '@/components/ui';
@@ -9,12 +10,19 @@ import type {
   FleetWorkOrder,
 } from '@/api/hooks/useFleetOps';
 import { costCenterAllocations, formatMinorUnits } from '../helpers';
+import type { DataState } from '@/api/dataState';
 
 interface CostCenterAllocationProps {
   costCenters: FleetCostCenter[];
   reservations: FleetReservation[];
   workOrders: FleetWorkOrder[];
   loading: boolean;
+  source?: DataState<unknown>;
+  pendingContent?: ReactNode;
+  dependencies?: {
+    reservations: DataState<unknown>;
+    workOrders: DataState<unknown>;
+  };
   error: unknown;
   onRetry: () => void;
   onAdd: () => void;
@@ -29,6 +37,9 @@ export function CostCenterAllocation({
   reservations,
   workOrders,
   loading,
+  source,
+  pendingContent,
+  dependencies,
   error,
   onRetry,
   onAdd,
@@ -52,9 +63,29 @@ export function CostCenterAllocation({
           {t('fleetOps.costCenters.add', 'Add cost center')}
         </Button>
       }>
-      {loading ? <Skeleton lines={5} /> : error ? (
+      {dependencies && Object.entries(dependencies).map(([key, state]) => {
+        if (state.hasData) return null;
+        const label = key === 'reservations'
+          ? t('fleetOps.reservations.resource', 'Reservations')
+          : t('fleetOps.workOrders.resource', 'Work orders');
+        return state.fatalError ? (
+          <QueryError key={key} error={state.fatalError} onRetry={() => state.retry?.()} resourceName={label} />
+        ) : (
+          <div key={key} role="status">
+            <Text as="p" variant="bodySm" color="muted">
+              {label}: {state.isRefreshBlocked
+                ? t('fleetOps.brief.refreshBlocked', 'Refresh paused')
+                : t('fleetOps.brief.source.initial', 'Awaiting source')}
+            </Text>
+            {state.isRefreshBlocked ? <Button variant="ghost" onClick={() => state.retry?.()}>{t('common.retry', 'Retry')}</Button> : null}
+          </div>
+        );
+      })}
+      {source?.hasData !== true && error ? (
         <QueryError error={error} onRetry={onRetry} resourceName={t('fleetOps.costCenters.resource', 'Cost centers')} />
-      ) : allocations.length === 0 ? (
+      ) : source && !source.hasData ? (
+        pendingContent
+      ) : !source && loading ? <Skeleton lines={5} /> : allocations.length === 0 ? (
         <EmptyState
           icon={<Building2 className="h-8 w-8" />}
           message={t('fleetOps.costCenters.empty', 'No cost centers have been configured.')}
@@ -106,14 +137,22 @@ export function CostCenterAllocation({
               <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
                 <div>
                   <Text as="p" variant="caption">{t('fleetOps.costCenters.bookings', 'Bookings')}</Text>
-                  <Text as="p" weight="semibold">{allocation.reservation_count}</Text>
+                  <Text as="p" weight="semibold">{dependencies && !dependencies.reservations.hasData ? '—' : allocation.reservation_count}</Text>
                 </div>
                 <Text as="p" variant="caption" className="mt-3">
-                  {t('fleetOps.costCenters.maintenanceCost', 'Maintenance cost')}: {formatMinorUnits(allocation.cost_minor, allocation.currency)}
+                  {t('fleetOps.costCenters.maintenanceCost', 'Maintenance cost')}: {dependencies && !dependencies.workOrders.hasData ? '—' : formatMinorUnits(allocation.cost_minor, allocation.currency)}
+                  {(!dependencies || dependencies.workOrders.hasData) && (
+                    <>
+                      {' · '}{t('fleetOps.workOrders.resource', 'Work orders')}: {allocation.qualifying_cost_count}/{allocation.work_order_count}
+                      {allocation.cost_state === 'partial'
+                        ? <> · {t('fleetOps.brief.source.partial', 'Partial source data')}</>
+                        : null}
+                    </>
+                  )}
                 </Text>
                 <div>
                   <Text as="p" variant="caption">{t('fleetOps.costCenters.openOrders', 'Open orders')}</Text>
-                  <Text as="p" weight="semibold">{allocation.open_work_order_count}</Text>
+                  <Text as="p" weight="semibold">{dependencies && !dependencies.workOrders.hasData ? '—' : allocation.open_work_order_count}</Text>
                 </div>
               </div>
             </div>

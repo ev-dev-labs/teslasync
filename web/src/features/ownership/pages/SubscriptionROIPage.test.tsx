@@ -634,6 +634,8 @@ describe('SubscriptionROIPage — confirm-gated delete', () => {
     expect(row).toHaveTextContent('Samples2');
     expect(row).toHaveTextContent('Coverage20');
     expect(row).toHaveTextContent('Observation window');
+    expect(row).toHaveTextContent(formatDateTime(quality.window_start, { locale: 'en-US', tz: 'UTC' }));
+    expect(row).toHaveTextContent(formatDateTime(quality.window_end, { locale: 'en-US', tz: 'UTC' }));
     expect(row).toHaveTextContent(quality.reasons[0]);
     view.unmount();
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(() => new DOMRect(0, 0, 375, 100));
@@ -644,6 +646,8 @@ describe('SubscriptionROIPage — confirm-gated delete', () => {
     expect(dialog).toHaveTextContent('Limited evidence');
     expect(dialog).toHaveTextContent('Samples2');
     expect(dialog).toHaveTextContent('Coverage20');
+    expect(dialog).toHaveTextContent(formatDateTime(quality.window_start, { locale: 'en-US', tz: 'UTC' }));
+    expect(dialog).toHaveTextContent(formatDateTime(quality.window_end, { locale: 'en-US', tz: 'UTC' }));
     expect(dialog).toHaveTextContent(quality.reasons[0]);
   });
 
@@ -662,13 +666,19 @@ describe('SubscriptionROIPage — confirm-gated delete', () => {
     mockROI.mockReturnValue(makeQuery(makeReport([makeROI({ quality })])));
     const view = renderPage();
     const expected = formatDateTime(subscription.started_at, { locale: 'de-DE', tz: 'America/Los_Angeles' });
+    const expectedEnd = formatDateTime(subscription.ended_at, { locale: 'de-DE', tz: 'America/Los_Angeles' });
     expect(card('Subscription register')).toHaveTextContent(expected);
+    expect(card('Subscription register')).toHaveTextContent(expectedEnd);
     expect(card('Per-subscription verdict')).toHaveTextContent(expected);
+    expect(card('Per-subscription verdict')).toHaveTextContent(expectedEnd);
     timezone.mockReturnValue('UTC');
     view.rerenderPage();
     const utc = formatDateTime(subscription.started_at, { locale: 'de-DE', tz: 'UTC' });
+    const utcEnd = formatDateTime(subscription.ended_at, { locale: 'de-DE', tz: 'UTC' });
     expect(card('Subscription register')).toHaveTextContent(utc);
+    expect(card('Subscription register')).toHaveTextContent(utcEnd);
     expect(card('Per-subscription verdict')).toHaveTextContent(utc);
+    expect(card('Per-subscription verdict')).toHaveTextContent(utcEnd);
     expect(subscription.started_at).toBe('2026-01-01T00:00:00Z');
     expect(subscription.ended_at).toBe('2026-03-01T00:00:00Z');
   });

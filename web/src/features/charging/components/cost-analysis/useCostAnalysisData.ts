@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import type { ChargingSession } from '@/api/types';
 import { distanceAddedM } from '../charging-curve/helpers';
-import { formatDateShort } from '@/lib/dateFormat';
+import { ymdInTz } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { CHART_COLORS, CHARGER_COLORS } from '@/lib/colors';
 import { KWH_PER_GALLON, CO2_PER_GAL_KG, KG_CO2_PER_TREE_YEAR } from './constants';
 import { categorizeCharger, gasEquivalentCost } from './helpers';
@@ -25,7 +26,7 @@ function finite(value: unknown): number | null {
 }
 
 function durationMinutes(start: string, end: string | null): number {
-  if (!end) return NaN;
+  if (!start || !end) return NaN;
   const milliseconds = new Date(end).getTime() - new Date(start).getTime();
   return Number.isFinite(milliseconds) && milliseconds >= 0 ? milliseconds / 60000 : NaN;
 }
@@ -52,13 +53,54 @@ function coverage(sessions: ChargingSession[]) {
 
 type Coverage = ReturnType<typeof coverage>;
 
+interface SavingsDisclosure {
+  /** Energy-content comparison, not savings proven from driven distance. */
+  basis: 'energy-content-equivalence';
+  modeledEvCost: number | null;
+  modeledSavings: number | null;
+  /** Uses recorded charging spend, but the gasoline comparator is still modeled. */
+  actualSavings: number | null;
+}
+
+function savingsDisclosure(
+  gasCost: number, energyKwh: number, actualSavings: number,
+  electricityRate: number, dataCoverage: Coverage,
+): SavingsDisclosure {
+  const modeledEvCost = dataCoverage.unknownEnergyCount === 0 && finite(electricityRate) != null
+    ? finite(energyKwh * electricityRate) : null;
+  return {
+    basis: 'energy-content-equivalence',
+    modeledEvCost,
+    modeledSavings: modeledEvCost == null ? null : finite(gasCost - modeledEvCost),
+    actualSavings: finite(actualSavings),
+  };
+}
+
+const OFF_PEAK_ASSUMPTION = {
+  source: 'assumption',
+  startHourInclusive: 22,
+  endHourExclusive: 6,
+} as const;
+
 interface UseCostAnalysisDataResult {
+  /** Timezone used for monthly accounting, hourly buckets and off-peak boundaries. */
+  accountingTimezone: string;
+  dateCoverage: { totalCount: number; datedCount: number; undatedCount: number };
+  /** Bounds of loaded session starts, not query bounds or proof of continuous history. */
+  observedWindow: {
+    source: 'loaded-session-starts';
+    firstSessionStart: string | null;
+    lastSessionStart: string | null;
+    observedMonthCount: number;
+    accountingMonthCompleteness: 'unknown';
+  };
   coverage: Coverage;
   rawMeasurements: {
     sessionId: number;
     cost: number | null;
     energyWh: number | null;
     durationMinutes: number | null;
+    /** Charging-session odometer delta, not verified driven distance. */
     distanceM: number | null;
   }[];
   currencySummary: {
@@ -70,13 +112,31 @@ interface UseCostAnalysisDataResult {
     recordedAmounts: { sessionId: number; amount: number | null; currency: string | null }[];
   };
   operationalTotals: { count: number; energyKwh: number; durationMinutes: number; distanceM: number };
-  coreStats: (CoreStats & { coverage: Coverage }) | null;
-  monthlyData: (MonthlyBucket & { coverage: Coverage })[];
+  coreStats: (CoreStats & { coverage: Coverage; savingsDisclosure: SavingsDisclosure }) | null;
+  monthlyData: (MonthlyBucket & {
+    coverage: Coverage;
+    accountingMonthCompleteness: 'unknown';
+    savingsDisclosure: SavingsDisclosure;
+  })[];
   costPerKwhTrend: { date: string; costPerKwh: number; currency: string }[];
   chargerTypeData: (ChargerTypeData & { coverage: Coverage })[];
   hourlyData: (HourBucket & { coverage: Coverage })[];
-  touInsights: TouInsights | null;
-  gasComparison: GasComparison | null;
+  /** Fixed analysis window, not an observed utility tariff. */
+  touAssumptions: typeof OFF_PEAK_ASSUMPTION & { timezone: string };
+  touInsights: (TouInsights & {
+    /** Hour ranking compares recorded spend per session, not currency per kWh. */
+    comparisonBasis: 'recorded-spend-per-session';
+    /** Off-peak share excludes sessions whose start time is unknown. */
+    datedSessionCount: number;
+    undatedSessionCount: number;
+  }) | null;
+  gasComparison: (GasComparison & {
+    basis: 'driven-distance';
+    unavailableReason: 'no-verified-driven-distance';
+    modeledSavings: number | null;
+    actualSavings: number | null;
+    projectionStatus: 'unavailable';
+  }) | null;
   lifetimeMetrics: LifetimeMetrics | null;
 }
 
@@ -85,8 +145,42 @@ export function useCostAnalysisData({
   gasPrice,
   mpg,
   electricityRate,
-  toDistanceDisplay,
 }: UseCostAnalysisDataParams): UseCostAnalysisDataResult {
+  const { tz: accountingTimezone, formatDateShort } = useDateFormat();
+  const sessionDates = useMemo(() => {
+    const hourFormatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: accountingTimezone, hour: 'numeric', hourCycle: 'h23',
+    });
+    return new Map((sourceSessions ?? []).map(session => {
+      const date = session.started_at ? new Date(session.started_at) : null;
+      const validDate = date && Number.isFinite(date.getTime()) ? date : null;
+      const hour = validDate
+        ? Number(hourFormatter.formatToParts(validDate).find(part => part.type === 'hour')?.value)
+        : NaN;
+      return [session, {
+        month: validDate ? ymdInTz(validDate, accountingTimezone)?.slice(0, 7) ?? null : null,
+        hour: Number.isFinite(hour) ? hour : null,
+        timestamp: validDate?.getTime() ?? null,
+      }];
+    }));
+  }, [sourceSessions, accountingTimezone]);
+  const dateCoverage = useMemo(() => {
+    const totalCount = sourceSessions?.length ?? 0;
+    const datedCount = (sourceSessions ?? []).filter(session => sessionDates.get(session)?.timestamp != null).length;
+    return { totalCount, datedCount, undatedCount: totalCount - datedCount };
+  }, [sourceSessions, sessionDates]);
+  const observedWindow = useMemo<UseCostAnalysisDataResult['observedWindow']>(() => {
+    const dates = [...sessionDates.values()];
+    const timestamps = dates.flatMap(date => date.timestamp == null ? [] : [date.timestamp])
+      .sort((a, b) => a - b);
+    return {
+      source: 'loaded-session-starts',
+      firstSessionStart: timestamps.length ? new Date(timestamps[0]).toISOString() : null,
+      lastSessionStart: timestamps.length ? new Date(timestamps[timestamps.length - 1]).toISOString() : null,
+      observedMonthCount: new Set(dates.flatMap(date => date.month == null ? [] : [date.month])).size,
+      accountingMonthCompleteness: 'unknown',
+    };
+  }, [sessionDates]);
   const rawMeasurements = useMemo(() => (sourceSessions ?? []).map(s => ({
     sessionId: s.id,
     cost: finite(s.cost_decimal),
@@ -130,7 +224,7 @@ export function useCostAnalysisData({
     count: sourceSessions?.length ?? 0,
     energyKwh: convertEnergyFromSI(rawMeasurements.reduce((sum, s) => sum + (s.energyWh ?? 0), 0), 'kWh'),
     durationMinutes: rawMeasurements.reduce((sum, s) => sum + (s.durationMinutes ?? 0), 0),
-    distanceM: (sourceSessions ?? []).reduce((sum, session) => sum + (distanceAddedM(session) ?? 0), 0),
+    distanceM: NaN,
   }), [sourceSessions, rawMeasurements]);
   // Existing views and calculator seeds are USD-only. Other denominations
   // remain in currencySummary, never relabelled or converted into USD.
@@ -147,13 +241,10 @@ export function useCostAnalysisData({
     const avgCostPerKwh = statsCoverage.rate ?? NaN;
     const totalDuration = sessions.reduce((s, c) => s + (finite(durationMinutes(c.started_at, c.ended_at)) ?? 0), 0);
 
-    let totalDistanceM = 0;
-    sessions.forEach((s) => {
-      totalDistanceM += (distanceAddedM(s) ?? 0);
-    });
-
-    const distVal = toDistanceDisplay(totalDistanceM);
-    const costPerDist = distVal > 0 && statsCoverage.unknownCostCount === 0 ? totalCost / distVal : NaN;
+    // Stationary charging odometer deltas do not establish driven distance.
+    // Keep distance-based views unavailable until verified driving evidence exists.
+    const totalDistanceM = NaN;
+    const costPerDist = NaN;
 
     const gallonsEquiv = totalEnergy / KWH_PER_GALLON;
     const gasCost = statsCoverage.unknownEnergyCount === 0 && finite(gasPrice) != null ? gallonsEquiv * gasPrice : NaN;
@@ -167,16 +258,16 @@ export function useCostAnalysisData({
       totalCost, totalEnergy, avgCostPerKwh, totalDuration,
       totalDistanceM, costPerDist, gasCost, savings, savingsPercent,
       co2SavedKg, treeEquiv, gallonsEquiv, count: sessions.length, coverage: statsCoverage,
+      savingsDisclosure: savingsDisclosure(gasCost, totalEnergy, savings, electricityRate, statsCoverage),
     };
-  }, [sessions, gasPrice, toDistanceDisplay]);
+  }, [sessions, gasPrice, electricityRate]);
 
   const monthlyData = useMemo<UseCostAnalysisDataResult['monthlyData']>(() => {
     if (!sessions || sessions.length === 0) return [];
     const buckets: Record<string, { cost: number; energy: number; sessions: number; records: ChargingSession[] }> = {};
     sessions.forEach((s) => {
-      const d = new Date(s.started_at);
-      if (!Number.isFinite(d.getTime())) return;
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const key = sessionDates.get(s)?.month;
+      if (!key) return;
       if (!buckets[key]) buckets[key] = { cost: 0, energy: 0, sessions: 0, records: [] };
       buckets[key].records.push(s);
       buckets[key].cost += finite(s.cost_decimal) ?? 0;
@@ -190,6 +281,7 @@ export function useCostAnalysisData({
         const bucketCoverage = coverage(v.records);
         const ge = bucketCoverage.unknownEnergyCount === 0 && finite(gasPrice) != null
           ? gasEquivalentCost(energyKwh, mpg, gasPrice) : NaN;
+        const savings = bucketCoverage.unknownCostCount === 0 ? ge - v.cost : NaN;
         return {
           month,
           cost: bucketCoverage.pricedCount > 0 ? v.cost : NaN,
@@ -198,16 +290,18 @@ export function useCostAnalysisData({
           avgCostPerKwh: bucketCoverage.rate ?? NaN,
           coverage: bucketCoverage,
           gasEquiv: ge,
-          savings: bucketCoverage.unknownCostCount === 0 ? ge - v.cost : NaN,
+          savings,
+          accountingMonthCompleteness: 'unknown',
+          savingsDisclosure: savingsDisclosure(ge, energyKwh, savings, electricityRate, bucketCoverage),
         };
       });
-  }, [sessions, gasPrice, mpg]);
+  }, [sessions, gasPrice, mpg, electricityRate, sessionDates]);
 
   const costPerKwhTrend = useMemo(() => {
     if (!sessions || sessions.length === 0) return [];
     return sessions
       .filter((s) => finite(s.cost_decimal) != null && finite(s.total_energy_added_wh) != null
-        && s.total_energy_added_wh! > 0 && Number.isFinite(new Date(s.started_at).getTime()))
+        && s.total_energy_added_wh! > 0 && sessionDates.get(s)?.timestamp != null)
       .sort(
         (a, b) =>
           new Date(a.started_at).getTime() - new Date(b.started_at).getTime(),
@@ -217,7 +311,7 @@ export function useCostAnalysisData({
         costPerKwh: (s.cost_decimal ?? 0) / ((s.total_energy_added_wh ?? 0) / 1000),
         currency: currencySummary.currency!,
       }));
-  }, [sessions, currencySummary.currency]);
+  }, [sessions, currencySummary.currency, sessionDates, formatDateShort]);
 
   const chargerTypeData = useMemo<UseCostAnalysisDataResult['chargerTypeData']>(() => {
     if (!sessions || sessions.length === 0) return [];
@@ -252,8 +346,8 @@ export function useCostAnalysisData({
       buckets[h] = { sessions: 0, totalCost: 0, totalEnergy: 0, records: [] };
     }
     sessions.forEach((s) => {
-      const hour = new Date(s.started_at).getHours();
-      if (!Number.isFinite(hour)) return;
+      const hour = sessionDates.get(s)?.hour;
+      if (hour == null) return;
       buckets[hour].sessions++;
       buckets[hour].records.push(s);
       buckets[hour].totalCost += finite(s.cost_decimal) ?? 0;
@@ -273,9 +367,9 @@ export function useCostAnalysisData({
         };
       })
       .sort((a, b) => a.hour - b.hour);
-  }, [sessions]);
+  }, [sessions, sessionDates]);
 
-  const touInsights = useMemo<TouInsights | null>(() => {
+  const touInsights = useMemo<UseCostAnalysisDataResult['touInsights']>(() => {
     if (hourlyData.length === 0) return null;
     const withSessions = hourlyData.filter((h) => h.sessions > 0 && h.coverage.unknownCostCount === 0);
     if (withSessions.length === 0) return null;
@@ -283,42 +377,43 @@ export function useCostAnalysisData({
     const priciest = [...withSessions].sort((a, b) => b.avgCost - a.avgCost)[0];
     const busiest = [...hourlyData].sort((a, b) => b.sessions - a.sessions)[0];
     const offPeakCount = sessions?.filter((s) => {
-      const h = new Date(s.started_at).getHours();
-      if (!Number.isFinite(h)) return false;
-      return h >= 22 || h < 6;
+      const h = sessionDates.get(s)?.hour;
+      if (h == null) return false;
+      return h >= OFF_PEAK_ASSUMPTION.startHourInclusive
+        || h < OFF_PEAK_ASSUMPTION.endHourExclusive;
     }).length ?? 0;
-    const offPeakPct = sessions && sessions.length > 0
-      ? (offPeakCount / sessions.length) * 100
-      : 0;
-    return { cheapest, priciest, busiest, offPeakPct };
-  }, [hourlyData, sessions]);
+    const datedSessionCount = hourlyData.reduce((sum, bucket) => sum + bucket.sessions, 0);
+    const offPeakPct = (offPeakCount / datedSessionCount) * 100;
+    return {
+      cheapest, priciest, busiest, offPeakPct,
+      comparisonBasis: 'recorded-spend-per-session',
+      datedSessionCount,
+      undatedSessionCount: (sessions?.length ?? 0) - datedSessionCount,
+    };
+  }, [hourlyData, sessions, sessionDates]);
 
-  const gasComparison = useMemo<GasComparison | null>(() => {
+  const gasComparison = useMemo<UseCostAnalysisDataResult['gasComparison']>(() => {
     if (!coreStats) return null;
-    const { totalEnergy, totalCost, totalDistanceM } = coreStats;
-    const displayDistance = toDistanceDisplay(totalDistanceM);
-    const distMiles = totalDistanceM / 1609.344;
-    const gallonsNeeded = finite(mpg) != null && mpg > 0 ? distMiles / mpg : NaN;
-    const gasCostCalc = finite(gasPrice) != null ? gallonsNeeded * gasPrice : NaN;
+    const { totalEnergy, totalCost } = coreStats;
+    const gasCostCalc = NaN;
     const evCostCalc = coreStats.coverage.unknownEnergyCount === 0 && finite(electricityRate) != null
       ? totalEnergy * electricityRate : NaN;
-    const monthlySavings =
-      monthlyData.length > 0
-        ? (gasCostCalc - evCostCalc) / Math.max(monthlyData.length, 1)
-        : 0;
-    const yearlySavings = monthlySavings * 12;
-
     return {
       gasCost: gasCostCalc,
       evCost: evCostCalc,
       actualCost: totalCost,
-      savings: coreStats.coverage.unknownCostCount === 0 ? gasCostCalc - totalCost : NaN,
-      monthlySavings,
-      yearlySavings,
-      costPerMileGas: displayDistance > 0 ? gasCostCalc / displayDistance : NaN,
+      savings: NaN,
+      monthlySavings: NaN,
+      yearlySavings: NaN,
+      costPerMileGas: NaN,
       costPerMileEV: coreStats.costPerDist,
+      basis: 'driven-distance',
+      unavailableReason: 'no-verified-driven-distance',
+      modeledSavings: finite(gasCostCalc - evCostCalc),
+      actualSavings: finite(gasCostCalc - totalCost),
+      projectionStatus: 'unavailable',
     };
-  }, [coreStats, gasPrice, mpg, electricityRate, toDistanceDisplay, monthlyData.length]);
+  }, [coreStats, electricityRate]);
 
   const lifetimeMetrics = useMemo<LifetimeMetrics | null>(() => {
     if (!sessions || sessions.length === 0 || !coreStats) return null;
@@ -351,8 +446,10 @@ export function useCostAnalysisData({
   }, [sessions, coreStats]);
 
   return {
+    accountingTimezone, dateCoverage, observedWindow,
     currencySummary, operationalTotals, coverage: dataCoverage, rawMeasurements,
     coreStats, monthlyData, costPerKwhTrend, chargerTypeData,
+    touAssumptions: { ...OFF_PEAK_ASSUMPTION, timezone: accountingTimezone },
     hourlyData, touInsights, gasComparison, lifetimeMetrics,
   };
 }

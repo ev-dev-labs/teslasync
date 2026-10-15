@@ -27,6 +27,8 @@ export function ClipPlayerPanel({ clip }: ClipPlayerPanelProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [mediaDuration, setMediaDuration] = useState<number | null>(null);
+  const [playbackFailed, setPlaybackFailed] = useState(false);
+  const playAttempt = useRef(0);
   const motionAnalysis = useMotionAnalysis();
 
   const objectUrl = useMemo(() => URL.createObjectURL(clip.blob), [clip.blob]);
@@ -36,7 +38,8 @@ export function ClipPlayerPanel({ clip }: ClipPlayerPanelProps) {
     setIsPlaying(false);
     setProgress(0);
     setMediaDuration(null);
-  }, [clip.id]);
+    setPlaybackFailed(false);
+  }, [clip.id, objectUrl]);
 
   const duration = clip.durationSeconds != null && Number.isFinite(clip.durationSeconds)
     ? Math.max(0, clip.durationSeconds) : mediaDuration;
@@ -59,10 +62,31 @@ export function ClipPlayerPanel({ clip }: ClipPlayerPanelProps) {
     setProgress(normalized);
   };
 
-  const play = () => {
+  const handlePlaybackFailure = () => {
+    playAttempt.current += 1;
+    setIsPlaying(false);
+    setPlaybackFailed(true);
+  };
+
+  const play = async () => {
     const video = videoRef.current;
     if (!video) return;
-    void video.play();
+    const attempt = ++playAttempt.current;
+    try {
+      await video.play();
+    } catch {
+      if (videoRef.current === video && playAttempt.current === attempt) {
+        handlePlaybackFailure();
+      }
+    }
+  };
+
+  const replay = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.load();
+    setProgress(0);
+    void play();
   };
 
   const pause = () => {
@@ -82,6 +106,7 @@ export function ClipPlayerPanel({ clip }: ClipPlayerPanelProps) {
     <LayoutCard title={t('dashcam.tabs.player', 'Player')}>
       <div className="relative overflow-hidden rounded-lg border border-[var(--border-subtle)] bg-black">
         <video
+          key={objectUrl}
           ref={videoRef}
           src={objectUrl}
           muted
@@ -91,12 +116,29 @@ export function ClipPlayerPanel({ clip }: ClipPlayerPanelProps) {
           onLoadedMetadata={handleDurationChange}
           onDurationChange={handleDurationChange}
           onPlay={() => setIsPlaying(true)}
+          onPlaying={() => {
+            playAttempt.current += 1;
+            setPlaybackFailed(false);
+            setIsPlaying(true);
+          }}
+          onError={handlePlaybackFailure}
           onPause={() => setIsPlaying(false)}
           onEnded={() => setIsPlaying(false)}
           className="aspect-video w-full bg-black"
         />
         <RedactionOverlay regions={clip.redactions} />
       </div>
+
+      {playbackFailed && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Text role="alert" variant="bodySm">
+            {t('dashcam.player.playbackFailed', 'This clip could not be played. Replay to try again. If it still fails, the file may be damaged or its format unsupported by this browser.')}
+          </Text>
+          <Button size="sm" variant="secondary" onClick={replay}>
+            {t('dashcam.player.replay', 'Replay clip')}
+          </Button>
+        </div>
+      )}
 
       <PlaybackControls
         framed={false}

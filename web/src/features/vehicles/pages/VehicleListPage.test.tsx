@@ -61,7 +61,11 @@ vi.mock('react-i18next', () => ({
 // Mutable unit preference so one file exercises both the metric (km) and
 // imperial (mi) display-conversion branches. Hoisted so the settings mock
 // factory can close over it.
-const unitState = vi.hoisted(() => ({ length: 'km' as 'km' | 'mi' }));
+const unitState = vi.hoisted(() => ({
+  length: 'km' as 'km' | 'mi',
+  precision: 2,
+  locale: 'en-US',
+}));
 
 // File-level useSettings mock (overrides the global test-setup stub) so
 // `useUnits` sees a stable shape while `unit_of_length` flips.
@@ -104,7 +108,7 @@ vi.mock('@/hooks/useSettings', async (importActual) => {
   return {
     ...actual,
     useSettings: () => ({
-      settings: { ...defaults, unit_of_length: unitState.length },
+      settings: { ...defaults, unit_of_length: unitState.length, decimal_precision: unitState.precision, locale: unitState.locale },
       isMiles: unitState.length === 'mi',
       isFahrenheit: false,
       isPSI: false,
@@ -171,10 +175,12 @@ import {
   useFleetStates,
   useSyncVehicles,
   useDeleteVehicle,
+  FleetStatesBatchError,
 } from '@/api/hooks/useVehicles';
 import { usePinned, useTogglePin } from '@/api/hooks/usePinned';
 import { useFleetWorkOrders, type FleetWorkOrder } from '@/api/hooks/useFleetOps';
 import { fmtNumber } from '@/lib/numberFormat';
+import { maskFor } from '@/lib/maskValue';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import type { Vehicle } from '@/types/vehicle';
 import type { VehicleState } from '@/api/types';
@@ -420,6 +426,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
   unitState.length = 'km';
+  unitState.precision = 2;
+  unitState.locale = 'en-US';
   installHappyPath();
 });
 
@@ -477,7 +485,7 @@ describe('VehicleListPage — happy path', () => {
     )).toBeInTheDocument();
     expect(within(posture).getByText('Live utilization')).toBeInTheDocument();
     // V1 charging + V2 driving out of 2 covered = 100 %, not 67 % of 3.
-    expect(within(posture).getByText('100%')).toBeInTheDocument();
+    expect(within(posture).getByText('100.00%')).toBeInTheDocument();
     expect(within(posture).getByText('Software posture')).toBeInTheDocument();
     expect(within(posture).getByText('2 versions')).toBeInTheDocument();
     expect(within(posture).getByText(
@@ -758,6 +766,33 @@ describe('VehicleListPage — accessibility & derived per-card data', () => {
     fireEvent.click(within(grid).getByRole('button', { name: 'Reveal value' }));
     expect(within(grid).getByText('VINBLANK000000007')).toBeInTheDocument();
   });
+
+  it.each(['VINBLANK000000007', 'short', ''])(
+    'uses the existing masked fallback in an unnamed vehicle preview (%s)',
+    async (vin) => {
+      const vehicle = makeVehicle({ id: 7, vehicle_id: 7, vin, display_name: '' });
+      const masked = maskFor(vin, 'vin');
+      mockVehicles.mockReturnValue(qr({ data: [vehicle] }));
+      mockFleetStates.mockReturnValue(qr({ data: [missingEntry(vehicle)] }));
+      renderPage();
+
+      fireEvent.click(within(cardGrid()).getByRole('button', { name: `Actions for ${masked}`.trim() }));
+      fireEvent.click(await screen.findByRole('button', { name: `Quick view ${masked}`.trim() }));
+      const drawer = await screen.findByRole('dialog', { name: masked || 'Vehicle details' });
+      if (vin) {
+        expect(drawer).not.toHaveTextContent(vin);
+        expect(drawer.outerHTML).not.toContain(vin);
+      }
+      expect(mockFleetStates).toHaveBeenCalledWith(
+        expect.arrayContaining([expect.objectContaining({ id: 7, vin })]),
+      );
+      fireEvent.click(within(drawer).getByRole('button', { name: 'Open vehicle details' }));
+      await waitFor(() =>
+        expect(screen.getByTestId('location')).toHaveAttribute('data-pathname', '/vehicles/7'),
+      );
+      expect(vehicle.vin).toBe(vin);
+    },
+  );
 });
 
 /* ─────────────────────────── User interactions ──────────────────────────── */
@@ -835,6 +870,28 @@ describe('VehicleListPage — sync & compare actions', () => {
 });
 
 describe('VehicleListPage — delete flow', () => {
+  it.each(['VINBLANK000000007', 'short', ''])(
+    'masks the unnamed vehicle removal message without changing its numeric ID (%s)',
+    async (vin) => {
+      const vehicle = makeVehicle({ id: 7, vehicle_id: 7, vin, display_name: '' });
+      const masked = maskFor(vin, 'vin');
+      mockVehicles.mockReturnValue(qr({ data: [vehicle] }));
+      mockFleetStates.mockReturnValue(qr({ data: [missingEntry(vehicle)] }));
+      renderPage();
+
+      fireEvent.click(within(cardGrid()).getByRole('button', { name: `Actions for ${masked}`.trim() }));
+      fireEvent.click(await screen.findByRole('button', { name: `Remove ${masked}`.trim() }));
+      const dialog = await screen.findByRole('dialog');
+      expect(within(dialog).getByText(
+        `Are you sure you want to remove "${masked}"? This will delete all associated data including drives, charges, and state history.`,
+      )).toBeInTheDocument();
+      if (vin) expect(dialog.outerHTML).not.toContain(vin);
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Remove' }));
+      expect(deleteMut.mutate).toHaveBeenCalledWith(7, expect.anything());
+      expect(vehicle.vin).toBe(vin);
+    },
+  );
+
   it('opens a confirm dialog and fires the delete mutation on confirm', async () => {
     renderPage();
     await screen.findByRole('heading', { level: 1, name: 'Fleet' });
@@ -890,6 +947,17 @@ describe('VehicleListPage — pinned ordering', () => {
 /* ──────────────────── Loading / error / empty branches ───────────────────── */
 
 describe('VehicleListPage — loading, error & empty states', () => {
+  function expectUnknownRosterShells() {
+    for (const title of ['Fleet summary', 'Fleet overview', 'All vehicles']) {
+      expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
+    }
+    expect(screen.getByRole('group', { name: 'Availability and readiness across the fleet' })).toBeInTheDocument();
+    expect(screen.queryByText('No vehicles yet')).not.toBeInTheDocument();
+    expect(screen.queryByText(/No fleet records for/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('fleet-operational-brief')).not.toBeInTheDocument();
+    expect(screen.queryByText('Fleet ready')).not.toBeInTheDocument();
+  }
+
   it('renders the skeleton while the vehicles query is pending', () => {
     mockVehicles.mockReturnValue(qr({ isLoading: true, data: undefined }));
     renderPage();
@@ -897,6 +965,73 @@ describe('VehicleListPage — loading, error & empty states', () => {
     expect(screen.getByTestId('vehicle-list-skeleton')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: 'Fleet' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Compare vehicles' })).not.toBeInTheDocument();
+    expectUnknownRosterShells();
+  });
+
+  it('uses initial data state for an unresolved idle read, not isLoading or an empty roster', () => {
+    mockVehicles.mockReturnValue(qr({ isPending: true, fetchStatus: 'idle', isLoading: false }));
+    renderPage();
+
+    expect(screen.getByTestId('vehicle-list-skeleton')).toBeInTheDocument();
+    expectUnknownRosterShells();
+    expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
+  });
+
+  it('keeps paused initial reads distinct and independently retryable without asserting registration', () => {
+    const refetch = vi.fn();
+    const serviceRefetch = vi.fn();
+    mockVehicles.mockReturnValue(qr({ isPending: true, fetchStatus: 'paused', refetch }));
+    mockFleetWorkOrders.mockReturnValue(qr({
+      isError: true, error: new Error('service unavailable'), refetch: serviceRefetch,
+    }));
+    renderPage();
+
+    expectUnknownRosterShells();
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.queryByTestId('vehicle-list-skeleton')).not.toBeInTheDocument();
+    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Fleet' }));
+    expect(refetch).toHaveBeenCalledOnce();
+    expect(serviceRefetch).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(serviceRefetch).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole('button', { name: 'Sync from Tesla' }));
+    expect(syncMut.mutate).toHaveBeenCalledOnce();
+  });
+
+  it('preserves populated fleet cards when the roster refresh is paused', () => {
+    const refetch = vi.fn();
+    mockVehicles.mockReturnValue(qr({ data: VEHICLES, fetchStatus: 'paused', refetch }));
+    renderPage();
+
+    expect(within(cardGrid()).getAllByRole('link', { name: /^Open .+ details$/ })).toHaveLength(3);
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.getByTestId('fleet-operational-brief')).toBeInTheDocument();
+    const compare = screen.getByRole('button', { name: 'Compare vehicles' });
+    expect(within(compare).queryByRole('button')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Fleet' }));
+    expect(refetch).toHaveBeenCalledOnce();
+    expect(screen.getByTestId('location')).toHaveAttribute('data-pathname', '/vehicles');
+    expect(syncMut.mutate).not.toHaveBeenCalled();
+    expect(deleteMut.mutate).not.toHaveBeenCalled();
+  });
+
+  it('retries only the failed roster read on reconnect without triggering sync or deletion', () => {
+    const online = vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(false);
+    const refetch = vi.fn();
+    mockVehicles.mockReturnValue(qr({
+      isError: true, error: new TypeError('Failed to fetch'), refetch,
+    }));
+    try {
+      renderPage();
+      expectUnknownRosterShells();
+      fireEvent(window, new Event('online'));
+      expect(refetch).toHaveBeenCalledOnce();
+      expect(syncMut.mutate).not.toHaveBeenCalled();
+      expect(deleteMut.mutate).not.toHaveBeenCalled();
+    } finally {
+      online.mockRestore();
+    }
   });
 
   it('renders a retryable error panel when the vehicles query fails', async () => {
@@ -907,6 +1042,7 @@ describe('VehicleListPage — loading, error & empty states', () => {
     renderPage();
 
     expect(await screen.findByText("Can't reach server")).toBeInTheDocument();
+    expectUnknownRosterShells();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
@@ -1126,7 +1262,7 @@ describe('VehicleListPage — loading, error & empty states', () => {
     renderPage();
 
     // Only V1 has a fresh reading; it is charging ⇒ 1/1 covered = 100 %.
-    expect(within(briefMetric('Live utilization')).getByText('100%')).toBeInTheDocument();
+    expect(within(briefMetric('Live utilization')).getByText('100.00%')).toBeInTheDocument();
     expect(within(briefMetric('Departure ready')).getByText('1/1')).toBeInTheDocument();
     expect(within(briefMetric('Departure ready')).getByText(
       /Based on 1 of 3 vehicles with a current battery reading/,
@@ -1268,7 +1404,7 @@ describe('VehicleListPage — loading, error & empty states', () => {
     // Both ARE live-state responses — that is what the card measures.
     expect(within(briefMetric('Live state available')).getByText('2/3')).toBeInTheDocument();
     // Neither is driving or charging, so utilization is a real 0 % of 2.
-    expect(within(briefMetric('Live utilization')).getByText('0%')).toBeInTheDocument();
+    expect(within(briefMetric('Live utilization')).getByText('0.00%')).toBeInTheDocument();
     // Backend explicitly said offline/asleep, so the breakdown may say so.
     expect(screen.getByRole('progressbar', { name: 'Offline' })).toBeInTheDocument();
     expect(screen.getByRole('progressbar', { name: 'Asleep' })).toBeInTheDocument();
@@ -1303,6 +1439,88 @@ describe('VehicleListPage — loading, error & empty states', () => {
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
   });
 
+  it('retains qualified battery rows from a failed batch envelope and recovers fresh aggregates on retry', () => {
+    const observedAt = Date.now() - 600_000;
+    const entries = [retainedEntry(V1, S1, observedAt), retainedEntry(V2, S2, observedAt), failedEntry(V3)];
+    const error = new FleetStatesBatchError(entries, new Error('502 Bad Gateway'));
+    const refetch = vi.fn();
+    mockFleetStates.mockReturnValue(qr({
+      data: error.entries, isError: true, error, refetch, dataUpdatedAt: Date.now(),
+    }));
+    const view = renderPage();
+    const batteryPanel = screen.getByText('Fleet battery status').parentElement?.parentElement;
+    if (!batteryPanel) throw new Error('Missing battery panel');
+    expect(within(batteryPanel).getByRole('progressbar', { name: 'Model 3 Alpha' }))
+      .toHaveAttribute('aria-valuenow', '80');
+    expect(within(batteryPanel).getByText(/Last known: 80\.00% \(10m ago\) — not currently verified/))
+      .toBeInTheDocument();
+    expect(within(batteryPanel).queryByText(/Live battery readings have not arrived/)).toBeNull();
+    expect(within(briefMetric('Departure ready')).getByText('—')).toBeInTheDocument();
+    const summary = screen.getByTestId('fleet-current-summary');
+    expect(summary.querySelector('[data-operational-metric="fleet-average-battery"]'))
+      .toHaveAttribute('data-value-state', 'missing');
+    expect(screen.queryByRole('progressbar', { name: 'Charging' })).toBeNull();
+    const warning = screen.getAllByTestId('stale-refresh-warning')
+      .find(node => node.textContent?.includes('Live vehicle state'));
+    if (!warning) throw new Error('Missing live-state refresh warning');
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledOnce();
+
+    mockFleetStates.mockReturnValue(qr({
+      data: [resolvedEntry(V1, makeState({ ...S1, battery_level: 0 }), Date.now()), missingEntry(V2), missingEntry(V3)],
+      refetch,
+    }));
+    view.rerender(
+      <MemoryRouter initialEntries={['/vehicles']}>
+        <QueryClientProvider client={view.client}><VehicleListPage /><LocationProbe /></QueryClientProvider>
+      </MemoryRouter>,
+    );
+    const recoveredBar = screen.getByRole('progressbar', { name: 'Model 3 Alpha' });
+    expect(recoveredBar).toHaveAttribute('aria-valuenow', '0');
+    expect(recoveredBar).toHaveTextContent('0.00%');
+    expect(recoveredBar).not.toHaveTextContent('Last known');
+    expect(screen.getByTestId('fleet-current-summary')
+      .querySelector('[data-operational-metric="fleet-average-battery"]'))
+      .toHaveAttribute('data-value-state', 'value');
+    expect(within(briefMetric('Departure ready')).getByText('0/1')).toBeInTheDocument();
+    expect(screen.queryByText('502 Bad Gateway')).toBeNull();
+  });
+
+  it('shows retained battery rows beside fresh rows without including them in the fleet average', () => {
+    mockFleetStates.mockReturnValue(qr({
+      data: [retainedEntry(V1, S1, Date.now() - 600_000), resolvedEntry(V2, S2), missingEntry(V3)],
+    }));
+    renderPage();
+    const panel = screen.getByText('Fleet battery status').parentElement?.parentElement;
+    if (!panel) throw new Error('Missing battery panel');
+    expect(within(panel).getByRole('progressbar', { name: 'Model 3 Alpha' })).toHaveTextContent('Last known: 80.00%');
+    expect(within(panel).getByRole('progressbar', { name: 'Model Y Beta' })).not.toHaveTextContent('Last known: 50.00%');
+    expect(within(screen.getByTestId('fleet-current-summary')).getByText(`${fmtNumber(50)}%`)).toBeInTheDocument();
+    expect(within(briefMetric('Departure ready')).getByText('1/1')).toBeInTheDocument();
+  });
+
+  it('keeps active battery loading distinct from a successful empty batch', () => {
+    mockFleetStates.mockReturnValue(qr({
+      isLoading: true, isPending: true, isFetching: true, fetchStatus: 'fetching',
+    }));
+    renderPage();
+    expect(screen.getByTestId('fleet-battery-skeleton')).toBeInTheDocument();
+    expect(screen.queryByText('Live battery readings have not arrived for the registered fleet.')).toBeNull();
+    expect(screen.queryByRole('progressbar', { name: 'Model 3 Alpha' })).toBeNull();
+  });
+
+  it('explains paused battery reads without data and retries only the live-state source', () => {
+    const refetch = vi.fn();
+    mockFleetStates.mockReturnValue(qr({ isPending: true, fetchStatus: 'paused', refetch }));
+    renderPage();
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.queryByTestId('fleet-battery-skeleton')).toBeNull();
+    expect(screen.queryByText('Live battery readings have not arrived for the registered fleet.')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Live vehicle state' }));
+    expect(refetch).toHaveBeenCalledOnce();
+    expect(mockVehicles.mock.results[0]?.value.refetch).not.toHaveBeenCalled();
+  });
+
   it('explains a successful battery-state gap and refreshes without presenting an error retry', () => {
     const refetch = vi.fn();
     mockFleetStates.mockReturnValue(qr({ data: [], refetch }));
@@ -1333,7 +1551,7 @@ describe('VehicleListPage — loading, error & empty states', () => {
     expect(
       await screen.findByText('Service attention is temporarily unavailable'),
     ).toBeInTheDocument();
-    expect(screen.getByText('Fleet availability and live state remain visible, but maintenance work orders could not be loaded.')).toBeInTheDocument();
+    expect(screen.getByText('Available sections remain visible. Source status is tracked independently below.')).toBeInTheDocument();
     expect(within(cardGrid()).getByText('Model 3 Alpha')).toBeInTheDocument();
   });
 
@@ -1419,6 +1637,91 @@ describe('VehicleListPage — loading, error & empty states', () => {
 });
 
 describe('VehicleListPage — field and independent source qualification', () => {
+  it.each([
+    ['missing', undefined],
+    ['null', null],
+    ['NaN', Number.NaN],
+    ['positive infinity', Number.POSITIVE_INFINITY],
+    ['negative infinity', Number.NEGATIVE_INFINITY],
+    ['numeric string', '0'],
+  ])('does not manufacture measured zero from %s readings', (_label, input) => {
+    mockVehicles.mockReturnValue(qr({ data: [V1] }));
+    mockFleetStates.mockReturnValue(qr({ data: [{
+      ...resolvedEntry(V1, S1),
+      state: { ...S1, battery_level: input, rated_range: input, odometer: input, charger_power: input },
+      verifiedFields: [...VERIFIED_FIELDS, 'odometer', 'charger_power'],
+    }] }));
+    renderPage();
+    const summary = screen.getByTestId('fleet-current-summary');
+    expect(summary.querySelector('[data-operational-metric="fleet-average-battery"]'))
+      .toHaveAttribute('data-value-state', 'missing');
+    expect(summary.querySelector('[data-operational-metric="fleet-total-range"]'))
+      .toHaveAttribute('data-value-state', 'missing');
+    const grid = cardGrid();
+    expect(within(grid).getAllByText('—')).toHaveLength(4);
+    expect(within(grid).queryByText('0.00 kW')).toBeNull();
+    expect(screen.getByTestId('fleet-battery-unknown')).toHaveTextContent('Not reported');
+  });
+
+  it.each([0, -12.375, 12.375])('retains raw signed and fractional readings (%s) independently of display precision', (input) => {
+    const state = Object.freeze(makeState({
+      battery_level: input,
+      rated_range: input * 1_000,
+      odometer: input * 1_000,
+      charger_power: input,
+      is_charging: true,
+    }));
+    mockVehicles.mockReturnValue(qr({ data: [V1] }));
+    mockFleetStates.mockReturnValue(qr({ data: [{
+      ...resolvedEntry(V1, state),
+      verifiedFields: [...VERIFIED_FIELDS, 'odometer', 'charger_power'],
+    }] }));
+    renderPage();
+    const summary = screen.getByTestId('fleet-current-summary');
+    expect(summary.querySelector('[data-operational-metric="fleet-average-battery"]'))
+      .toHaveAttribute('data-value-state', 'value');
+    expect(within(summary).getByText(`${fmtNumber(input)}%`)).toBeInTheDocument();
+    expect(within(cardGrid()).getByText(`${fmtNumber(input)} kW`)).toBeInTheDocument();
+    expect(screen.getByRole(input < 0 ? 'group' : 'progressbar', { name: 'Model 3 Alpha' }))
+      .toHaveTextContent(`${fmtNumber(input)}%`);
+    expect(state.battery_level).toBe(input);
+    expect(state.rated_range).toBe(input * 1_000);
+    expect(state.charger_power).toBe(input);
+  });
+
+  it('uses effective metric preferences rather than the formatter bridge defaults', () => {
+    unitState.length = 'mi';
+    unitState.precision = 3;
+    unitState.locale = 'de-DE';
+    mockVehicles.mockReturnValue(qr({ data: [V1] }));
+    mockFleetStates.mockReturnValue(qr({ data: [resolvedEntry(V1, makeState({
+      battery_level: 12.375,
+      rated_range: 1_234_567,
+      is_charging: false,
+      speed: 0,
+    }))] }));
+    renderPage();
+    const summary = screen.getByTestId('fleet-current-summary');
+    expect(within(summary).getByText('12,375%')).toBeInTheDocument();
+    expect(within(summary).getByText(fmtNumber(convertDistanceFromSI(1_234_567, 'mi'), 3, 'de-DE')))
+      .toBeInTheDocument();
+    expect(within(briefMetric('Live utilization')).getByText('0,000%')).toBeInTheDocument();
+    expect(within(briefMetric('Live state available')).getByText('1/1')).toBeInTheDocument();
+    expect(within(briefMetric('Departure ready')).getByText('0/1')).toBeInTheDocument();
+  });
+
+  it('formats fractional utilization without rounding the raw ratio to a whole percent', () => {
+    mockFleetStates.mockReturnValue(qr({ data: [
+      resolvedEntry(V1, makeState({ is_charging: true })),
+      resolvedEntry(V2, makeState({ is_charging: false, speed: 0 })),
+      resolvedEntry(V3, makeState({ is_charging: false, speed: 0 })),
+    ] }));
+    renderPage();
+    expect(within(briefMetric('Live utilization')).getByText('33.33%')).toBeInTheDocument();
+    expect(within(briefMetric('Live state available')).getByText('3/3')).toBeInTheDocument();
+    expect(within(briefMetric('Departure ready')).getByText('3/3')).toBeInTheDocument();
+  });
+
   it('keeps sparse card readings retained without claiming current battery range power or security', () => {
     mockVehicles.mockReturnValue(qr({ data: [V1] }));
     mockFleetStates.mockReturnValue(qr({ data: [{

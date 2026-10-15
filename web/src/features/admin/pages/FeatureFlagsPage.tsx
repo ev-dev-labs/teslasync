@@ -35,6 +35,7 @@ import { FadeIn } from '@/components/motion';
 import { QueryError, SectionErrorBoundary } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import {
+  assertFeatureFlagDeleteResult,
   useDeleteFlag,
   useFlagChanges,
   useFlags,
@@ -107,10 +108,11 @@ export default function FeatureFlagsPage() {
   const handleConfirmDelete = async () => {
     if (!pendingDelete || deleteReason.trim().length === 0) return;
     try {
-      await deleteFlag.mutateAsync({
+      const result = await deleteFlag.mutateAsync({
         key: pendingDelete.key,
         reason: deleteReason,
       });
+      assertFeatureFlagDeleteResult(result, pendingDelete.key);
       setPendingDelete(null);
       setDeleteReason('');
     } catch {

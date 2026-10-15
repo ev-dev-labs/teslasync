@@ -43,6 +43,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
 import type { VehicleDriver, VehicleInvitation } from '@/api/types';
+import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 
 // ── i18n stub: resolve a string fallback (or the options-bag defaultValue) and
 //    interpolate {{var}} placeholders so assertions read on human copy. ────────
@@ -274,6 +275,43 @@ describe('VehicleAccessPage — populated KPIs', () => {
 });
 
 describe('VehicleAccessPage — populated tables + overview', () => {
+  it('reactively formats section count badges while preserving raw query records', () => {
+    const preferences = getFormatterPreferences();
+    const drivers = Array.from({ length: 1234 }, (_, index) => makeDriver({ id: index + 1 }));
+    const invitations = Array.from({ length: 2345 }, (_, index) => makeInvite({
+      id: index + 1,
+      invitation_id: `inv-${index + 1}`,
+    }));
+    const driversQuery = makeQuery({ data: drivers });
+    const invitationsQuery = makeQuery({ data: invitations });
+    mockDrivers.mockReturnValue(driversQuery);
+    mockInvitations.mockReturnValue(invitationsQuery);
+    try {
+      setGlobalLocale('en-US');
+      setGlobalPrecision(3);
+      renderPage();
+      const driversHeader = screen.getByRole('heading', { name: 'Drivers' }).parentElement!;
+      const invitationsHeader = screen.getByRole('heading', { name: 'Share invitations' }).parentElement!;
+      expect(within(driversHeader).getByText('1,234')).toBeInTheDocument();
+      expect(within(invitationsHeader).getByText('2,345')).toBeInTheDocument();
+
+      act(() => setGlobalLocale('de-DE'));
+      expect(within(driversHeader).getByText('1.234')).toBeInTheDocument();
+      expect(within(invitationsHeader).getByText('2.345')).toBeInTheDocument();
+      expect(driversQuery.data).toBe(drivers);
+      expect(invitationsQuery.data).toBe(invitations);
+      expect(drivers).toHaveLength(1234);
+      expect(invitations).toHaveLength(2345);
+      expect(screen.getByRole('progressbar', { name: 'Pending' })).toHaveAttribute('aria-valuenow', '2345');
+      expect(screen.getByRole('progressbar', { name: 'Pending' })).toHaveAttribute('aria-valuemax', '2345');
+    } finally {
+      act(() => {
+        setGlobalLocale(preferences.locale);
+        setGlobalPrecision(preferences.precision);
+      });
+    }
+  });
+
   it('paginates growing driver and invitation lists independently', () => {
     mockDrivers.mockReturnValue(makeQuery({
       data: Array.from({ length: 26 }, (_, index) => makeDriver({

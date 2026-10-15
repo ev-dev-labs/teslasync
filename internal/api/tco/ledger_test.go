@@ -23,13 +23,15 @@ func TestValidateLedgerEntryRejects(t *testing.T) {
 	now := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
 	base := LedgerEntry{VehicleID: 3, Category: "insurance", Amount: 142.5, Currency: "USD", Incurred: "2026-01-15"}
 	cases := map[string]func(*LedgerEntry){
-		"bad category": func(e *LedgerEntry) { e.Category = "yacht" },
-		"zero amount":  func(e *LedgerEntry) { e.Amount = 0 },
-		"bad currency": func(e *LedgerEntry) { e.Currency = "usd" },
-		"bad date":     func(e *LedgerEntry) { e.Incurred = "15/01/2026" },
-		"future date":  func(e *LedgerEntry) { e.Incurred = "2028-01-01" },
-		"long note":    func(e *LedgerEntry) { e.Note = strings.Repeat("x", 281) },
-		"missing veh":  func(e *LedgerEntry) { e.VehicleID = 0 },
+		"bad category":         func(e *LedgerEntry) { e.Category = "yacht" },
+		"zero amount":          func(e *LedgerEntry) { e.Amount = 0 },
+		"bad currency":         func(e *LedgerEntry) { e.Currency = "usd" },
+		"unknown currency":     func(e *LedgerEntry) { e.Currency = "XYZ" },
+		"unspecified currency": func(e *LedgerEntry) { e.Currency = "XXX" },
+		"bad date":             func(e *LedgerEntry) { e.Incurred = "15/01/2026" },
+		"future date":          func(e *LedgerEntry) { e.Incurred = "2028-01-01" },
+		"long note":            func(e *LedgerEntry) { e.Note = strings.Repeat("x", 281) },
+		"missing veh":          func(e *LedgerEntry) { e.VehicleID = 0 },
 	}
 	for name, mutate := range cases {
 		e := base
@@ -42,17 +44,17 @@ func TestValidateLedgerEntryRejects(t *testing.T) {
 
 func TestSummarizeLedger(t *testing.T) {
 	s := SummarizeLedger([]LedgerEntry{
-		{Category: "insurance", Amount: 100},
-		{Category: "insurance", Amount: 50.5},
-		{Category: "tires", Amount: 800},
+		{Category: "insurance", Amount: 100, Currency: "USD"},
+		{Category: "insurance", Amount: 50.5, Currency: "USD"},
+		{Category: "tires", Amount: 800, Currency: "USD"},
 	})
-	if s.GrandTotal != 950.5 || s.Entries != 3 {
+	if s.GrandTotal == nil || *s.GrandTotal != 950.5 || s.Entries != 3 || s.Currency != "USD" {
 		t.Fatalf("unexpected totals: %+v", s)
 	}
 	if s.ByCategory["insurance"] != 150.5 || s.ByCategory["tires"] != 800 {
 		t.Fatalf("unexpected categories: %+v", s.ByCategory)
 	}
-	if empty := SummarizeLedger(nil); empty.ByCategory == nil || empty.GrandTotal != 0 {
+	if empty := SummarizeLedger(nil); empty.ByCategory == nil || empty.GrandTotal == nil || *empty.GrandTotal != 0 {
 		t.Fatalf("empty input must yield empty totals: %+v", empty)
 	}
 }
@@ -74,7 +76,7 @@ func TestLedgerListServesEntriesAndTotals(t *testing.T) {
 	if err := json.NewDecoder(rec.Body).Decode(&res); err != nil {
 		t.Fatal(err)
 	}
-	if len(res.Entries) != 1 || res.Totals.GrandTotal != 500 {
+	if len(res.Entries) != 1 || res.Totals.GrandTotal == nil || *res.Totals.GrandTotal != 500 {
 		t.Fatalf("unexpected list: %+v", res)
 	}
 }
@@ -92,19 +94,53 @@ func TestLedgerCreateRoundTrips(t *testing.T) {
 	if err := json.NewDecoder(rec.Body).Decode(&e); err != nil {
 		t.Fatal(err)
 	}
-	if e.ID == 0 || e.Category != "tires" {
+	if e.ID == 0 || e.Category != "tires" || e.Currency != "USD" {
 		t.Fatalf("unexpected entry: %+v", e)
 	}
 }
 
-func TestLedgerCreateDefaultsCurrency(t *testing.T) {
+func TestLedgerCreateRequiresCurrency(t *testing.T) {
 	h := NewLedgerHandler(NewMemoryLedgerStore())
 	body := `{"vehicle_id":3,"category":"service","amount":60,"incurred_on":"2026-01-10"}`
 	req := httptest.NewRequest(http.MethodPost, "/ledger", strings.NewReader(body))
 	rec := httptest.NewRecorder()
 	h.Create(rec, req)
-	if rec.Code != http.StatusCreated {
-		t.Fatalf("status = %d, want 201 (%s)", rec.Code, rec.Body.String())
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400 (%s)", rec.Code, rec.Body.String())
+	}
+}
+
+func TestSummarizeLedgerPreservesCurrencies(t *testing.T) {
+	for _, code := range []string{"EUR", "", "XYZ", "XXX"} {
+		t.Run(code, func(t *testing.T) {
+			s := SummarizeLedger([]LedgerEntry{
+				{Category: "insurance", Amount: 100, Currency: "USD"},
+				{Category: "insurance", Amount: 50, Currency: code},
+			})
+			if s.GrandTotal != nil || len(s.ByCategory) != 0 || s.Currency != "" || s.Entries != 2 {
+				t.Fatalf("mixed or unknown currency must not have a scalar total: %+v", s)
+			}
+			if s.ByCurrency["USD"].GrandTotal != 100 {
+				t.Fatalf("USD source total lost: %+v", s)
+			}
+			if code == "EUR" && s.ByCurrency["EUR"].GrandTotal != 50 {
+				t.Fatalf("EUR source total lost: %+v", s)
+			}
+		})
+	}
+}
+
+func TestLedgerCreatePreservesSourceCurrency(t *testing.T) {
+	h := NewLedgerHandler(NewMemoryLedgerStore())
+	body := `{"vehicle_id":3,"category":"service","amount":60,"currency":"EUR","incurred_on":"2026-01-10"}`
+	rec := httptest.NewRecorder()
+	h.Create(rec, httptest.NewRequest(http.MethodPost, "/ledger", strings.NewReader(body)))
+	var entry LedgerEntry
+	if err := json.Unmarshal(rec.Body.Bytes(), &entry); err != nil {
+		t.Fatal(err)
+	}
+	if rec.Code != http.StatusCreated || entry.Currency != "EUR" || entry.Amount != 60 {
+		t.Fatalf("source currency not preserved: %d %+v", rec.Code, entry)
 	}
 }
 

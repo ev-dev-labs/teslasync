@@ -21,6 +21,7 @@ import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
 import { TimeStamp } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState, useCombinedDataState } from '@/hooks/useDataState';
 import { cn } from '@/lib/cn';
 import { severityTokens, typography } from '@/lib/tokens';
@@ -68,6 +69,7 @@ const SEVEN_DAYS_MS = 7 * 86_400_000;
 
 export default function VehicleAccessPage() {
   const { t } = useTranslation();
+  const { fmtInt } = useNumberFormatting();
   const { id: vehicleId } = useParams<{ id: string }>();
   usePageTitle(t('vehicleAccess.title', 'Vehicle access'));
 
@@ -332,7 +334,7 @@ export default function VehicleAccessPage() {
                 <Icon icon={Users} size="lg" className={typography.color.muted} />
                 <PanelTitle>{t('vehicleAccess.drivers.title', 'Drivers')}</PanelTitle>
                 {driversList.length > 0 && (
-                  <Badge variant="neutral">{driversList.length}</Badge>
+                  <Badge variant="neutral">{fmtInt(driversList.length)}</Badge>
                 )}
               </div>
               <Button
@@ -399,7 +401,7 @@ export default function VehicleAccessPage() {
               <Icon icon={Mail} size="lg" className={typography.color.muted} />
               <PanelTitle>{t('vehicleAccess.invitations.title', 'Share invitations')}</PanelTitle>
               {invitationsList.length > 0 && (
-                <Badge variant="neutral">{invitationsList.length}</Badge>
+                <Badge variant="neutral">{fmtInt(invitationsList.length)}</Badge>
               )}
             </div>
             <div className="flex flex-wrap items-center gap-2">

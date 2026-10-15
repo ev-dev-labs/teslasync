@@ -3,9 +3,9 @@ import { Text } from '@/components/ui';
 import { AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { severityTokens } from '@/lib/tokens';
-import type { Automation } from '@/api/types';
+import type { AutomationListItem } from '@/api/hooks/useAutomations';
 
-export function AutomationCardNotices({ automation: a }: { automation: Automation }) {
+export function AutomationCardNotices({ automation: a }: { automation: AutomationListItem }) {
   const { t } = useTranslation();
   const conflicts = a.conflicts ?? [];
   return (

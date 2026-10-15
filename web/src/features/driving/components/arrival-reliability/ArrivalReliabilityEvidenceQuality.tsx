@@ -27,7 +27,7 @@ export function ArrivalReliabilityEvidenceQuality({
     <section data-testid="arrival-evidence-quality">
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <ShieldCheck className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
           {t(
             'arrivalReliability.quality.title',
             'Evidence quality, accounting, and coverage',
@@ -46,6 +46,7 @@ export function ArrivalReliabilityEvidenceQuality({
         >
           <ArrivalReliabilityEvidenceMetrics
             analysis={analysis}
+            retained={state.refreshError != null || state.isRefreshBlocked}
             locale={locale}
             timeZone={timeZone}
           />

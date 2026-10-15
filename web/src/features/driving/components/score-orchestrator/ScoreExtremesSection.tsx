@@ -1,10 +1,10 @@
-import { GlassPanel, PanelTitle } from '@/components/ui';
+import { GlassPanel, PanelTitle, Caption } from '@/components/ui';
 import { KVList } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { Icons } from '@/lib/icons';
 import { ScoreExtremeDrive } from '../continuation-driving-primary/ScoreExtremeDrive';
 import { ScorePeriodStatisticsPanel } from './ScorePeriodStatisticsPanel';
-import { gradeVariant } from './scoreDomain';
+import { gradeVariant, localScoreExplanation, localScoreInsight } from './scoreDomain';
 import type { ScoreSectionProps } from './scoreSectionTypes';
 
 type ScoreExtremesSectionProps = ScoreSectionProps<
@@ -33,11 +33,7 @@ export function ScoreExtremesSection({ model, driveState, scoreState }: ScoreExt
           badgeVariant={bestDrive ? gradeVariant(bestDrive.score.grade) : 'neutral'}
           formatDistance={formatDistance}
           formatEfficiency={formatEfficiency}
-          insight={bestDrive?.score.efficiency != null && bestDrive.score.efficiency >= 35
-            ? t('driveScore.tipBestEff', 'Outstanding energy efficiency — minimal energy wasted!')
-            : bestDrive?.score.smoothness != null && bestDrive.score.smoothness >= 25
-              ? t('driveScore.tipBestSmooth', 'Exceptionally smooth driving with controlled acceleration.')
-              : t('driveScore.tipBestSpeed', 'Great speed discipline, staying in the optimal range.')}
+          insight={localScoreInsight(t, 'best', bestDrive?.score)}
           sourceFallback={driveState(
             200,
             t('driveScore.noDrives', 'No drives available'),
@@ -52,11 +48,7 @@ export function ScoreExtremesSection({ model, driveState, scoreState }: ScoreExt
           badgeVariant={worstDrive ? gradeVariant(worstDrive.score.grade) : 'neutral'}
           formatDistance={formatDistance}
           formatEfficiency={formatEfficiency}
-          insight={worstDrive?.score.efficiency != null && worstDrive.score.efficiency < 15
-            ? t('driveScore.tipWorstEff', 'High energy consumption — possibly high speeds or cold weather.')
-            : worstDrive?.score.smoothness != null && worstDrive.score.smoothness < 10
-              ? t('driveScore.tipWorstSmooth', 'Aggressive acceleration and braking detected.')
-              : t('driveScore.tipWorstSpeed', 'Excessive highway speed reduced the overall score.')}
+          insight={localScoreInsight(t, 'worst', worstDrive?.score)}
           sourceFallback={driveState(
             200,
             t('driveScore.noDrives', 'No drives available'),
@@ -82,7 +74,7 @@ export function ScoreExtremesSection({ model, driveState, scoreState }: ScoreExt
                 },
                 {
                   id: 'smoothness',
-                  label: t('driveScore.smoothnessLabel', 'Smoothness (power range)'),
+                  label: t('driveScore.smoothness', 'Smoothness'),
                   value: smoothnessReading != null ? `${smoothnessReading}/30` : '—',
                 },
                 {
@@ -98,6 +90,7 @@ export function ScoreExtremesSection({ model, driveState, scoreState }: ScoreExt
               ]}
             />
           )}
+          <Caption className="mt-3">{localScoreExplanation(t)}</Caption>
         </GlassPanel>
 
         {/* Period statistics */}

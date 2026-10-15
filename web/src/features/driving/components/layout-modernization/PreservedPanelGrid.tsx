@@ -1,4 +1,4 @@
-import { CardGrid, useCardPlacement, type CardGridItem } from '@/components/layout/layout-reference';
+import { CardGrid, useCardPlacement, type CardGridItem } from '@/components/layout';
 import { cn } from '@/lib/cn';
 
 function PreservedPanel({ item }: { item: CardGridItem }) {

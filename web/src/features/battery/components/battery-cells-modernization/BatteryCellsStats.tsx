@@ -10,8 +10,24 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { formatTemperatureDelta } from '@/lib/unitConversion';
 import { BatteryEvidenceBrief } from '../operationalbrief-all/BatteryEvidenceBrief';
 
+// Endpoint-local extension: the shared hook contract remains owned separately.
+export type BatteryCellsSnapshot = BatteryCellData & {
+  signal_availability?: Partial<Record<
+    'min_voltage' | 'max_voltage' | 'avg_voltage' | 'voltage_spread' | 'imbalance_mv'
+    | 'pack_voltage' | 'min_temperature' | 'max_temperature' | 'avg_temperature' | 'temp_spread',
+    boolean
+  >>;
+};
+
+export function batteryCellsHealthValue(
+  data: BatteryCellsSnapshot | undefined, field: 'imbalance_mv' | 'temp_spread',
+): number | null {
+  const value = data?.signal_availability?.[field] === true ? knownNumber(data[field]) : null;
+  return value == null ? null : Math.abs(value);
+}
+
 interface BatteryCellsStatsProps {
-  data: BatteryCellData | undefined;
+  data: BatteryCellsSnapshot | undefined;
   cells: CellReading[];
   minCell: CellReading | null;
   maxCell: CellReading | null;
@@ -39,6 +55,8 @@ export function BatteryCellsStats({
   };
   const hasCellSnapshot = data != null && data.status !== 'no_data';
   const imbalance = hasCellSnapshot ? knownNumber(data?.imbalance_mv) : null;
+  const imbalanceHealth = batteryCellsHealthValue(data, 'imbalance_mv');
+  const spreadHealth = batteryCellsHealthValue(data, 'temp_spread');
   const spread = knownNumber(data?.temp_spread);
   const missingReason = t('battery.cells.modernization.unknown', 'Measurement unavailable');
   const electrical = (scientific = false, unit = 'V') => (value: number) =>
@@ -71,28 +89,30 @@ export function BatteryCellsStats({
     numericMetric('temperature-maximum', t('battery.cells.temp.max', 'Max temperature'),
       knownNumber(data?.max_temperature), formatTemperature),
     numericMetric('temperature-spread', t('battery.cells.temp.spread', 'Temp spread'),
-      spread, raw => formatTemperatureDelta(raw, unitPrefs), severity(data?.status === 'no_data' ? null : spread, 3, 5)),
+      spread, raw => formatTemperatureDelta(raw, unitPrefs), severity(spreadHealth, 3, 5)),
   ] : variant === 'overview' ? [
     totalMetric,
     numericMetric('overview-average-voltage', t('battery.cells.kpi.avgVoltage', 'Avg voltage'), hasCellSnapshot ? knownNumber(data?.avg_voltage) : null, electrical(true)),
     numericMetric('overview-min-cell', t('battery.cells.kpi.minCell', 'Min cell'), knownNumber(minCell?.voltage), cellExtreme(minCell)),
     numericMetric('overview-max-cell', t('battery.cells.kpi.maxCell', 'Max cell'), knownNumber(maxCell?.voltage), cellExtreme(maxCell)),
-    numericMetric('overview-imbalance', t('battery.cells.kpi.imbalance', 'Imbalance'), imbalance, electrical(false, 'mV'), severity(imbalance, 5, 15)),
+    numericMetric('overview-imbalance', t('battery.cells.kpi.imbalance', 'Imbalance'), imbalance, electrical(false, 'mV'), severity(imbalanceHealth, 5, 15)),
     numericMetric('overview-pack-voltage', t('battery.cells.kpi.packVoltage', 'Pack voltage'), knownNumber(data?.pack_voltage), electrical()),
   ] : [
     { ...totalMetric, label: t('battery.cells.stat.totalCells', 'Total cells') },
     numericMetric('summary-pack-voltage', t('battery.cells.stat.packVoltage', 'Pack voltage'), knownNumber(data?.pack_voltage), electrical()),
     numericMetric('summary-average-voltage', t('battery.cells.stat.avgVoltage', 'Avg cell V'), hasCellSnapshot ? knownNumber(data?.avg_voltage) : null, electrical(true)),
-    numericMetric('summary-voltage-spread', t('battery.cells.stat.voltageSpread', 'V spread'), imbalance, electrical(false, 'mV'), severity(imbalance, 5, 15)),
+    numericMetric('summary-voltage-spread', t('battery.cells.stat.voltageSpread', 'V spread'), imbalance, electrical(false, 'mV'), severity(imbalanceHealth, 5, 15)),
     numericMetric('summary-temperature-spread', t('battery.cells.stat.tempSpread', 'Temp spread'),
-      spread, raw => formatTemperatureDelta(raw, unitPrefs), severity(data?.status === 'no_data' ? null : spread, 3, 5)),
+      spread, raw => formatTemperatureDelta(raw, unitPrefs), severity(spreadHealth, 3, 5)),
     { metricId: 'count', occurrenceId: 'summary-normal-cells', label: t('battery.cells.stat.normalCells', 'Normal cells'),
       rawValue: cells.length === 0 || total == null ? null : cells.filter(cell => cell.status === 'normal').length,
       display: { formatter: raw => ({ value: `${fmtInt(raw)}/${fmtInt(total)}`, unit: '' }) } },
   ];
   const props = {
     metrics, period: snapshot, loading, retained,
-    secondary: t('battery.cells.modernization.signalAvailability', 'Pack and temperature signal availability is not supplied by this endpoint; reported values alone do not establish health.'),
+    secondary: data?.signal_availability == null
+      ? t('battery.cells.modernization.signalAvailability', 'Pack and temperature signal availability is not supplied by this endpoint; reported values alone do not establish health.')
+      : undefined,
   };
   if (variant === 'temperature') {
     return <BatteryEvidenceBrief {...props} id="battery-cells-temperature" title={t('battery.cells.temp.title', 'Temperature summary')} />;

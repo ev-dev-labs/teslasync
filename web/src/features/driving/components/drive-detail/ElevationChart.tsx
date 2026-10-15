@@ -84,14 +84,14 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
                 syncMethod={syncProps.syncMethod}
                 onMouseMove={syncProps.onMouseMove}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} interval="preserveStartEnd" />
-                <YAxis yAxisId="elev" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-                <YAxis yAxisId="speed" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
+                <XAxis dataKey="time" tick={{ fill: chartTokens.axisStroke, fontSize: 10 }} interval="preserveStartEnd" />
+                <YAxis yAxisId="elev" tick={{ fill: chartTokens.axisStroke, fontSize: 10 }} />
+                <YAxis yAxisId="speed" orientation="right" tick={{ fill: chartTokens.axisStroke, fontSize: 10 }} />
                 <Tooltip content={<ChartTooltip />} />
                 <ChartLegend />
                 <Area yAxisId="elev" type="monotone" dataKey="elevation" stroke={chartTokens.series[1]} fill={chartTokens.series[1]} fillOpacity={0.08} strokeWidth={2} name={`${t('driveDetail.elevation', 'Elevation')} (m)`} hide={hiddenSeries?.isHidden('elevation')} />
-                <Line yAxisId="speed" type="monotone" dataKey="speed" stroke={chartTokens.series[4]} strokeWidth={1.5} dot={false} name={`${t('driveDetail.speed', 'Speed')} (${speedUnit})`} strokeOpacity={0.6} hide={hiddenSeries?.isHidden('speed')} />
+                <Line yAxisId="speed" type="monotone" dataKey="speed" stroke={chartTokens.series[0]} strokeWidth={1.5} dot={false} name={`${t('driveDetail.speed', 'Speed')} (${speedUnit})`} strokeOpacity={0.6} hide={hiddenSeries?.isHidden('speed')} />
                 {syncedX != null && (
                   <ReferenceLine
                     yAxisId="elev"

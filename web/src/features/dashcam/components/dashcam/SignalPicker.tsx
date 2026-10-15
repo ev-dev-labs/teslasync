@@ -1,6 +1,8 @@
+import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ComboboxMulti } from '@/components/forms';
 import { SourceContent } from '@/components/layout';
+import { HelperText } from '@/components/ui';
 import { deriveDataState } from '@/api/dataState';
 import { useSignals } from '@/api/hooks/useTelemetry';
 
@@ -17,6 +19,7 @@ export interface SignalPickerProps {
  */
 export function SignalPicker({ vehicleId, selected, onChange }: SignalPickerProps) {
   const { t } = useTranslation();
+  const limitHintId = useId();
   const signalsQuery = useSignals(vehicleId);
   const options = signalsQuery.data ?? [];
   const source = deriveDataState(signalsQuery);
@@ -26,6 +29,8 @@ export function SignalPicker({ vehicleId, selected, onChange }: SignalPickerProp
     <ComboboxMulti
       value={selected}
       onChange={onChange}
+      maxItems={8}
+      describedBy={limitHintId}
       options={options}
       getOptionLabel={(s) => s}
       getOptionKey={(s) => s}
@@ -33,6 +38,10 @@ export function SignalPicker({ vehicleId, selected, onChange }: SignalPickerProp
       placeholder={t('dashcam.reconstruction.signalPickerPlaceholder', 'Search signals…')}
       loading={signalsQuery.isLoading && !source.hasData}
     />
+    <HelperText id={limitHintId}>
+      {t('dashcam.reconstruction.signalLimitHint',
+        'Reconstruction loads the first 8 unique, non-empty signal names in selection order. Remove a selected signal before adding another at the limit; existing selections are kept.')}
+    </HelperText>
     <SourceContent
       state={source.fatalError ? 'error' : source.refreshError ? 'retained'
         : source.hasData && options.length === 0 ? 'empty' : 'ready'}

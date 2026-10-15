@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next'
 import { isApiError } from '@/api/client'
-import { deriveDataState } from '@/api/dataState'
+import { deriveDataState, type DataStateSource } from '@/api/dataState'
 import {
+  AlertBanner,
   DataStateNotice,
   EmptyState,
   ErrorDisplay,
@@ -15,6 +16,7 @@ import { ManagementDataView } from './ManagementDataView'
 
 interface ManagementEndpointBodyProps {
   data: unknown
+  source?: DataStateSource<unknown>
   loading: boolean
   error?: unknown
   unavailable: boolean
@@ -34,8 +36,9 @@ function hasRenderableData(value: unknown): boolean {
 
 export function ManagementEndpointBody({
   data,
+  source,
   loading,
-  error,
+  error: suppliedError,
   unavailable,
   kind,
   hasCompletedResult = false,
@@ -43,7 +46,12 @@ export function ManagementEndpointBody({
   emptyMessage,
 }: ManagementEndpointBodyProps) {
   const { t } = useTranslation()
-  const state = deriveDataState({ data, error, isLoading: loading })
+  const error = suppliedError ?? source?.error
+  const state = deriveDataState(source ? { ...source, error } : { data, error })
+  const completed = hasCompletedResult
+  const activelyLoading = source
+    ? source.fetchStatus === 'fetching' && !state.hasData
+    : loading
   const prerequisiteUnavailable =
     isApiError(error) && [402, 412].includes(error.status)
 
@@ -64,7 +72,12 @@ export function ManagementEndpointBody({
     state="stale"
     title={t('dataState.stale.title', 'Data may be stale')}
     message={t('dataSources.staleMessage', 'Previously loaded data remains visible while affected sources recover.')}
-  /> : null
+  /> : state.isRefreshBlocked && state.hasData ? <AlertBanner
+    variant="info"
+    title={t('dataSources.status.paused', 'Refresh paused')}
+  >
+    {t('system.outage.refreshPaused', 'Connection paused; source freshness is not confirmed.')}
+  </AlertBanner> : null
   if (hasRenderableData(data)) {
     return <>
       {refreshNotice}
@@ -77,7 +90,7 @@ export function ManagementEndpointBody({
       <ManagementDataView data={data} kind={kind} />
     </>
   }
-  if (loading && !state.hasData) {
+  if (activelyLoading && !state.hasData && !state.fatalError) {
     return (
       <ListSkeleton
         rows={3}
@@ -120,7 +133,21 @@ export function ManagementEndpointBody({
       />
     )
   }
-  if (hasCompletedResult) {
+  if (source && !state.hasData && !completed) {
+    return (
+      <AlertBanner
+        variant="info"
+        title={state.isRefreshBlocked
+          ? t('dataSources.status.paused', 'Refresh paused')
+          : t('operations.status.awaitingData', 'Awaiting data')}
+      >
+        {state.isRefreshBlocked
+          ? t('system.outage.pausedSource', 'Waiting for a connection before this source can load. Missing evidence remains unknown.')
+          : t('system.outage.awaitingSource', 'This source has not resolved yet; missing evidence is not a confirmed empty result.')}
+      </AlertBanner>
+    )
+  }
+  if (completed) {
     return (
       <>
       {refreshNotice}

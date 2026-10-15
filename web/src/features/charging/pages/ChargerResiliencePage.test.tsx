@@ -14,7 +14,33 @@ const h = vi.hoisted(() => ({
   query: {} as DataStateSource<ChargingSession[]> & { isLoading: boolean },
   chart: undefined as ChartContainerProps | undefined,
   refetch: vi.fn(),
+  downloadCSV: vi.fn(),
   formatEnergy: vi.fn((wh: number) => `${wh} Wh`),
+  unknownLocation: 'Unknown location',
+  contextualHelp: true,
+  translations: {} as Record<string, string>,
+}));
+vi.mock('@/hooks/useProductPreferences', () => ({
+  useProductPreferences: () => ({ preferences: { contextualHelp: h.contextualHelp } }),
+}));
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, fallback?: string | Record<string, unknown>, values?: Record<string, unknown>) => {
+      const options = typeof fallback === 'object' ? fallback : values;
+      const defaultValue = typeof fallback === 'string' ? fallback : options?.defaultValue;
+      const label = h.translations[key] ?? (key === 'chargerResilience.unknownLocation' ? h.unknownLocation
+        : typeof defaultValue === 'string' ? defaultValue : key);
+      return label.replace(/\{\{\s*(\w+)\s*\}\}/g, (match, name: string) =>
+        options?.[name] == null ? match : String(options[name]));
+    },
+    i18n: { language: 'en', changeLanguage: vi.fn() },
+  }),
+  Trans: ({ children }: { children?: ReactNode }) => children,
+  initReactI18next: { type: '3rdParty', init: () => undefined },
+}));
+vi.mock('@/lib/csvExport', async importOriginal => ({
+  ...await importOriginal<typeof import('@/lib/csvExport')>(),
+  downloadCSV: h.downloadCSV,
 }));
 vi.mock('@/api/hooks/useCharging', async importOriginal => ({
   ...await importOriginal<typeof import('@/api/hooks/useCharging')>(),
@@ -23,9 +49,13 @@ vi.mock('@/api/hooks/useCharging', async importOriginal => ({
 vi.mock('@/hooks/useSelectedVehicle', () => ({
   useSelectedVehicle: () => ({ vehicleId: 7 }),
 }));
-vi.mock('@/hooks/useUnits', () => ({
-  useUnits: () => ({ formatEnergy: h.formatEnergy }),
-}));
+vi.mock('@/hooks/useUnits', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/hooks/useUnits')>();
+  return {
+    ...actual,
+    useUnits: () => ({ ...actual.useUnits(), formatEnergy: h.formatEnergy }),
+  };
+});
 vi.mock('@/components/motion', async importOriginal => ({
   ...await importOriginal<typeof import('@/components/motion')>(),
   FadeIn: ({ children }: { children: ReactNode }) => <>{children}</>,
@@ -72,6 +102,9 @@ function mountPage() {
 beforeEach(() => {
   vi.clearAllMocks();
   h.chart = undefined;
+  h.unknownLocation = 'Unknown location';
+  h.contextualHelp = true;
+  h.translations = {};
   setGlobalPrecision(2);
   setGlobalLocale('en-US');
   h.query = {
@@ -87,6 +120,134 @@ afterEach(() => {
 });
 
 describe('charger resilience page-local modernization', () => {
+  it('localizes distinct contextual help names and preserves their explanations and preference', () => {
+    h.translations = {
+      'help.chargerResilience.scoreIconLabel': 'Informationen zum Resilienzwert',
+      'help.chargerResilience.effectiveSitesIconLabel': 'Informationen zur effektiven Standortanzahl',
+      'help.chargerResilience.whatIfIconLabel': 'Informationen zum hypothetischen Szenario',
+    };
+    const { rerender } = mountPage();
+    const help = [
+      ['Informationen zum Resilienzwert', 'A composite of three things:'],
+      ['Informationen zur effektiven Standortanzahl', 'The reciprocal of the energy-weighted Herfindahl-Hirschman Index'],
+      ['Informationen zum hypothetischen Szenario', 'A hypothetical, not a prediction:'],
+    ];
+    const assertHelp = () => {
+      for (const [name, explanation] of help) {
+        const trigger = screen.getByRole('button', { name: name! });
+        const tooltip = document.getElementById(trigger.getAttribute('aria-describedby')!);
+        expect(tooltip).toHaveAttribute('role', 'tooltip');
+        expect(tooltip).toHaveTextContent(explanation!);
+      }
+      expect(screen.queryByRole('button', { name: 'More info' })).not.toBeInTheDocument();
+    };
+    assertHelp();
+    h.contextualHelp = false;
+    rerender(
+      <QueryClientProvider client={clients[clients.length - 1]!}>
+        <MemoryRouter initialEntries={['/charger-resilience']}>
+          <ChargerResiliencePage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    for (const [name] of help) {
+      expect(screen.queryByRole('button', { name: name! })).not.toBeInTheDocument();
+    }
+    expect(screen.getByText('Resilience Score')).toBeInTheDocument();
+    expect(screen.getByText('Effective Site Count')).toBeInTheDocument();
+    expect(screen.getByText('What If the Top Site Disappeared?')).toBeInTheDocument();
+    h.contextualHelp = true;
+    rerender(
+      <QueryClientProvider client={clients[clients.length - 1]!}>
+        <MemoryRouter initialEntries={['/charger-resilience']}>
+          <ChargerResiliencePage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    assertHelp();
+  });
+
+  it.each([true, false])('localizes the synthetic site across chart, export, detail and KPI (energy available: %s)', energyAvailable => {
+    h.unknownLocation = 'Unbekannter Standort';
+    h.query = { ...h.query, data: [
+      { ...session('unknown', '', energyAvailable ? 100 : 0), charger_type: null },
+      { ...session('unknown-again', '', energyAvailable ? 100 : 0), charger_type: null },
+      session('named', 'Unknown location', energyAvailable ? 20 : 0),
+      { ...session('typed', '', energyAvailable ? 10 : 0), charger_type: 'DC fast / CCS' },
+    ] };
+    mountPage();
+    expect(h.chart?.data?.map(row => row.site)).toEqual([
+      'Unbekannter Standort', 'Unknown location', 'DC fast / CCS',
+    ]);
+    expect(h.chart?.exportData).toEqual(h.chart?.data);
+    const syntheticSite = screen.getAllByText('Unbekannter Standort').find(node => node.closest('li'))?.closest('li');
+    expect(syntheticSite).toHaveTextContent('2 sessions');
+    expect(screen.getAllByText(energyAvailable
+      ? 'Unbekannter Standort'
+      : 'Unbekannter Standort — share of sessions, not energy').length).toBeGreaterThan(0);
+    expect(screen.getByText('New top site').nextElementSibling).toHaveTextContent('Unknown location');
+  });
+
+  it('localizes a synthetic runner-up without confusing it with no remaining site', () => {
+    h.unknownLocation = 'Unbekannter Standort';
+    h.query = { ...h.query, data: [
+      session('home', 'Home', 100),
+      { ...session('unknown', '', 20), charger_type: null },
+    ] };
+    mountPage();
+    expect(screen.getByText('New top site').nextElementSibling).toHaveTextContent('Unbekannter Standort');
+    expect(screen.queryByText('None yet')).not.toBeInTheDocument();
+  });
+
+  it.each([null, undefined, NaN, Infinity, 'bad'])('discloses invalid energy %s without hiding sites or inventing zero shares', energy => {
+    h.query = { ...h.query, data: [
+      Object.assign(session('missing', 'Home', 0), { total_energy_added_wh: energy }),
+      session('backup', 'Backup', 0),
+    ] };
+    const { container } = mountPage();
+    expect(screen.getAllByText('Energy denominator unavailable: some sessions have missing or invalid energy measurements.').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Session-based fallback, not energy-weighted; diversification uses the observed site count.').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Energy share unavailable')).toHaveLength(2);
+    expect(screen.getByText('Sites')).toBeInTheDocument();
+    expect(screen.getByText('What If the Top Site Disappeared?')).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(1);
+    expect(h.chart?.data?.map(row => row.share)).toEqual([null, null]);
+    const chart = screen.getByRole('figure', { name: 'Energy Share by Site' });
+    for (const row of within(chart).getAllByRole('row').slice(1)) {
+      expect(within(row).getAllByRole('cell')[1]).toHaveTextContent('—');
+      expect(within(row).getAllByRole('cell')[2]).toHaveTextContent('1');
+    }
+  });
+
+  it('explains measured zero and remaining sites without remaining energy', () => {
+    h.query = { ...h.query, data: [session('home', 'Home', 10), session('backup', 'Backup', 0)] };
+    mountPage();
+    expect(screen.getByText(/Sites remain, but no positive recorded energy remains\./)).toBeInTheDocument();
+    expect(screen.queryByText('No remaining sites after removing the top site.')).not.toBeInTheDocument();
+    expect(screen.getByText('New top site').nextElementSibling).toHaveTextContent('Backup');
+    expect(h.formatEnergy).toHaveBeenCalledWith(10);
+    const chart = screen.getByRole('figure', { name: 'Energy Share by Site' });
+    expect(within(within(chart).getAllByRole('row')[2]!).getAllByRole('cell')[1]).toHaveTextContent('0.00');
+  });
+
+  it('discloses measured-zero fallback separately from invalid energy', () => {
+    h.query = { ...h.query, data: [session('home', 'Home', 0), session('backup', 'Backup', -0)] };
+    mountPage();
+    expect(screen.getAllByText('Energy denominator unavailable: no positive recorded energy.').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Energy denominator unavailable: some sessions have missing or invalid energy measurements.')).not.toBeInTheDocument();
+    expect(h.formatEnergy).toHaveBeenCalledWith(0);
+  });
+
+  it('passes signed fractional Wh unchanged to the display boundary', () => {
+    h.query = { ...h.query, data: [
+      session('home', 'Home', 0.75), session('adjustment', 'Home', -2.5),
+      session('backup', 'Backup', 0.25),
+    ] };
+    mountPage();
+    expect(h.formatEnergy).toHaveBeenCalledWith(-1.75);
+    expect(h.chart?.data?.map(row => row.share)).toEqual([75, 25]);
+  });
+
   it('preserves every scalar row and adds textual top-site identity to the table, export and site detail', () => {
     mountPage();
     const rows = [
@@ -99,10 +260,10 @@ describe('charger resilience page-local modernization', () => {
     const tableRows = within(chart).getAllByRole('row');
     expect(tableRows).toHaveLength(3);
     expect(within(tableRows[1]!).getAllByRole('cell').map(cell => cell.textContent)).toEqual([
-      longSite, '80', '2', 'Top-Site Dependency',
+      longSite, '80.00', '2', 'Top-Site Dependency',
     ]);
     expect(within(tableRows[2]!).getAllByRole('cell').map(cell => cell.textContent)).toEqual([
-      'Backup station', '20', '1', '—',
+      'Backup station', '20.00', '1', '—',
     ]);
     const siteRow = screen.getAllByText(longSite).find(node => node.closest('li'))?.closest('li');
     expect(siteRow).toHaveTextContent('Named place');
@@ -111,6 +272,30 @@ describe('charger resilience page-local modernization', () => {
     expect(siteRow).toHaveTextContent('Top-Site Dependency');
     fireEvent.click(within(chart).getByRole('button', { name: 'Export chart' }));
     expect(within(chart).getByRole('menuitem', { name: 'Download data as CSV' })).toBeInTheDocument();
+    fireEvent.click(within(chart).getByRole('menuitem', { name: 'Download data as CSV' }));
+    expect(h.downloadCSV).toHaveBeenCalledWith(expect.any(String),
+      `site,share,sessions,dependency\r\n${longSite},80,2,Top-Site Dependency\r\nBackup station,20,1,—`);
+  });
+
+  it('localizes fractional shares while keeping counts integral and CSV values scalar', () => {
+    setGlobalLocale('de-DE');
+    h.query = { ...h.query, data: [
+      session('home', longSite, 2), session('backup', 'Backup station', 1),
+    ] };
+    mountPage();
+    expect(h.chart?.dataColumns?.filter(column => column.kind != null).map(column => [column.key, column.kind]))
+      .toEqual([['share', 'measurement'], ['sessions', 'count']]);
+    const chart = screen.getByRole('figure', { name: 'Energy Share by Site' });
+    const rows = within(chart).getAllByRole('row');
+    expect(within(rows[1]!).getAllByRole('cell').map(cell => cell.textContent))
+      .toEqual([longSite, '66,70', '1', 'Top-Site Dependency']);
+    expect(within(rows[2]!).getAllByRole('cell').map(cell => cell.textContent))
+      .toEqual(['Backup station', '33,30', '1', '—']);
+    expect(h.chart?.exportData?.map(row => [row.share, row.sessions])).toEqual([[66.7, 1], [33.3, 1]]);
+    fireEvent.click(within(chart).getByRole('button', { name: 'Export chart' }));
+    fireEvent.click(within(chart).getByRole('menuitem', { name: 'Download data as CSV' }));
+    expect(h.downloadCSV).toHaveBeenCalledWith(expect.any(String),
+      `site,share,sessions,dependency\r\n${longSite},66.7,1,Top-Site Dependency\r\nBackup station,33.3,1,—`);
   });
 
   it.each(['refresh-error', 'paused'] as const)('explains retained empty sections with one source recovery for %s', mode => {
@@ -169,6 +354,7 @@ describe('charger resilience page-local modernization', () => {
     expect(container.querySelector('[data-operational-metric]')).toHaveAttribute('data-value-state', 'value');
     expect(screen.getByText('0.00 (+0.00)')).toHaveClass(neonColorMap.green.text);
     expect(screen.getByText('None yet')).toBeInTheDocument();
+    expect(screen.getByText('No remaining sites after removing the top site.')).toBeInTheDocument();
     expect(screen.getByText('10000 Wh')).toBeInTheDocument();
   });
 });

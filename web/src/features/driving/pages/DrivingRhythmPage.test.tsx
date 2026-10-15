@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from 'i18next';
 
@@ -26,6 +26,7 @@ const {
   rangeOptionsMock,
   sharedRange,
   brokenSectionMock,
+  layoutPropsMock,
 } = vi.hoisted(() => ({
   pageTitleMock: vi.fn(),
   sectionPropsMock: vi.fn<(id: string, probe: SectionProbe) => void>(),
@@ -34,6 +35,7 @@ const {
   rangeOptionsMock: vi.fn(),
   sharedRange: { set: (_range: { start: string; end: string }) => {} },
   brokenSectionMock: vi.fn<(id: string) => void>(),
+  layoutPropsMock: vi.fn(),
 }));
 
 vi.mock('@/lib/errorReporter', () => ({ reportFrontendError: vi.fn() }));
@@ -113,19 +115,29 @@ vi.mock('@/components/layout', () => ({
     subtitle,
     actions,
     children,
+    query,
+    busy,
   }: {
     title: string;
     subtitle: string;
     actions: ReactNode;
     children: ReactNode;
-  }) => (
-    <main>
-      <h1>{title}</h1>
-      <p>{subtitle}</p>
-      {actions}
-      {children}
-    </main>
-  ),
+    query: { refetch: () => void };
+    busy?: boolean;
+  }) => {
+    layoutPropsMock({ query, busy });
+    return (
+      <main>
+        <h1>{title}</h1>
+        <p>{subtitle}</p>
+        <button type="button" aria-label="Refresh page" onClick={() => { void query.refetch(); }}>
+          Refresh page
+        </button>
+        {actions}
+        {children}
+      </main>
+    );
+  },
   Grid: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
 
@@ -326,6 +338,111 @@ describe('DrivingRhythmPage', () => {
     useHistoryMock.mockReturnValue(query({ data: [] }));
     render(<DrivingRhythmPage />);
 
+    for (const id of SECTION_IDS) {
+      expect(screen.getByTestId(id)).toHaveTextContent('empty');
+    }
+  });
+
+  it('announces active initial fetching without paused feedback or an empty result', () => {
+    useHistoryMock.mockReturnValue(query({
+      data: undefined, isPending: true, isLoading: true,
+      isFetching: true, fetchStatus: 'fetching',
+    }));
+    render(<DrivingRhythmPage />);
+
+    expect(layoutPropsMock).toHaveBeenLastCalledWith(expect.objectContaining({ busy: true }));
+    expect(screen.queryByTestId('driving-rhythm-initial-paused')).not.toBeInTheDocument();
+    for (const id of SECTION_IDS) {
+      expect(screen.getByTestId(id)).toHaveTextContent('loading');
+    }
+  });
+
+  it('keeps paused initial evidence unresolved and retries only its source through recovery', () => {
+    const refetch = vi.fn();
+    const paused = query({
+      data: undefined, isPending: true, isLoading: false,
+      isFetching: false, fetchStatus: 'paused', refetch,
+    });
+    useHistoryMock.mockReturnValue(paused);
+    const { rerender } = render(<DrivingRhythmPage />);
+
+    const notice = screen.getByTestId('driving-rhythm-initial-paused');
+    expect(notice).toHaveTextContent('Driving Rhythm');
+    expect(notice).toHaveTextContent('The initial evidence query is paused; no empty result is inferred.');
+    expect(notice).not.toHaveTextContent(/offline|failed|service unavailable|connection lost/i);
+    expect(layoutPropsMock).toHaveBeenLastCalledWith({ query: paused, busy: false });
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    for (const id of SECTION_IDS) {
+      expect(screen.getByTestId(id)).toHaveTextContent('loading');
+    }
+    expect(sectionPropsMock.mock.calls.every(([, probe]) => probe.state.error == null)).toBe(true);
+    fireEvent.click(within(notice).getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh page' }));
+    expect(refetch).toHaveBeenCalledTimes(2);
+
+    useHistoryMock.mockReturnValue(query({
+      data: undefined, isPending: true, isLoading: true,
+      isFetching: true, fetchStatus: 'fetching', refetch,
+    }));
+    rerender(<DrivingRhythmPage />);
+    expect(screen.queryByTestId('driving-rhythm-initial-paused')).not.toBeInTheDocument();
+    expect(layoutPropsMock).toHaveBeenLastCalledWith(expect.objectContaining({ busy: true }));
+
+    useHistoryMock.mockReturnValue(query({ data: [], isSuccess: true, refetch }));
+    rerender(<DrivingRhythmPage />);
+    for (const id of SECTION_IDS) {
+      expect(screen.getByTestId(id)).toHaveTextContent('empty');
+    }
+    expect(screen.queryByTestId('driving-rhythm-initial-paused')).not.toBeInTheDocument();
+    expect(layoutPropsMock).toHaveBeenLastCalledWith(expect.objectContaining({ busy: false }));
+  });
+
+  it('retains successful zero-distance evidence through refresh failure and recovery', () => {
+    const refetch = vi.fn();
+    const rows = [{ ...drive(1), distanceM: 0 }];
+    useHistoryMock.mockReturnValue(query({ data: rows, refetch }));
+    const { rerender } = render(<DrivingRhythmPage />);
+    useHistoryMock.mockReturnValue(query({
+      data: rows, refetch, isError: true, error: new Error('Synthetic refresh failure'),
+    }));
+    rerender(<DrivingRhythmPage />);
+    for (const id of SECTION_IDS) {
+      expect(screen.getByTestId(id)).toHaveTextContent('ready');
+    }
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    const brief = sectionPropsMock.mock.calls.filter(([id]) => id === SECTION_IDS[0]).at(-1)?.[1];
+    expect(brief?.summary).toMatchObject({ total: 1, totalDistanceM: 0, distanceMeasuredDrives: 1 });
+    expect(brief?.retained).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+
+    useHistoryMock.mockReturnValue(query({ data: rows, refetch, isSuccess: true }));
+    rerender(<DrivingRhythmPage />);
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(sectionPropsMock.mock.calls.filter(([id]) => id === SECTION_IDS[0]).at(-1)?.[1].retained).toBe(false);
+    expect(layoutPropsMock).toHaveBeenLastCalledWith(expect.objectContaining({ query: expect.objectContaining({ refetch }) }));
+  });
+
+  it('retains an authoritative empty window through refresh failure and recovery', () => {
+    const refetch = vi.fn();
+    useHistoryMock.mockReturnValue(query({ data: [], isSuccess: true, refetch }));
+    const { rerender } = render(<DrivingRhythmPage />);
+
+    useHistoryMock.mockReturnValue(query({
+      data: [], isError: true, error: new Error('Synthetic refresh failure'), refetch,
+    }));
+    rerender(<DrivingRhythmPage />);
+    for (const id of SECTION_IDS) {
+      expect(screen.getByTestId(id)).toHaveTextContent('empty');
+    }
+    expect(screen.queryByTestId('driving-rhythm-initial-paused')).not.toBeInTheDocument();
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+
+    useHistoryMock.mockReturnValue(query({ data: [], isSuccess: true, refetch }));
+    rerender(<DrivingRhythmPage />);
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
     for (const id of SECTION_IDS) {
       expect(screen.getByTestId(id)).toHaveTextContent('empty');
     }

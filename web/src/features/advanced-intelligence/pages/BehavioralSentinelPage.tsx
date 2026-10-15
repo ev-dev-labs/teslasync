@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Fingerprint, RadioTower, TerminalSquare } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { useBehavioralSentinel } from '@/api/hooks/useAdvancedIntelligence';
 import { AlertBanner } from '@/components/feedback';
 
@@ -28,6 +29,16 @@ function severityVariant(severity: string) {
   if (severity === 'medium' || severity === 'warning') return 'warning' as const;
   if (severity === 'low' || severity === 'info') return 'info' as const;
   return 'neutral' as const;
+}
+
+function severityLabel(severity: string, t: TFunction): string {
+  if (severity === 'critical') return t('advancedIntelligence.sentinel.severity.critical', 'Critical');
+  if (severity === 'high') return t('advancedIntelligence.sentinel.severity.high', 'High');
+  if (severity === 'medium') return t('advancedIntelligence.sentinel.severity.medium', 'Medium');
+  if (severity === 'warning') return t('advancedIntelligence.sentinel.severity.warning', 'Warning');
+  if (severity === 'low') return t('advancedIntelligence.sentinel.severity.low', 'Low');
+  if (severity === 'info') return t('advancedIntelligence.sentinel.severity.info', 'Info');
+  return t('advancedIntelligence.sentinel.severity.unknownCode', 'Unknown severity: {{code}}', { code: severity });
 }
 
 export default function BehavioralSentinelPage() {
@@ -94,7 +105,7 @@ export default function BehavioralSentinelPage() {
                       </div>
                     </div>
                     <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
-                      <Badge variant={severityVariant(finding.severity)} className="max-w-full break-words">{finding.severity}</Badge>
+                      <Badge variant={severityVariant(finding.severity)} className="max-w-full break-words">{severityLabel(finding.severity, t)}</Badge>
                       <Badge variant="neutral" className="max-w-full break-words">
                         {Number.isFinite(finding.confidence_pct) ? t('advancedIntelligence.sentinel.confidence', '{{value}}% confidence', {
                           value: fmtNumber(finding.confidence_pct),

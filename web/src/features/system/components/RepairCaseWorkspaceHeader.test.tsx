@@ -3,6 +3,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ComponentProps } from 'react';
 import type { RepairCaseStats } from '@/api/hooks/useRepairCaseStats';
+import { deriveDataState } from '@/api/dataState';
 import { formatDateTime } from '@/lib/dateFormat';
 import { RepairCaseWorkspaceHeader } from './RepairCaseWorkspaceHeader';
 
@@ -25,6 +26,60 @@ function renderHeader(overrides: Partial<ComponentProps<typeof RepairCaseWorkspa
 }
 
 describe('RepairCaseWorkspaceHeader neutral chrome and preservation', () => {
+  it('uses actual paused state and retained metadata without manufacturing an error', () => {
+    const retry = vi.fn();
+    const state = deriveDataState({
+      data: statistics, fetchStatus: 'paused', dataUpdatedAt: 1234, refetch: retry,
+    });
+    const { props, rerender } = renderHeader({ statisticsState: state });
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(screen.getByText('Retained source')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Repair case metrics' })).getByText('4')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(retry).toHaveBeenCalledOnce();
+    expect(props.onRetryStatistics).not.toHaveBeenCalled();
+    rerender(<MemoryRouter><RepairCaseWorkspaceHeader {...props} statisticsState={deriveDataState({
+      data: statistics, fetchStatus: 'idle', dataUpdatedAt: 2345, refetch: retry,
+    })} /></MemoryRouter>);
+    expect(screen.getByText('Monitoring')).toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.queryByText('Retained source')).not.toBeInTheDocument();
+  });
+
+  it('keeps paused initial metrics unknown rather than loading or reporting zeros', () => {
+    renderHeader({
+      statistics: undefined,
+      statisticsState: deriveDataState({ fetchStatus: 'paused', isPending: true }),
+    });
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    const metrics = within(screen.getByRole('region', { name: 'Repair case metrics' }));
+    expect(metrics.getAllByText('—')).toHaveLength(4);
+    expect(metrics.queryByText('0')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+  });
+
+  it('retains authoritative zero metrics through refresh failure and successful recovery', () => {
+    const data = { ...statistics, open: 0, in_review: 0, quarantined: 0 };
+    const retry = vi.fn();
+    const { props, rerender } = renderHeader({
+      statisticsState: deriveDataState({
+        data, error: new Error('Synthetic refresh failure'), dataUpdatedAt: 1234, refetch: retry,
+      }),
+    });
+    expect(screen.getByText('Retained metrics')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Repair case metrics' })).getAllByText('0')).toHaveLength(4);
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(retry).toHaveBeenCalledOnce();
+    expect(props.onScan).not.toHaveBeenCalled();
+    rerender(<MemoryRouter><RepairCaseWorkspaceHeader {...props} statisticsState={deriveDataState({
+      data, dataUpdatedAt: 2345, refetch: retry,
+    })} /></MemoryRouter>);
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getByText('Monitoring')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Repair case metrics' })).getAllByText('0')).toHaveLength(4);
+  });
+
   it('uses neutral theme roles for decorative chrome without changing responsive layout', () => {
     const { container } = renderHeader();
     const icon = container.querySelector('.lucide-activity');

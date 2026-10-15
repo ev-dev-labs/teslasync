@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useDrives } from '@/api/hooks/useDriving';
@@ -11,8 +11,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useDataState } from '@/hooks/useDataState';
-import { StaleRefreshWarning } from '@/components/feedback';
-import { EmptyState, QueryError } from '@/components/feedback';
+import { AlertBanner, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { VehicleEvidenceBrief } from '../components/operationalbrief-n-z/VehicleEvidenceBrief';
@@ -43,28 +42,41 @@ export default function ParkingAnalyticsPage() {
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const { tz } = useDateFormat();
-  const [pageNowMs] = useState(() => Date.now());
-  const { start, end } = useRangeState({
+  const { start, end, startInstant, endInstantExclusive, timezone } = useRangeState({
     persistKey: 'parking-analytics.range',
+    timezone: tz,
   });
 
   const drivesQuery = useDrives(vehicleIdStr, {
-    start,
-    end,
+    start: startInstant,
+    end: endInstantExclusive,
     limit: PARKING_DRIVE_LIMIT,
   });
   const drives = useMemo(() => drivesQuery.data ?? [], [drivesQuery.data]);
+  // This is the client acceptance time, not a server completeness watermark.
+  // Retained snapshots keep their edge; a new snapshot or scope renews the fallback.
+  const sourceNowMs = useMemo(
+    () => Number.isFinite(drivesQuery.dataUpdatedAt) && drivesQuery.dataUpdatedAt > 0
+      ? drivesQuery.dataUpdatedAt
+      : Date.now(),
+    [drivesQuery.dataUpdatedAt, drives, vehicleIdStr, startInstant, endInstantExclusive, timezone],
+  );
   const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
+  const awaitingSource = drivesState.status === 'initial' && !drivesState.hasData;
+  const loadingSource = awaitingSource && !drivesState.isRefreshBlocked
+    && (drivesQuery.isFetching || drivesQuery.isLoading);
+  const refreshPaused = drivesState.isRefreshBlocked && !drivesState.fatalError
+    && !drivesState.refreshError;
   const summary = useMemo(
     () =>
       summarizeParking(drives, {
-        nowMs: pageNowMs,
-        rangeStart: start,
-        rangeEnd: end,
-        timeZone: tz,
+        nowMs: sourceNowMs,
+        startInstant,
+        endInstantExclusive,
+        timeZone: timezone,
         rowLimit: PARKING_DRIVE_LIMIT,
       }),
-    [drives, end, pageNowMs, start, tz],
+    [drives, endInstantExclusive, sourceNowMs, startInstant, timezone],
   );
   const summaryStatus =
     drivesState.status === 'ok' && summary.coverage.possiblyCapped
@@ -75,13 +87,13 @@ export default function ParkingAnalyticsPage() {
   }, [drivesQuery.refetch]);
   const sectionState = useMemo<ParkingSectionState>(
     () => ({
-      isLoading: drivesQuery.isLoading,
+      isLoading: awaitingSource,
       error: drivesState.fatalError,
       onRetry,
     }),
     [
       drivesState.fatalError,
-      drivesQuery.isLoading,
+      awaitingSource,
       onRetry,
     ],
   );
@@ -101,21 +113,29 @@ export default function ParkingAnalyticsPage() {
       )}
       query={drivesQuery}
     >
-      <StaleRefreshWarning state={drivesState} label={t('parking.title', 'Parking analytics')} />
+      <StaleRefreshWarning state={drivesState} label={t('parking.title', 'Parking analytics')}
+        title={refreshPaused ? t('dataSources.status.paused', 'Refresh paused') : undefined}
+        message={refreshPaused ? t('dataSources.staleMessage', 'Previously loaded data remains visible while affected sources recover.') : undefined} />
+      {awaitingSource && refreshPaused ? (
+        <AlertBanner variant="info" role="status" title={t('dataSources.status.paused', 'Refresh paused')}>
+          {t('system.outage.awaitingSource', 'This source has not resolved yet; missing evidence is not a confirmed empty result.')}
+        </AlertBanner>
+      ) : null}
       <FadeIn>
         <section data-testid="parking-kpis" aria-label={t('parking.kpis', 'Parking summary metrics')}>
           {sectionState.error ? <QueryError error={sectionState.error} onRetry={onRetry} /> : null}
           <VehicleEvidenceBrief id="parking-summary"
             title={t('parking.kpis', 'Parking summary metrics')}
             description={t('parking.briefDescription', 'Parking is reconstructed between usable drives, not observed continuously. Missing locations and incomplete history remain explicit.')}
-            status={summaryStatus} loading={drivesQuery.isLoading}
+            status={summaryStatus} loading={loadingSource}
+            freshness={refreshPaused ? t('dataSources.status.paused', 'Refresh paused') : undefined}
             provenance={t('parking.briefSource', 'Drive-derived parking reconstruction')}
             scope={t('parking.briefWindow', '{{sample}} · {{start}} → {{end}} · {{timezone}}', {
               sample: t('parking.kpis.observedSample', '{{drives}} usable drives · {{stints}} reconstructed stints', {
                 drives: fmtInt(summary.coverage.validDrives), stints: fmtInt(summary.stints.length),
               }),
               start: start || t('vehicles.evidenceBrief.unbounded', 'Unbounded'),
-              end: end || t('vehicles.evidenceBrief.unbounded', 'Unbounded'), timezone: tz,
+              end: end || t('vehicles.evidenceBrief.unbounded', 'Unbounded'), timezone,
             })}
             metrics={[
               { metricId: 'percent', occurrenceId: 'parked-share', label: t('parking.parkedShare', 'Time parked'),
@@ -140,7 +160,7 @@ export default function ParkingAnalyticsPage() {
                   known: fmtInt(summary.coverage.knownLocationStints), missing: fmtInt(summary.coverage.missingLocationStints),
                 }) },
             ]} />
-          {!drivesQuery.isLoading && !sectionState.error && summary.stints.length === 0 ? <EmptyState
+          {drivesState.hasData && !sectionState.error && summary.stints.length === 0 ? <EmptyState
             message={t('parking.noData', 'Not enough drives in this period to reconstruct parking.')}
             actionTo={{ label: t('parking.browseDrives', 'Browse drives'), to: '/drives' }} /> : null}
         </section>
@@ -176,9 +196,9 @@ export default function ParkingAnalyticsPage() {
           summary={summary}
           state={sectionState}
           sourceStatus={drivesState.status}
-          hasSource={drivesState.data != null}
-          rangeStart={start}
-          rangeEnd={end}
+          hasSource={drivesState.hasData}
+          rangeStart={startInstant}
+          rangeEnd={endInstantExclusive}
         />
       </FadeIn>
     </PageLayout>

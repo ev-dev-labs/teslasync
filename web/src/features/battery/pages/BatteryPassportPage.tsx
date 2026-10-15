@@ -17,7 +17,7 @@ import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useDataState } from '@/hooks/useDataState';
-import { useTimezone } from '@/lib/timezone';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import {
   BatteryPassportCapacityContext,
@@ -54,9 +54,9 @@ import {
  * - capture one immutable page clock for every date-based diagnostic;
  * - derive one immutable analysis result for every extracted section;
  * - create the canonical snake_case download from unmodified response facts;
- * - pass vehicle-time display context only to instant-based identity fields;
+ * - pass saved date/time display context to instant-based certificate fields;
  * - leave UTC trend dates in UTC throughout analysis and presentation;
- * - expose one retry action, owned by the masthead's initial-error surface;
+ * - keep certificate retry separate from nonblocking verification retry;
  * - treat verification failure as status evidence rather than page failure.
  *
  * Section components own their panel shells and state-specific interiors.
@@ -115,7 +115,7 @@ function downloadCertificate(passport: BatteryPassport): void {
 }
 
 export default function BatteryPassportPage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   usePageTitle(
     t(
       'batteryPassport.title',
@@ -130,7 +130,7 @@ export default function BatteryPassportPage() {
    * no-vehicle state.
    */
   const { vehicleId } = useSelectedVehicle();
-  const vehicleTimeZone = useTimezone('vehicle');
+  const { opts: timestampContext, locale, tz } = useDateFormat();
   const vehicleIdString =
     vehicleId != null
       ? String(vehicleId)
@@ -223,6 +223,7 @@ export default function BatteryPassportPage() {
     initialError,
     refreshError,
     onRetry,
+    timestampContext,
   };
 
   /*
@@ -231,7 +232,13 @@ export default function BatteryPassportPage() {
    * During a background fetch, cached evidence is identified explicitly as
    * a previous result rather than presented as a current digest comparison.
    */
-  const verification: BatteryPassportVerificationState = (() => {
+  const onVerifyRetry = useCallback(
+    () => {
+      void verifyQuery.refetch();
+    },
+    [verifyQuery.refetch],
+  );
+  const verificationResult = ((): Pick<BatteryPassportVerificationState, 'status' | 'data' | 'error'> => {
     if (
       passport == null
       || typeof passport.provenance_hash !== 'string'
@@ -244,7 +251,17 @@ export default function BatteryPassportPage() {
       };
     }
     if (
-      verifyQuery.isLoading
+      verifyQuery.fetchStatus === 'paused'
+      && !verifyQuery.error
+    ) {
+      return {
+        status: 'unavailable',
+        data: verifyQuery.data ?? null,
+        error: null,
+      };
+    }
+    if (
+      verifyQuery.isFetching
       && verifyQuery.data == null
     ) {
       return {
@@ -290,6 +307,12 @@ export default function BatteryPassportPage() {
       error: null,
     };
   })();
+  const verification: BatteryPassportVerificationState = {
+    ...verificationResult,
+    onRetry: onVerifyRetry,
+    isPaused: verifyQuery.fetchStatus === 'paused',
+    isRetrying: verifyQuery.isFetching,
+  };
 
   const onExport = useCallback(
     () => {
@@ -338,8 +361,8 @@ export default function BatteryPassportPage() {
         <BatteryPassportMasthead
           state={queryState}
           verification={verification}
-          locale={i18n.language}
-          timeZone={vehicleTimeZone}
+          locale={locale}
+          timeZone={tz}
           onExport={onExport}
         />
       </FadeIn>
@@ -363,7 +386,7 @@ export default function BatteryPassportPage() {
         <BatteryPassportTrendTimeline
           analysis={analysis}
           state={queryState}
-          locale={i18n.language}
+          locale={locale}
         />
       </FadeIn>
 

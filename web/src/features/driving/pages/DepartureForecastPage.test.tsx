@@ -11,6 +11,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastProvider } from '@/components/feedback';
 import type { Drive } from '@/types/driving';
+import { formatDayKey } from '@/lib/dateFormat';
+import { fmtNumber } from '@/lib/numberFormat';
+import { forecastDepartures } from '../lib/departureForecast';
 
 import {
   departureChartLabel,
@@ -278,6 +281,99 @@ beforeEach(() => {
 });
 
 describe('DepartureForecastPage', () => {
+  it('qualifies elapsed calendar opportunity without changing counts, rates, or ranked dates', () => {
+    h.locale = 'de-DE';
+    h.useSharedTimezone = true;
+    h.vehicleTimezone = 'America/Los_Angeles';
+    const drives = weekdayCommute(12);
+    const original = structuredClone(drives);
+    h.history = query({ data: drives });
+    const forecast = forecastDepartures(drives, FROZEN_NOW, h.vehicleTimezone);
+    renderPage();
+
+    const ranked = within(screen.getByTestId('departure-ranked-windows'));
+    const rows = ranked.getAllByRole('listitem');
+    expect(rows).toHaveLength(forecast.rankedWindows.length);
+    forecast.rankedWindows.forEach((slot, index) => {
+      expect(rows[index]).toHaveTextContent(
+        departureDateTime(slot.startMs, h.locale, h.vehicleTimezone!),
+      );
+      expect(rows[index]).toHaveTextContent(
+        `${slot.historicalDepartures} recorded departures / ${slot.cellOccurrences} model-assumed calendar opportunities`,
+      );
+      expect(rows[index]).toHaveTextContent(
+        `${fmtNumber(slot.p * 100, undefined, h.locale)}% modeled`,
+      );
+    });
+    expect(ranked.getByText(/not verified telemetry coverage/)).toBeInTheDocument();
+
+    const quality = within(screen.getByTestId('departure-evidence-quality'));
+    expect(quality.getByText('Elapsed calendar opportunity and recorded recurrence')).toBeInTheDocument();
+    for (const [label, value] of [
+      ['Elapsed returned-history span (days)', forecast.observedSpanDays],
+      ['Elapsed returned-history span (weeks)', forecast.observedWeeks],
+      ['Mean model-assumed opportunities per occupied cell', forecast.evidenceStrength.meanOccupiedCellOccurrences],
+    ] as const) {
+      expect(quality.getByText(label).closest('div')).toHaveTextContent(
+        fmtNumber(value, undefined, h.locale),
+      );
+    }
+    expect(quality.getByText(/not measured recording coverage/)).toBeInTheDocument();
+    const method = screen.getByTestId('departure-methodology');
+    expect(within(method).getByRole('heading', {
+      name: 'Model-assumed calendar opportunity',
+    }).closest('article')).toHaveTextContent(
+      'Zero-event weeks mean no included returned starts; they do not prove inactivity.',
+    );
+    expect(method).toHaveTextContent('(recorded departures + α) / (model-assumed calendar opportunities + β)');
+    expect(method).toHaveTextContent('1 − exp(−rate)');
+    expect(method).toHaveTextContent('No telemetry uptime, completeness, or monitoring coverage metadata is available');
+    expect(drives).toEqual(original);
+    expectEverySection();
+  });
+
+  it('preserves local Monday buckets and real returned-event zeroes across gaps and invalid dates', () => {
+    h.locale = 'de-DE';
+    h.useSharedTimezone = true;
+    h.vehicleTimezone = 'America/Los_Angeles';
+    const anchor = Date.parse('2026-01-20T01:00:00Z');
+    vi.mocked(Date.now).mockReturnValue(anchor);
+    const missing = driveAt('2026-01-05T00:00:00Z');
+    Reflect.deleteProperty(missing, 'startTs');
+    const drives = [
+      missing, driveAt('invalid'), driveAt(''),
+      driveAt('2026-01-05T07:59:00Z'),
+      driveAt('2026-01-05T08:00:00Z'),
+      driveAt('2026-01-19T08:00:00Z'),
+    ];
+    const original = structuredClone(drives);
+    h.history = query({ data: drives });
+    renderPage();
+
+    const weekly = within(screen.getByTestId('departure-weekly-trend'));
+    const tableRows = within(weekly.getByRole('table')).getAllByRole('row').slice(1);
+    expect(tableRows.map((row) => within(row).getAllByRole('cell').map((cell) => cell.textContent))).toEqual(
+      [
+        ['2025-12-29', '1', '1'],
+        ['2026-01-05', '1', '1'],
+        ['2026-01-12', '0', '0'],
+        ['2026-01-19', '1', '1'],
+      ].map(([key, departures, activeDays]) => [
+        formatDayKey(key, { locale: h.locale, style: 'short' }), departures, activeDays,
+      ]),
+    );
+    expect(weekly.getByText(/gaps do not establish recording coverage/)).toHaveTextContent(
+      '3 returned departures across 3 active days and 3 active weeks',
+    );
+    expect(weekly.getByText(/elapsed calendar opportunity is model-assumed/)).toBeInTheDocument();
+    const quality = within(screen.getByTestId('departure-evidence-quality'));
+    for (const label of ['Included departures', 'Invalid start times', 'Excluded rows']) {
+      expect(quality.getByText(label).closest('div')?.querySelector('dd')).toHaveTextContent('3');
+    }
+    expect(drives).toEqual(original);
+    expectEverySection();
+  });
+
   it('uses restrained presenter roles without implying forecast success or losing support', () => {
     renderPage();
 
@@ -947,7 +1043,7 @@ describe('DepartureForecastPage', () => {
 
     for (const label of [
       'Hourly and cumulative modeled departure likelihood across the next 24 vehicle-timezone hour boundaries',
-      'Weekly recorded departure events and active local driving days across the observed vehicle-timezone span',
+      'Weekly returned departure events and active local driving days across the elapsed model-timezone span',
     ]) {
       expect(screen.getByRole('group', { name: label })).toBeInTheDocument();
     }

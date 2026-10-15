@@ -28,6 +28,7 @@ import {
   fireEvent,
   cleanup,
   waitFor,
+  act,
 } from '@testing-library/react';
 import type { SavedView } from '@/api/types';
 import {
@@ -67,7 +68,17 @@ vi.mock('react-i18next', async () => {
 // Controllable stand-ins for the saved-views data + mutation hooks. Tests set
 // `hooks.query.*` before rendering and inspect `hooks.*Mutate` afterwards.
 const hooks = vi.hoisted(() => ({
-  query: { data: undefined as SavedView[] | undefined, isLoading: false, isError: false },
+  query: {
+    data: undefined as SavedView[] | undefined,
+    isLoading: false,
+    isError: false,
+    isPending: false,
+    isFetching: false,
+    fetchStatus: 'idle' as 'idle' | 'fetching' | 'paused',
+    error: null as Error | null,
+    dataUpdatedAt: 0,
+    refetch: vi.fn(),
+  },
   pending: { create: false, update: false, delete: false, setDefault: false },
   createMutate: vi.fn(),
   updateMutate: vi.fn(),
@@ -111,6 +122,12 @@ beforeEach(() => {
   hooks.query.data = [];
   hooks.query.isLoading = false;
   hooks.query.isError = false;
+  hooks.query.isPending = false;
+  hooks.query.isFetching = false;
+  hooks.query.fetchStatus = 'idle';
+  hooks.query.error = null;
+  hooks.query.dataUpdatedAt = 0;
+  hooks.query.refetch.mockReset();
   hooks.pending.create = false;
   hooks.pending.update = false;
   hooks.pending.delete = false;
@@ -256,6 +273,9 @@ describe('SavedViewMenu — query states', () => {
   it('shows a loading message (not the empty state) while the query is pending', () => {
     hooks.query.data = undefined;
     hooks.query.isLoading = true;
+    hooks.query.isPending = true;
+    hooks.query.isFetching = true;
+    hooks.query.fetchStatus = 'fetching';
     renderMenu();
     openMenu();
     expect(screen.getByText('Loading saved views…')).toBeInTheDocument();
@@ -269,6 +289,124 @@ describe('SavedViewMenu — query states', () => {
     openMenu();
     expect(screen.getByRole('alert')).toHaveTextContent('Unable to load saved views');
     expect(screen.queryByText('No saved views yet')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+    expect(hooks.query.refetch).toHaveBeenCalledTimes(1);
+    expect(hooks.createMutate).not.toHaveBeenCalled();
+  });
+
+  it('shows paused recovery without inventing empty data, loading or an error', () => {
+    hooks.query.data = undefined;
+    hooks.query.isPending = true;
+    hooks.query.fetchStatus = 'paused';
+    renderMenu();
+    openMenu();
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.queryByText('No saved views yet')).not.toBeInTheDocument();
+    expect(screen.queryByText('Loading saved views…')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(hooks.query.refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([false, true])('retains confirmed %s empty choices during failed refresh and recovery', (empty) => {
+    hooks.query.data = empty ? [] : [makeView({ id: 0, sort_order: 0, query: '' })];
+    const onApply = vi.fn();
+    const props = { route: '/drives', currentQuery: 'nomatch', onApply };
+    const { rerender } = render(<SavedViewMenu {...props} />);
+    openMenu();
+    hooks.query.isError = true;
+    hooks.query.error = new Error('Refresh failed');
+    hooks.query.dataUpdatedAt = Date.now() - 60_000;
+    rerender(<SavedViewMenu {...props} />);
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByText(empty ? 'No saved views yet' : 'Recent')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(hooks.query.refetch).toHaveBeenCalledTimes(1);
+    hooks.query.isFetching = true;
+    hooks.query.fetchStatus = 'fetching';
+    rerender(<SavedViewMenu {...props} />);
+    expect(screen.getByRole('button', { name: 'Updating…' })).toBeDisabled();
+    expect(screen.getByText(empty ? 'No saved views yet' : 'Recent')).toBeInTheDocument();
+    hooks.query.isError = false;
+    hooks.query.error = null;
+    hooks.query.isFetching = false;
+    hooks.query.fetchStatus = 'idle';
+    rerender(<SavedViewMenu {...props} />);
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    if (!empty) {
+      fireEvent.click(screen.getByRole('button', { name: 'Recent' }));
+      expect(onApply).toHaveBeenCalledWith('');
+    }
+    expect(hooks.createMutate).not.toHaveBeenCalled();
+    expect(hooks.updateMutate).not.toHaveBeenCalled();
+    expect(hooks.deleteMutate).not.toHaveBeenCalled();
+    expect(hooks.setDefaultMutate).not.toHaveBeenCalled();
+  });
+
+  it('keeps manage choices and its independent recovery mounted through refresh failure', () => {
+    hooks.query.data = [makeView()];
+    const props = { route: '/drives', currentQuery: 'nomatch', onApply: vi.fn() };
+    const { rerender } = render(<SavedViewMenu {...props} />);
+    const menu = openMenu();
+    fireEvent.click(within(menu).getByRole('button', { name: 'Manage views' }));
+    hooks.query.isError = true;
+    hooks.query.error = new Error('Refresh failed');
+    rerender(<SavedViewMenu {...props} />);
+    const dialog = screen.getByRole('dialog', { name: 'Manage views' });
+    expect(within(dialog).getByRole('button', { name: 'Recent' })).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Refresh' }));
+    expect(hooks.query.refetch).toHaveBeenCalledTimes(1);
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Pin' }));
+    expect(hooks.updateMutate).toHaveBeenCalledWith({
+      id: 1, route: '/drives', patch: { is_pinned: true },
+    });
+    hooks.query.isError = false;
+    hooks.query.error = null;
+    rerender(<SavedViewMenu {...props} />);
+    expect(screen.getByRole('dialog', { name: 'Manage views' })).toBe(dialog);
+    expect(within(dialog).queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+  });
+
+  it('preserves the applied choice and clearing during a paused retained refresh', () => {
+    hooks.query.data = [makeView()];
+    hooks.query.fetchStatus = 'paused';
+    const { onApply } = renderMenu({ currentQuery: 'sort=recent' });
+    fireEvent.click(screen.getByRole('button', { name: 'Saved views: Recent' }));
+    const menu = screen.getByRole('menu', { name: 'Saved views' });
+    expect(within(menu).getByRole('button', { name: 'Recent' })).toBeInTheDocument();
+    expect(within(menu).getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear applied view' }));
+    expect(onApply).toHaveBeenCalledWith('');
+  });
+
+  it('keeps a save draft through refresh failure and closes only on mutation success', async () => {
+    hooks.query.data = [makeView()];
+    hooks.createMutate.mockImplementation(() => {});
+    const props = { route: '/drives', currentQuery: 'sort=recent', onApply: vi.fn() };
+    const { rerender } = render(<SavedViewMenu {...props} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Saved views: Recent' }));
+    fireEvent.click(screen.getByRole('button', { name: SAVE_CURRENT }));
+    const dialog = screen.getByRole('dialog', { name: SAVE_CURRENT });
+    fireEvent.change(within(dialog).getByRole('textbox'), { target: { value: 'Keep draft' } });
+    hooks.query.isError = true;
+    hooks.query.error = new Error('Refresh failed');
+    rerender(<SavedViewMenu {...props} />);
+    expect(within(dialog).getByRole('textbox')).toHaveValue('Keep draft');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
+    expect(screen.getByRole('dialog', { name: SAVE_CURRENT })).toBe(dialog);
+    const options = hooks.createMutate.mock.calls[0][1] as MutateOpts;
+    hooks.pending.create = true;
+    rerender(<SavedViewMenu {...props} />);
+    expect(within(dialog).getByRole('button', { name: 'Saving…' })).toBeDisabled();
+    hooks.pending.create = false;
+    hooks.query.isError = false;
+    hooks.query.error = null;
+    rerender(<SavedViewMenu {...props} />);
+    expect(within(dialog).getByRole('textbox')).toHaveValue('Keep draft');
+    act(() => options.onSuccess?.());
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
   it('lists views with per-row default, pin, rename and delete controls', () => {
@@ -498,11 +636,12 @@ describe('SavedViewMenu — manage dialog + null safety', () => {
     });
   });
 
-  it('renders safely and shows the empty state when the hook returns no data', () => {
+  it('renders safely without claiming an empty result when the hook returns no data', () => {
     hooks.query.data = undefined;
     renderMenu();
     expect(screen.getByRole('button', { name: 'Saved views' })).toBeInTheDocument();
     openMenu();
-    expect(screen.getByText('No saved views yet')).toBeInTheDocument();
+    expect(screen.getByText('Loading saved views…')).toBeInTheDocument();
+    expect(screen.queryByText('No saved views yet')).not.toBeInTheDocument();
   });
 });

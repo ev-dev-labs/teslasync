@@ -335,6 +335,43 @@ describe('TeslaAccountSection — connected branch', () => {
       expect(errors).toEqual([{ code: 'TLS_ERROR', message, timestamp }])
     })
 
+    it.each([false, true])('retains every loaded error in a contained list (refresh failed=%s)', (refreshFailed) => {
+      const errors = Array.from({ length: 8 }, (_, index) => ({
+        code: `ERROR_${index + 1}`,
+        message: `Complete diagnostic ${index + 1}.\nAdditional diagnostic detail.`,
+        timestamp: `2026-10-14T01:30:0${index}Z`,
+      }))
+      vi.mocked(useFleetTelemetryErrors).mockReturnValue({
+        data: errors,
+        isLoading: false,
+        isError: refreshFailed,
+        error: refreshFailed ? new Error('Refresh failed') : null,
+        refetch: vi.fn(),
+      } as ReturnType<typeof useFleetTelemetryErrors>)
+      render(tree(<FleetSetupSubscribePanel />))
+      fireEvent.change(screen.getByRole('combobox', { name: 'Vehicle' }), {
+        target: { value: 'TEST-VIN' },
+      })
+
+      const diagnostics = screen.getByRole('region', { name: 'Tesla telemetry errors' })
+      expect(diagnostics).toHaveAttribute('tabindex', '0')
+      expect(diagnostics).toHaveClass('max-h-80', 'overflow-y-auto')
+      for (const error of errors) {
+        expect(within(diagnostics).getByText(error.code)).toBeInTheDocument()
+        expect(within(diagnostics).getByText(error.message, {
+          exact: true, collapseWhitespace: false,
+        })).toBeInTheDocument()
+      }
+      expect(diagnostics.querySelectorAll('time')).toHaveLength(errors.length)
+      expect(Array.from(diagnostics.querySelectorAll('time'), (time) =>
+        time.getAttribute('datetime'))).toEqual(errors.map((error) => error.timestamp))
+      expect(screen.getByText('telemetry.example.com')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Subscribe Test vehicle' })).toBeEnabled()
+      if (refreshFailed) {
+        expect(screen.getByText('Previously loaded data remains visible while affected sources recover.')).toBeInTheDocument()
+      }
+    })
+
     it('retains timestamp-only, message-only and missing-detail error cases', () => {
       const timestamp = '2026-10-14T01:30:00Z'
       vi.mocked(useFleetTelemetryErrors).mockReturnValue({

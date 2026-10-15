@@ -3,6 +3,8 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CHART_COLORS, Line } from '@/components/charts';
 import { formatTime } from '@/lib/dateFormat';
+import { fmtPercent } from '@/lib/numberFormat';
+import { formatPower } from '@/lib/unitConversion';
 import { EnergyFlowChart } from './EnergyFlowChart';
 import type { SlotResult } from '../lib/types';
 
@@ -20,7 +22,7 @@ const slots: SlotResult[] = [
     slotIndex: 0, startIso: '2026-10-12T12:00:00Z', solarW: 4000.4, loadW: 1250.6,
     unmetLoadW: 0, vehicleChargeW: 2000.4, vehiclePowerW: { vehicle: 2000.4 },
     batteryChargeW: 749.4, batteryDischargeW: 0, batteryPowerW: 749.4,
-    batterySocPct: 51, gridImportW: 0, gridExportW: 0, curtailedW: 0,
+    batterySocPct: 37.26, gridImportW: 0.4, gridExportW: 0, curtailedW: 0,
     importPricePerKwh: 0.25, exportPricePerKwh: 0.08, slotCost: 0,
   },
   {
@@ -43,6 +45,10 @@ const labels = [
   'Solar', 'Household load', 'Vehicle charging', 'Powerwall (+charge/-discharge)',
   'Grid import', 'Grid export (shown negative)',
 ];
+const powerLabel = (value: number) => formatPower(value, {
+  distance: 'km', speed: 'km/h', temperature: '°C', pressure: 'bar',
+  energy: 'kWh', duration: 'h', power: 'kW', locale: 'en-US', precision: 2,
+});
 
 const lineDefaults = Line.defaultProps;
 const fullscreenSupport = Object.getOwnPropertyDescriptor(document, 'fullscreenEnabled');
@@ -108,18 +114,18 @@ describe('EnergyFlowChart restrained paint', () => {
     }
   });
 
-  it('keeps all slot rows in watts with battery charge and discharge signs and negative exports', () => {
+  it('formats accessible power and percent labels without losing charge, discharge or export signs', () => {
     mount();
     const table = screen.getByRole('table', { hidden: true });
     const rows = within(table).getAllByRole('row', { hidden: true });
     expect(within(rows[0]).getAllByRole('columnheader', { hidden: true })
-      .map(cell => cell.textContent)).toEqual(['Time', ...labels]);
+      .map(cell => cell.textContent)).toEqual(['Time', ...labels, 'State of charge']);
     expect(rows.slice(1).map(row =>
       within(row).getAllByRole('cell', { hidden: true }).map(cell => cell.textContent),
     )).toEqual([
-      ['2026-10-12T12:00:00Z', '4000', '1251', '2000', '749', '0', '0'],
-      ['2026-10-12T12:15:00Z', '1001', '2200', '1000', '-501', '1699', '-301'],
-      ['2026-10-12T12:30:00Z', '0', '0', '0', '0', '0', '0'],
+      [slots[0].startIso, ...[4000.4, 1250.6, 2000.4, 749.4, 0.4, 0].map(powerLabel), fmtPercent(37.26)],
+      [slots[1].startIso, ...[1000.6, 2200.4, 999.6, -500.6, 1698.6, -300.6].map(powerLabel), fmtPercent(50)],
+      [slots[2].startIso, ...[0, 0, 0, 0, 0, 0].map(powerLabel), fmtPercent(50)],
     ]);
     expect(screen.getByRole('button', {
       name: 'Read full description for Energy flow schedule',
@@ -141,9 +147,9 @@ describe('EnergyFlowChart restrained paint', () => {
     fireEvent.mouseMove(chart, { clientX: 90, clientY: 100 });
     const tooltip = await within(chart).findByRole('tooltip');
     for (const label of labels) expect(tooltip).toHaveTextContent(`${label}:`);
-    expect(tooltip).toHaveTextContent('4,000');
-    expect(tooltip).toHaveTextContent('1,251');
-    expect(tooltip).toHaveTextContent('749');
+    expect(tooltip).toHaveTextContent(powerLabel(slots[0].solarW));
+    expect(tooltip).toHaveTextContent(powerLabel(slots[0].loadW));
+    expect(tooltip).toHaveTextContent(powerLabel(slots[0].batteryPowerW));
   });
 
   it('keeps the chart key and complete CSV when a retained series is hidden and restored', async () => {
@@ -154,15 +160,15 @@ describe('EnergyFlowChart restrained paint', () => {
     expect(screen.getByLabelText('Chart URL')).toHaveTextContent(
       'hidden_home-energy-flow-schedule=gridExportW',
     );
-    expect(screen.getByRole('table', { hidden: true })).toHaveTextContent('-301');
+    expect(screen.getByRole('table', { hidden: true })).toHaveTextContent(powerLabel(-300.6));
     fireEvent.click(screen.getByRole('button', { name: 'Export chart' }));
     fireEvent.click(screen.getByRole('menuitem', { name: /CSV/i }));
     expect(downloadCSV).toHaveBeenCalledTimes(1);
     expect(downloadCSV.mock.calls[0][1]).toBe(
-      'time,solarW,loadW,vehicleChargeW,batteryPowerW,gridImportW,gridExportW\r\n' +
-      '2026-10-12T12:00:00Z,4000,1251,2000,749,0,0\r\n' +
-      '2026-10-12T12:15:00Z,1001,2200,1000,-501,1699,-301\r\n' +
-      '2026-10-12T12:30:00Z,0,0,0,0,0,0',
+      'time,solarW,loadW,vehicleChargeW,batteryPowerW,gridImportW,gridExportW,batterySocPct\r\n' +
+      '2026-10-12T12:00:00Z,4000.4,1250.6,2000.4,749.4,0.4,0,37.26\r\n' +
+      '2026-10-12T12:15:00Z,1000.6,2200.4,999.6,-500.6,1698.6,-300.6,50\r\n' +
+      '2026-10-12T12:30:00Z,0,0,0,0,0,0,50',
     );
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute('aria-pressed', 'false');
@@ -181,5 +187,49 @@ describe('EnergyFlowChart restrained paint', () => {
     expect(screen.queryByRole('button', { name: 'Export chart' })).toBeNull();
     expect(screen.queryByRole('table', { hidden: true })).toBeNull();
     expect(downloadCSV).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['missing', undefined],
+    ['null', null],
+    ['NaN', Number.NaN],
+    ['positive infinity', Number.POSITIVE_INFINITY],
+    ['negative infinity', Number.NEGATIVE_INFINITY],
+    ['numeric string', '0.4'],
+  ])('keeps %s measurements unknown rather than turning them into measured zero', (_name, value) => {
+    const fields = [
+      'solarW', 'loadW', 'vehicleChargeW', 'batteryPowerW',
+      'gridImportW', 'gridExportW', 'batterySocPct',
+    ];
+    const invalid = Object.assign({}, slots[0], Object.fromEntries(fields.map(key => [key, value])));
+    mount([invalid, { ...slots[2], batterySocPct: 0 }]);
+    const rows = within(screen.getByRole('table', { hidden: true }))
+      .getAllByRole('row', { hidden: true });
+    const cells = (row: HTMLElement) => within(row).getAllByRole('cell', { hidden: true })
+      .slice(1).map(cell => cell.textContent);
+    expect(cells(rows[1])).toEqual(fields.map(() => '—'));
+    expect(cells(rows[2])).toEqual([...fields.slice(0, -1).map(() => powerLabel(0)), fmtPercent(0)]);
+    fireEvent.click(screen.getByRole('button', { name: 'Export chart' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /CSV/i }));
+    expect(downloadCSV.mock.calls[0][1].split('\r\n').slice(1)).toEqual([
+      '2026-10-12T12:00:00Z,,,,,,,',
+      '2026-10-12T12:30:00Z,0,0,0,0,0,0,0',
+    ]);
+  });
+
+  it('preserves sub-watt signed measurements without rounding or clamping', () => {
+    mount([{
+      ...slots[0], solarW: 0.4, loadW: -0.4, vehicleChargeW: 0.4,
+      batteryPowerW: -0.4, gridImportW: -0.4, gridExportW: 0.4,
+    }]);
+    const rows = within(screen.getByRole('table', { hidden: true }))
+      .getAllByRole('row', { hidden: true });
+    expect(within(rows[1]).getAllByRole('cell', { hidden: true })
+      .slice(1).map(cell => cell.textContent))
+      .toEqual([...[0.4, -0.4, 0.4, -0.4, -0.4, -0.4].map(powerLabel), fmtPercent(37.26)]);
+    fireEvent.click(screen.getByRole('button', { name: 'Export chart' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /CSV/i }));
+    expect(downloadCSV.mock.calls[0][1].split('\r\n')[1])
+      .toBe('2026-10-12T12:00:00Z,0.4,-0.4,0.4,-0.4,-0.4,-0.4,37.26');
   });
 });

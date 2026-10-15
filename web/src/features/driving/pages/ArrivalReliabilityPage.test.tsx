@@ -169,6 +169,9 @@ interface QueryStub {
   data: unknown;
   dataUpdatedAt?: number;
   isLoading: boolean;
+  isPending: boolean;
+  isFetching: boolean;
+  fetchStatus: 'fetching' | 'paused' | 'idle';
   isSuccess: boolean;
   isError: boolean;
   error: unknown;
@@ -181,6 +184,9 @@ function query(overrides: Partial<QueryStub> = {}): QueryStub {
   return {
     data: undefined,
     isLoading,
+    isPending: overrides.isPending ?? isLoading,
+    isFetching: overrides.isFetching ?? isLoading,
+    fetchStatus: overrides.fetchStatus ?? (isLoading ? 'fetching' : 'idle'),
     isSuccess: overrides.isSuccess ?? (!isLoading && !isError),
     isError,
     error: null,
@@ -244,6 +250,83 @@ beforeEach(() => {
 });
 
 describe('ArrivalReliabilityPage', () => {
+  it.each(['failed', 'blocked'] as const)(
+    'propagates %s refresh trust without changing retained quality or window quantities',
+    (refresh) => {
+      const data = readyHistory();
+      h.history = query({ data });
+      const view = renderPage();
+      const briefs = () => [
+        screen.getByTestId('arrival-kpis'),
+        screen.getByTestId('arrival-window-comparisons'),
+        screen.getByTestId('arrival-row-accounting-brief'),
+        screen.getByTestId('arrival-coverage-recurrence-brief'),
+        screen.getByTestId('arrival-support-ingredients-brief'),
+      ];
+      const quantities = () => briefs().map(brief =>
+        Array.from(brief.querySelectorAll('[data-operational-value]'), node => node.textContent),
+      );
+      const original = quantities();
+      expect(original.map(values => values.length)).toEqual([6, 8, 9, 17, 6]);
+
+      h.history = query({
+        data,
+        ...(refresh === 'failed'
+          ? { isError: true, error: new Error('refresh unavailable') }
+          : { fetchStatus: 'paused' as const }),
+      });
+      view.rerenderPage();
+      expectEverySection();
+      expect(quantities()).toEqual(original);
+      expect(within(briefs()[0]!).getByText(
+        refresh === 'failed' ? 'Retained evidence' : 'Refresh paused',
+      )).toBeVisible();
+      for (const brief of briefs().slice(1)) {
+        expect(within(brief).getAllByText('Retained source').length).toBeGreaterThan(0);
+        expect(within(brief).queryByText('Returned evidence')).toBeNull();
+      }
+      const warning = refresh === 'failed'
+        ? screen.getByRole('alert')
+        : screen.getByTestId('stale-refresh-warning');
+      expect(screen.getAllByRole('button', {
+        name: refresh === 'failed' ? 'Retry' : 'Refresh',
+      })).toHaveLength(1);
+      fireEvent.click(within(warning).getByRole('button', {
+        name: refresh === 'failed' ? 'Retry' : 'Refresh',
+      }));
+      expect(historyRefetch).toHaveBeenCalledTimes(1);
+
+      if (refresh === 'failed') {
+        h.history = query({
+          data,
+          isError: true,
+          error: new Error('refresh unavailable'),
+          isFetching: true,
+          fetchStatus: 'fetching',
+        });
+        view.rerenderPage();
+        expect(quantities()).toEqual(original);
+        for (const brief of briefs().slice(1)) {
+          expect(within(brief).getAllByText('Retained source').length).toBeGreaterThan(0);
+        }
+        expect(screen.getAllByRole('alert')).toHaveLength(1);
+        expect(screen.getByRole('button', { name: 'Updating…' })).toBeDisabled();
+      }
+
+      h.history = query({ data, dataUpdatedAt: FROZEN_NOW });
+      view.rerenderPage();
+      expectEverySection();
+      expect(quantities()).toEqual(original);
+      expect(screen.queryByText('Retained evidence')).toBeNull();
+      expect(screen.queryByText('Retained source')).toBeNull();
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect(screen.queryByTestId('stale-refresh-warning')).toBeNull();
+      for (const brief of briefs().slice(1)) {
+        expect(within(brief).getAllByText('Returned evidence').length).toBeGreaterThan(0);
+      }
+    },
+  );
+
   it('retains every row, coverage and support operand in the three real evidence briefs', () => {
     renderPage();
     const accounting = screen.getByTestId('arrival-row-accounting-brief');
@@ -259,16 +342,33 @@ describe('ArrivalReliabilityPage', () => {
     expectEverySection();
   });
 
-  it('keeps all timing evidence while a cached history refresh is paused offline', () => {
-    h.history = { ...query({ data: readyHistory() }), fetchStatus: 'paused' };
-    renderPage();
+  it('keeps all timing evidence while a cached history refresh is paused and recovers', () => {
+    const data = readyHistory();
+    h.history = query({ data, fetchStatus: 'paused' });
+    const view = renderPage();
     expectEverySection();
     const notice = screen.getByTestId('stale-refresh-warning');
     expect(notice).toHaveAttribute('data-refresh-blocked', 'true');
     expect(notice).toHaveTextContent('Previously loaded data remains visible.');
     expect(notice).not.toHaveTextContent(/offline/i);
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Loading arrival timing history')).toBeNull();
     fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }));
     expect(historyRefetch).toHaveBeenCalledTimes(1);
+
+    h.history = query({ data, fetchStatus: 'fetching', isFetching: true });
+    view.rerenderPage();
+    expectEverySection();
+    expect(screen.queryByTestId('stale-refresh-warning')).toBeNull();
+    expect(screen.getByText('Updating…')).toBeInTheDocument();
+    expect(screen.getAllByText('Home → Office').length).toBeGreaterThan(0);
+
+    h.history = query({ data });
+    view.rerenderPage();
+    expectEverySection();
+    expect(screen.queryByText('Refresh paused')).toBeNull();
+    expect(screen.queryByText('Updating…')).toBeNull();
+    expect(screen.getByText('Returned evidence')).toBeInTheDocument();
   });
 
   it('renders all ten persistent analytical shells with the capped hook and vehicle timezone', () => {
@@ -405,6 +505,102 @@ describe('ArrivalReliabilityPage', () => {
     expect(screen.queryByText('0 rows returned')).toBeNull();
     expect(screen.queryByText('Below the 1,000-row cap')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+    expect(screen.queryByTestId('arrival-row-accounting-brief')).toBeNull();
+    expect(screen.queryByText('Retained source')).toBeNull();
+  });
+
+  it('keeps paused initial evidence unknown and resumes through active loading to successful zero', () => {
+    h.history = query({
+      isPending: true,
+      isSuccess: false,
+      fetchStatus: 'paused',
+    });
+    const view = renderPage();
+    expectEverySection();
+    expect(screen.getAllByText('Arrival Reliability loading is paused. No data has been loaded yet.').length).toBeGreaterThan(6);
+    expect(screen.queryByLabelText('Loading arrival timing history')).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText(/offline|Can't reach server/i)).toBeNull();
+    expect(screen.queryByText('0 rows returned')).toBeNull();
+    expect(screen.queryByText('Below the 1,000-row cap')).toBeNull();
+    expect(screen.queryByTestId('arrival-row-accounting-brief')).toBeNull();
+    expect(screen.queryByText('Retained source')).toBeNull();
+    const retry = screen.getByRole('button', { name: 'Retry' });
+    expect(retry).toHaveAttribute('type', 'button');
+    expect(retry).toBeEnabled();
+    expect(retry).not.toHaveAttribute('aria-busy');
+    expect(retry).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0', 'h-auto', 'whitespace-normal');
+    expect(within(retry).getByText('Retry')).toHaveClass('min-w-0', 'break-words');
+    retry.focus();
+    expect(retry).toHaveFocus();
+    fireEvent.click(retry);
+    expect(retry).toHaveFocus();
+    expect(historyRefetch).toHaveBeenCalledTimes(1);
+
+    h.history = query({ isLoading: true });
+    view.rerenderPage();
+    expectEverySection();
+    expect(screen.getAllByRole('status', { name: 'Loading arrival timing history' })).toHaveLength(1);
+    expect(screen.queryByText('Source paused')).toBeNull();
+
+    h.history = query({ data: [] });
+    view.rerenderPage();
+    expectEverySection();
+    expect(screen.getByText('No drives were returned, so no route timing claim is made.')).toBeInTheDocument();
+    expect(within(screen.getByTestId('arrival-kpis')).getAllByText('0').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+    const accounting = screen.getByTestId('arrival-row-accounting-brief');
+    expect(within(accounting).getByText('Returned evidence')).toBeVisible();
+    expect(within(accounting).getByText('Rows returned').closest('[data-operational-metric]'))
+      .toHaveTextContent('0');
+    expect(screen.queryByText('Retained source')).toBeNull();
+  });
+
+  it('does not describe an idle unresolved query as actively loading', () => {
+    h.history = query({ isPending: true, isSuccess: false });
+    renderPage();
+    expectEverySection();
+    expect(screen.queryByLabelText('Loading arrival timing history')).toBeNull();
+    expect(screen.getAllByText('Drive-history availability has not resolved.')).toHaveLength(6);
+    expect(screen.queryByText('0 rows returned')).toBeNull();
+  });
+
+  it('retains refresh failures during retry and clears their status after successful recovery', () => {
+    const data = readyHistory();
+    const error = new Error('refresh unavailable');
+    h.history = query({ data, isError: true, error });
+    const view = renderPage();
+    const retry = screen.getByRole('button', { name: 'Retry' });
+    expect(retry).toHaveAttribute('type', 'button');
+    expect(retry).toBeEnabled();
+    expect(retry).not.toHaveAttribute('aria-busy');
+    expect(retry).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0', 'h-auto', 'whitespace-normal');
+    expect(within(retry).getByText('Retry')).toHaveClass('min-w-0', 'break-words');
+    retry.focus();
+    fireEvent.click(retry);
+    expect(retry).toHaveFocus();
+    expect(historyRefetch).toHaveBeenCalledTimes(1);
+
+    h.history = query({ data, isError: true, error, isFetching: true, fetchStatus: 'fetching' });
+    view.rerenderPage();
+    expectEverySection();
+    expect(screen.getAllByText('Home → Office').length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Updating…' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Updating…' })).toBe(retry);
+    expect(retry).toHaveAttribute('aria-busy', 'true');
+    expect(retry).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0');
+    expect(within(retry).getByText('Updating…')).toHaveClass('min-w-0', 'break-words');
+    fireEvent.click(retry);
+    expect(historyRefetch).toHaveBeenCalledTimes(1);
+    expect(screen.queryByLabelText('Loading arrival timing history')).toBeNull();
+
+    h.history = query({ data, dataUpdatedAt: FROZEN_NOW });
+    view.rerenderPage();
+    expectEverySection();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+    expect(screen.getByText('Returned evidence')).toBeInTheDocument();
   });
 
   it('shows one actionable initial error without removing any shell', () => {

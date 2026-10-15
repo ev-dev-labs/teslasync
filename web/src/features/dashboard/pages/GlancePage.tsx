@@ -207,12 +207,16 @@ export default function GlancePage() {
     ? { ...stateSourceTrust, status: 'stale' as const, provenance: stateData?.live === true ? 'cached' as const : stateSourceTrust.provenance }
     : stateSourceTrust;
 
-  const locationQuery = useLocationSnapshotLatest(vehicleId, 30_000);
+  const locationInterval = useRefreshInterval(30_000);
+  const locationQuery = useLocationSnapshotLatest(vehicleId, locationInterval);
   const { data: location } = locationQuery;
   const locationTrust = useDataState(locationQuery, {
     provenance: 'cached',
     unavailable: location === null,
   });
+  const hasIndependentWorkspace = !vehiclesState.hasData && vehicleId > 0 &&
+    (state != null || location != null);
+  const hasWorkspace = vehicle != null || hasIndependentWorkspace;
 
   const { formatDistance, formatSpeed, formatTemperature } = useUnits();
   const sendCommand = useVehicleCommand();
@@ -225,7 +229,7 @@ export default function GlancePage() {
   const timeToFull = knownNumber(state?.time_to_full_charge);
   const minutesToArrival = knownNumber(location?.minutes_to_arrival);
   const vehicleName =
-    vehicle?.display_name || vehicle?.model || t('glance.defaultName', 'Tesla');
+    vehicle ? vehicle.display_name || vehicle.model || t('glance.defaultName', 'Tesla') : '—';
 
   const observation = (
     <Caption className="block min-w-0 break-words">
@@ -265,6 +269,7 @@ export default function GlancePage() {
     <div className="flex flex-wrap items-center gap-2">
       <Button
         variant="ghost"
+        className="max-md:min-h-11 max-md:min-w-11"
         onClick={() => refetch()}
         disabled={vehicleId === 0}
         aria-label={t('common.refresh', 'Refresh')}
@@ -302,9 +307,9 @@ export default function GlancePage() {
       subtitle={asOf
         ? t('timeMachine.banner.body', 'Read-only point-in-time mode — current state, battery, and other live signals are reconstructed from history. Live actions stay disabled.')
         : t('glance.subtitle', 'A quick, live snapshot of your vehicle')}
-      actions={vehicle ? actions : undefined}
-      loading={vehiclesLoading && !vehiclesState.hasData}
-      error={vehiclesState.fatalError}
+      actions={hasWorkspace ? actions : undefined}
+      loading={vehiclesLoading && !vehiclesState.hasData && !hasIndependentWorkspace}
+      error={hasIndependentWorkspace ? null : vehiclesState.fatalError}
       query={vehicleId > 0 ? stateQuery : undefined}
       dataSources={[
         { id: 'vehicle-registry', label: t('dataSources.labels.vehicleRegistry', 'Vehicle registry'), query: vehiclesQuery },
@@ -312,9 +317,16 @@ export default function GlancePage() {
         { id: 'live-location', label: t('glance.locationLabel', 'Location'), query: locationQuery, enabled: vehicleId > 0 },
       ]}
     >
+      {hasIndependentWorkspace && vehiclesState.fatalError && (
+        <QueryError
+          error={vehiclesState.fatalError}
+          onRetry={vehiclesState.retry ?? undefined}
+        />
+      )}
+      {hasIndependentWorkspace && vehiclesLoading && <Skeleton height={48} />}
       <StaleRefreshWarning state={vehiclesState} label={t('dataSources.labels.vehicleRegistry', 'Vehicle registry')} />
       <StaleRefreshWarning state={stateTrust} label={stateLabel} />
-      {!vehicle ? (
+      {!hasWorkspace ? (
         <GlassPanel className="p-8">
           <EmptyState
             icon={<Battery className="h-8 w-8" />}
@@ -561,13 +573,13 @@ export default function GlancePage() {
                             value={location.destination_name}
                           />
                         )}
-                        {minutesToArrival != null && minutesToArrival >= 0 && (
-                          <DetailRow
-                            icon={Route}
-                            label={t('glance.eta', 'ETA')}
-                            value={`${fmtNumber(minutesToArrival)} ${t('glance.minutesShort', 'min')}`}
-                          />
-                        )}
+                        <DetailRow
+                          icon={Route}
+                          label={t('glance.eta', 'ETA')}
+                          value={minutesToArrival != null
+                            ? `${fmtNumber(minutesToArrival)} ${t('glance.minutesShort', 'min')}`
+                            : '—'}
+                        />
                       </div>
                       <Caption className="block border-t border-[var(--border-subtle)] pt-3">
                         {t('glance.software', 'Software')}: {state?.software_version || '—'}

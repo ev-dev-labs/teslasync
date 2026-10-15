@@ -6,7 +6,7 @@
  * loopback addresses and rejects public egress targets.
  */
 
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Input,
@@ -61,13 +61,33 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
   const [validateBanner, setValidateBanner] = useState<
     { kind: 'ok' | 'fail'; message: string } | null
   >(null)
+  const validationIdentity = useRef(0)
+
+  useLayoutEffect(() => {
+    validationIdentity.current += 1
+    setValidateBanner(null)
+    return () => {
+      validationIdentity.current += 1
+    }
+  }, [
+    isCloud,
+    value.provider,
+    value.base_url,
+    value.model,
+    value.api_key,
+    value.cost_cap_cents,
+    value.api_protocol,
+    value.embedding_model,
+  ])
 
   function patch(next: Partial<AIProviderDraft>) {
+    validationIdentity.current += 1
     onChange({ ...value, ...next })
     setValidateBanner(null)
   }
 
   async function runValidate() {
+    const identity = ++validationIdentity.current
     setValidateBanner(null)
     // Build the request payload. For local mode only mode + base_url
     // matter (the validator is provider-agnostic). For cloud mode we
@@ -97,6 +117,7 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
         }
     try {
       const result = await validate.mutateAsync(req)
+      if (identity !== validationIdentity.current) return
       if (result.ok) {
         const okMessage = result.pinned_ip
           ? t(
@@ -116,6 +137,7 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
       }
       setValidateBanner({ kind: 'fail', message: result.message })
     } catch {
+      if (identity !== validationIdentity.current) return
       // The hook re-shapes only the backend's 422 rejection into the
       // failure variant. A malformed request (400), a 5xx from the
       // probe, or the network being unreachable rejects out of

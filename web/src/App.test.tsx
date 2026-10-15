@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, act, cleanup, screen } from '@testing-library/react'
+import { render, act, cleanup, screen, within } from '@testing-library/react'
 import { StrictMode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { initReactI18next } from 'react-i18next'
 import i18n from 'i18next'
+import { getWorkspaceRouteScope } from '@/lib/workspaceScope'
 
 import { setBaseTitle, __resetTitleStoreForTests } from '@/lib/titleStore'
 import {
@@ -21,22 +22,29 @@ import {
  * plus the `<App>` composition that wires the redirect side effect.
  *
  * We mock `react-router-dom` to (a) spy on the imperative `navigate()` and
- * (b) neutralise `<Routes>` so mounting `<App>` never triggers a lazy page
- * chunk import (which would drag the whole feature graph into jsdom).
+ * (b) neutralise `<Routes>` except in the focused QuickStats routing tests,
+ * which exercise real route matching with a stubbed lazy page and Layout.
  * `MemoryRouter` / `useLocation` are kept REAL so the recorder + route shell
  * resolve their location from a genuine router context. The feedback shell
  * (ErrorBoundary / SuspenseProgressBoundary / PageLoadSkeleton) is exercised
  * for real — only `<App>`'s always-mounted chrome is stubbed out.
  */
 
-const { navigateSpy, recordPageViewSpy } = vi.hoisted(() => ({
+const { navigateSpy, recordPageViewSpy, routing, quickStatsRender } = vi.hoisted(() => ({
   navigateSpy: vi.fn(),
   recordPageViewSpy: vi.fn(),
+  routing: { enabled: false },
+  quickStatsRender: vi.fn(),
 }))
 
 vi.mock('react-router-dom', async (importOriginal) => {
   const actual = await importOriginal<typeof import('react-router-dom')>()
-  return { ...actual, useNavigate: () => navigateSpy, Routes: () => null }
+  return {
+    ...actual,
+    useNavigate: () => navigateSpy,
+    Routes: (props: React.ComponentProps<typeof actual.Routes>) =>
+      routing.enabled ? <actual.Routes {...props} /> : null,
+  }
 })
 
 // Capture recordPageView while keeping the real classify/label helpers so
@@ -55,7 +63,23 @@ vi.mock('@/lib/errorReporter', () => ({
 
 // Neutralise <App>'s always-mounted chrome so the composition renders in
 // isolation. These are covered by their own unit tests.
-vi.mock('./components/layout/Layout', () => ({ default: () => null }))
+vi.mock('./components/layout/Layout', async () => {
+  const { Outlet, useLocation } =
+    await vi.importActual<typeof import('react-router-dom')>('react-router-dom')
+  return {
+    default: () => {
+      const { pathname, search, hash } = useLocation()
+      return (
+        <main data-testid="application-layout" data-location={`${pathname}${search}${hash}`}>
+          <Outlet />
+        </main>
+      )
+    },
+  }
+})
+vi.mock('./features/dashboard/pages/QuickStatsPage', () => ({
+  default: () => quickStatsRender(),
+}))
 vi.mock('./components/layout/ScrollRestoration', () => ({ ScrollRestoration: () => null }))
 vi.mock('@/features/onboarding/components/OnboardingGate', () => ({ OnboardingGate: () => null }))
 vi.mock('@/features/onboarding/components/TaskOnboardingHost', () => ({
@@ -113,6 +137,9 @@ beforeEach(async () => {
   await setupI18n()
   navigateSpy.mockReset()
   recordPageViewSpy.mockReset()
+  routing.enabled = false
+  quickStatsRender.mockReset()
+  quickStatsRender.mockReturnValue(<div>quick-stats-content</div>)
   sessionStorage.clear()
   localStorage.clear()
   resetProductPreferences()
@@ -247,6 +274,60 @@ describe('App :: post-re-auth redirect wiring', () => {
 })
 
 // ── SafeRoute (Suspense + ErrorBoundary shell) ───────────────────────────
+describe('App :: QuickStats route', () => {
+  function renderQuickStats() {
+    routing.enabled = true
+    return render(
+      <MemoryRouter initialEntries={['/quick-stats?vehicle_id=7#summary']}>
+        <App />
+      </MemoryRouter>,
+    )
+  }
+
+  it('mounts the lazy page inside the shared Layout without changing its URL or fixed-window scope', async () => {
+    renderQuickStats()
+
+    const content = await screen.findByText('quick-stats-content')
+    const layout = screen.getByTestId('application-layout')
+    expect(layout).toContainElement(content)
+    expect(screen.getAllByTestId('application-layout')).toHaveLength(1)
+    expect(layout).toHaveAttribute('data-location', '/quick-stats?vehicle_id=7#summary')
+    expect(getWorkspaceRouteScope('/quick-stats')).toMatchObject({
+      vehicle: true,
+      range: false,
+    })
+    expect(navigateSpy).not.toHaveBeenCalled()
+  })
+
+  it('keeps the SafeRoute loading fallback inside the shared Layout', async () => {
+    quickStatsRender.mockImplementation(() => {
+      throw new Promise<void>(() => {})
+    })
+    renderQuickStats()
+
+    const skeleton = await screen.findByTestId('page-load-skeleton')
+    expect(screen.getByTestId('application-layout')).toContainElement(skeleton)
+    expect(skeleton).toHaveAttribute('aria-busy', 'true')
+  })
+
+  it('keeps a page crash isolated inside the shared Layout', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    quickStatsRender.mockImplementation(() => {
+      throw new Error('quick-stats-route-failure')
+    })
+    try {
+      renderQuickStats()
+
+      await screen.findByText('quick-stats-route-failure')
+      const layout = within(screen.getByTestId('application-layout'))
+      expect(layout.getByText('Something went wrong')).toBeInTheDocument()
+      expect(layout.getByRole('button', { name: /try again/i })).toBeInTheDocument()
+    } finally {
+      errSpy.mockRestore()
+    }
+  })
+})
+
 describe('App :: SafeRoute', () => {
   function Boom(): JSX.Element {
     throw new Error('kaboom-boundary')

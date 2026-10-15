@@ -27,11 +27,18 @@
  * the decorative-glyph a11y attribute is asserted on a real <svg>. Network is
  * never touched (this component has no data source of its own).
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
 import type { SpeedHistogramBucket } from './types';
+import { chartTokens } from '@/lib/tokens';
+
+const H = vi.hoisted(() => ({ speed: 'km/h' as 'km/h' | 'mph' }));
+vi.mock('@/hooks/useUnits', () => ({
+  useUnits: () => ({ unitPrefs: { speed: H.speed } }),
+}));
+beforeEach(() => { H.speed = 'km/h'; });
 
 // ── i18n: resolve the string fallback (2nd arg) so assertions read on copy. ──
 vi.mock('react-i18next', () => {
@@ -114,8 +121,8 @@ vi.mock('@/components/charts', () => {
         data-name={String(p.name ?? '')}
       />
     ),
-    XAxis: (p: { dataKey?: string }) => (
-      <span data-testid="xaxis" data-key={String(p.dataKey ?? '')} />
+    XAxis: (p: { dataKey?: string; label?: { value: string } }) => (
+      <span data-testid="xaxis" data-key={String(p.dataKey ?? '')}>{p.label?.value}</span>
     ),
   };
 });
@@ -195,7 +202,7 @@ describe('SpeedHistogramChart — populated bars', () => {
 
     const bar = screen.getByTestId('bar');
     expect(bar).toHaveAttribute('data-key', 'pct');
-    expect(bar).toHaveAttribute('data-fill', '#a855f7');
+    expect(bar).toHaveAttribute('data-fill', chartTokens.series[0]);
     const name = bar.getAttribute('data-name') ?? '';
     expect(name).toContain('%');
     expect(name).toContain('of speed samples');
@@ -222,9 +229,33 @@ describe('SpeedHistogramChart — populated bars', () => {
       screen.getByLabelText('chart-container').getAttribute('data-columns') || '[]',
     );
     expect(columns).toEqual([
-      { key: 'range', label: 'Speed range' },
+      { key: 'range', label: 'Speed range (km/h)' },
       { key: 'pct', label: '% of speed samples' },
     ]);
+  });
+
+  describe('SpeedHistogramChart — selected speed unit', () => {
+    it.each(['km/h', 'mph'] as const)('labels the title, axis and accessible fallback in %s without changing buckets', (unit) => {
+      H.speed = unit;
+      render(<SpeedHistogramChart speedHistData={BUCKETS} />);
+
+      expect(screen.getByRole('heading')).toHaveTextContent(`Speed histogram (${unit})`);
+      expect(screen.getByRole('img')).toHaveAccessibleName(`Speed-bucket distribution histogram (${unit})`);
+      expect(screen.getByTestId('xaxis')).toHaveTextContent(`Speed range (${unit})`);
+      expect(JSON.parse(screen.getByLabelText('chart-container').getAttribute('data-columns') || '[]'))
+        .toContainEqual({ key: 'range', label: `Speed range (${unit})` });
+      expect(readChartRows()).toEqual(BUCKETS);
+      expect(readTableRows()).toEqual(BUCKETS);
+    });
+
+    it('updates the unit when preferences change and retains units in an empty panel', () => {
+      const { rerender } = render(<SpeedHistogramChart speedHistData={BUCKETS} />);
+      H.speed = 'mph';
+      rerender(<SpeedHistogramChart speedHistData={[]} />);
+      expect(screen.getByRole('heading')).toHaveTextContent('Speed histogram (mph)');
+      expect(screen.getByRole('img')).toHaveAccessibleName('Speed-bucket distribution histogram (mph)');
+      expect(screen.getByRole('status')).toBeInTheDocument();
+    });
   });
 
   it('does not mutate the caller-supplied buckets array', () => {

@@ -1,3 +1,4 @@
+import i18n, { type TFunction } from 'i18next';
 import type { BadgeVariant } from '@/types/fsm';
 import type { NeonColor } from '@/lib/tokens';
 import { formatTime } from '@/lib/dateFormat';
@@ -61,23 +62,64 @@ export function stopReasonVariant(reason: string | null): BadgeVariant {
   return 'warning';
 }
 
-/**
- * Turn a proto-prefixed enum literal (e.g. `PowershareStatusActive`,
- * `PowershareStopReasonUserRequest`) into a human label ("Active",
- * "User Request"). Strips the supplied signal prefix (falling back to a generic
- * `Powershare` strip) then splits camelCase. Returns null for empty input so
- * callers can render a "—" placeholder.
- */
-export function humanizeEnum(raw: string | null, prefix?: string): string | null {
+// Identities and proto prefixes from api/proto/tesla/vehicle_data.proto.
+const ENUM_LABELS = [
+  {
+    signal: 'PowershareStatus',
+    proto: 'PowershareState',
+    labels: [
+      ['Unknown', 'powershare.enums.unknown', 'Unknown'],
+      ['Inactive', 'powershare.enums.inactive', 'Inactive'],
+      ['Handshaking', 'powershare.enums.handshaking', 'Handshaking'],
+      ['Init', 'powershare.enums.init', 'Initializing'],
+      ['Enabled', 'powershare.enums.enabled', 'Enabled'],
+      ['EnabledReconnectingSoon', 'powershare.enums.enabledReconnectingSoon', 'Enabled, reconnecting soon'],
+      ['Stopped', 'powershare.enums.stopped', 'Stopped'],
+    ],
+  },
+  {
+    signal: 'PowershareStopReason',
+    proto: 'PowershareStopReasonStatus',
+    labels: [
+      ['Unknown', 'powershare.enums.unknown', 'Unknown'],
+      ['None', 'powershare.enums.none', 'None'],
+      ['SOCTooLow', 'powershare.enums.socTooLow', 'Battery charge too low'],
+      ['Retry', 'powershare.enums.retry', 'Retry'],
+      ['Fault', 'powershare.enums.fault', 'Fault'],
+      ['User', 'powershare.enums.user', 'User'],
+      ['Reconnecting', 'powershare.enums.reconnecting', 'Reconnecting'],
+      ['Authentication', 'powershare.enums.authentication', 'Authentication'],
+    ],
+  },
+  {
+    signal: 'PowershareType',
+    proto: 'PowershareTypeStatus',
+    labels: [
+      ['Unknown', 'powershare.enums.unknown', 'Unknown'],
+      ['None', 'powershare.enums.none', 'None'],
+      ['Load', 'powershare.enums.load', 'Load'],
+      ['Home', 'powershare.enums.home', 'Home'],
+    ],
+  },
+] as const;
+
+/** Localize verified enum identities; keep unfamiliar telemetry intact. */
+export function humanizeEnum(
+  raw: string | null,
+  prefix?: string,
+  t: TFunction = i18n.t,
+): string | null {
   if (!raw) return null;
-  let s = raw;
-  if (prefix && s.startsWith(prefix)) s = s.slice(prefix.length);
-  else if (s.startsWith('Powershare')) s = s.slice('Powershare'.length);
-  s = s
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
-    .trim();
-  return s.length > 0 ? s : raw;
+  for (const group of ENUM_LABELS) {
+    if (prefix && prefix !== group.signal && prefix !== group.proto) continue;
+    for (const [identity, key, fallback] of group.labels) {
+      if (raw === identity || raw === `${group.proto}${identity}` ||
+          raw === `${group.signal}${identity}`) {
+        return t(key, fallback);
+      }
+    }
+  }
+  return raw;
 }
 
 /**

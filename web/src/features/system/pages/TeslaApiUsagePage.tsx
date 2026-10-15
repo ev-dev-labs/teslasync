@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { PageLayout } from '@/components/layout'
-import { GlassPanel, Heading, Text } from '@/components/ui'
+import { Button, GlassPanel, Heading, Text } from '@/components/ui'
 import { KVList } from '@/components/data-display'
 import { FadeIn } from '@/components/motion'
 import { usePageTitle } from '@/hooks/usePageTitle'
@@ -36,6 +36,20 @@ export default function TeslaApiUsagePage() {
             <GlassPanel className="p-4 sm:p-6">
               <TeslaApiUsageCard apiUsage={data} now={Date.now()} loading={isLoading}
                 error={state.fatalError ?? (state.hasData ? query.error : null)} />
+              {state.fatalError && state.retry && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  wrapLabel
+                  className="mt-4 min-h-11 md:min-h-9"
+                  onClick={state.retry}
+                  disabled={query.isFetching || state.isRefreshBlocked}
+                  aria-busy={query.isFetching || undefined}
+                >
+                  {t('common.retry', 'Retry')}
+                </Button>
+              )}
             </GlassPanel>
           </section>
         </FadeIn>

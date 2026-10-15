@@ -29,7 +29,7 @@
  *      subscription.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
@@ -75,6 +75,7 @@ import { request, ApiError } from '@/api/client'
 import { ToastProvider } from '@/components/feedback/Toast'
 import {
   getConsent,
+  isReportingAllowed,
   setConsent,
   type ConsentState,
 } from '@/lib/cookieConsent'
@@ -136,6 +137,84 @@ beforeEach(() => {
   // (recent pages, consent, confirm-silence) so tests never leak into each
   // other via localStorage.
   localStorage.clear()
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
+
+describe('PrivacyPage — persistence failures', () => {
+  it.each(['remove failure', 'unavailable storage'])('does not report history cleared after %s', async (failure) => {
+    seedRecentPages(3)
+    renderPage()
+    await within(kpiRegion()).findByText('Optional')
+    fireEvent.click(screen.getByTestId('privacy-clear-recent-pages'))
+    const dialog = await screen.findByRole('dialog')
+    const spy = failure === 'remove failure'
+      ? vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+        throw new DOMException('Storage blocked', 'SecurityError')
+      })
+      : vi.spyOn(window, 'localStorage', 'get').mockImplementation(() => {
+        throw new DOMException('Storage blocked', 'SecurityError')
+      })
+
+    fireEvent.click(within(dialog).getByRole('button', { name: /Clear pages/i }))
+
+    expect(await screen.findByText('Save failed')).toBeInTheDocument()
+    expect(screen.queryByText('Recent pages cleared')).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    spy.mockRestore()
+    expect(getRecentPages()).toHaveLength(3)
+    act(() => {
+      window.dispatchEvent(new StorageEvent('storage', { key: null }))
+    })
+    expect(screen.getByTestId('privacy-recent-count')).toHaveTextContent('3 entries stored')
+  })
+
+  it.each([
+    { action: 'accept', initial: 'declined', method: 'setItem', success: 'Consent granted' },
+    { action: 'decline', initial: 'accepted', method: 'setItem', success: 'Consent withdrawn' },
+    { action: 'reset', initial: 'accepted', method: 'removeItem', success: 'Consent reset — banner will reappear' },
+  ] as const)('retains persisted consent and reporting policy when $action fails', async ({ action, initial, method, success }) => {
+    setConsent(initial)
+    renderPage()
+    await within(kpiRegion()).findByText('Optional')
+    const spy = vi.spyOn(Storage.prototype, method).mockImplementation(() => {
+      throw new DOMException('Storage blocked', 'SecurityError')
+    })
+
+    fireEvent.click(screen.getByTestId(`privacy-consent-${action}`))
+
+    expect(await screen.findByText('Save failed')).toBeInTheDocument()
+    expect(screen.queryByText(success)).not.toBeInTheDocument()
+    expect(getConsent()).toBe(initial)
+    expect(screen.getByTestId('privacy-consent-state')).toHaveAttribute('data-consent-state', initial)
+    expect(within(kpiRegion()).getByText(initial === 'accepted' ? 'Accepted' : 'Declined')).toBeInTheDocument()
+    expect(isReportingAllowed(true)).toBe(initial === 'accepted')
+    expect(isReportingAllowed(false)).toBe(true)
+
+    spy.mockRestore()
+    fireEvent.click(screen.getByTestId(`privacy-consent-${action}`))
+    expect(await screen.findByText(success)).toBeInTheDocument()
+  })
+
+  it.each(['accept', 'decline', 'reset'])('does not report consent %s as persisted when storage is unavailable', async (action) => {
+    if (action === 'reset') setConsent('accepted')
+    renderPage()
+    await within(kpiRegion()).findByText('Optional')
+    vi.spyOn(window, 'localStorage', 'get').mockImplementation(() => {
+      throw new DOMException('Storage blocked', 'SecurityError')
+    })
+
+    fireEvent.click(screen.getByTestId(`privacy-consent-${action}`))
+
+    expect(await screen.findByText('Save failed')).toBeInTheDocument()
+    expect(screen.queryByText('Consent granted')).not.toBeInTheDocument()
+    expect(screen.queryByText('Consent withdrawn')).not.toBeInTheDocument()
+    expect(screen.queryByText('Consent reset — banner will reappear')).not.toBeInTheDocument()
+    expect(screen.getByTestId('privacy-consent-state')).toHaveAttribute('data-consent-state', 'unknown')
+    expect(isReportingAllowed(true)).toBe(false)
+  })
 })
 
 describe('PrivacyPage — layout', () => {
@@ -217,15 +296,35 @@ describe('PrivacyPage — deployment policy', () => {
     expect(screen.getByTestId('privacy-consent-reset')).toBeEnabled()
   })
 
-  it('does not infer Optional from a successful response with no policy flag', async () => {
+  it.each([undefined, null, 'false', 0])('distinguishes an unknown policy flag (%s) from a transport failure and preserves local actions', async (flag) => {
     const response: Partial<ReturnType<typeof versionResponse>> = versionResponse()
     delete response.require_cookie_consent
-    mockedRequest.mockResolvedValue(response)
+    mockedRequest.mockResolvedValue({ ...response, require_cookie_consent: flag })
+    seedRecentPages(2)
     renderPage()
-    await within(kpiRegion()).findByText('Failed to load privacy policy')
+    await waitFor(() => {
+      const policyMetric = kpiRegion().querySelectorAll('[data-operational-metric]')[2]
+      expect(policyMetric).toHaveTextContent('Deployment policy unavailable')
+      expect(policyMetric).toHaveAttribute('data-value-state', 'missing')
+      expect(policyMetric.querySelector('[data-operational-value]')).toHaveTextContent('—')
+    })
     expect(kpiRegion().querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(1)
     expect(within(kpiRegion()).queryByText('Optional')).toBeNull()
+    expect(within(kpiRegion()).queryByText('Required')).toBeNull()
+    expect(screen.queryByText('Failed to load privacy policy')).not.toBeInTheDocument()
+    expect(screen.queryByText('Server error')).not.toBeInTheDocument()
+    expect(within(kpiRegion()).queryByRole('button', { name: /Retry/i })).not.toBeInTheDocument()
+    expect(screen.getByTestId('privacy-clear-recent-pages')).toBeEnabled()
     expect(screen.getByTestId('privacy-consent-accept')).toBeEnabled()
+    fireEvent.click(screen.getByTestId('privacy-consent-accept'))
+    expect(getConsent()).toBe('accepted')
+    fireEvent.click(screen.getByTestId('privacy-consent-decline'))
+    expect(getConsent()).toBe('declined')
+    fireEvent.click(screen.getByTestId('privacy-consent-reset'))
+    expect(getConsent()).toBe('unknown')
+    fireEvent.click(screen.getByTestId('privacy-clear-recent-pages'))
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: /Clear pages/i }))
+    expect(getRecentPages()).toHaveLength(0)
   })
 
   it('renders the policy KPI as Required when consent is enforced', async () => {
@@ -374,6 +473,7 @@ describe('PrivacyPage — policy load failure', () => {
     expect(tiles).toHaveLength(4)
     expect(tiles[0].querySelector('[data-operational-value]')).toHaveTextContent('0')
     expect(tiles[2]).toHaveAttribute('data-value-state', 'missing')
+    expect(tiles[2]).toHaveTextContent('Failed to load privacy policy')
     expect(tiles[2].querySelector('[data-operational-value]')).toHaveTextContent('—')
     expect(within(kpiRegion()).queryByText('Optional')).toBeNull()
     expect(tiles[3].querySelector('[data-operational-value]')).toHaveTextContent('This browser')

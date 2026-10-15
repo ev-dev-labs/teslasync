@@ -5,6 +5,7 @@ import { Text } from '@/components/ui';
 import { deriveDataState, type DataStateSource } from '@/api/dataState';
 import type { FleetTelemetryCoverageResponse } from '@/api/types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { sourceStatus, sourceFreshness } from './sourceMetadata';
 
@@ -49,6 +50,7 @@ export function coverageMetrics(data: FleetTelemetryCoverageResponse | undefined
 export function CoverageOperationalBrief({ query }: { query: DataStateSource<FleetTelemetryCoverageResponse> }) {
   const { t } = useTranslation();
   const { precision } = useNumberFormatting();
+  const { formatDateTime } = useDateFormat();
   const source = deriveDataState(query);
   const metrics = coverageMetrics(query.data, t).map(metric =>
     metric.metricId === 'percent' ? { ...metric, display: { precision } } : metric);
@@ -66,7 +68,7 @@ export function CoverageOperationalBrief({ query }: { query: DataStateSource<Fle
       statusLabel={sourceStatus(source.status, t)}
       statusTone={error ? 'warning' : 'neutral'}
       scope={<Text as="span" variant="caption">{t('coverage.statstrip.period', 'Package configuration snapshot')}</Text>}
-      freshness={<Text as="span" variant="caption">{sourceFreshness(source.updatedAt, t)}</Text>}
+      freshness={<Text as="span" variant="caption">{sourceFreshness(source.updatedAt, t, formatDateTime)}</Text>}
       provenance={t('coverage.statstrip.provenance', 'routing.yaml and teslaconfig.Builder; not per-vehicle telemetry or a time-range aggregate.')} />
     <Text variant="caption">{t('coverage.statstrip.provenance', 'routing.yaml and teslaconfig.Builder; not per-vehicle telemetry or a time-range aggregate.')}</Text>
   </section>;

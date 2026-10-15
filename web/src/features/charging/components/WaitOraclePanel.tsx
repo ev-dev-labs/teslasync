@@ -23,12 +23,19 @@ import {
 import { Badge, Button, GlassPanel, Input, PanelTitle, Select, Text } from '@/components/ui';
 import { ChartSkeleton, DataSourceNotice, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { gaugeTone, typography } from '@/lib/tokens';
+import { convertDurationFromSI } from '@/lib/unitConversion';
 
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 type ArrivalPreset = 'now' | 60 | 120 | 180;
 
 const PRESETS: ArrivalPreset[] = ['now', 60, 120, 180];
+
+function waitMinutes(seconds: unknown): number | null {
+  return typeof seconds === 'number' && Number.isFinite(seconds)
+    ? convertDurationFromSI(seconds, 'min')
+    : null;
+}
 
 function verdictVariant(verdict: WaitOracleForecast['verdict']) {
   switch (verdict) {
@@ -64,6 +71,23 @@ function toIsoOrNull(local: string): string | null {
 export function WaitOraclePanel() {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  const verdictLabel = (verdict: string) => {
+    switch (verdict) {
+      case 'quiet': return t('wait_oracle.verdict.quiet', 'Quiet');
+      case 'steady': return t('wait_oracle.verdict.steady', 'Steady');
+      case 'busy': return t('wait_oracle.verdict.busy', 'Busy');
+      case 'packed': return t('wait_oracle.verdict.packed', 'Packed');
+      default: return verdict;
+    }
+  };
+  const confidenceLabel = (confidence: string) => {
+    switch (confidence) {
+      case 'high': return t('wait_oracle.confidenceLevels.high', 'High');
+      case 'medium': return t('wait_oracle.confidenceLevels.medium', 'Medium');
+      case 'low': return t('wait_oracle.confidenceLevels.low', 'Low');
+      default: return confidence;
+    }
+  };
   const [site, setSite] = useState<string | null>(null);
   const [preset, setPreset] = useState<ArrivalPreset>('now');
   const [custom, setCustom] = useState('');
@@ -82,13 +106,26 @@ export function WaitOraclePanel() {
   const forecastQuery = useWaitOracleForecast(activeSite, arriveAt);
   const forecastState = useDataState(forecastQuery);
   const forecast = forecastState.data ?? null;
+  const expectedWait = waitMinutes(forecast?.expected_wait_s);
+  const savedWait = waitMinutes(forecast?.save_s);
+  const sitesEmpty = sitesState.hasData && sites.length === 0;
+  const waitingForSites = !sitesState.hasData;
+  const pendingQuery = waitingForSites ? sitesQuery : forecastQuery;
+  const pendingState = waitingForSites ? sitesState : forecastState;
+  const loading = !pendingState.hasData && !pendingState.isRefreshBlocked
+    && (pendingQuery.isLoading || pendingQuery.isFetching);
+  const fallbackLabel = pendingState.isRefreshBlocked
+    ? t('dataSources.status.paused', 'Refresh paused')
+    : pendingState.fatalError
+      ? t('dataState.unavailable.title', 'Service unavailable')
+      : t('common.unknown', 'Unknown');
 
   const chartData = useMemo(
     () =>
       (forecast?.hours ?? []).map((h) => ({
         hour: h.hour,
         label: `${String(h.hour).padStart(2, '0')}:00`,
-        wait: (h.expected_wait_s ?? 0) / 60,
+        wait: waitMinutes(h.expected_wait_s),
         busyness: h.busyness,
       })),
     [forecast?.hours],
@@ -107,7 +144,7 @@ export function WaitOraclePanel() {
         )}
       </Text>
 
-      <div className="mb-4 grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+      <div className="mb-4 grid min-w-0 gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
         <Select
           label={t('wait_oracle.site', 'Site')}
           value={activeSite ?? ''}
@@ -119,13 +156,15 @@ export function WaitOraclePanel() {
           disabled={sitesQuery.isLoading || sites.length === 0}
           onChange={(event) => setSite(event.target.value || null)}
         />
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="flex gap-1" role="group" aria-label={t('wait_oracle.arrival', 'Arrival')}>
+        <div className="flex min-w-0 flex-wrap items-end gap-2">
+          <div className="flex min-w-0 flex-wrap gap-1" role="group" aria-label={t('wait_oracle.arrival', 'Arrival')}>
             {PRESETS.map((p) => (
               <Button
                 key={String(p)}
                 variant={preset === p && !custom ? 'primary' : 'ghost'}
                 size="sm"
+                className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
+                aria-pressed={preset === p && !custom}
                 onClick={() => {
                   setPreset(p);
                   setCustom('');
@@ -139,6 +178,7 @@ export function WaitOraclePanel() {
           </div>
           <Input
             type="datetime-local"
+            className="min-h-11 md:min-h-10"
             aria-label={t('wait_oracle.customArrival', 'Custom arrival')}
             value={custom}
             onChange={(event) => setCustom(event.target.value)}
@@ -161,53 +201,60 @@ export function WaitOraclePanel() {
         />
       )}
 
-      {!sitesState.hasData && sitesState.isRefreshBlocked ? (
-        <DataSourceNotice sources={[{
-          id: 'wait-oracle-sites',
-          label: t('wait_oracle.site', 'Site'),
-          query: sitesQuery,
-        }]} />
-      ) : !sitesState.hasData && (sitesQuery.isLoading || sitesQuery.isFetching) ? (
-        <ChartSkeleton
-          className="h-[220px]"
-          label={t('wait_oracle.loadingSites', 'Loading sites…')}
-        />
-      ) : sitesState.fatalError ? (
-        <QueryError error={sitesState.fatalError} onRetry={() => sitesState.retry?.()} />
-      ) : sites.length === 0 ? (
-        <EmptyState /* no-action: informational empty — no CTA */
-          icon={<Icons.location className="h-10 w-10" />}
-          message={t(
-            'wait_oracle.noSites',
-            'No named sites yet. Sync fleet charging sessions to build wait forecasts.',
-          )}
-        />
-      ) : !forecastState.hasData && forecastState.isRefreshBlocked ? (
-        <DataSourceNotice sources={[{
-          id: 'wait-oracle-forecast',
-          label: t('wait_oracle.title', 'Supercharger Wait Oracle'),
-          query: forecastQuery,
-        }]} />
-      ) : !forecastState.hasData && (forecastQuery.isLoading || forecastQuery.isFetching) ? (
-        <ChartSkeleton
-          className="h-[220px]"
-          label={t('wait_oracle.loadingForecast', 'Forecasting wait…')}
-        />
-      ) : forecastState.fatalError ? (
-        <QueryError error={forecastState.fatalError} onRetry={() => forecastState.retry?.()} />
-      ) : forecast ? (
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+        <div>
+          {!sitesState.hasData && sitesState.isRefreshBlocked ? (
+            <DataSourceNotice sources={[{
+              id: 'wait-oracle-sites',
+              label: t('wait_oracle.site', 'Site'),
+              query: sitesQuery,
+            }]} />
+          ) : !sitesState.hasData && (sitesQuery.isLoading || sitesQuery.isFetching) ? (
+            <ChartSkeleton
+              className="h-[220px]"
+              label={t('wait_oracle.loadingSites', 'Loading sites…')}
+            />
+          ) : sitesState.fatalError ? (
+            <QueryError error={sitesState.fatalError} onRetry={() => sitesState.retry?.()} />
+          ) : sitesEmpty ? (
+            <EmptyState /* no-action: informational empty — no CTA */
+              icon={<Icons.location className="h-10 w-10" />}
+              message={t(
+                'wait_oracle.noSites',
+                'No named sites yet. Sync fleet charging sessions to build wait forecasts.',
+              )}
+            />
+          ) : waitingForSites ? (
+            <EmptyState /* no-action: unresolved source */
+              message={t('common.unknown', 'Unknown')}
+            />
+          ) : !forecastState.hasData && forecastState.isRefreshBlocked ? (
+            <DataSourceNotice sources={[{
+              id: 'wait-oracle-forecast',
+              label: t('wait_oracle.title', 'Supercharger Wait Oracle'),
+              query: forecastQuery,
+            }]} />
+          ) : !forecastState.hasData && (forecastQuery.isLoading || forecastQuery.isFetching) ? (
+            <ChartSkeleton
+              className="h-[220px]"
+              label={t('wait_oracle.loadingForecast', 'Forecasting wait…')}
+            />
+          ) : forecastState.fatalError ? (
+            <QueryError error={forecastState.fatalError} onRetry={() => forecastState.retry?.()} />
+          ) : forecast ? (
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <Text as="span" size="xl" className="font-semibold tabular-nums">
-                {t('wait_oracle.expectedWait', '{{min}} min expected wait', {
-                  min: fmtNumber((forecast.expected_wait_s ?? 0) / 60),
-                })}
+                {expectedWait == null
+                  ? t('common.unknown', 'Unknown')
+                  : t('wait_oracle.expectedWait', '{{min}} min expected wait', {
+                    min: fmtNumber(expectedWait),
+                  })}
               </Text>
-              <Badge variant={verdictVariant(forecast.verdict)}>{forecast.verdict}</Badge>
+              <Badge variant={verdictVariant(forecast.verdict)}>{verdictLabel(forecast.verdict)}</Badge>
               <Badge variant="neutral">
                 {t('wait_oracle.confidence', '{{level}} confidence', {
-                  level: forecast.confidence,
+                  level: confidenceLabel(forecast.confidence),
                 })}
               </Badge>
             </div>
@@ -217,7 +264,7 @@ export function WaitOraclePanel() {
                 stalls: forecast.stalls_estimated,
               })}
             </Text>
-            {(forecast.save_s ?? 0) >= 60 ? (
+            {savedWait != null && savedWait >= 1 ? (
               <div className="mt-3 flex items-start gap-2 rounded-lg border border-[var(--semantic-info-border)] bg-[var(--semantic-info-bg)] p-3">
                 <Icons.sparkles className={`mt-0.5 h-4 w-4 shrink-0 ${typography.color.secondary}`} aria-hidden="true" />
                 <Text as="p" size="sm">
@@ -226,34 +273,46 @@ export function WaitOraclePanel() {
                     'Arrive {{hour}}:00 UTC instead to save ~{{min}} min.',
                     {
                       hour: String(forecast.best_hour_utc).padStart(2, '0'),
-                      min: fmtNumber((forecast.save_s ?? 0) / 60),
+                      min: fmtNumber(savedWait),
                     },
                   )}
                 </Text>
               </div>
             ) : null}
             <ul className="mt-3 space-y-1">
-              {forecast.evidence.map((line) => (
+              {(forecast.evidence ?? []).map((line) => (
                 <Text as="li" key={line} size="xs" color="muted">
                   · {line}
                 </Text>
               ))}
             </ul>
           </div>
-          <ChartContainer
-            title={t('wait_oracle.chart.title', 'Wait across the arrival day (UTC)')}
-            ariaLabel={t('wait_oracle.chart.aria', 'Expected wait minutes by hour of day')}
-            data={chartData}
-            dataColumns={[
-              { key: 'label', label: t('wait_oracle.chart.col.hour', 'Hour (UTC)') },
-              {
-                key: 'wait',
-                label: t('wait_oracle.chart.col.wait', 'Expected wait (min)'),
-                format: (v) => fmtNumber(v as number),
-              },
-            ]}
-            height={220}
-          >
+          ) : (
+            <EmptyState /* no-action: unresolved source */
+              message={t('common.unknown', 'Unknown')}
+            />
+          )}
+        </div>
+        <ChartContainer
+          title={t('wait_oracle.chart.title', 'Wait across the arrival day (UTC)')}
+          ariaLabel={t('wait_oracle.chart.aria', 'Expected wait minutes by hour of day')}
+          data={chartData}
+          dataColumns={[
+            { key: 'label', label: t('wait_oracle.chart.col.hour', 'Hour (UTC)') },
+            {
+              key: 'wait',
+              label: t('wait_oracle.chart.col.wait', 'Expected wait (min)'),
+              format: (v) => typeof v === 'number' && Number.isFinite(v)
+                ? fmtNumber(v)
+                : t('common.unknown', 'Unknown'),
+            },
+          ]}
+          height={220}
+          loading={!forecast && loading}
+          empty={sitesEmpty || (forecast != null && chartData.length === 0)}
+          emptyMessage={t('chart.noData', 'No data available')}
+        >
+          {forecast ? (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={chartData}>
                 {chartGrid}
@@ -267,9 +326,11 @@ export function WaitOraclePanel() {
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-          </ChartContainer>
-        </div>
-      ) : null}
+          ) : (
+            <Text as="p" color="secondary" role="status">{fallbackLabel}</Text>
+          )}
+        </ChartContainer>
+      </div>
     </GlassPanel>
   );
 }

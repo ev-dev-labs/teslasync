@@ -341,6 +341,44 @@ describe('QuietHoursPanel — source slots and specialist weekdays', () => {
         expect(onSeedConsumed).toHaveBeenCalledTimes(1)
       })
 
+      it('retains the original dirty draft when a proposal is withdrawn during confirmation', async () => {
+        const onSeedConsumed = vi.fn()
+        const { rerender } = renderPanel()
+        fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+        fireEvent.change(screen.getByLabelText('End'), { target: { value: '08:00' } })
+        rerender(<QuietHoursPanel seedDraft={{
+          enabled: true, start_local: '21:00', end_local: '06:00', timezone: 'UTC',
+          weekdays: 2, bypass_severities: [],
+        }} onSeedConsumed={onSeedConsumed} />)
+        const dialog = await screen.findByRole('dialog')
+        rerender(<QuietHoursPanel seedDraft={null} onSeedConsumed={onSeedConsumed} />)
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Discard changes' }))
+        await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+        expect(screen.getByLabelText('End')).toHaveValue('08:00')
+        expect(onSeedConsumed).not.toHaveBeenCalled()
+        expect(mockSave.mock.results[0].value.mutate).not.toHaveBeenCalled()
+      })
+
+      it('does not replace a draft if saving starts while row replacement confirmation is pending', async () => {
+        const mutate = vi.fn()
+        mockSave.mockReturnValue(makeMutation({ mutate }))
+        mockWindows.mockReturnValue(makeQuery([makeWindow(), makeWindow({ id: 2, start_local: '20:00' })]))
+        renderPanel()
+        fireEvent.click(within(screen.getByTestId('quiet-hours-row-1')).getByRole('button', { name: 'Edit' }))
+        fireEvent.change(screen.getByLabelText('End'), { target: { value: '08:00' } })
+        fireEvent.click(within(screen.getByTestId('quiet-hours-row-2')).getByRole('button', { name: 'Edit' }))
+        const dialog = await screen.findByRole('dialog')
+        fireEvent.submit(screen.getByTestId('quiet-hours-form'))
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Discard changes' }))
+        await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+        expect(screen.getByLabelText('Start')).toHaveValue('22:00')
+        expect(screen.getByLabelText('End')).toHaveValue('08:00')
+        expect(mutate).toHaveBeenCalledTimes(1)
+        const callbacks = mutate.mock.calls[0][1] as { onSuccess: (window: QuietHoursWindow) => void }
+        act(() => callbacks.onSuccess(makeWindow({ end_local: '08:00' })))
+        expect(screen.queryByTestId('quiet-hours-form')).toBeNull()
+      })
+
       it('keeps edits made after submission when the original revision succeeds', async () => {
         const mutate = vi.fn()
         mockSave.mockReturnValue(makeMutation({ mutate }))

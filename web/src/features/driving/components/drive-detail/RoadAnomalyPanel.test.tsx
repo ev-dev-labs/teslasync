@@ -3,6 +3,15 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { RoadAnomalyResponse } from '@/types/roadAnomalies';
+import { formatDateTime } from '@/lib/dateFormat';
+import { gaugeTone } from '@/lib/tokens';
+
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({ locale: 'de-DE', settings: { tz_display_default: 'user', timezone_user: 'America/Los_Angeles' } }),
+}));
+vi.mock('@/hooks/useSelectedVehicle', () => ({
+  useSelectedVehicle: () => ({ vehicle: null }),
+}));
 
 const mock = vi.hoisted(() => ({
   query: vi.fn(),
@@ -20,9 +29,9 @@ vi.mock('@/components/maps', () => ({
   MapTileLayer: () => null,
   MapInvalidator: () => null,
   MarkerCluster: ({ points, onMarkerClick }: {
-    points: { id: string; lat: number; lng: number }[];
+    points: { id: string; lat: number; lng: number; color: string }[];
     onMarkerClick: (point: { id: string; lat: number; lng: number }) => void;
-  }) => <button type="button" onClick={() => onMarkerClick(points[0])}>Select clustered candidate ({points.length})</button>,
+  }) => <button type="button" data-color={points[0]?.color} onClick={() => onMarkerClick(points[0])}>Select clustered candidate ({points.length})</button>,
 }));
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
@@ -60,6 +69,33 @@ function renderPanel() {
 }
 
 describe('RoadAnomalyPanel', () => {
+  it('uses warning paint for possible jolts without claiming confirmed potholes', () => {
+    setQuery({ drive_id: 42, status: 'candidates', analyzed_samples: 25, limitations: [], candidates: [{ ts: '2026-04-02T08:30:00Z', latitude: 47.6, longitude: -122.3, speed_mps: 12, peak_jerk_g_per_s: 1.5 }] });
+    renderPanel();
+    expect(screen.getByRole('button', { name: 'Select clustered candidate (1)' })).toHaveAttribute('data-color', gaugeTone.warning);
+    expect(screen.getByText('Historical telemetry review — not confirmed potholes')).toBeInTheDocument();
+  });
+  it('keeps a native disclosure with feature-local mobile targets and dense desktop sizing', () => {
+    setQuery({ drive_id: 42, status: 'no_candidates', analyzed_samples: 17, candidates: [], limitations: [] });
+    renderPanel();
+    const disclosure = screen.getByRole('button', { name: 'Hide analysis' });
+    expect(disclosure).toHaveClass('min-h-9');
+    expect(disclosure.closest('[class*="max-md:"]')).toHaveClass('max-md:[&_button]:min-h-11', 'max-md:[&_button]:min-w-11');
+    disclosure.focus();
+    expect(disclosure).toHaveFocus();
+  });
+
+  it.each(['2026-04-02T00:30:00Z', '2026-04-02T08:30:00Z', 'invalid', ''])('formats candidate %s with saved preferences and UTC provenance', (ts) => {
+    setQuery({ drive_id: 42, status: 'candidates', analyzed_samples: 25, limitations: [], candidates: [{ ts, latitude: 47.6, longitude: -122.3, speed_mps: 12, peak_jerk_g_per_s: 1.5 }] });
+    renderPanel();
+    const label = formatDateTime(ts, { locale: 'de-DE', tz: 'America/Los_Angeles' });
+    const button = screen.getByRole('button', { name: label });
+    expect(button.querySelector('time')).toHaveAttribute('datetime', ts);
+    expect(button.querySelector('time')).toHaveAttribute('title', ts);
+    fireEvent.click(button);
+    expect(screen.getByRole('status')).toHaveTextContent(label);
+  });
+
   beforeEach(() => {
     mock.query.mockReset();
     mock.refetch.mockReset();

@@ -167,7 +167,19 @@ function CellHeatmap({ cells, label, statusLabel }: {
 /* ── Page ──────────────────────────────────────────────────────── */
 
 export default function BatteryCellsPage() {
-  const { fmtNumber, fmtScientificNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
+  const { fmtNumber, fmtInt, fmtScientificNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
+  const formatVoltage = (value: unknown) => {
+    const reading = knownNumber(value);
+    return reading == null ? '—' : fmtScientificNumber(reading, 4);
+  };
+  const formatMeasurement = (value: unknown) => {
+    const reading = knownNumber(value);
+    return reading == null ? '—' : fmtNumber(reading);
+  };
+  const formatCount = (value: unknown) => {
+    const reading = knownNumber(value);
+    return reading == null ? '—' : fmtInt(reading);
+  };
   const { formatDateTime } = useDateFormat();
   const { t } = useTranslation();
   usePageTitle(t('battery.cells.title', 'Battery cells'));
@@ -450,8 +462,8 @@ export default function BatteryCellsPage() {
                 )}
                 data={cells.map(({ cell_number, voltage }) => ({ cell_number, voltage }))}
                 dataColumns={[
-                  { key: 'cell_number', label: t('battery.cells.table.cell', 'Cell #') },
-                  { key: 'voltage', label: t('battery.cells.table.voltage', 'Voltage (V)') },
+                  { key: 'cell_number', label: t('battery.cells.table.cell', 'Cell #'), format: formatCount },
+                  { key: 'voltage', label: t('battery.cells.table.voltage', 'Voltage (V)'), format: formatVoltage },
                 ]}
                 fluid={false}
                 mobileHeight={288}
@@ -498,7 +510,7 @@ export default function BatteryCellsPage() {
                 data={histogram}
                 dataColumns={[
                   { key: 'bucket', label: t('battery.cells.distribution.range', 'Voltage range') },
-                  { key: 'count', label: t('battery.cells.distribution.count', 'Cell count') },
+                  { key: 'count', label: t('battery.cells.distribution.count', 'Cell count'), format: formatCount },
                 ]}
                 fluid={false}
                 mobileHeight={224}
@@ -543,8 +555,8 @@ export default function BatteryCellsPage() {
               )}
               data={cells.map(({ cell_number, voltage }) => ({ cell_number, voltage }))}
               dataColumns={[
-                { key: 'cell_number', label: t('battery.cells.table.cell', 'Cell #') },
-                { key: 'voltage', label: t('battery.cells.table.voltage', 'Voltage (V)') },
+                { key: 'cell_number', label: t('battery.cells.table.cell', 'Cell #'), format: formatCount },
+                { key: 'voltage', label: t('battery.cells.table.voltage', 'Voltage (V)'), format: formatVoltage },
               ]}
               fluid={false}
               mobileHeight={256}
@@ -609,9 +621,9 @@ export default function BatteryCellsPage() {
                 }))}
                 dataColumns={[
                   { key: 'timestamp', label: t('battery.cells.time', 'Time') },
-                  { key: 'min_voltage', label: t('battery.cells.overTime.min', 'Min voltage') },
-                  { key: 'avg_voltage', label: t('battery.cells.overTime.avg', 'Avg voltage') },
-                  { key: 'max_voltage', label: t('battery.cells.overTime.max', 'Max voltage') },
+                  { key: 'min_voltage', label: t('battery.cells.overTime.min', 'Min voltage'), format: formatVoltage },
+                  { key: 'avg_voltage', label: t('battery.cells.overTime.avg', 'Avg voltage'), format: formatVoltage },
+                  { key: 'max_voltage', label: t('battery.cells.overTime.max', 'Max voltage'), format: formatVoltage },
                 ]}
                 chartKey="battery-cells-voltage-history"
                 fluid={false}
@@ -664,7 +676,7 @@ export default function BatteryCellsPage() {
                 data={history.map(({ timestamp, imbalance_mv }) => ({ timestamp, imbalance_mv }))}
                 dataColumns={[
                   { key: 'timestamp', label: t('battery.cells.time', 'Time') },
-                  { key: 'imbalance_mv', label: t('battery.cells.imbalance.series', 'Imbalance (mV)') },
+                  { key: 'imbalance_mv', label: t('battery.cells.imbalance.series', 'Imbalance (mV)'), format: formatMeasurement },
                 ]}
                 fluid={false}
                 mobileHeight={256}
@@ -697,7 +709,7 @@ export default function BatteryCellsPage() {
           data={voltageSpreadTrend}
           dataColumns={[
             { key: 'timestamp', label: t('battery.cells.time', 'Time'), format: value => formatDateTime(String(value)) },
-            { key: 'spreadRaw', label: t('battery.cells.chart.voltageSpread', 'Voltage spread (mV)'), format: value => knownNumber(value) == null ? '—' : fmtNumber(Number(value)) },
+            { key: 'spreadRaw', label: t('battery.cells.chart.voltageSpread', 'Voltage spread (mV)'), format: formatMeasurement },
           ]}
           annotations={{ vehicleId, scope: 'battery', chartId: 'battery-cells-spread-trend' }}
           loading={isLoading}

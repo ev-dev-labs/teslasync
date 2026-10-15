@@ -83,6 +83,8 @@ const H = vi.hoisted(() => {
     requestMock: vi.fn(),
     toastSuccess: vi.fn(),
     toastError: vi.fn(),
+    operational: { canWrite: true, writeBlockReason: null as string | null },
+    online: true,
     settingsRef: { current: undefined as unknown },
     liveState: {
       status: 'connected' as const,
@@ -133,6 +135,8 @@ vi.mock('@/components/feedback/Toast', async () => {
 })
 
 vi.mock('@/hooks/useLiveConnection', () => ({ useLiveConnection: () => H.liveState }))
+vi.mock('@/hooks/useOperationalMode', () => ({ useOperationalMode: () => H.operational }))
+vi.mock('@/hooks/useOnlineStatus', () => ({ useOnlineStatus: () => H.online }))
 
 // Stub the 14 sections so we can capture the exact props the page computed.
 // VehicleHeader is a clickable button so the wake path can be driven.
@@ -329,6 +333,8 @@ beforeEach(() => {
   H.toastSuccess.mockReset()
   H.toastError.mockReset()
   H.captured = {}
+  H.operational = { canWrite: true, writeBlockReason: null }
+  H.online = true
   // Default: a nickname override is present so the title-override path runs.
   H.settingsRef.current = {
     settings: [{ key: 'nickname', value: 'My Roadster', source: 'override' }],
@@ -383,6 +389,7 @@ describe('VehicleDetailPage', () => {
     const header = title.closest('[data-role="page-header"]')
     expect(header).toHaveClass('border-0', 'bg-transparent')
     expect(screen.getByTestId('wake-btn').closest('[data-role="page-header"]')).toBe(header)
+    expect(screen.getByTestId('wake-btn').closest('[data-tour="vehicle-detail-tabs"]')).toHaveClass('min-w-0', 'max-w-full')
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
     expect(screen.getByText('Model 3 Performance')).toBeInTheDocument()
 
@@ -424,6 +431,92 @@ describe('VehicleDetailPage', () => {
     expect(screen.queryByRole('heading', { name: 'My Roadster' })).not.toBeInTheDocument()
   })
 
+  it.each([undefined, null, 'not-a-timestamp'])(
+    'does not turn receive time into observation evidence when observed_at is %s',
+    async (observed_at) => {
+      const response = { ...STATE_RESPONSE, observed_at, freshness: 'fresh', verified_fields: ['battery_level'] }
+      H.requestMock.mockImplementation((path: string, options?: unknown) =>
+        path === '/vehicles/1/state' ? Promise.resolve(response) : defaultRequest(path, options),
+      )
+      const { client } = renderPage()
+
+      await waitFor(() => expect(H.captured.BatteryRangePanel?.state).toBe(STATE))
+      expect(client.getQueryData(['vehicle-state', 1])).toBe(response)
+      expect(client.getQueryState(['vehicle-state', 1])?.dataUpdatedAt).toBeGreaterThan(0)
+      expect(screen.getByText('No verified observation time for this vehicle')).toBeInTheDocument()
+      expect(screen.getByLabelText('Live')).toHaveAttribute('data-data-status', 'partial')
+      expect(screen.getByLabelText('Live')).not.toHaveAttribute('title', expect.stringContaining('Last updated:'))
+      expect(H.captured.SecuritySection?.state).toBe(STATE)
+    },
+  )
+
+  it('keeps old observation evidence and raw readings through successful polling and failed refresh', async () => {
+    const observed_at = new Date(Date.now() - 10 * 60_000).toISOString()
+    const response = {
+      ...STATE_RESPONSE, observed_at, freshness: 'fresh',
+      verified_fields: ['battery_level', 'is_charging'],
+    }
+    H.requestMock.mockImplementation((path: string, options?: unknown) =>
+      path === '/vehicles/1/state' ? Promise.resolve(response) : defaultRequest(path, options),
+    )
+    const { client } = renderPage()
+    await waitFor(() => expect(H.captured.BatteryRangePanel?.state).toBe(STATE))
+    expect(screen.getByText('Last real observation 10m ago')).toHaveAttribute('title', observed_at)
+    expect(screen.getByLabelText('Live')).toHaveAttribute('data-data-status', 'stale')
+
+    await act(async () => {
+      await client.invalidateQueries({ queryKey: ['vehicle-state', 1], exact: true })
+    })
+    expect(screen.getByLabelText('Live')).toHaveAttribute('data-data-status', 'stale')
+    expect(client.getQueryData(['vehicle-state', 1])).toBe(response)
+
+    H.requestMock.mockImplementation((path: string, options?: unknown) =>
+      path === '/vehicles/1/state'
+        ? Promise.reject(new ApiError('State refresh failed', 500))
+        : defaultRequest(path, options),
+    )
+    await act(async () => {
+      await client.invalidateQueries({ queryKey: ['vehicle-state', 1], exact: true })
+    })
+    await waitFor(() => expect(screen.getByLabelText('Cached')).toHaveAttribute('data-data-status', 'stale'))
+    expect(screen.getByText('Last real observation 10m ago')).toHaveAttribute('title', observed_at)
+    for (const sectionId of ALL_SECTION_IDS) expect(screen.getByTestId(sectionId)).toBeInTheDocument()
+    expect(H.captured.BatteryRangePanel?.state).toBe(STATE)
+    expect(H.captured.BatteryRangeCharts?.state).toBe(STATE)
+    expect(H.captured.SecuritySection?.state).toBe(STATE)
+    expect(H.captured.VehicleHeader?.status).toBe('charging')
+  })
+
+  it('ages a verified observation without replacing it with the newer receive time', async () => {
+    const now = Date.now()
+    const response = {
+      ...STATE_RESPONSE, observed_at: new Date(now).toISOString(), freshness: 'fresh',
+      verified_fields: ['battery_level', 'is_charging'],
+    }
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(now)
+    try {
+      H.requestMock.mockImplementation((path: string, options?: unknown) =>
+        path === '/vehicles/1/state' ? Promise.resolve(response) : defaultRequest(path, options),
+      )
+      const { client } = renderPage()
+      await waitFor(() => expect(H.captured.BatteryRangePanel?.state).toBe(STATE))
+      expect(screen.getByLabelText('Live')).toHaveAttribute('data-data-status', 'ok')
+      expect(screen.getByText('Last real observation 0s ago')).toBeInTheDocument()
+
+      clock.mockReturnValue(now + 3 * 60_000)
+      await act(async () => {
+        await client.invalidateQueries({ queryKey: ['vehicle-state', 1], exact: true })
+      })
+      await waitFor(() => expect(screen.getByLabelText('Live')).toHaveAttribute('data-data-status', 'stale'))
+      expect(screen.getByText('Last real observation 3m ago')).toBeInTheDocument()
+      expect(client.getQueryState(['vehicle-state', 1])?.dataUpdatedAt).toBe(now + 3 * 60_000)
+      expect(client.getQueryData(['vehicle-state', 1])).toBe(response)
+      expect(H.captured.BatteryRangePanel?.state).toBe(STATE)
+    } finally {
+      clock.mockRestore()
+    }
+  })
+
   it('sends the wake command and shows a success toast', async () => {
     renderPage()
 
@@ -437,6 +530,74 @@ describe('VehicleDetailPage', () => {
     expect(H.toastError).not.toHaveBeenCalled()
   })
 
+  it.each([
+    ['historical', false, true, 'Return to live mode before making operational changes.'],
+    ['offline', true, false, 'Reconnect before making operational changes.'],
+  ] as const)('blocks wake in %s mode without queueing or hiding populated sections', async (_mode, canWrite, online, reason) => {
+    H.operational = { canWrite, writeBlockReason: canWrite ? null : reason }
+    H.online = online
+    const { rerender, client } = renderPage()
+    const button = await screen.findByTestId('wake-btn')
+    expect(button).toBeDisabled()
+    expect(screen.getByText(reason)).toHaveAttribute('id', 'vehicle-wake-blocked')
+    expect(button.closest('fieldset')).toHaveAttribute('aria-describedby', 'vehicle-wake-blocked')
+    await waitFor(() => {
+      for (const id of ALL_SECTION_IDS) expect(screen.getByTestId(id)).toBeInTheDocument()
+    })
+
+    // Also exercise the callback guard independently of native disabled behavior.
+    act(() => { (H.captured.VehicleHeader.onWake as () => void)() })
+    expect(H.requestMock.mock.calls.some(([path]) => path === '/vehicles/1/wake')).toBe(false)
+    expect(client.getMutationCache().getAll()).toHaveLength(0)
+    expect(H.toastSuccess).not.toHaveBeenCalled()
+    expect(H.toastError).toHaveBeenCalledWith(reason)
+
+    H.operational = { canWrite: true, writeBlockReason: null }
+    H.online = true
+    rerender(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/vehicles/1']}>
+          <Routes><Route path="/vehicles/:id" element={<VehicleDetailPage />} /></Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    expect(screen.getByTestId('wake-btn')).not.toBeDisabled()
+    expect(H.requestMock.mock.calls.some(([path]) => path === '/vehicles/1/wake')).toBe(false)
+  })
+
+  it('keeps wake pending single-flight and refetches state only after success', async () => {
+    let finishWake!: (value: { status: string }) => void
+    H.requestMock.mockImplementation((path: string, options?: unknown) =>
+      path === '/vehicles/1/wake'
+        ? new Promise<{ status: string }>(resolve => { finishWake = resolve })
+        : defaultRequest(path, options),
+    )
+    renderPage()
+    await screen.findByTestId('wake-btn')
+    await waitFor(() => expect(H.captured.BatteryRangePanel?.state).toBe(STATE))
+    const stateCalls = () => H.requestMock.mock.calls.filter(([path]) => path === '/vehicles/1/state').length
+    const before = stateCalls()
+    const timeout = vi.spyOn(globalThis, 'setTimeout')
+    try {
+      const wake = H.captured.VehicleHeader.onWake as () => void
+      act(() => { wake(); wake() })
+      await waitFor(() => expect(screen.getByTestId('wake-btn')).toBeDisabled())
+      expect(screen.getByTestId('wake-btn')).toHaveAttribute('data-waking', 'true')
+      expect(H.requestMock.mock.calls.filter(([path]) => path === '/vehicles/1/wake')).toHaveLength(1)
+      expect(H.toastSuccess).not.toHaveBeenCalled()
+      expect(stateCalls()).toBe(before)
+      await act(async () => { finishWake({ status: 'ok' }) })
+      await waitFor(() => expect(H.toastSuccess).toHaveBeenCalledWith('Wake command sent'))
+      expect(screen.getByTestId('wake-btn')).not.toBeDisabled()
+      const refresh = timeout.mock.calls.find(([, delay]) => delay === 5000)?.[0]
+      expect(refresh).toBeTypeOf('function')
+      await act(async () => { if (typeof refresh === 'function') refresh() })
+      expect(stateCalls()).toBe(before + 1)
+    } finally {
+      timeout.mockRestore()
+    }
+  })
+
   it('surfaces the error message via a toast when the wake command fails', async () => {
     H.requestMock.mockImplementation((path: string, options?: unknown) => {
       if (path === '/vehicles/1/wake') return Promise.reject(new Error('boom'))
@@ -445,11 +606,19 @@ describe('VehicleDetailPage', () => {
 
     renderPage()
 
-    fireEvent.click(await screen.findByTestId('wake-btn'))
+    const button = await screen.findByTestId('wake-btn')
+    const timeout = vi.spyOn(globalThis, 'setTimeout')
+    try {
+      fireEvent.click(button)
 
-    await waitFor(() => expect(H.toastError).toHaveBeenCalledTimes(1))
-    expect(H.toastError).toHaveBeenCalledWith('boom')
-    expect(H.toastSuccess).not.toHaveBeenCalled()
+      await waitFor(() => expect(H.toastError).toHaveBeenCalledTimes(1))
+      expect(H.toastError).toHaveBeenCalledWith('boom')
+      expect(H.toastSuccess).not.toHaveBeenCalled()
+      expect(timeout.mock.calls.some(([, delay]) => delay === 5000)).toBe(false)
+      expect(button).not.toBeDisabled()
+    } finally {
+      timeout.mockRestore()
+    }
   })
 
   it('shows an error with a working Retry when the live-state read fails', async () => {
@@ -563,6 +732,24 @@ describe('VehicleDetailPage', () => {
     expect(H.captured.BatteryRangeCharts?.state).toBe(STATE)
     expect(H.captured.SecuritySection?.state).toBe(STATE)
     expect(H.captured.VehicleHeader?.status).toBe('charging')
+  })
+
+  it.each([
+    { state: {}, recordStatus: 'asleep' },
+    { state: { state: 'unknown', speed: 0, is_charging: false }, recordStatus: 'parked' },
+    { state: { state: '', battery_level: 72 }, recordStatus: 'offline' },
+  ])('retains $recordStatus from the record when partial state cannot establish status', async ({ state, recordStatus }) => {
+    H.requestMock.mockImplementation((path: string, options?: unknown) => {
+      if (path === '/vehicles/1') return Promise.resolve({ ...VEHICLE, state: recordStatus })
+      if (path === '/vehicles/1/state') return Promise.resolve({ state, live: true })
+      return defaultRequest(path, options)
+    })
+    const { client } = renderPage()
+
+    await waitFor(() => expect(client.getQueryState(['vehicle-state', 1])?.status).toBe('success'))
+    await waitFor(() => expect(H.captured.VehicleHeader?.status).toBe(recordStatus))
+    expect(H.captured.QuickStatsGrid?.status).toBe(recordStatus)
+    expect(H.captured.BatteryRangePanel?.state).toBe(state)
   })
 
   it('retains the known record status when independent live state is unavailable', async () => {

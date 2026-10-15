@@ -41,7 +41,7 @@ export function TwinScenarioForm({
   const numericProps = (index: number, field: NumericField, siUnit: string) => ({
     type: 'number',
     step: 'any',
-    className: 'min-h-11 md:min-h-10',
+    className: 'max-md:min-h-11',
     value: drafts[index]?.[field] ?? String(scenarios[index][field] ?? ''),
     suffix: <Text as="span" variant="caption" color="muted">{siUnit}</Text>,
     onChange: (event: ChangeEvent<HTMLInputElement>) => {
@@ -70,7 +70,7 @@ export function TwinScenarioForm({
       onSubmit(event);
     }}>
       {scenarios.map((scenario, index) => (
-        <div key={index} className="rounded-panel border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
+        <div key={index} className="glass-panel p-4">
           <div className="mb-4 flex items-center justify-between gap-3">
             <Text as="h3" variant="label">
               {t('advancedIntelligence.twin.form.scenario', 'Scenario {{number}}', {
@@ -81,6 +81,7 @@ export function TwinScenarioForm({
               type="button"
               variant="ghost"
               size="sm"
+              className="max-md:min-h-11 max-md:min-w-11"
               aria-label={t('advancedIntelligence.twin.form.remove', 'Remove scenario')}
               disabled={scenarios.length <= 1}
               onClick={() => {
@@ -94,6 +95,7 @@ export function TwinScenarioForm({
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <Input
               id={`twin-name-${index}`}
+              className="max-md:min-h-11"
               label={t('advancedIntelligence.twin.form.name', 'Scenario name')}
               value={scenario.name}
               required
@@ -160,6 +162,7 @@ export function TwinScenarioForm({
         <Button
           type="button"
           variant="secondary"
+          className="max-md:min-h-11 max-md:min-w-11 max-md:w-full"
           icon={<Plus className="h-4 w-4" aria-hidden="true" />}
           disabled={scenarios.length >= 12}
           onClick={() => {
@@ -171,6 +174,7 @@ export function TwinScenarioForm({
         </Button>
         <Button
           type="submit"
+          className="max-md:min-h-11 max-md:min-w-11 max-md:w-full max-md:h-auto max-md:whitespace-normal max-md:py-2"
           loading={pending}
           disabled={disabled || pending}
           icon={<FlaskConical className="h-4 w-4" aria-hidden="true" />}

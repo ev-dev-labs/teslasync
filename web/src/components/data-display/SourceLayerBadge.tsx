@@ -1,24 +1,18 @@
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
-import { Tooltip } from '@/components/ui';
+import { Tooltip } from '@/components/ui/Tooltip';
+import { Button } from '@/components/ui/Button';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
- * Debugger-only badge showing where a signal value came from.
- *
- * The layered live-state contract documented in `.github/copilot-instructions.md`
- * requires power-user diagnostics surfaces (FSM debugger, signal diff) to be
- * able to distinguish the L1 in-process store from the L2 Redis hot cache and
- * the durable signal_log replay path. The backend reports the layer per
- * signal as one of:
- *   - `l1`    — fresh value satisfied from the local in-process Store
- *   - `l2`    — value came from Redis HSET (legacy unknown-freshness entry)
+ * Debugger-only badge for the inspector's legacy freshness codes.
+ * These codes do not attest the physical L1/L2 read layer:
+ *   - `l1`    — timestamp within the freshness window
+ *   - `l2`    — timestamp absent; freshness unknown
  *   - `log`   — replayed from signal_log (point-in-time snapshot)
- *   - `stale` — Redis-backed value older than the 2 minute freshness threshold
+ *   - `stale` — value older than the 2 minute freshness threshold
  *
- * The badge is intentionally tiny (single character glyph + tooltip) so it
- * fits in dense table cells next to a value without crowding the surrounding
- * text.
+ * Compact labels retain the freshness distinction without inventing provenance.
  */
 export type SignalSource = 'l1' | 'l2' | 'log' | 'stale' | string;
 
@@ -26,23 +20,25 @@ export interface SourceLayerBadgeProps {
   source: SignalSource | null | undefined;
   /** Optional age-in-ms — when provided, surfaces in the tooltip. */
   ageMs?: number | null;
-  /** Render the badge with the layer label spelled out instead of the glyph. */
+  /** Reserve extra width for the descriptive label. */
   showLabel?: boolean;
   className?: string;
 }
 
 const STYLE: Record<string, { tint: string; label: string; labelKey?: string; descKey: string; descFallback: string }> = {
   l1: {
-    tint: 'bg-emerald-500/15 text-emerald-200 border border-emerald-500/30',
-    label: 'L1',
-    descKey: 'sourceLayer.l1.desc',
-    descFallback: 'Read from the in-process SignalStore (hot path, freshest).',
+    tint: 'bg-[var(--surface-2)] text-[var(--text-secondary)] border border-[var(--border-default)]',
+    label: 'Fresh',
+    labelKey: 'timeMachine.ageFresh',
+    descKey: 'sourceLayer.unknown.desc',
+    descFallback: 'Source layer unknown.',
   },
   l2: {
-    tint: 'bg-blue-500/15 text-blue-200 border border-blue-500/30',
-    label: 'L2',
-    descKey: 'sourceLayer.l2.desc',
-    descFallback: 'Read from Redis cross-pod cache (legacy entry; freshness unknown).',
+    tint: 'bg-[var(--surface-2)] text-[var(--text-secondary)] border border-[var(--border-default)]',
+    label: 'Unknown',
+    labelKey: 'common.unknown',
+    descKey: 'sourceLayer.unknown.desc',
+    descFallback: 'Source layer unknown.',
   },
   log: {
     tint: 'bg-[var(--surface-2)] text-[var(--text-secondary)] border border-[var(--border-strong)]',
@@ -52,11 +48,11 @@ const STYLE: Record<string, { tint: string; label: string; labelKey?: string; de
     descFallback: 'Replayed from signal_log (durable history).',
   },
   stale: {
-    tint: 'bg-amber-500/15 text-amber-200 border border-amber-500/30',
+    tint: 'bg-[var(--semantic-warning-bg)] text-[var(--semantic-warning)] border border-[var(--semantic-warning-border)]',
     label: 'Stale',
     labelKey: 'sourceLayer.stale.label',
-    descKey: 'sourceLayer.stale.desc',
-    descFallback: 'Redis-backed value older than the 2-minute freshness window.',
+    descKey: 'admin.liveSignals.kpi.staleHint',
+    descFallback: 'Past 2-min window',
   },
   unknown: {
     tint: 'bg-[var(--surface-2)] text-[var(--text-secondary)] border border-[var(--border-subtle)]',
@@ -81,25 +77,37 @@ export function SourceLayerBadge({ source, ageMs, showLabel, className }: Source
   const key = (source ?? 'unknown').toLowerCase();
   const style = STYLE[key] ?? STYLE.unknown;
   const ageText = formatAge(ageMs, fmtWithUnit);
+  const description = key === 'l1'
+    ? `${t('timeMachine.ageFresh', 'Fresh')}. ${t(style.descKey, style.descFallback)}`
+    : key === 'l2'
+      ? `${t('sourceLayer.age', 'age')}: ${t('common.unknown', 'Unknown')}. ${t(style.descKey, style.descFallback)}`
+      : key === 'stale'
+        ? `${t(style.descKey, style.descFallback)}. ${t('sourceLayer.unknown.desc', 'Source layer unknown.')}`
+        : t(style.descKey, style.descFallback);
   const tooltip = ageText
-    ? `${t(style.descKey, style.descFallback)} (${t('sourceLayer.age', 'age')}: ${ageText})`
-    : t(style.descKey, style.descFallback);
+    ? `${description} (${t('sourceLayer.age', 'age')}: ${ageText})`
+    : description;
+  const label = style.labelKey ? t(style.labelKey, style.label) : style.label;
 
   return (
-    <Tooltip content={tooltip}>
-      <span
+    <Tooltip content={tooltip} multiline>
+      <Button
+        type="button"
+        variant="ghost"
+        aria-label={style === STYLE.unknown ? t('common.unknown', 'Unknown') : label}
+        onClick={(event) => event.currentTarget.focus()}
         data-testid="source-layer-badge"
         data-source={key}
         className={cn(
-          'inline-flex items-center justify-center rounded px-1.5 py-px font-mono',
+          'inline-flex h-auto min-h-11 min-w-11 items-center justify-center rounded px-1.5 py-px font-mono md:min-h-6',
           'text-2xs tracking-wider leading-none',
-          showLabel ? 'min-w-[2.5rem]' : 'min-w-[1.5rem]',
+          showLabel ? 'md:min-w-[2.5rem]' : 'md:min-w-[1.5rem]',
           style.tint,
           className,
         )}
       >
-        {style.labelKey ? t(style.labelKey, style.label) : style.label}
-      </span>
+        {label}
+      </Button>
     </Tooltip>
   );
 }

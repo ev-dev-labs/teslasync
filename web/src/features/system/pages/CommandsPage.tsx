@@ -13,7 +13,7 @@ import { History, Wifi } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
 import { StaleRefreshWarning } from '@/components/feedback';
-import { Badge, Button, Icon } from '@/components/ui';
+import { Badge, Button, GlassPanel, Heading, Icon, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -63,11 +63,14 @@ export default function CommandsPage() {
     [vehicles],
   );
 
-  const fallbackStatus: CommandCenterFallbackStatus = vehiclesQuery.isLoading
-    ? 'loading'
-    : vehiclesState.fatalError
-      ? 'error'
+  const fallbackStatus: CommandCenterFallbackStatus = vehiclesState.fatalError
+    ? 'error'
+    : !vehiclesState.hasData
+      ? 'loading'
       : 'empty';
+  const initialRefreshBlocked =
+    !vehiclesState.hasData && vehiclesState.isRefreshBlocked;
+  const refreshPausedTitle = t('dataSources.status.paused', 'Refresh paused');
 
   return (
     <PageLayout
@@ -110,7 +113,16 @@ export default function CommandsPage() {
         </div>
       }
     >
-      <StaleRefreshWarning state={vehiclesState} />
+      <StaleRefreshWarning
+        state={vehiclesState}
+        title={vehiclesState.isRefreshBlocked ? refreshPausedTitle : undefined}
+        message={vehiclesState.isRefreshBlocked
+          ? t(
+              'dataSources.staleMessage',
+              'Previously loaded data remains visible while affected sources recover.',
+            )
+          : undefined}
+      />
       <FadeIn>
         <section
           aria-label={t(
@@ -123,6 +135,36 @@ export default function CommandsPage() {
               key={selectedVehicle.id}
               vehicle={selectedVehicle}
             />
+          ) : initialRefreshBlocked ? (
+            <div className="space-y-4 sm:space-y-5" data-testid="command-center-paused">
+              {[
+                t('commands.hero.title', 'Selected vehicle'),
+                t('commands.readiness.title', 'Command readiness'),
+                t('commands.workspace.title', 'Command workspace'),
+              ].map((title, index) => (
+                <GlassPanel key={title} className="space-y-4 p-4 sm:p-5">
+                  <Heading level="section">{title}</Heading>
+                  <Text as="p" color="secondary" role={index === 0 ? 'status' : undefined}>
+                    {index === 0
+                      ? refreshPausedTitle
+                      : t(
+                          'dataSources.unavailableMessage',
+                          'No requested source has returned usable data yet.',
+                        )}
+                  </Text>
+                  {index === 0 && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="min-h-11"
+                      onClick={() => void vehiclesQuery.refetch()}
+                    >
+                      {t('error.retry', 'Retry')}
+                    </Button>
+                  )}
+                </GlassPanel>
+              ))}
+            </div>
           ) : (
             <CommandCenterFallback
               status={fallbackStatus}

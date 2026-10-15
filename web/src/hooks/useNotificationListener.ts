@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { sseManager } from '../lib/sseManager'
@@ -8,6 +8,7 @@ import {
   getNotificationSoundPrefs,
   mapNotificationToCategory,
   playNotificationSound,
+  useNotificationSoundPrefs,
 } from '@/lib/notificationSound'
 import type { Alert } from '@/api/types'
 
@@ -57,6 +58,50 @@ function savePrefs(prefs: WebPushPreferences) {
   }
 }
 
+let cachedPrefs = loadPrefs()
+const preferenceListeners = new Set<() => void>()
+
+function updatePrefs(next: WebPushPreferences) {
+  if (next.alerts === cachedPrefs.alerts && next.exportStatus === cachedPrefs.exportStatus) return
+  cachedPrefs = next
+  for (const listener of preferenceListeners) listener()
+}
+
+function onPreferenceStorage(event: StorageEvent) {
+  if (event.storageArea && event.storageArea !== localStorage) return
+  if (event.key === PREFS_KEY || event.key === null) updatePrefs(loadPrefs())
+}
+
+function subscribePreferences(listener: () => void) {
+  if (preferenceListeners.size === 0) {
+    updatePrefs(loadPrefs())
+    window.addEventListener('storage', onPreferenceStorage)
+  }
+  preferenceListeners.add(listener)
+  return () => {
+    preferenceListeners.delete(listener)
+    if (preferenceListeners.size === 0) {
+      window.removeEventListener('storage', onPreferenceStorage)
+    }
+  }
+}
+
+function getPreferenceSnapshot() {
+  return cachedPrefs
+}
+
+function setPrefs(next: WebPushPreferences | ((prev: WebPushPreferences) => WebPushPreferences)) {
+  const resolved = normalizePrefs(typeof next === 'function' ? next(cachedPrefs) : next)
+  savePrefs(resolved)
+  updatePrefs(resolved)
+}
+
+/** Shared settings access without installing an SSE delivery listener. */
+export function useBrowserNotificationPrefs() {
+  const prefs = useSyncExternalStore(subscribePreferences, getPreferenceSnapshot, getPreferenceSnapshot)
+  return { prefs, setPrefs }
+}
+
 interface AlertEventData {
   id?: number
   title?: string
@@ -97,16 +142,10 @@ interface ExportStatusData {
 export function useNotificationListener() {
   const { permission, sendNotification } = useWebPush()
   const { t } = useTranslation()
-  const [prefs, setPrefsState] = useState<WebPushPreferences>(loadPrefs)
+  const { prefs, setPrefs } = useBrowserNotificationPrefs()
+  // Keep cross-tab sound preference updates alive independently of the settings page.
+  useNotificationSoundPrefs()
   const navigate = useNavigate()
-
-  const setPrefs = useCallback((next: WebPushPreferences | ((prev: WebPushPreferences) => WebPushPreferences)) => {
-    setPrefsState((prev) => {
-      const resolved = typeof next === 'function' ? next(prev) : next
-      savePrefs(resolved)
-      return resolved
-    })
-  }, [])
 
   useEffect(() => {
     if (permission !== 'granted') return

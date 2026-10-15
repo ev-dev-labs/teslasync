@@ -224,7 +224,8 @@ export default function BatteryDegradationPage() {
   const totalCharges = batteryCount(habits?.fast_charge_count) != null &&
     batteryCount(habits?.slow_charge_count) != null && habits
     ? habits.fast_charge_count + habits.slow_charge_count : null;
-  const fastChargePct = data?.valid_charge_count !== 0 && totalCharges != null && totalCharges > 0 && habits
+  const validChargeCount = batteryCount(data?.valid_charge_count);
+  const fastChargePct = validChargeCount != null && validChargeCount > 0 && totalCharges != null && totalCharges > 0 && habits
     ? fmtInt((habits.fast_charge_count / totalCharges) * 100) : '—';
 
   const avgDoD = (batteryCount(data?.valid_dod_count) ?? 0) > 0 &&
@@ -234,7 +235,7 @@ export default function BatteryDegradationPage() {
     : null;
   const habitsScore = data?.charge_habits_available !== false &&
     validPercent(data?.charge_habits_score) ? data.charge_habits_score : null;
-  const fastPct = totalCharges != null && totalCharges > 0 && data?.valid_charge_count !== 0 &&
+  const fastPct = totalCharges != null && totalCharges > 0 && validChargeCount != null && validChargeCount > 0 &&
     validPercent(data?.fast_charge_pct) ? data.fast_charge_pct : null;
   const fullPct = (batteryCount(data?.valid_end_soc_count) ?? 0) > 0 &&
     validPercent(data?.full_charge_pct) ? data.full_charge_pct : null;

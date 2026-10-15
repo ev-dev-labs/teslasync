@@ -6,6 +6,7 @@ import (
 	"math"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
@@ -242,11 +243,13 @@ func ComputeLifetimeStats(ctx context.Context, db *database.DB, vehicleID int64)
 
 	// Savings.
 	var gasPrice, gasEfficiencyMPG float64
+	var gasUnit string
 	if err := db.Pool.QueryRow(ctx,
 		`SELECT
 			COALESCE((SELECT value_num FROM settings WHERE key = 'gas_price_per_unit'), 3.50),
-			COALESCE((SELECT value_num FROM settings WHERE key = 'gas_efficiency_mpg'), 25)`,
-	).Scan(&gasPrice, &gasEfficiencyMPG); err != nil && err != pgx.ErrNoRows {
+			COALESCE((SELECT value_num FROM settings WHERE key = 'gas_efficiency_mpg'), 25),
+			COALESCE((SELECT value_text FROM settings WHERE key = 'gas_unit'), 'gallon')`,
+	).Scan(&gasPrice, &gasEfficiencyMPG, &gasUnit); err != nil && err != pgx.ErrNoRows {
 		log.Warn().Err(err).Msg("lifetime: failed to get settings")
 	}
 	if gasPrice <= 0 {
@@ -255,16 +258,7 @@ func ComputeLifetimeStats(ctx context.Context, db *database.DB, vehicleID int64)
 	if gasEfficiencyMPG <= 0 {
 		gasEfficiencyMPG = 25
 	}
-	var gasEquivalentCost, totalSavings float64
-	if totalDistKm > 0 {
-		totalMiles := totalDistKm / 1.60934
-		gallonsUsed := totalMiles / gasEfficiencyMPG
-		gasEquivalentCost = gallonsUsed * gasPrice
-		totalSavings = gasEquivalentCost - totalChargingCost
-		if totalSavings < 0 {
-			totalSavings = 0
-		}
-	}
+	gasEquivalentCost, totalSavings := lifetimeSavings(totalDistKm, totalChargingCost, gasPrice, gasEfficiencyMPG, gasUnit)
 
 	// CO₂ offset.
 	co2OffsetKg := totalDistKm * 0.192
@@ -421,6 +415,19 @@ func ComputeLifetimeStats(ctx context.Context, db *database.DB, vehicleID int64)
 
 		Achievements: achievements,
 	}, nil
+}
+
+func lifetimeSavings(distanceKm, chargingCost, pricePerUnit, efficiencyMPG float64, gasUnit string) (float64, float64) {
+	if distanceKm <= 0 {
+		return 0, 0
+	}
+	fuelUsed := distanceKm / 1.60934 / efficiencyMPG
+	if strings.EqualFold(strings.TrimSpace(gasUnit), "liter") {
+		// Match the US gallon conversion used by TCO and the gas-price worker.
+		fuelUsed *= 3.785411784
+	}
+	gasCost := fuelUsed * pricePerUnit
+	return gasCost, math.Max(0, gasCost-chargingCost)
 }
 
 // The producer returns an hour bucket, not an instant or a documented zone.

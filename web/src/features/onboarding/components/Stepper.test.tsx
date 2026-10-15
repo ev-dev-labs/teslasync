@@ -142,6 +142,14 @@ describe('Stepper', () => {
     expect(onClick).not.toHaveBeenCalled();
   });
 
+  it('keeps the default CTA touch-sized below md with compact desktop sizing and wrapping', () => {
+    renderStepper({ steps: threeSteps() });
+    expect(screen.getByRole('button', { name: 'Refresh' })).toHaveClass(
+      'h-auto', 'min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0',
+      'max-w-full', 'whitespace-normal',
+    );
+  });
+
   it('uses the renderCta render-prop for the current step and suppresses the default button', () => {
     const steps = threeSteps();
     const renderCta = vi.fn((step: OnboardingStep) => <a href="/go">Custom {step.title}</a>);

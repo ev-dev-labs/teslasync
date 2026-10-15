@@ -295,6 +295,54 @@ describe('Tesla physics nested summary adoption', () => {
     expect(screen.getByText(`No true range. Recent Wh/mi: ${recent == null ? 'unknown' : '0.00'}`)).toBeInTheDocument();
   });
 
+  it.each([
+    [null, 'missing'], [undefined, 'missing'], [NaN, 'invalid'],
+    [Infinity, 'invalid'], [-Infinity, 'invalid'],
+  ] as const)('excludes unavailable range estimates (%s) without inventing equality', (rated, state) => {
+    const range = {
+      vehicle_id: 7, rated_range_m: rated ?? null, est_range_m: 0, ideal_range_m: null,
+      energy_remaining_wh: null, recent_wh_per_km: null, disagree: false,
+      true_range_m: null, honesty: 'Returned estimates only.',
+    };
+    Object.assign(range, { rated_range_m: rated });
+    source.report = { ...boundedReport, range };
+    renderSection(PhysicsRangeSection);
+    expect(metric('physics-range-summary', 'rated')).toHaveAttribute('data-value-state', state);
+    expect(metric('physics-range-summary', 'typical')).toHaveAttribute('data-value-state', 'value');
+    expect(metric('physics-range-summary', 'known')).toHaveTextContent('1');
+    expect(screen.getByText('Estimate spread: unknown')).toBeInTheDocument();
+    expect(screen.getByText('Spread versus rated: unknown')).toBeInTheDocument();
+    expect(screen.getByText(/At least two estimates are needed/)).toBeInTheDocument();
+    expect(screen.queryByText(/are equal in the returned estimates|is higher in the returned estimates/)).toBeNull();
+  });
+
+  it.each([
+    [0, 0, 'Rated and Typical are equal in the returned estimates', 'unknown'],
+    [1000.25, 1000.25, 'Rated and Typical are equal in the returned estimates', '0.00%'],
+    [-1000.25, -1000.25, 'Rated and Typical are equal in the returned estimates', 'unknown'],
+    [1000.25, 1000.125, 'Rated is higher in the returned estimates', '0.01%'],
+    [1000.125, 1000.25, 'Typical is higher in the returned estimates', '0.01%'],
+    [-1000.25, -1000.125, 'Typical is higher in the returned estimates', 'unknown'],
+    [0, -0.125, 'Rated is higher in the returned estimates', 'unknown'],
+  ])('compares raw signed and fractional ranges (%s, %s)', (rated, typical, direction, relative) => {
+    const range = {
+      vehicle_id: 7, rated_range_m: rated, est_range_m: typical, ideal_range_m: null,
+      energy_remaining_wh: null, recent_wh_per_km: null, disagree: rated !== typical,
+      true_range_m: null, honesty: 'Returned estimates only.',
+    };
+    source.report = { ...boundedReport, range };
+    renderSection(PhysicsRangeSection);
+    expect(screen.getByText(direction)).toBeInTheDocument();
+    expect(screen.getByText(`Difference relative to Rated: ${relative}`)).toBeInTheDocument();
+    expect(metric('physics-range-summary', 'rated')).toHaveAttribute('data-value-state', 'value');
+    expect(metric('physics-range-summary', 'spread')).toHaveAttribute('data-value-state', 'value');
+    if (rated === typical) expect(screen.queryByText(/is higher in the returned estimates/)).toBeNull();
+    else expect(screen.queryByText(/are equal in the returned estimates/)).toBeNull();
+    expect(range.rated_range_m).toBe(rated);
+    expect(range.est_range_m).toBe(typical);
+    expect(range.true_range_m).toBeNull();
+  });
+
   it('updates clock seconds, signed durations, scope and freshness with display preferences', () => {
     const event = '2026-10-01T00:00:17Z';
     const ingest = '2026-10-01T00:00:15.5Z';

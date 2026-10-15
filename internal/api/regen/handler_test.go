@@ -1,6 +1,7 @@
 package regen
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -10,6 +11,13 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // ---------------------------------------------------------------------------
@@ -49,9 +57,11 @@ type fakeRegenRepo struct {
 	energyCalls  []regenCall
 	modelCalls   []int64
 	order        []string
+	contexts     []trace.SpanContext
 }
 
-func (f *fakeRegenRepo) DriveRegens(_ context.Context, vehicleID int64, hasRange bool, start, end time.Time) ([]driveRegenRow, error) {
+func (f *fakeRegenRepo) DriveRegens(ctx context.Context, vehicleID int64, hasRange bool, start, end time.Time) ([]driveRegenRow, error) {
+	f.contexts = append(f.contexts, trace.SpanContextFromContext(ctx))
 	f.driveCalls = append(f.driveCalls, regenCall{vehicleID, hasRange, start, end})
 	f.order = append(f.order, "drives")
 	if f.drivesErr != nil {
@@ -60,7 +70,8 @@ func (f *fakeRegenRepo) DriveRegens(_ context.Context, vehicleID int64, hasRange
 	return f.drives, nil
 }
 
-func (f *fakeRegenRepo) MonthlyRegens(_ context.Context, vehicleID int64, hasRange bool, start, end time.Time) ([]monthlyRegenRow, error) {
+func (f *fakeRegenRepo) MonthlyRegens(ctx context.Context, vehicleID int64, hasRange bool, start, end time.Time) ([]monthlyRegenRow, error) {
+	f.contexts = append(f.contexts, trace.SpanContextFromContext(ctx))
 	f.monthlyCalls = append(f.monthlyCalls, regenCall{vehicleID, hasRange, start, end})
 	f.order = append(f.order, "monthly")
 	if f.monthlyErr != nil {
@@ -69,7 +80,8 @@ func (f *fakeRegenRepo) MonthlyRegens(_ context.Context, vehicleID int64, hasRan
 	return f.monthly, nil
 }
 
-func (f *fakeRegenRepo) LifetimeEnergy(_ context.Context, vehicleID int64, hasRange bool, start, end time.Time) (float64, float64, error) {
+func (f *fakeRegenRepo) LifetimeEnergy(ctx context.Context, vehicleID int64, hasRange bool, start, end time.Time) (float64, float64, error) {
+	f.contexts = append(f.contexts, trace.SpanContextFromContext(ctx))
 	f.energyCalls = append(f.energyCalls, regenCall{vehicleID, hasRange, start, end})
 	f.order = append(f.order, "energy")
 	if f.energyErr != nil {
@@ -78,7 +90,8 @@ func (f *fakeRegenRepo) LifetimeEnergy(_ context.Context, vehicleID int64, hasRa
 	return f.regenWh, f.driveWh, nil
 }
 
-func (f *fakeRegenRepo) VehicleModel(_ context.Context, vehicleID int64) (string, string, error) {
+func (f *fakeRegenRepo) VehicleModel(ctx context.Context, vehicleID int64) (string, string, error) {
+	f.contexts = append(f.contexts, trace.SpanContextFromContext(ctx))
 	f.modelCalls = append(f.modelCalls, vehicleID)
 	f.order = append(f.order, "model")
 	if f.modelErr != nil {
@@ -89,6 +102,99 @@ func (f *fakeRegenRepo) VehicleModel(_ context.Context, vehicleID int64) (string
 
 func regenRequest(target string) *http.Request {
 	return httptest.NewRequest(http.MethodGet, target, nil)
+}
+
+func TestStats_Tracing(t *testing.T) {
+	recorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(recorder))
+	previousProvider := otel.GetTracerProvider()
+	previousLogger := log.Logger
+	otel.SetTracerProvider(provider)
+	t.Cleanup(func() {
+		otel.SetTracerProvider(previousProvider)
+		log.Logger = previousLogger
+		if err := provider.Shutdown(context.Background()); err != nil {
+			t.Errorf("shutdown tracer provider: %v", err)
+		}
+	})
+
+	failure := errors.New("repository unavailable")
+	cases := []struct {
+		name   string
+		repo   fakeRegenRepo
+		status int
+	}{
+		{"success", fakeRegenRepo{}, http.StatusOK},
+		{"drives", fakeRegenRepo{drivesErr: failure}, http.StatusInternalServerError},
+		{"monthly", fakeRegenRepo{monthlyErr: failure}, http.StatusInternalServerError},
+		{"energy", fakeRegenRepo{energyErr: failure}, http.StatusInternalServerError},
+		{"capacity_fallback", fakeRegenRepo{modelErr: failure}, http.StatusOK},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var logs bytes.Buffer
+			log.Logger = zerolog.New(&logs)
+			ctx, parent := provider.Tracer("test").Start(context.Background(), "request")
+			defer parent.End()
+			before := len(recorder.Ended())
+			rec := httptest.NewRecorder()
+			newRegenHandlerForTest(&tc.repo).Stats(rec, regenRequest("/analytics/regen?vehicle_id=42").WithContext(ctx))
+			if rec.Code != tc.status {
+				t.Fatalf("status = %d, want %d", rec.Code, tc.status)
+			}
+			ended := recorder.Ended()[before:]
+			if len(ended) != 1 {
+				t.Fatalf("ended spans = %d, want one handler span", len(ended))
+			}
+			span := ended[0]
+			if span.Name() != "regen.Stats" || span.InstrumentationScope().Name != "api" {
+				t.Errorf("span = %q, scope = %q", span.Name(), span.InstrumentationScope().Name)
+			}
+			if !span.Parent().Equal(parent.SpanContext()) {
+				t.Error("handler did not retain request parent")
+			}
+			for _, got := range tc.repo.contexts {
+				if !got.Equal(span.SpanContext()) {
+					t.Error("repository did not receive handler span context")
+				}
+			}
+			if tc.name == "success" {
+				if len(span.Events()) != 0 || logs.Len() != 0 {
+					t.Error("success emitted errors or boundary logs")
+				}
+				return
+			}
+			events := span.Events()
+			if len(events) != 1 || events[0].Name != "exception" {
+				t.Fatalf("error events = %v, want one exception", events)
+			}
+			foundMessage := false
+			for _, attr := range events[0].Attributes {
+				if attr.Key == "exception.message" && attr.Value.AsString() == failure.Error() {
+					foundMessage = true
+				}
+			}
+			if !foundMessage {
+				t.Error("span did not record repository failure")
+			}
+			var entry map[string]json.RawMessage
+			if err := json.Unmarshal(logs.Bytes(), &entry); err != nil {
+				t.Fatalf("decode boundary log: %v", err)
+			}
+			var traceID string
+			if err := json.Unmarshal(entry["trace_id"], &traceID); err != nil {
+				t.Fatalf("decode trace_id: %v", err)
+			}
+			if traceID != span.SpanContext().TraceID().String() {
+				t.Error("boundary log trace_id differs from handler span")
+			}
+			for _, key := range []string{"vehicle_id", "vin", "model", "request", "response"} {
+				if _, exists := entry[key]; exists {
+					t.Errorf("boundary log contains user data field %q", key)
+				}
+			}
+		})
+	}
 }
 
 // statsResp mirrors the Stats JSON envelope. driveRegen / monthlySummary

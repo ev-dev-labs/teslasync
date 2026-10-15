@@ -1,8 +1,10 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { UnitPref } from '@/lib/unitConversion';
-import type { StatMetric } from '@/components/data-display/stat-reference';
+import type { StatMetric } from '@/components/data-display';
 import { DrivingSummaryBrief } from './DrivingSummaryBrief';
 
 const preferences = vi.hoisted(() => ({
@@ -27,6 +29,23 @@ beforeEach(() => {
 });
 
 describe('DrivingSummaryBrief — real OperationalBrief and raw metric bridge', () => {
+  it.each([
+    ['regen-efficiency-modernization', 'RankedDriveEvidence', 'LayoutCard', 'layout'],
+    ['regen-efficiency-modernization', 'RecoveryContext', 'LayoutCard', 'layout'],
+    ['regen-efficiency-modernization', 'RegenCardSlot', 'useCardPlacement', 'layout'],
+    ['operationalbrief-n-z', 'RegenSummaryBrief', 'StatMetric', 'data-display'],
+    ['operationalbrief-n-z', 'RegenOverviewBrief', 'StatMetric', 'data-display'],
+    ['operationalbrief-n-z', 'RegenCoverageBrief', 'StatMetric', 'data-display'],
+    ['operationalbrief-n-z', 'DrivingSummaryBrief', 'StatMetric', 'data-display'],
+  ])('%s/%s uses the public category import for %s', (directory, component, symbol, category) => {
+    const source = readFileSync(join('src', 'features', 'driving', 'components', directory, `${component}.tsx`), 'utf8');
+    expect(source).toMatch(new RegExp(`import(?: type)? \\{[^}]*\\b${symbol}\\b[^}]*\\} from '@/components/${category}';`));
+    expect(source).not.toMatch(/from ['"]@\/components\/(?:layout|data-display)\//);
+    if (symbol === 'StatMetric') {
+      expect(source).toMatch(/(?:import type \{ StatMetric \}|import \{[^}]*type StatMetric[^}]*\}) from '@\/components\/data-display';/);
+    }
+  });
+
   it('retains the exact unclassified 50/50 denominator and measured zero separately from missing and invalid counts', () => {
     renderBrief([
       { metricId: 'count', occurrenceId: 'unclassified', rawValue: 50, display: { countTotal: 50 }, label: 'Unclassified' },

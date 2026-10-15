@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, ExternalLink, RadioTower } from 'lucide-react';
-import { Badge, Button, Caption, Heading, Text, Tooltip } from '@/components/ui';
+import { Badge, Button, BUTTON_BASE, BUTTON_VARIANTS, Caption, Heading, Text, Tooltip } from '@/components/ui';
+import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 import { DateTime } from '@/components/data-display';
 import type {
   ServiceIntelligenceApplicability,
@@ -43,7 +45,7 @@ export function RecallFindingCard({ finding }: RecallFindingCardProps) {
           <Badge variant={applicabilityVariant(finding.applicability)}>
             {applicability}
           </Badge>
-          <Badge variant={finding.confidence_label === 'high' ? 'success' : 'info'}>
+          <Badge variant="neutral">
             {t('serviceIntelligence.confidence.value', '{{value}}% confidence', {
               value: Math.round(finding.confidence * 100),
             })}
@@ -91,7 +93,7 @@ export function RecallFindingCard({ finding }: RecallFindingCardProps) {
           {finding.match_factors.map((factor) => (
             <Tooltip key={factor.dimension} content={factor.detail} multiline>
               <Button type="button" variant="ghost" size="sm" wrapLabel className="min-h-11 px-1">
-                <Badge variant={factor.status === 'matched' ? 'success' : 'neutral'}>
+                <Badge variant="neutral">
                   {t(
                     `serviceIntelligence.matchFactors.dimension.${factor.dimension}`,
                     humanize(factor.dimension),
@@ -123,7 +125,7 @@ export function RecallFindingCard({ finding }: RecallFindingCardProps) {
           href={finding.source_document_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex min-h-11 items-center gap-1 rounded text-sm font-medium text-[var(--text-primary)] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
+          className={cn(BUTTON_BASE, BUTTON_VARIANTS.ghost, typography.size.sm, 'min-h-11 max-w-full justify-start whitespace-normal px-2 hover:underline')}
         >
           {t('serviceIntelligence.recall.source', 'Open NHTSA campaign')}
           <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />

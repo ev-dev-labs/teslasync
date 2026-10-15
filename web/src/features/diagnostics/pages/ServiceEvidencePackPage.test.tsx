@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -16,8 +17,9 @@ import {
 import ServiceEvidencePackPage from './ServiceEvidencePackPage';
 import { RootCauseEvidenceGraph } from '../components/RootCauseEvidenceGraph';
 import { RootCauseSignalTimelineChart } from '../components/RootCauseSignalTimelineChart';
+import { ServiceEvidenceIntegrityPanel } from '../components/ServiceEvidenceIntegrityPanel';
 import type { EvidenceGraph } from '../lib/rootCauseIntelligence';
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 
 const mocks = vi.hoisted(() => ({
   workspace: vi.fn(),
@@ -153,6 +155,77 @@ beforeEach(() => {
 });
 
 describe('root-cause chart preference adoption', () => {
+  it('keeps the timeline title and purpose through loading, paused-without-data, empty and zero-valued success', () => {
+    const props = {
+      timeline: [], seriesNames: ['Soc'], focalSignal: 'Soc',
+      hasChosenSignal: true, isLoading: true, isError: false,
+    };
+    const content = (overrides: Partial<ComponentProps<typeof RootCauseSignalTimelineChart>> = {}) => (
+      <MemoryRouter><RootCauseSignalTimelineChart {...props} {...overrides} /></MemoryRouter>
+    );
+    const view = render(content());
+    const assertShell = (state: string) => {
+      expect(screen.getByText('Normalized signal timeline')).toBeInTheDocument();
+      expect(screen.getByText('Each series independently scaled to 0–1 for visual comparison; ranking uses the raw robust statistics, not this view')).toBeInTheDocument();
+      expect(view.container.querySelector('[data-chart-key="diagnostics-root-cause-timeline"]'))
+        .toHaveAttribute('data-chart-state', state);
+    };
+    assertShell('loading');
+    expect(screen.queryByText('Not enough history yet for this signal and window.')).not.toBeInTheDocument();
+    expect(mocks.line).not.toHaveBeenCalled();
+
+    // A paused first request has no active loading or retained measurements.
+    view.rerender(content({ isLoading: false }));
+    assertShell('empty');
+    expect(screen.getByText('Not enough history yet for this signal and window.')).toBeInTheDocument();
+    view.rerender(content({ isLoading: false, hasChosenSignal: false }));
+    assertShell('empty');
+    expect(screen.getByText('Choose a signal above to see its normalized timeline.')).toBeInTheDocument();
+    view.rerender(content({ isLoading: false }));
+    assertShell('empty');
+    expect(screen.getByText('Not enough history yet for this signal and window.')).toBeInTheDocument();
+
+    view.rerender(content({
+      isLoading: false, timeline: [{ ms: 0, time: points[0]!.ts, Soc: 0 }],
+    }));
+    assertShell('ready');
+    expect(screen.getByRole('table')).toHaveTextContent('0');
+    expect(mocks.line).toHaveBeenCalledWith(expect.objectContaining({ dataKey: 'Soc' }));
+  });
+
+  it('preserves retained timeline rows and retry on refresh failure, then recovers without duplicate children', async () => {
+    const onRetry = vi.fn();
+    const props = {
+      timeline: [{ ms: 0, time: points[0]!.ts, Soc: 0 }],
+      seriesNames: ['Soc'], focalSignal: 'Soc', hasChosenSignal: true,
+      isLoading: false, isError: false, onRetry,
+    };
+    const content = (overrides: Partial<ComponentProps<typeof RootCauseSignalTimelineChart>> = {}) => (
+      <MemoryRouter><RootCauseSignalTimelineChart {...props} {...overrides} /></MemoryRouter>
+    );
+    const view = render(content());
+    view.rerender(content({ isError: true, error: new Error('refresh failed') }));
+    expect(screen.getByText('Normalized signal timeline')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByRole('table')).toHaveTextContent('0');
+    expect(view.container.querySelector('[data-chart-key]')).toHaveAttribute('data-chart-state', 'ready');
+    await userEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(onRetry).toHaveBeenCalledOnce();
+    mocks.line.mockClear();
+    view.rerender(content({ isLoading: true }));
+    expect(screen.getByRole('table')).toHaveTextContent('0');
+    expect(mocks.line).toHaveBeenCalledOnce();
+    view.rerender(content());
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('table')).toHaveLength(1);
+
+    view.rerender(content({ timeline: [], isError: true }));
+    expect(view.container.querySelector('[data-chart-key]')).toHaveAttribute('data-chart-state', 'error');
+    expect(screen.getByText('Normalized signal timeline')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(onRetry).toHaveBeenCalledTimes(2);
+  });
+
   it('updates graph nodes, edges and legend swatches without changing identities or relation encodings', () => {
     const graph: EvidenceGraph = {
       nodes: [
@@ -230,6 +303,78 @@ describe('root-cause chart preference adoption', () => {
 });
 
 describe('ServiceEvidencePackPage snapshot integrity', () => {
+  it('isolates software-history retries while retaining every populated section and generated snapshot', async () => {
+    const input = workspace();
+    const updates = query(undefined, new Error('Software history failed'));
+    const doc = documentFor(input);
+    mocks.workspace.mockReturnValue(input);
+    mocks.updates.mockReturnValue(updates);
+    vi.mocked(buildServiceEvidencePack).mockResolvedValueOnce(doc);
+    const view = renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(updates.refetch).toHaveBeenCalledOnce();
+    expect(input.signalsQuery.refetch).not.toHaveBeenCalled();
+    expect(input.evidenceBundle.refetch).not.toHaveBeenCalled();
+    expect(screen.getByRole('table')).toHaveTextContent('Soc');
+    const brief = screen.getByTestId('service-evidence-summary');
+    expect(brief.querySelector('[data-operational-metric="service-evidence-pack-status"]'))
+      .toHaveTextContent('Ready');
+    for (const title of ['Choose a signal to investigate', 'Evidence inventory', 'Privacy manifest', 'Integrity & export', 'Pack preview']) {
+      expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
+    }
+
+    fireEvent.click(screen.getByRole('button', { name: 'Generate pack' }));
+    await screen.findByRole('button', { name: 'Download JSON' });
+    expect(brief.querySelector('[data-operational-metric="service-evidence-pack-status"]'))
+      .toHaveTextContent('Generated');
+    expect(screen.getByRole('group', { name: 'Pack preview' }).querySelector('code')?.textContent)
+      .toBe(toPrettyJson(doc));
+
+    mocks.updates.mockReturnValue(query([]));
+    view.refresh();
+    expect(screen.queryByText('Software history failed')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Download JSON' })).toBeEnabled();
+    expect(screen.getByRole('group', { name: 'Pack preview' }).querySelector('code')?.textContent)
+      .toBe(toPrettyJson(doc));
+    expect(buildServiceEvidencePack).toHaveBeenCalledOnce();
+  });
+
+  it('keeps compact desktop sizing, wrapping mobile actions and the complete copy payload', async () => {
+    const user = userEvent.setup();
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText');
+    const doc = documentFor();
+    const onGenerate = vi.fn();
+    const onExport = vi.fn();
+    render(
+      <ServiceEvidenceIntegrityPanel
+        canGenerate generating={false} pack={doc} generationError={null}
+        onGenerate={onGenerate} onExport={onExport} onDismissError={vi.fn()}
+      />,
+    );
+    const generate = screen.getByRole('button', { name: 'Generate pack' });
+    const copy = screen.getByRole('button', { name: 'Copy digest' });
+    const download = screen.getByRole('button', { name: 'Download JSON' });
+    for (const action of [generate, copy, download]) {
+      expect(action).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0', 'whitespace-normal');
+      expect(action.querySelector('span.min-w-0')).toHaveClass('break-words');
+    }
+    expect(screen.getByText(doc.integrity.digestHex)).toHaveClass('min-w-0', 'break-all');
+    expect(screen.getByText(/^Schema .* · generated /)).toHaveClass('break-words');
+    await user.tab();
+    expect(generate).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(onGenerate).toHaveBeenCalledOnce();
+    await user.tab();
+    expect(copy).toHaveFocus();
+    await user.keyboard(' ');
+    expect(writeText).toHaveBeenCalledWith(doc.integrity.digestHex);
+    await user.tab();
+    expect(download).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(onExport).toHaveBeenCalledOnce();
+  });
+
   it('updates visible timestamps with locale and timezone preferences without rewriting the snapshot or digest', async () => {
     const input = workspace();
     const updatedAt = Date.parse('2026-01-01T00:30:00Z');

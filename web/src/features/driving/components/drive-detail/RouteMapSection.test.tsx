@@ -44,6 +44,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
 import { RouteMapSection } from './RouteMapSection';
+import { formatDateTime } from '@/lib/dateFormat';
 import {
   SPEED_SEGMENT_LOW_MPS,
   SPEED_SEGMENT_MED_MPS,
@@ -51,6 +52,7 @@ import {
 } from './constants';
 import { convertSpeedFromSI } from '@/lib/unitConversion';
 import { fmtNumber } from '@/lib/numberFormat';
+import { chartTokens } from '@/lib/tokens';
 import type { DriveDetail, DrivePosition } from '@/types/driving';
 import type { FsdEvidenceInterval } from '@/types/fsd';
 import type { RoutePoint, SpeedSegment } from './types';
@@ -61,6 +63,13 @@ const mapCtl = vi.hoisted(() => ({
   setView: vi.fn(),
 }));
 const unitCtl = vi.hoisted(() => ({ speed: 'km/h' as 'km/h' | 'mph' }));
+
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({ locale: 'de-DE', settings: { tz_display_default: 'user', timezone_user: 'America/Los_Angeles' } }),
+}));
+vi.mock('@/hooks/useSelectedVehicle', () => ({
+  useSelectedVehicle: () => ({ vehicle: null }),
+}));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -191,8 +200,8 @@ const END: [number, number] = [47.44, -122.3];
 const CENTER: [number, number] = [47.52, -122.31];
 const SPREAD_TRAIL: [number, number][] = [START, END];
 const SEGMENTS: SpeedSegment[] = [
-  { positions: [START, [47.52, -122.31]], color: '#10b981' },
-  { positions: [[47.52, -122.31], END], color: '#ef4444' },
+  { positions: [START, [47.52, -122.31]], color: chartTokens.series[1] },
+  { positions: [[47.52, -122.31], END], color: chartTokens.series[3] },
 ];
 
 interface RenderOpts {
@@ -238,6 +247,17 @@ beforeEach(() => {
   unitCtl.speed = 'km/h';
 });
 
+describe('RouteMapSection — saved date preferences', () => {
+  it.each(['2026-04-02T00:30:00Z', 'invalid', ''])('formats %s without changing UTC provenance', (startTs) => {
+    renderMeaningfulRoute({ startTs, endTs: '2026-04-02T08:30:00Z' });
+    const start = screen.getAllByTestId('popup')[0].querySelector('time');
+    expect(start).toHaveTextContent(formatDateTime(startTs, { locale: 'de-DE', tz: 'America/Los_Angeles' }));
+    expect(start).toHaveAttribute('datetime', startTs);
+    expect(start).toHaveAttribute('title', startTs);
+    expect(screen.getAllByTestId('popup')[1].querySelector('time')).toHaveTextContent('2. Apr. 2026');
+  });
+});
+
 /* ── EMPTY / NULL-SAFETY ───────────────────────────────────────────────────── */
 describe('RouteMapSection — empty + null-safety', () => {
   it('renders the no-route placeholder (never a blank map) when the trail is empty', () => {
@@ -265,6 +285,12 @@ describe('RouteMapSection — empty + null-safety', () => {
 
 /* ── MEANINGFUL ROUTE (km) ─────────────────────────────────────────────────── */
 describe('RouteMapSection — meaningful route (km)', () => {
+  it('matches speed swatches to shared route bands and includes the high-band boundary', () => {
+    const { container } = renderMeaningfulRoute();
+    expect(Array.from(container.querySelectorAll('rect')).map((rect) => rect.getAttribute('fill')))
+      .toEqual([chartTokens.series[1], chartTokens.series[0], chartTokens.series[2], chartTokens.series[3]]);
+    expect(screen.getByText(`≥${fmtNumber(convertSpeedFromSI(SPEED_SEGMENT_HIGH_MPS, 'km/h'))}`)).toBeInTheDocument();
+  });
   it('renders the map, tile layer and one polyline per speed segment', () => {
     renderMeaningfulRoute();
 
@@ -277,8 +303,8 @@ describe('RouteMapSection — meaningful route (km)', () => {
 
     const polylines = screen.getAllByTestId('polyline');
     expect(polylines).toHaveLength(2);
-    expect(polylines[0]).toHaveAttribute('data-color', '#10b981');
-    expect(polylines[1]).toHaveAttribute('data-color', '#ef4444');
+    expect(polylines[0]).toHaveAttribute('data-color', chartTokens.series[1]);
+    expect(polylines[1]).toHaveAttribute('data-color', chartTokens.series[3]);
   });
 
   it('renders start and end markers (with popups) and no stationary marker/banner', () => {
@@ -286,8 +312,8 @@ describe('RouteMapSection — meaningful route (km)', () => {
 
     const markers = screen.getAllByTestId('circle-marker');
     const colors = markers.map((m) => m.getAttribute('data-color'));
-    expect(colors).toContain('#10b981'); // start
-    expect(colors).toContain('#ef4444'); // end
+    expect(colors).toContain(chartTokens.series[1]); // start
+    expect(colors).toContain(chartTokens.series[3]); // end
     // Popups carry the exact "Start"/"End" labels…
     expect(screen.getByText('Start')).toBeInTheDocument();
     expect(screen.getByText('End')).toBeInTheDocument();
@@ -335,7 +361,7 @@ describe('RouteMapSection — meaningful route (km)', () => {
     });
 
     expect(screen.getAllByTestId('polyline')).toHaveLength(3);
-    expect(screen.getAllByTestId('polyline')[2]).toHaveAttribute('data-color', '#c084fc');
+    expect(screen.getAllByTestId('polyline')[2]).toHaveAttribute('data-color', chartTokens.series[4]);
     expect(screen.getByText(/Approximate area where the FSD counter increased/)).toBeInTheDocument();
     expect(screen.getByText(/not an exact FSD-active segment/)).toBeInTheDocument();
   });
@@ -363,7 +389,7 @@ describe('RouteMapSection — meaningful route (km)', () => {
     });
 
     expect(screen.getAllByTestId('polyline')).toHaveLength(1);
-    expect(screen.getByTestId('polyline')).toHaveAttribute('data-color', '#c084fc');
+    expect(screen.getByTestId('polyline')).toHaveAttribute('data-color', chartTokens.series[4]);
   });
 
   it('shows the bottom Start and End labels for a completed drive', () => {
@@ -420,7 +446,7 @@ describe('RouteMapSection — stationary GPS cluster', () => {
     expect(screen.getByText('Last known location')).toBeInTheDocument();
     const marker = screen.getByTestId('circle-marker');
     expect(marker).toHaveAttribute('data-center', JSON.stringify(ANCHOR));
-    expect(marker).toHaveAttribute('data-color', '#22d3ee');
+    expect(marker).toHaveAttribute('data-color', chartTokens.series[0]);
     // …and neither the polyline segments, the trip markers, nor the legend show.
     expect(screen.queryByTestId('polyline')).toBeNull();
     expect(screen.queryByText('Start')).toBeNull();

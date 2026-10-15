@@ -513,12 +513,40 @@ describe('CostAnalysisPage', () => {
     expect(sessionPath).toBeDefined()
     const params = new URLSearchParams(sessionPath?.split('?')[1])
     expect(params.get('vehicle_id')).toBe('7')
-    expect(params.get('start')).toBe('2025-04-01')
-    expect(params.get('end')).toBe('2025-06-30')
+    expect(params.get('start')).toBe(new Date('2025-04-01T00:00:00').toISOString())
+    expect(params.get('end')).toBe(new Date('2025-07-01T00:00:00').toISOString())
     expect(params.get('limit')).toBe('1000')
     expect(paths).toContain('/analytics/cost-forecast?vehicle_id=7&months=6')
     expect(screen.queryByRole('combobox', { name: /vehicle/i })).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/^start date$|^end date$/i)).not.toBeInTheDocument()
     expect(screen.getByRole('spinbutton', { name: 'Gas Price ($/gal)' })).toHaveValue(3.5)
   })
+
+  it.each(['/cost-analysis', '/charging/costs'])(
+    'passes the precise rolling 24-hour window through the sessions hook on %s',
+    async route => {
+      const now = Date.parse('2025-06-15T18:37:42.123Z')
+      const clock = vi.spyOn(Date, 'now').mockReturnValue(now)
+      try {
+        renderPage([`${route}?time_scope=24h`])
+        expect(await screen.findByText('$0.10')).toBeInTheDocument()
+        const sessionPaths = mockedRequest.mock.calls
+          .map(([path]) => String(path))
+          .filter(path => path.startsWith('/charging?'))
+        expect(sessionPaths.length).toBeGreaterThan(0)
+        for (const path of sessionPaths) {
+          const params = new URLSearchParams(path.split('?')[1])
+          expect(params.get('vehicle_id')).toBe('7')
+          expect(params.get('start')).toBe('2025-06-14T18:37:42.123Z')
+          expect(params.get('end')).toBe('2025-06-15T18:37:42.123Z')
+          expect(params.get('limit')).toBe('1000')
+        }
+        expect(screen.getByText('$7.25')).toBeInTheDocument()
+        expect(screen.queryByLabelText(/^start date$|^end date$/i)).not.toBeInTheDocument()
+        expect(screen.queryByRole('combobox', { name: /vehicle/i })).not.toBeInTheDocument()
+      } finally {
+        clock.mockRestore()
+      }
+    },
+  )
 })

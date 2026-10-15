@@ -33,8 +33,11 @@ import {
   useUpdateAutomationFull,
   useAutomationPresets,
   useAutomationPreset,
+  useInstallRoutine,
   type AutomationFullInput,
   type AutomationImportEnvelope,
+  type AutomationBulkOp,
+  type AutomationBulkResult,
 } from './useAutomations';
 import type {
   Automation,
@@ -43,13 +46,15 @@ import type {
   AutomationPreset,
   AutomationPresetsResponse,
 } from '@/api/types';
+import type { ApiRequestOptions } from '../client';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────
 // Hoisted so the (also-hoisted) mock factories close over the same spy
 // instances the assertions later read.
-const { requestMock, toastSuccess, toastError, invalidateSpy } = vi.hoisted(() => ({
+const { requestMock, toastSuccess, toastWarning, toastError, invalidateSpy } = vi.hoisted(() => ({
   requestMock: vi.fn(),
   toastSuccess: vi.fn(),
+  toastWarning: vi.fn(),
   toastError: vi.fn(),
   invalidateSpy: vi.fn(),
 }));
@@ -59,7 +64,7 @@ vi.mock('../client', () => ({
 }));
 
 vi.mock('./_toastHelpers', () => ({
-  useMutationToast: () => ({ success: toastSuccess, error: toastError }),
+  useMutationToast: () => ({ success: toastSuccess, warning: toastWarning, error: toastError }),
 }));
 
 // Mock the cross-tab invalidation helper so mutation invalidations are
@@ -89,8 +94,8 @@ function calledUrl(i = 0): string {
   return requestMock.mock.calls[i]?.[0] as string;
 }
 /** RequestInit the mocked `request` was called with on invocation `i`. */
-function calledOpts(i = 0): RequestInit {
-  return requestMock.mock.calls[i]?.[1] as RequestInit;
+function calledOpts(i = 0): ApiRequestOptions {
+  return requestMock.mock.calls[i]?.[1] as ApiRequestOptions;
 }
 
 function makeAutomation(overrides: Partial<Automation> = {}): Automation {
@@ -156,6 +161,7 @@ const validFullInput: AutomationFullInput = {
 beforeEach(() => {
   requestMock.mockReset();
   toastSuccess.mockReset();
+  toastWarning.mockReset();
   toastError.mockReset();
   invalidateSpy.mockReset();
 });
@@ -191,12 +197,56 @@ describe('useAutomations', () => {
     expect(result.current.data?.[0].id).toBe(1);
   });
 
-  it('coerces a non-array payload to [] via the safeArray select', async () => {
-    requestMock.mockResolvedValueOnce(null as unknown as Automation[]);
+  it('rejects a non-array payload rather than presenting an empty inventory', async () => {
+    requestMock.mockResolvedValueOnce(null);
     const { result } = renderHook(() => useAutomations(), { wrapper: wrapperFor(makeClient()) });
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data).toEqual([]);
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error?.message).toBe('Invalid automation inventory response');
+    expect(result.current.data).toBeUndefined();
+  });
+});
+
+describe('useInstallRoutine', () => {
+  it('requires live mode while preserving the encoded endpoint, body, defaults and success effects', async () => {
+    const installed = makeAutomation({ id: 7 });
+    requestMock.mockResolvedValueOnce(installed);
+    const client = makeClient();
+    const { result } = renderHook(() => useInstallRoutine(), { wrapper: wrapperFor(client) });
+    const params = { place_id: 42, vehicle_id: 12, name: 'Home routine' };
+
+    await act(async () => {
+      expect(await result.current.mutateAsync({ id: 'home/arrival', ...params })).toEqual(installed);
+    });
+
+    expect(requestMock).toHaveBeenCalledExactlyOnceWith(
+      '/automations/routine-templates/home%2Farrival/install',
+      { method: 'POST', requiresLiveMode: true, body: JSON.stringify(params) },
+    );
+    expect(client.getMutationCache().getAll()[0].options.networkMode).toBeUndefined();
+    expect(client.getMutationCache().getAll()[0].options.retry).toBe(false);
+    expect(invalidateSpy).toHaveBeenCalledExactlyOnceWith(client, { queryKey: automationKeys.all });
+    expect(toastSuccess).toHaveBeenCalledExactlyOnceWith(
+      'toast.automations.routine.success', 'Routine installed',
+    );
+    expect(toastError).not.toHaveBeenCalled();
+  });
+
+  it('surfaces installation rejection without success effects', async () => {
+    const error = new Error('Routine installation blocked');
+    requestMock.mockRejectedValueOnce(error);
+    const { result } = renderHook(() => useInstallRoutine(), { wrapper: wrapperFor(makeClient()) });
+
+    await act(async () => {
+      await expect(result.current.mutateAsync({ id: 'home', place_id: 42 })).rejects.toBe(error);
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(toastError).toHaveBeenCalledExactlyOnceWith(
+      error, 'toast.automations.routine.error', 'Failed to install routine',
+    );
+    expect(invalidateSpy).not.toHaveBeenCalled();
+    expect(toastSuccess).not.toHaveBeenCalled();
   });
 });
 
@@ -459,13 +509,20 @@ describe('useBulkAutomationsUpdate', () => {
     expect((calledOpts().headers as Record<string, string>)['Content-Type']).toBe('application/json');
     expect(JSON.parse(calledOpts().body as string)).toEqual({ ids: [1, 2], op: 'enable' });
     expect(toastSuccess).toHaveBeenCalledWith('toast.automation.bulk.enable.success', 'Automations enabled');
+    expect(toastWarning).not.toHaveBeenCalled();
+    expect(toastError).not.toHaveBeenCalled();
+    expect(invalidateSpy).toHaveBeenCalledTimes(2);
+    expect(invalidateSpy).toHaveBeenCalledWith(expect.any(QueryClient), { queryKey: automationKeys.all });
+    expect(invalidateSpy).toHaveBeenCalledWith(expect.any(QueryClient), { queryKey: ['automation-history'] });
   });
 
   it.each([
     ['disable', 'Automations disabled'],
     ['delete', 'Automations deleted'],
   ] as const)('maps the %s op to its fallback toast', async (op, fallback) => {
-    requestMock.mockResolvedValueOnce({ updated: 0, deleted: 0, failed: [] });
+    requestMock.mockResolvedValueOnce(op === 'delete'
+      ? { deleted: 1, failed: [] }
+      : { updated: 1, failed: [] });
     const { result } = renderHook(() => useBulkAutomationsUpdate(), { wrapper: wrapperFor(makeClient()) });
 
     await act(async () => {
@@ -473,6 +530,64 @@ describe('useBulkAutomationsUpdate', () => {
     });
 
     expect(toastSuccess).toHaveBeenCalledWith(`toast.automation.bulk.${op}.success`, fallback);
+    expect(toastWarning).not.toHaveBeenCalled();
+    expect(toastError).not.toHaveBeenCalled();
+  });
+
+  it.each<AutomationBulkOp>(['enable', 'disable', 'delete'])(
+    'warns about partial %s outcomes without changing failed IDs or invalidation',
+    async (op) => {
+      const payload: AutomationBulkResult = {
+        ...(op === 'delete' ? { deleted: 1 } : { updated: 1 }),
+        failed: [{ id: 2, reason: 'not found' }],
+      };
+      requestMock.mockResolvedValueOnce(payload);
+      const client = makeClient();
+      const { result } = renderHook(() => useBulkAutomationsUpdate(), { wrapper: wrapperFor(client) });
+
+      await act(async () => {
+        expect(await result.current.mutateAsync({ ids: [1, 2], op })).toBe(payload);
+      });
+
+      expect(payload.failed).toEqual([{ id: 2, reason: 'not found' }]);
+      expect(toastWarning).toHaveBeenCalledExactlyOnceWith(
+        'bulk.result.partial', '{{ok}} succeeded, {{failed}} failed', { ok: 1, failed: 1 },
+      );
+      expect(toastSuccess).not.toHaveBeenCalled();
+      expect(toastError).not.toHaveBeenCalled();
+      expect(invalidateSpy).toHaveBeenCalledTimes(2);
+      expect(invalidateSpy).toHaveBeenCalledWith(client, { queryKey: automationKeys.all });
+      expect(invalidateSpy).toHaveBeenCalledWith(client, { queryKey: ['automation-history'] });
+    },
+  );
+
+  it.each<{
+    op: AutomationBulkOp;
+    payload: AutomationBulkResult;
+  }>([
+    { op: 'enable', payload: { updated: 0, failed: [{ id: 1, reason: 'not found' }] } },
+    { op: 'disable', payload: { updated: 0, failed: [{ id: 1, reason: 'not found' }] } },
+    { op: 'delete', payload: { deleted: 0, failed: [{ id: 1, reason: 'not found' }] } },
+    { op: 'enable', payload: { updated: 0, failed: [] } },
+    { op: 'disable', payload: { deleted: 1, failed: [] } },
+    { op: 'delete', payload: { updated: 1, failed: [] } },
+  ])('reports an error for zero confirmed $op changes', async ({ op, payload }) => {
+    requestMock.mockResolvedValueOnce(payload);
+    const client = makeClient();
+    const { result } = renderHook(() => useBulkAutomationsUpdate(), { wrapper: wrapperFor(client) });
+
+    await act(async () => {
+      expect(await result.current.mutateAsync({ ids: [1], op })).toBe(payload);
+    });
+
+    expect(toastError).toHaveBeenCalledExactlyOnceWith(
+      null, 'toast.automation.bulk.error', 'Bulk automation update failed',
+    );
+    expect(toastSuccess).not.toHaveBeenCalled();
+    expect(toastWarning).not.toHaveBeenCalled();
+    expect(invalidateSpy).toHaveBeenCalledTimes(2);
+    expect(invalidateSpy).toHaveBeenCalledWith(client, { queryKey: automationKeys.all });
+    expect(invalidateSpy).toHaveBeenCalledWith(client, { queryKey: ['automation-history'] });
   });
 
   it('toasts an error when the bulk op fails', async () => {
@@ -483,6 +598,9 @@ describe('useBulkAutomationsUpdate', () => {
       await result.current.mutateAsync({ ids: [1], op: 'enable' }).catch(() => undefined);
     });
     expect(toastError).toHaveBeenCalledWith(boom, 'toast.automation.bulk.error', 'Bulk automation update failed');
+    expect(toastSuccess).not.toHaveBeenCalled();
+    expect(toastWarning).not.toHaveBeenCalled();
+    expect(invalidateSpy).not.toHaveBeenCalled();
   });
 });
 

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import type { DataState } from '@/api/dataState';
-import { type StatMetric } from '@/components/data-display/stat-reference';
+import type { StatMetric } from '@/components/data-display';
 import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBrief';
 import { EmptyState, QueryError } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';

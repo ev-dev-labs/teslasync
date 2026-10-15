@@ -2,11 +2,13 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ReactNode } from 'react';
+import { useMemo, type ComponentProps, type ReactNode } from 'react';
 
 import type { GhostResponse, LeaderboardRow, SegmentSummary } from '@/api/hooks/useSegments';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { chartTokens } from '@/lib/tokens';
+import { formatDateShort } from '@/lib/dateFormat';
+import type { DateFormatter } from '@/hooks/useDateFormat';
 
 const state = vi.hoisted(() => ({
   vehicleId: 7 as number | null,
@@ -24,19 +26,30 @@ const state = vi.hoisted(() => ({
   leaderboardRows: [] as LeaderboardRow[],
   efficiencyRows: [] as LeaderboardRow[],
   chartInputs: [] as unknown[],
+  reduceMotion: false,
+  hiddenSeries: new Set<string>(),
+  elapsedLine: vi.fn(),
   segmentRefetch: vi.fn(),
   leaderboardRefetch: vi.fn(),
   ghostRefetch: vi.fn(),
+  formatDateShort: vi.fn<DateFormatter>(),
+  ghostArgs: [] as Array<[number | null, number | null, number | null]>,
+  translations: {} as Record<string, string>,
 }));
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, fallback?: string, values?: Record<string, unknown>) =>
-      (fallback ?? key).replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(values?.[name] ?? '')),
-  }),
-}));
+vi.mock('react-i18next', () => {
+  const t = (key: string, fallback?: string, values?: Record<string, unknown>) =>
+    (state.translations[key] ?? fallback ?? key).replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(values?.[name] ?? ''));
+  return { useTranslation: () => ({ t }) };
+});
 
 vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: vi.fn() }));
+vi.mock('@/hooks/useMotionPreference', () => ({
+  useMotionPreference: () => ({ reduce: state.reduceMotion, durationMs: state.reduceMotion ? 0 : 250 }),
+}));
+vi.mock('@/hooks/useDateFormat', () => ({
+  useDateFormat: () => ({ formatDateShort: state.formatDateShort }),
+}));
 vi.mock('@/hooks/useSelectedVehicle', () => ({
   useSelectedVehicle: () => ({ vehicleId: state.vehicleId }),
 }));
@@ -46,10 +59,24 @@ vi.mock('@/hooks/useUnits', () => ({
 vi.mock('@/components/forms', () => ({
   VehicleSelect: () => <div>Vehicle select</div>,
 }));
-vi.mock('@/components/layout', async (importActual) => ({
-  ...await importActual<typeof import('@/components/layout')>(),
-  PageLayout: ({ children }: { children: ReactNode }) => <main>{children}</main>,
-}));
+vi.mock('@/components/layout', async (importActual) => {
+  const actual = await importActual<typeof import('@/components/layout')>();
+  return {
+    ...actual,
+    PageLayout: ({ children }: { children: ReactNode }) => <main>{children}</main>,
+    ChartCard: ({ children, ...props }: ComponentProps<typeof actual.ChartCard>) => (
+      <actual.ChartCard {...props}>
+        {typeof children === 'function' ? (context) => children({
+          ...context,
+          hiddenSeries: context.hiddenSeries ? {
+            ...context.hiddenSeries,
+            isHidden: (key) => state.hiddenSeries.has(key),
+          } : null,
+        }) : children}
+      </actual.ChartCard>
+    ),
+  };
+});
 vi.mock('@/components/motion', () => ({
   FadeIn: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
@@ -57,6 +84,10 @@ vi.mock('@/components/charts', async (importActual) => ({
   ...await importActual<typeof import('@/components/charts')>(),
   ResponsiveContainer: ({ children }: { children: ReactNode }) => <>{children}</>,
   LineChart: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  Line: (props: ComponentProps<typeof import('@/components/charts').Line>) => {
+    state.elapsedLine(props);
+    return null;
+  },
   ComposedChart: ({ children, data }: { children: ReactNode; data: unknown[] }) => (
     <div data-testid="gap-chart" data-points={JSON.stringify(data)}>{children}</div>
   ),
@@ -96,12 +127,13 @@ vi.mock('@/api/hooks/useSegments', () => ({
   }),
   useSegmentLeaderboard: (id: number | null) => {
     state.selectedIds.push(id);
+    const data = useMemo(() => id == null || !state.leaderboardHasData ? undefined : {
+      segment: { id, name: `Route ${id}` },
+      by_time: state.leaderboardRows,
+      by_efficiency: state.efficiencyRows,
+    }, [id, state.leaderboardHasData, state.leaderboardRows, state.efficiencyRows]);
     return {
-      data: id == null || !state.leaderboardHasData ? undefined : {
-        segment: { id, name: `Route ${id}` },
-        by_time: state.leaderboardRows,
-        by_efficiency: state.efficiencyRows,
-      },
+      data,
       isLoading: !state.leaderboardHasData && state.leaderboardFetchStatus === 'fetching',
       isPending: !state.leaderboardHasData,
       fetchStatus: state.leaderboardFetchStatus,
@@ -110,7 +142,9 @@ vi.mock('@/api/hooks/useSegments', () => ({
       refetch: state.leaderboardRefetch,
     };
   },
-  useSegmentGhost: () => ({
+  useSegmentGhost: (segmentId: number | null, a: number | null, b: number | null) => {
+    state.ghostArgs.push([segmentId, a, b]);
+    return {
     data: state.ghost,
     isLoading: !state.ghost && state.ghostFetchStatus === 'fetching',
     isPending: !state.ghost,
@@ -118,7 +152,8 @@ vi.mock('@/api/hooks/useSegments', () => ({
     isError: state.ghostError != null,
     error: state.ghostError,
     refetch: state.ghostRefetch,
-  }),
+    };
+  },
 }));
 
 import SegmentsPage from './SegmentsPage';
@@ -160,11 +195,160 @@ describe('SegmentsPage pagination', () => {
     state.leaderboardRows = [];
     state.efficiencyRows = [];
     state.chartInputs = [];
+    state.reduceMotion = false;
+    state.hiddenSeries = new Set();
+    state.elapsedLine.mockClear();
     setGlobalLocale('en-US');
     setGlobalPrecision(2);
     state.segmentRefetch.mockClear();
     state.leaderboardRefetch.mockClear();
     state.ghostRefetch.mockClear();
+    state.ghostArgs = [];
+    state.translations = {};
+    state.formatDateShort = vi.fn((value) => formatDateShort(value, { locale: 'en-US', tz: 'UTC' }));
+  });
+
+  it('updates leaderboard and ghost dates from display preferences without changing attempt identity or raw timestamps', () => {
+    const timestamps = ['2026-10-14T00:30:00Z', '2026-10-14T01:30:00Z', '2026-10-14T02:30:00Z'];
+    state.leaderboardRows = timestamps.map((started_at, index) => Object.freeze({
+      rank: index + 1, drive_id: index + 101, started_at,
+      duration_s: 60 + index, distance_m: 1000, wh_per_km: 150,
+      delta_to_best_s: index, is_pr: index === 0,
+    }));
+    state.efficiencyRows = [...state.leaderboardRows].reverse();
+    state.ghost = {
+      segment: segment(1),
+      a: { drive_id: 103, duration_s: 62, series: [] },
+      b: { drive_id: 102, duration_s: 61, series: [] },
+      split_deltas: [], winner_drive_id: 102, margin_s: 1,
+    };
+    const view = renderPage();
+    fireEvent.click(screen.getByRole('option', { name: 'Open leaderboard for Route 1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'By efficiency' }));
+    const table = screen.getByRole('table');
+    const firstRow = within(table).getAllByRole('row')[1];
+    const pickA = within(firstRow).getByRole('button', { name: 'Attempt A · Oct 14 · #103' });
+    pickA.focus();
+    fireEvent.click(pickA);
+    expect(pickA).toHaveAttribute('aria-pressed', 'true');
+    expect(within(table).getAllByText('Oct 14')).toHaveLength(3);
+    const brief = screen.getByTestId('segment-ghost-brief');
+    expect(within(brief).getByText('Attempt B · Oct 14')).toBeInTheDocument();
+    expect(within(brief).getAllByText('Oct 14')).toHaveLength(2);
+    expect(state.ghostArgs.at(-1)).toEqual([1, 103, 102]);
+
+    state.formatDateShort = vi.fn((value) => formatDateShort(value, {
+      locale: 'de-DE', tz: 'America/Los_Angeles',
+    }));
+    view.rerender(<MemoryRouter><SegmentsPage /></MemoryRouter>);
+    expect(within(table).getAllByText('13. Okt.')).toHaveLength(3);
+    expect(within(brief).getByText('Attempt B · 13. Okt.')).toBeInTheDocument();
+    expect(within(brief).getAllByText('13. Okt.')).toHaveLength(2);
+    expect(screen.queryByText('Oct 14')).not.toBeInTheDocument();
+    expect(pickA).toHaveFocus();
+    expect(pickA).toHaveAccessibleName('Attempt A · 13. Okt. · #103');
+    expect(pickA).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'By efficiency' })).toHaveAttribute('aria-pressed', 'true');
+    expect(state.ghostArgs.at(-1)).toEqual([1, 103, 102]);
+    expect(state.leaderboardRows.map((row) => row.started_at)).toEqual(timestamps);
+    for (const timestamp of timestamps) {
+      expect(state.formatDateShort).toHaveBeenCalledWith(timestamp);
+    }
+  });
+
+  it('localizes attempt labels with distinct row context while keeping visible letters and pressed state', () => {
+    state.translations = {
+      'segments.ghost.racerA': 'Versuch A',
+      'segments.ghost.racerB': 'Versuch B',
+      'segments.table.attemptLabel': '{{attempt}} für #{{driveId}} am {{date}}',
+    };
+    state.leaderboardRows = [101, 102, 103].map((drive_id, index) => ({
+      rank: index + 1, drive_id, started_at: '2026-10-14T12:00:00Z',
+      duration_s: 60 + index, distance_m: 1000, wh_per_km: 150,
+      delta_to_best_s: index, is_pr: index === 0,
+    }));
+    renderPage();
+    fireEvent.click(screen.getByRole('option', { name: 'Open leaderboard for Route 1' }));
+    const table = screen.getByRole('table');
+    for (const id of [101, 102, 103]) {
+      for (const letter of ['A', 'B']) {
+        const button = within(table).getByRole('button', {
+          name: `Versuch ${letter} für #${id} am Oct 14`,
+        });
+        expect(button).toHaveTextContent(new RegExp(`^${letter}$`));
+        expect(button).toHaveAttribute('aria-pressed',
+          String((letter === 'A' && id === 101) || (letter === 'B' && id === 102)));
+      }
+    }
+    const a = within(table).getByRole('button', { name: 'Versuch A für #103 am Oct 14' });
+    fireEvent.click(a);
+    expect(a).toHaveAttribute('aria-pressed', 'true');
+    expect(a).toHaveAccessibleName('Versuch A für #103 am Oct 14');
+    expect(within(table).getByRole('button', { name: 'Versuch A für #101 am Oct 14' }))
+      .toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(a);
+    expect(a).toHaveAttribute('aria-pressed', 'false');
+    expect(a).toHaveAccessibleName('Versuch A für #103 am Oct 14');
+    expect(state.ghostArgs.at(-1)).toEqual([1, null, 102]);
+    expect(table.querySelector('[aria-label*="selected"]')).toBeNull();
+  });
+
+  it('suppresses elapsed animation for the reduced-motion/low-bandwidth preference without changing samples or hidden-series identities', () => {
+    const a = [
+      { fraction_of_distance: 0, elapsed_s: 0, speed_mps: 0 },
+      { fraction_of_distance: 0.5001, elapsed_s: 30.125, speed_mps: 10 },
+      { fraction_of_distance: 0.5001, elapsed_s: 30.126, speed_mps: 10 },
+    ];
+    const b = [{ fraction_of_distance: 0.5002, elapsed_s: 31, speed_mps: 9 }];
+    state.ghost = {
+      segment: segment(1),
+      a: { drive_id: 101, duration_s: 60, series: a },
+      b: { drive_id: 102, duration_s: 61, series: b },
+      split_deltas: [{ fraction: 0.5, delta_s: -1 }],
+      winner_drive_id: 101, margin_s: 1,
+    };
+    state.hiddenSeries = new Set(['b']);
+    const view = renderPage();
+    const lines = () => state.elapsedLine.mock.calls.slice(-2).map(([props]) => props);
+    const initialLines = lines();
+    expect(initialLines).toEqual([
+      expect.objectContaining({
+        dataKey: 'a', name: 'Attempt A', hide: false, isAnimationActive: true,
+        animationDuration: 700, connectNulls: false,
+        data: a.map((point) => ({ frac: point.fraction_of_distance, a: point.elapsed_s })),
+      }),
+      expect.objectContaining({
+        dataKey: 'b', name: 'Attempt B', hide: true, isAnimationActive: true,
+        animationDuration: 700, connectNulls: false,
+        data: b.map((point) => ({ frac: point.fraction_of_distance, b: point.elapsed_s })),
+      }),
+    ]);
+    const table = screen.getByRole('table', { name: 'Elapsed time along the route — data table' });
+    const tableContent = table.textContent;
+    const gapPoints = screen.getByTestId('gap-chart').getAttribute('data-points');
+
+    state.reduceMotion = true;
+    view.rerender(<MemoryRouter><SegmentsPage /></MemoryRouter>);
+    expect(lines()).toEqual(initialLines.map((props) => ({ ...props, isAnimationActive: false })));
+    lines().forEach((props, index) => expect(props.data).toBe(initialLines[index].data));
+    expect(table).toHaveTextContent(tableContent ?? '');
+    expect(screen.getByTestId('gap-chart')).toHaveAttribute('data-points', gapPoints);
+    expect(state.ghost.a.series).toBe(a);
+    expect(state.ghost.b.series).toBe(b);
+
+    state.hiddenSeries = new Set(['a']);
+    view.rerender(<MemoryRouter><SegmentsPage /></MemoryRouter>);
+    expect(lines().map(({ dataKey, hide, isAnimationActive }) => ({ dataKey, hide, isAnimationActive }))).toEqual([
+      { dataKey: 'a', hide: true, isAnimationActive: false },
+      { dataKey: 'b', hide: false, isAnimationActive: false },
+    ]);
+
+    state.reduceMotion = false;
+    view.rerender(<MemoryRouter><SegmentsPage /></MemoryRouter>);
+    expect(lines().map(({ dataKey, hide, isAnimationActive }) => ({ dataKey, hide, isAnimationActive }))).toEqual([
+      { dataKey: 'a', hide: true, isAnimationActive: true },
+      { dataKey: 'b', hide: false, isAnimationActive: true },
+    ]);
   });
 
   it('distinguishes active loading, paused initial segments, and a successful empty response', () => {
@@ -495,6 +679,63 @@ describe('SegmentsPage pagination', () => {
     expect(screen.getByRole('table')).toHaveTextContent('—');
   });
 
+  it('exposes every independent elapsed sample without merging close or duplicate route fractions', () => {
+    const a = [
+      { fraction_of_distance: 0, elapsed_s: 0, speed_mps: 0 },
+      { fraction_of_distance: 0.5001, elapsed_s: 30.125, speed_mps: 10 },
+      { fraction_of_distance: 0.5001, elapsed_s: 30.126, speed_mps: 10 },
+    ];
+    const b = Array.from({ length: 505 }, (_, index) => ({
+      fraction_of_distance: index / 504, elapsed_s: index + 0.0001, speed_mps: 10,
+    }));
+    state.ghost = {
+      segment: segment(1),
+      a: { drive_id: 1, duration_s: 60, series: a },
+      b: { drive_id: 2, duration_s: 61, series: b },
+      split_deltas: [], winner_drive_id: 1, margin_s: 1,
+    };
+    renderPage();
+    const table = screen.getByRole('table', { name: 'Elapsed time along the route — data table' });
+    const rows = within(table).getAllByRole('row').slice(1);
+    expect(rows).toHaveLength(a.length + b.length);
+    const cellText = (row: HTMLElement) => within(row).getAllByRole('cell').map((cell) => cell.textContent);
+    for (const [index, point] of a.entries()) {
+      expect(cellText(rows[index])).toEqual([`${point.fraction_of_distance * 100}%`, `${point.elapsed_s}s`, '—']);
+    }
+    for (const [index, point] of b.entries()) {
+      expect(cellText(rows[a.length + index])).toEqual([`${point.fraction_of_distance * 100}%`, '—', `${point.elapsed_s}s`]);
+    }
+    expect(state.ghost.a.series).toEqual(a);
+    expect(state.ghost.b.series).toEqual(b);
+  });
+
+  it('distinguishes missing and invalid samples from zero and retains every signed fractional gap', () => {
+    const inputs = [undefined, null, NaN, Infinity, -Infinity, '', '2', 0, -0, -4, 4, -1.25, 1.25, -0.0001, 0.0001];
+    const expected = ['—', '—', '—', '—', '—', '—', '—', '0s', '0s', '−4s', '+4s', '−1.25s', '+1.25s', '−0.0001s', '+0.0001s'];
+    state.ghost = {
+      segment: segment(1),
+      a: { drive_id: 1, duration_s: 60, series: inputs.map((value) => Object.assign(
+        { fraction_of_distance: 0.5001, elapsed_s: 0, speed_mps: 0 }, { elapsed_s: value },
+      )) },
+      b: { drive_id: 2, duration_s: 61, series: [] },
+      split_deltas: inputs.map((value) => Object.assign({ fraction: 0.5001, delta_s: 0 }, { delta_s: value })),
+      winner_drive_id: 1, margin_s: 1,
+    };
+    renderPage();
+    const elapsed = screen.getByRole('table', { name: 'Elapsed time along the route — data table' });
+    const gaps = screen.getByRole('table', { name: 'Time gap (A vs B) — data table' });
+    const elapsedRows = within(elapsed).getAllByRole('row').slice(1);
+    const gapRows = within(gaps).getAllByRole('row').slice(1);
+    expect(elapsedRows).toHaveLength(inputs.length);
+    expect(gapRows).toHaveLength(inputs.length);
+    expected.forEach((value, index) => {
+      expect(within(gapRows[index]).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['50.01%', value]);
+      expect(within(elapsedRows[index]).getAllByRole('cell').map((cell) => cell.textContent)).toEqual([
+        '50.01%', value.replace(/^\+/, ''), '—',
+      ]);
+    });
+  });
+
   it('keeps every leaderboard field available on mobile with adjacent 44px race targets and compact desktop restoration', () => {
     state.leaderboardRows = [{
       rank: 1, drive_id: 1, started_at: '2026-10-14T12:00:00Z',
@@ -510,8 +751,8 @@ describe('SegmentsPage pagination', () => {
     for (const cell of within(table).getAllByRole('cell')) {
       expect(cell).not.toHaveClass('hidden');
     }
-    const a = within(table).getByRole('button', { name: 'A (selected)' });
-    const b = within(table).getByRole('button', { name: 'B' });
+    const a = within(table).getByRole('button', { name: 'Attempt A · Oct 14 · #1' });
+    const b = within(table).getByRole('button', { name: 'Attempt B · Oct 14 · #1' });
     expect(a.parentElement).toBe(b.parentElement);
     expect(a.parentElement).toHaveClass('inline-flex', 'gap-1');
     for (const button of [a, b]) {
@@ -546,13 +787,13 @@ describe('SegmentsPage pagination', () => {
     expect(efficiency).toHaveFocus();
     const rows = within(screen.getByRole('table')).getAllByRole('row').slice(1);
     expect(within(rows[0]).getByText('3')).toBeInTheDocument();
-    const a = within(rows[0]).getByRole('button', { name: 'A' });
+    const a = within(rows[0]).getByRole('button', { name: 'Attempt A · Oct 13 · #3' });
     a.focus();
     await user.keyboard('{Enter}');
     expect(a).toHaveAttribute('aria-pressed', 'true');
     expect(a).toHaveFocus();
     await user.tab();
-    const b = within(rows[0]).getByRole('button', { name: 'B' });
+    const b = within(rows[0]).getByRole('button', { name: 'Attempt B · Oct 13 · #3' });
     expect(b).toHaveFocus();
     await user.keyboard(' ');
     expect(b).toHaveAttribute('aria-pressed', 'true');

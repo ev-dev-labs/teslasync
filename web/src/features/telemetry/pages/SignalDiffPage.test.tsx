@@ -605,6 +605,62 @@ describe('SignalDiffPage', () => {
     for (const [args] of diffArgs.mock.calls) expect(args).toEqual(comparison);
   });
 
+  it('labels the selected CSV download accurately and preserves its filename and schema', async () => {
+    expect(english.signalDiff.bulk.csv).toBe('Download CSV');
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-one' }));
+
+    expect(screen.queryByRole('button', { name: 'Copy CSV' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Download CSV' }));
+
+    await waitFor(() => expect(downloadCSV).toHaveBeenCalledWith(
+      'signal-diff-vehicle-7.csv', 'MOCK_CSV',
+    ));
+    expect(downloadCSV).toHaveBeenCalledTimes(1);
+    expect(objectsToCSV).toHaveBeenCalledWith([
+      { signal: 'battery_level', window_a: 80, window_b: 75, source_a: undefined, source_b: 'l1' },
+    ]);
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-selected', 'battery_level');
+  });
+
+  it.each([
+    { label: 'missing', a: null, b: undefined, cells: ',' },
+    { label: 'missing versus measured zero', a: null, b: 0, cells: ',0' },
+    { label: 'false versus missing', a: false, b: undefined, cells: 'false,' },
+    { label: 'measured zero and false', a: 0, b: false, cells: '0,false' },
+    { label: 'signed fractions', a: -3.5, b: 0.125, cells: '-3.5,0.125' },
+    { label: 'positive numbers', a: 3.5, b: 42, cells: '3.5,42' },
+    { label: 'invalid numeric inputs', a: '12abc', b: '', cells: '12abc,' },
+    { label: 'non-finite inputs', a: Number.NaN, b: Infinity, cells: 'NaN,Infinity' },
+    {
+      label: 'structured values',
+      a: { reading: 0, active: false, nested: { value: null } },
+      b: [0, false, null, -1.25],
+      cells: '"{""reading"":0,""active"":false,""nested"":{""value"":null}}","[0,false,null,-1.25]"',
+    },
+    { label: 'formula strings', a: '=1+1', b: '@SUM(A1)', cells: "'=1+1,'@SUM(A1)" },
+    { label: 'signed strings', a: '-3.5', b: '+0.125', cells: "'-3.5,'+0.125" },
+    { label: 'whitespace-prefixed formula', a: ' =1+1', b: false, cells: "' =1+1,false" },
+    { label: 'CSV quoting', a: 'a,"b"\nc', b: true, cells: '"a,""b""\nc",true' },
+  ])('exports $label through the existing serializer without lossy coercion', async ({ a, b, cells }) => {
+    const actual = await vi.importActual<typeof import('@/lib/csvExport')>('@/lib/csvExport');
+    vi.mocked(objectsToCSV).mockImplementation(actual.objectsToCSV);
+    h.diff = makeQuery({ data: diffResponse([
+      { name: 'battery_level', value_a: a, value_b: b, source_a: 'l1', source_b: 'log', changed: true },
+    ]) });
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-one' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Download CSV' }));
+
+    await waitFor(() => expect(downloadCSV).toHaveBeenCalledWith(
+      'signal-diff-vehicle-7.csv',
+      `signal,window_a,window_b,source_a,source_b\r\nbattery_level,${cells},l1,log`,
+    ));
+    expect(objectsToCSV).toHaveBeenCalledWith([
+      { signal: 'battery_level', window_a: a, window_b: b, source_a: 'l1', source_b: 'log' },
+    ]);
+  });
+
   it('surfaces the bulk toolbar on selection and wires CSV export + alert-rule nav', async () => {
     renderPage();
 
@@ -619,13 +675,13 @@ describe('SignalDiffPage', () => {
     );
 
     // CSV export builds the two-row payload and downloads it for this vehicle.
-    fireEvent.click(screen.getByRole('button', { name: 'Copy CSV' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Download CSV' }));
     await waitFor(() =>
       expect(vi.mocked(downloadCSV)).toHaveBeenCalledWith('signal-diff-vehicle-7.csv', 'MOCK_CSV'),
     );
     expect(vi.mocked(objectsToCSV)).toHaveBeenCalledWith([
-      { signal: 'battery_level', window_a: '80', window_b: '75', source_a: '', source_b: 'l1' },
-      { signal: 'vehicle_speed', window_a: '0', window_b: '30', source_a: '', source_b: 'l1' },
+      { signal: 'battery_level', window_a: 80, window_b: 75, source_a: undefined, source_b: 'l1' },
+      { signal: 'vehicle_speed', window_a: 0, window_b: 30, source_a: undefined, source_b: 'l1' },
     ]);
 
     // Alert-rule action hands the selection to Alert Studio via navigation.
@@ -663,10 +719,10 @@ describe('SignalDiffPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Battery' }));
     expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-rows', '1');
     expect(screen.getByText('2 selected')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Copy CSV' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Download CSV' }));
     await waitFor(() => expect(objectsToCSV).toHaveBeenCalledWith([
-      { signal: 'battery_level', window_a: '80', window_b: '75', source_a: '', source_b: 'l1' },
-      { signal: 'vehicle_speed', window_a: '0', window_b: '30', source_a: '', source_b: 'l1' },
+      { signal: 'battery_level', window_a: 80, window_b: 75, source_a: undefined, source_b: 'l1' },
+      { signal: 'vehicle_speed', window_a: 0, window_b: 30, source_a: undefined, source_b: 'l1' },
     ]));
     fireEvent.click(screen.getByRole('button', { name: 'Add as alert rule' }));
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith(

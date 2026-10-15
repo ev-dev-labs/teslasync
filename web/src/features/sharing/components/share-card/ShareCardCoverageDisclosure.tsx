@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { AlertBanner } from '@/components/feedback';
 import { Table, Text } from '@/components/ui';
 import { LayoutCard } from '@/components/layout';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { ShareCardSectionBody } from './ShareCardSectionBody';
 import type { ShareCardSectionProps } from './types';
 
@@ -13,6 +13,7 @@ export function ShareCardCoverageDisclosure({
   display,
 }: ShareCardSectionProps) {
   const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat();
   const dateOptions = { tz: analysis.window.resolvedTimezone };
 
   return (

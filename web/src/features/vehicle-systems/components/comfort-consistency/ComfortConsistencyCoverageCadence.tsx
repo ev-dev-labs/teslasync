@@ -6,7 +6,7 @@ import {
   Text,
 } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
 import { ComfortConsistencySectionBody } from './ComfortConsistencySectionBody';
@@ -23,14 +23,16 @@ interface ComfortConsistencyCoverageCadenceProps {
 export function ComfortConsistencyCoverageCadence({
   summary,
   state,
-  locale,
   formatDuration,
 }: ComfortConsistencyCoverageCadenceProps) {
   const { fmtPercent, fmtInt } = useNumberFormatting();
+  const { formatDateTime, tz } = useDateFormat();
   const { t } = useTranslation();
   const coverage = summary.coverage;
-  const date = (ms: number | null) =>
-    formatDateTime(ms != null ? new Date(ms) : null, { locale });
+  const date = (ms: number) => ({
+    value: `${formatDateTime(new Date(ms))} (${tz})`,
+    unit: '',
+  });
 
   return (
     <section data-testid="comfort-consistency-coverage-cadence">
@@ -52,8 +54,8 @@ export function ComfortConsistencyCoverageCadence({
             period={{ kind: 'unknown', label: t('dataSources.labels.climateHistory', 'Climate history'),
               reason: t('comfortConsistency.coverage.subtitle', 'Every unique valid timestamp defines source span and cadence, including rows later excluded from comfort scoring.') }}
             metrics={[
-              { metricId: 'text', occurrenceId: 'earliest', label: t('comfortConsistency.coverage.earliest', 'Earliest valid timestamp'), rawValue: coverage.earliestValidMs != null ? date(coverage.earliestValidMs) : null },
-              { metricId: 'text', occurrenceId: 'latest', label: t('comfortConsistency.coverage.latest', 'Latest valid timestamp'), rawValue: coverage.latestValidMs != null ? date(coverage.latestValidMs) : null },
+              { metricId: 'number', occurrenceId: 'earliest', label: t('comfortConsistency.coverage.earliest', 'Earliest valid timestamp'), rawValue: coverage.earliestValidMs, display: { formatter: date } },
+              { metricId: 'number', occurrenceId: 'latest', label: t('comfortConsistency.coverage.latest', 'Latest valid timestamp'), rawValue: coverage.latestValidMs, display: { formatter: date } },
               ...[
                 { key: 'span', label: t('comfortConsistency.coverage.span', 'Timeline span'), value: coverage.spanS },
                 { key: 'median', label: t('comfortConsistency.coverage.medianGap', 'Median cadence'), value: coverage.medianGapS },

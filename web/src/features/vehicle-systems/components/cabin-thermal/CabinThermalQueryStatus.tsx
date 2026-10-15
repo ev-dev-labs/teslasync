@@ -52,7 +52,7 @@ export function CabinThermalQueryStatus({
         <Text as="p" variant="caption">
           {t(
             'cabinThermal.states.loading',
-            'Loading the climate endpoint’s seven-day history…',
+            'Loading climate history for the selected workspace range…',
           )}
         </Text>
       </AlertBanner>

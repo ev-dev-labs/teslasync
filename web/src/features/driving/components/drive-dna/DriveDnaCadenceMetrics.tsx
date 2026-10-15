@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import type { StatMetric } from '@/components/data-display/stat-reference';
+import type { StatMetric } from '@/components/data-display';
 import type { UseUnitsResult } from '@/hooks/useUnits';
 import type { DriveDnaModel } from '../../lib/driveDNA';
 import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';

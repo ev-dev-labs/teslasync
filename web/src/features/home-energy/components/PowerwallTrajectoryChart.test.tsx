@@ -141,10 +141,11 @@ describe('PowerwallTrajectoryChart restrained area paint', () => {
     expect(within(table).getAllByRole('row').slice(1).map((row) =>
       within(row).getAllByRole('cell').map((cell) => cell.textContent)))
       .toEqual([
-        ['2026-10-12T08:00:00Z', '0'],
-        ['2026-10-12T08:15:00Z', '0.1'],
-        ['2026-10-12T08:30:00Z', '37.3'],
-        ['2026-10-12T08:45:00Z', '100'],
+        ['2026-10-12T08:00:00Z', '37.3'],
+        ['2026-10-12T08:15:00.000Z', '0'],
+        ['2026-10-12T08:30:00.000Z', '0.1'],
+        ['2026-10-12T08:45:00.000Z', '37.3'],
+        ['2026-10-12T09:00:00.000Z', '100'],
       ]);
     expect(screen.getByRole('button', { name: 'Enter fullscreen' })).toBeEnabled();
     fireEvent.click(screen.getByRole('button', { name: 'Export chart' }));
@@ -158,11 +159,22 @@ describe('PowerwallTrajectoryChart restrained area paint', () => {
       reader.readAsText(createUrl.mock.calls[0][0]);
     });
     expect(csv.replace(/^\ufeff/, '')).toBe(
-      'time,socPct\r\n2026-10-12T08:00:00Z,0\r\n2026-10-12T08:15:00Z,0.1\r\n'
-      + '2026-10-12T08:30:00Z,37.3\r\n2026-10-12T08:45:00Z,100',
+      'time,socPct\r\n2026-10-12T08:00:00Z,37.3\r\n2026-10-12T08:15:00.000Z,0\r\n'
+      + '2026-10-12T08:30:00.000Z,0.1\r\n2026-10-12T08:45:00.000Z,37.3\r\n2026-10-12T09:00:00.000Z,100',
     );
     expect(slots).toEqual(originalSlots);
     expect(powerwall).toEqual(originalPowerwall);
+  });
+
+  it.each([15, 30, 60])('anchors a single %i-minute slot and plots its post-slot SOC at the interval end', (slotMinutes) => {
+    const source = slot(0, '2026-10-12T23:45:00Z', 62.34);
+    render(<PowerwallTrajectoryChart slots={[source]} powerwall={powerwall} slotMinutes={slotMinutes} />);
+    const table = screen.getByRole('table', { name: 'Powerwall trajectory — data table' });
+    expect(within(table).getAllByRole('row').slice(1).map((row) =>
+      within(row).getAllByRole('cell').map((cell) => cell.textContent))).toEqual([
+      [source.startIso, '37.3'],
+      [new Date(Date.parse(source.startIso) + slotMinutes * 60_000).toISOString(), '62.3'],
+    ]);
   });
 
   it('keeps the unmodeled battery explanation and shell without inventing a zero trajectory', () => {

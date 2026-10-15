@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { AlertBanner, EmptyState, QueryError } from '@/components/feedback';
 import { Button, Text } from '@/components/ui';
+import { VehicleSourcePause } from '../VehicleSourcePause';
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
 import type { PreconditioningQueryState } from './types';
 
@@ -16,13 +17,6 @@ export function PreconditioningQueryStatus({
   state,
 }: PreconditioningQueryStatusProps) {
   const { t } = useTranslation();
-  const loading = state.climate.isLoading || state.drives.isLoading;
-  const refreshing = (state.climate.isFetching && state.climate.hasData)
-    || (state.drives.isFetching && state.drives.hasData);
-  const paused = state.climate.isPaused || state.drives.isPaused;
-  const refreshFailed = Boolean(state.climate.refreshError)
-    || Boolean(state.drives.refreshError);
-
   if (!state.vehicleSelected) {
     return (
       <EmptyState /* no-action: retry, vehicle, and range controls are owned by the parent page */
@@ -35,121 +29,75 @@ export function PreconditioningQueryStatus({
       />
     );
   }
-  if (loading) {
+  const sources = [
+    {
+      id: 'climate',
+      label: t('preconditioningEffectiveness.coverage.climateSource', 'Climate history source'),
+      failure: t('preconditioningEffectiveness.states.climateFailure', 'Climate-history query failed'),
+      query: state.climate,
+    },
+    {
+      id: 'drives',
+      label: t('preconditioningEffectiveness.coverage.driveSource', 'Drive history source'),
+      failure: t('preconditioningEffectiveness.states.driveFailure', 'Drive-history query failed'),
+      query: state.drives,
+    },
+  ];
+  const affected = sources.filter(({ query }) => (
+    query.error || query.refreshError || query.isPaused || query.isLoading
+    || (query.isFetching && query.hasData)
+  ));
+  if (affected.length > 0) {
     return (
-      <AlertBanner
-        className="mt-4"
-        variant="info"
-        role="status"
-        aria-live="polite"
-        aria-label={t(
-          'preconditioningEffectiveness.states.loadingAria',
-          'Loading preconditioning evidence',
-        )}
-        icon={<LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />}
-      >
-        <Text as="p" variant="caption">
-          {t(
-            'preconditioningEffectiveness.states.loading',
-            'Loading the climate timeline and bounded drive history...',
-          )}
-        </Text>
-      </AlertBanner>
-    );
-  }
-  if (paused) {
-    return (
-      <AlertBanner
-        className="mt-4"
-        variant="warning"
-        role="status"
-        aria-live="polite"
-        icon={<ShieldAlert className="h-4 w-4" aria-hidden="true" />}
-      >
-        <Text as="p" variant="caption">
-          {t(
-            'preconditioningEffectiveness.states.paused',
-            'Evidence loading is paused while the network is unavailable; no empty response has been inferred.',
-          )}
-        </Text>
-      </AlertBanner>
-    );
-  }
-  if (state.climate.error || state.drives.error) {
-    return (
-      <div
-        className="mt-4 grid gap-3 lg:grid-cols-2"
-        data-testid="preconditioning-initial-errors"
-      >
-        {state.climate.error ? (
-          <div>
+      <div className="mt-4 grid gap-3 lg:grid-cols-2">
+        {affected.map(({ id, label, failure, query }) => (
+          <div key={id} role="group" aria-label={label} data-testid={`preconditioning-${id}-notice`}>
             <Text as="h3" variant="label" className="mb-2">
-              {t(
-                'preconditioningEffectiveness.states.climateFailure',
-                'Climate-history query failed',
-              )}
+              {query.error ? failure : label}
             </Text>
-            <QueryError
-              error={state.climate.error}
-              onRetry={state.climate.onRetry}
-            />
-          </div>
-        ) : null}
-        {state.drives.error ? (
-          <div>
-            <Text as="h3" variant="label" className="mb-2">
-              {t(
-                'preconditioningEffectiveness.states.driveFailure',
-                'Drive-history query failed',
-              )}
-            </Text>
-            <QueryError
-              error={state.drives.error}
-              onRetry={state.drives.onRetry}
-            />
-          </div>
-        ) : null}
-      </div>
-    );
-  }
-  if (refreshFailed) {
-    return (
-      <AlertBanner
-        className="mt-4"
-        variant="warning"
-        role="alert"
-        icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}
-      >
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Text as="p" variant="caption">
-            {t(
-              'preconditioningEffectiveness.states.refreshError',
-              'One or more sources could not refresh. The most recently loaded evidence remains visible.',
+            {query.error ? (
+              <QueryError error={query.error} onRetry={query.onRetry} resourceName={label} />
+            ) : (
+              <>
+                {query.refreshError ? (
+                  <AlertBanner variant="warning" role="alert"
+                    icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <Text as="p" variant="caption">
+                        {t(
+                          'preconditioningEffectiveness.states.refreshError',
+                          'One or more sources could not refresh. The most recently loaded evidence remains visible.',
+                        )}
+                      </Text>
+                      <Button type="button" variant="ghost" size="sm" wrapLabel
+                        className="min-h-11 md:min-h-9" onClick={query.onRetry}>
+                        {t('preconditioningEffectiveness.states.retryRefresh', 'Retry refresh')}
+                      </Button>
+                    </div>
+                  </AlertBanner>
+                ) : null}
+                {query.isPaused && !query.refreshError ? (
+                  <VehicleSourcePause label={label} retained={query.hasData} onRetry={query.onRetry}
+                    message={t('dataSources.status.paused', 'Refresh paused')} />
+                ) : !query.isPaused && (query.isLoading || (query.isFetching && query.hasData)) ? (
+                  <AlertBanner variant="info" role="status" aria-live="polite"
+                    aria-label={t(
+                      'preconditioningEffectiveness.states.loadingAria',
+                      'Loading preconditioning evidence',
+                    )}
+                    icon={<LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />}>
+                    <Text as="p" variant="caption">
+                      {query.hasData
+                        ? t('dataSources.status.refreshing', 'Refreshing')
+                        : t('dataSources.status.loading', 'Loading')}
+                    </Text>
+                  </AlertBanner>
+                ) : null}
+              </>
             )}
-          </Text>
-          <Button type="button" variant="ghost" size="sm" onClick={state.onRefresh}>
-            {t('preconditioningEffectiveness.states.retryRefresh', 'Retry refresh')}
-          </Button>
-        </div>
-      </AlertBanner>
-    );
-  }
-  if (refreshing) {
-    return (
-      <AlertBanner
-        className="mt-4"
-        variant="info"
-        role="status"
-        aria-live="polite"
-        icon={<LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />}
-      >
-        <Text as="p" variant="caption">
-          {t(
-            'preconditioningEffectiveness.states.refreshing',
-            'Refreshing both evidence sources while retaining the current workspace...',
-          )}
-        </Text>
-      </AlertBanner>
+          </div>
+        ))}
+      </div>
     );
   }
   if (!state.climate.isResolved || !state.drives.isResolved) return null;

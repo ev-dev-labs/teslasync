@@ -5,10 +5,8 @@ import { useTranslation } from 'react-i18next';
 import {
   Bar,
   BarChart,
-  Cell,
   ChartContainer,
   ChartTooltip,
-  CHART_COLORS,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -24,6 +22,7 @@ import type { WeekdayResult } from '../../lib/efficiencyTarget';
 import type { EfficiencyTargetSectionState } from './types';
 import { useEfficiencyTargetDisplay } from './useEfficiencyTargetDisplay';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useChartPalette } from '@/hooks/useChartPalette';
 
 const WEEKDAYS = [
   ['effTarget.weekday.monday', 'Monday'],
@@ -49,6 +48,7 @@ export function WeekdayEfficiencyChart({
   className,
 }: WeekdayEfficiencyChartProps) {
   const { fmtNumber } = useNumberFormatting();
+  const palette = useChartPalette();
   const { t } = useTranslation();
   const {
     convertEfficiency,
@@ -165,7 +165,7 @@ export function WeekdayEfficiencyChart({
               />
               <ReferenceLine
                 y={targetDisplay}
-                stroke={CHART_COLORS[5]}
+                stroke={palette[5]}
                 strokeDasharray="6 4"
               />
               <Bar
@@ -176,15 +176,8 @@ export function WeekdayEfficiencyChart({
                 )}
                 radius={[4, 4, 0, 0]}
                 maxBarSize={42}
-              >
-                {rows.map((row, index) => (
-                  <Cell
-                    key={row.day}
-                    fill={CHART_COLORS[index % CHART_COLORS.length]}
-                    fillOpacity={0.78}
-                  />
-                ))}
-              </Bar>
+                fill={palette[0]}
+              />
             </BarChart>
           </ResponsiveContainer>
         )}

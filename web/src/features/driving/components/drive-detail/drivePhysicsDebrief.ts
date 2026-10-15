@@ -1,5 +1,6 @@
 import type { DriveFsdInsight } from '@/types/fsd';
-import type { ChartDataPoint, DriveStats } from './types';
+import type { ChartDataPoint } from './types';
+import { statsEnergyEvidence, type DriveEnergyStats } from './energyEvidence';
 
 export type DebriefHonesty = 'live' | 'stale' | 'guessed' | 'missing';
 
@@ -26,7 +27,7 @@ function finite(value: number | null | undefined): number | null {
 }
 
 export function interpretDriveDebrief(
-  stats: DriveStats | null | undefined,
+  stats: DriveEnergyStats | null | undefined,
   chart: ChartDataPoint[] | undefined,
   fsd: DriveFsdInsight | undefined,
 ): DrivePhysicsDebrief {
@@ -34,9 +35,10 @@ export function interpretDriveDebrief(
   const powers = samples.map((row) => finite(row.power)).filter((value): value is number => value != null);
   // An average aggregate is not a measured peak. Zero is a valid sample.
   const peakPowerKw = powers.length > 0 ? powers.reduce((max, value) => Math.max(max, value), -Infinity) : null;
-  const energyWh = finite(stats?.energyWh) ?? 0;
-  const regenWh = finite(stats?.regenWh) ?? 0;
-  const regenShare = energyWh > 0 ? regenWh / (energyWh + regenWh) : null;
+  const { energyWh, regenWh, regenSource } = statsEnergyEvidence(stats);
+  const grossEnergyWh = energyWh != null && regenWh != null ? finite(energyWh + regenWh) : null;
+  const regenShare = grossEnergyWh != null && grossEnergyWh > 0 && regenWh != null
+    ? finite(regenWh / grossEnergyWh) : null;
   const hasPower = powers.length > 0;
 
   const beats: DebriefBeat[] = [];
@@ -49,7 +51,7 @@ export function interpretDriveDebrief(
     });
     beats.push({
       id: 'regen',
-      honesty: regenWh > 0 ? 'live' : 'missing',
+      honesty: regenWh == null ? 'missing' : regenSource === 'estimated' ? 'guessed' : 'live',
     });
   }
   beats.push({ id: 'blended', honesty: 'missing' });

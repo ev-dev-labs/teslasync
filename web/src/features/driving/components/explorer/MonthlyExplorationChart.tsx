@@ -49,7 +49,7 @@ export function MonthlyExplorationChart({
     >
       <ChartContainer
         className={cn('h-full')}
-        title={t('explorer.discoveries', 'New Places per Month')}
+        title={t('explorer.discoveries', 'New places per month')}
         subtitle={t(
           'explorer.monthly.subtitle',
           'First arrivals, return arrivals, and cumulative observed destinations',

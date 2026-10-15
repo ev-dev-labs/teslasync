@@ -133,6 +133,44 @@ describe('effectiveSampleSize', () => {
 });
 
 describe('crossCorrelate', () => {
+  it('preserves the fixed screening cutoff and lead classification at small effective sample sizes', () => {
+    const a = signal('a', 10, 60, i => i);
+    const b = signal('b', 10, 60, i => 2 * i + 5);
+    const r = crossCorrelate(a, b, { maxLagS: 0 })!;
+    expect(r.effectiveN).toBe(3);
+    expect(r.significanceThreshold).toBe(0.8908);
+    expect(r.bestR).toBe(1);
+    expect(r.bestN).toBe(10);
+    expect(r.bestLagS).toBe(0);
+    expect(r.significant).toBe(true);
+    expect(r.lead).toBe('simultaneous');
+  });
+
+  it('distinguishes original records and valid deduplicated measurements from resampled pairs', () => {
+    const a = [obs('a', 0, -0.25), obs('a', 600, 0), obs('a', 1200, 0.5)];
+    const b = [...a, obs('b', 600, 0), obs('b', 300, null),
+      obs('b', 400, Number.NaN), { ...obs('b', 500, 1), ts: 'invalid' }];
+    const r = crossCorrelate(a, b, { maxLagS: 0 })!;
+    expect(r.sourceCountA).toBe(3);
+    expect(r.sourceCountB).toBe(7);
+    expect(r.validCountA).toBe(3);
+    expect(r.validCountB).toBe(3);
+    expect(r.bestN).toBe(21);
+    expect(r.bestR).toBe(1);
+    expect(r.zeroLagR).toBe(1);
+    expect(r.effectiveN).toBeLessThan(r.bestN);
+    expect(r.seriesA.v).toContain(-0.25);
+    expect(r.seriesA.v).toContain(0);
+    expect(r.seriesA.v).toContain(0.5);
+    const swapped = crossCorrelate(b, a, { maxLagS: 0 })!;
+    expect(swapped.sourceCountA).toBe(7);
+    expect(swapped.sourceCountB).toBe(3);
+    expect(swapped.validCountA).toBe(3);
+    expect(swapped.validCountB).toBe(3);
+    expect(swapped.bestN).toBe(r.bestN);
+    expect(swapped.effectiveN).toBe(r.effectiveN);
+  });
+
   it('keeps zero-lag unavailable when only shifted samples meet the overlap minimum', () => {
     const a = [obs('a', 0, 1), obs('a', 60, 2), obs('a', 120, 1), obs('a', 300, 0)];
     const b = [obs('b', 0, 0), obs('b', 180, 1), obs('b', 240, 2), obs('b', 300, 1)];

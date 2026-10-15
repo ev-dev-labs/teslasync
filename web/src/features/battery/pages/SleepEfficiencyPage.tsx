@@ -2,11 +2,12 @@ import { useMemo, useState, type ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useSleepEfficiency } from '@/api/hooks/useEnergy';
-import { AlertBanner, SectionErrorBoundary, StaleRefreshWarning } from '@/components/feedback';
-import { Button, HelpTooltip } from '@/components/ui';
+import { AlertBanner, QueryError, SectionErrorBoundary, StaleRefreshWarning } from '@/components/feedback';
+import { Button, Caption, HelpTooltip } from '@/components/ui';
 import { CardGrid, PageLayout } from '@/components/layout';
 import { useDataState } from '@/hooks/useDataState';
 import { useFormatting } from '@/hooks/useFormatting';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -60,23 +61,43 @@ export default function SleepEfficiencyPage() {
   );
   const sleepState = useDataState(sleepQuery, { provenance: 'historical' });
   const [frozenNowMs] = useState(() => Date.now());
+  const responseAsOfMs = Number.isFinite(sleepQuery.dataUpdatedAt)
+    && sleepQuery.dataUpdatedAt > 0
+    ? sleepQuery.dataUpdatedAt
+    : frozenNowMs;
+  // Calendar bounds are inclusive UTC dates in the sleep endpoint.
+  const analysisAsOfMs = requestedRange.status === 'valid'
+    && requestedRange.endMs != null
+    ? Math.min(responseAsOfMs, requestedRange.endMs + 86_400_000 - 1)
+    : responseAsOfMs;
   const analysis = useMemo(
     () =>
       analyzeSleepEfficiency(
         sleepQuery.data,
-        frozenNowMs,
+        analysisAsOfMs,
         start,
         end,
       ),
-    [end, frozenNowMs, sleepQuery.data, start],
+    [analysisAsOfMs, end, sleepQuery.data, start],
   );
 
   const { formatTemperature, formatEnergy } = useUnits();
-  const { formatCurrency } = useFormatting();
+  const { formatCurrency, pricingState } = useFormatting();
+  const { fmtNumber } = useNumberFormatting();
+  const configuredSymbol = pricingState.data?.currency_symbol;
+  const currencyKnown = pricingState.hasData
+    && typeof configuredSymbol === 'string'
+    && configuredSymbol.trim().length > 0;
+  const formatSleepCurrency = (amount: number) => {
+    if (!Number.isFinite(amount)) return '—';
+    return currencyKnown
+      ? formatCurrency(amount)
+      : `${fmtNumber(amount)} (${t('app.currency', 'Currency')}: ${t('sleep.common.unavailable', 'Unavailable')})`;
+  };
   const vehicleSelected = vehicleId != null;
   const hasCachedData = sleepState.hasData;
   const dataResolved =
-    vehicleSelected && (hasCachedData || sleepQuery.isSuccess);
+    vehicleSelected && hasCachedData;
   const isLoading =
     vehicleSelected
     && !dataResolved
@@ -99,7 +120,7 @@ export default function SleepEfficiencyPage() {
   };
   const common = { analysis, state: queryState };
   const sections: ComponentProps<typeof CardGrid>['items'] = [
-    { id: 'evidence', size: 'full', content: <SleepEvidenceOverview {...common} /> },
+    { id: 'evidence', size: 'full', content: <SleepEvidenceOverview {...common} trust={sleepState} /> },
     { id: 'transition-destinations', size: 'half', content: <TransitionDestinationChart {...common} /> },
     { id: 'transition-composition', size: 'half', content: <TransitionCompositionPanel {...common} /> },
     { id: 'dwell-duration', size: 'half', content: <DwellDurationChart {...common} /> },
@@ -109,7 +130,7 @@ export default function SleepEfficiencyPage() {
     { id: 'state-directory', size: 'full', content: <StateEvidenceDirectory {...common} /> },
     {
       id: 'sentry-projection', size: 'half',
-      content: <SentryProjectionContext {...common} formatCurrency={formatCurrency} formatEnergy={formatEnergy} />,
+      content: <SentryProjectionContext {...common} formatCurrency={formatSleepCurrency} formatEnergy={formatEnergy} />,
     },
     { id: 'drain-profile', size: 'half', content: <DrainEventProfile {...common} /> },
     {
@@ -130,13 +151,29 @@ export default function SleepEfficiencyPage() {
       )}
       query={sleepQuery}
       metadataActions={
-        <HelpTooltip
-          i18nKey="sleep.methodology.transitionSemantics"
-          defaultValue="state_distribution.count records FSM transition destinations from fsm_transitions.to_state; it is not occupancy or duration."
-          ariaLabel={t('sleep.methodology.title', 'Methodology and interpretation limits')}
-        />
+        <>
+          {hasCachedData && analysis.source.frozenNowIso && (
+            <Caption data-testid="sleep-analysis-as-of">
+              {t('operationalMode.asOf.label', 'As of {{when}}', {
+                when: analysis.source.frozenNowIso,
+              })}
+            </Caption>
+          )}
+          <HelpTooltip
+            i18nKey="sleep.methodology.transitionSemantics"
+            defaultValue="state_distribution.count records FSM transition destinations from fsm_transitions.to_state; it is not occupancy or duration."
+            ariaLabel={t('sleep.methodology.title', 'Methodology and interpretation limits')}
+          />
+        </>
       }
     >
+      {pricingState.fatalError && (
+        <QueryError error={pricingState.fatalError} onRetry={pricingState.retry ?? undefined} />
+      )}
+      <StaleRefreshWarning
+        state={pricingState}
+        label={t('settings.title', 'Settings')}
+      />
       {hasCachedData && sleepState.status !== 'ok' && (
         <div data-testid={refreshError ? 'sleep-refresh-error' : undefined}>
           <StaleRefreshWarning

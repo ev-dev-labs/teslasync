@@ -13,7 +13,7 @@ import { Wallet } from 'lucide-react';
 import { GlassPanel, PanelTitle, Caption, Text, DataTable, type Column } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError, SectionErrorBoundary } from '@/components/feedback';
 
-import { formatRelative } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { costReading, formatCostReading, vehicleName, type SectionState } from './helpers';
 import type { VehicleCostRow } from '@/types/admin-operator-confidence';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -24,6 +24,7 @@ interface VehicleCostTableProps extends SectionState {
 
 export function VehicleCostTable({ vehicles, loading, error, onRetry }: VehicleCostTableProps) {
   const { fmtInt, fmtNumber, formatBytes } = useNumberFormatting();
+  const { formatRelative } = useDateFormat();
   const { t } = useTranslation();
 
   // Defensive: the page passes `data?.vehicles ?? []`, but guard here too so a
@@ -100,7 +101,7 @@ export function VehicleCostTable({ vehicles, loading, error, onRetry }: VehicleC
         ),
       },
     ],
-    [t, fmtInt, fmtNumber, formatBytes],
+    [t, fmtInt, fmtNumber, formatBytes, formatRelative],
   );
 
   return (

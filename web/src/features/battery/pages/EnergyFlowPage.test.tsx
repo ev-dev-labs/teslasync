@@ -32,6 +32,24 @@ import { MemoryRouter, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui';
 import type { ReactNode } from 'react';
 import { neonColorMap, typography } from '@/lib/tokens';
+import en from '@/i18n/en.json';
+import type { StatMetric } from '@/components/data-display';
+import type { StatPeriod } from '@/lib/metric-reference';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+
+const briefProps = vi.hoisted(() => vi.fn());
+const translationCalls = vi.hoisted(() => vi.fn());
+
+vi.mock('../components/operationalbrief-all/BatteryEvidenceBrief', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../components/operationalbrief-all/BatteryEvidenceBrief')>();
+  return {
+    ...actual,
+    BatteryEvidenceBrief: (props: Parameters<typeof actual.BatteryEvidenceBrief>[0]) => {
+      briefProps(props);
+      return <actual.BatteryEvidenceBrief {...props} />;
+    },
+  };
+});
 
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
@@ -42,9 +60,21 @@ vi.mock('@/components/charts', async (importOriginal) => {
 // i18n stub: return the fallback string, interpolating {{var}} tokens so
 // assertions can target the rendered English copy. When called with a bare
 // key (e.g. t('Charging')) it echoes the key.
-vi.mock('react-i18next', () => ({
+vi.mock('react-i18next', async () => {
+  const { createInstance } = await import('i18next');
+  const { default: catalog } = await import('@/i18n/en.json');
+  const i18n = createInstance();
+  await i18n.init({ lng: 'en', resources: { en: { translation: catalog } }, interpolation: { escapeValue: false } });
+  return {
   useTranslation: () => ({
     t: (key: string, fallbackOrOpts?: unknown, opts?: unknown) => {
+      translationCalls(key, fallbackOrOpts, opts);
+      if (key === 'energyFlow.units.days' || key === 'energyFlow.summary.trailingWindow') {
+        return i18n.t(key, {
+          defaultValue: typeof fallbackOrOpts === 'string' ? fallbackOrOpts : key,
+          ...(opts as Record<string, unknown>),
+        });
+      }
       if (typeof fallbackOrOpts === 'string') {
         if (opts && typeof opts === 'object') {
           const o = opts as Record<string, unknown>;
@@ -64,7 +94,8 @@ vi.mock('react-i18next', () => ({
   }),
   Trans: ({ children }: { children?: ReactNode }) => <>{children}</>,
   initReactI18next: { type: '3rdParty', init: () => undefined },
-}));
+  };
+});
 
 // Mutable unit preference so one file exercises both the metric (km) and
 // imperial (mi) display-conversion branches. Hoisted so the settings mock
@@ -280,6 +311,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
   unitState.length = 'km';
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
   installHappyPath();
 });
 
@@ -499,6 +532,68 @@ describe('EnergyFlowPage — shell & KPI band', () => {
     expect(Number.parseFloat(metricValue('Efficiency', kpi))).toBe(257);
     expect(metricValue('Efficiency', kpi)).toBe('257.00 Wh/mi');
     expect(metricValue('Efficiency', kpi)).toMatch(/ Wh\/mi$/);
+  });
+});
+
+describe('EnergyFlowPage — period presentation', () => {
+  it.each([
+    [0, '0 days'],
+    [1, '1 day'],
+    [7, '7 days'],
+    [-1, '-1 day'],
+    [-2.5, '-2.50 days'],
+    [1.25, '1.25 days'],
+    [1234, '1,234 days'],
+    [1.004, '1.00 days'],
+  ])('formats %s raw days without changing metric identity or duration seconds', (days, expected) => {
+    const data = makeStatsData({ period_days: days });
+    mockStats.mockReturnValue(qr({ data }));
+    renderPage();
+    expect(metricValue('Period')).toBe(expected);
+    const props = briefProps.mock.calls
+      .map(([props]) => props as { metrics: StatMetric[]; period: StatPeriod })
+      .find(props => props.metrics.some(metric => metric.occurrenceId === 'period-days'))!;
+    const metric = props.metrics.find(metric => metric.occurrenceId === 'period-days')!;
+    expect(metric.metricId).toBe('duration');
+    expect(metric.rawValue).toBe(days * 86400);
+    expect(data.period_days).toBe(days);
+    expect(props.period.kind).toBe('unknown');
+    expect(props.period).toHaveProperty('reason',
+      'The energy endpoint uses a trailing day count; custom calendar bounds are not applied by this source.');
+    expect(translationCalls).toHaveBeenCalledWith('energyFlow.units.days', 'days', { count: days });
+  });
+
+  it.each([null, undefined, NaN, Infinity, -Infinity])(
+    'keeps missing/invalid period %s distinct from measured zero', (days) => {
+      mockStats.mockReturnValue(qr({ data: makeStatsData({ period_days: days }) }));
+      renderPage();
+      expect(metricValue('Period')).toBe('—');
+      expect(translationCalls.mock.calls.some(([key]) => key === 'energyFlow.units.days')).toBe(false);
+    },
+  );
+
+  it('uses locale-aware presentation and raw plural counts', () => {
+    setGlobalLocale('de-DE');
+    setGlobalPrecision(3);
+    mockStats.mockReturnValue(qr({ data: makeStatsData({ period_days: 1234.5 }) }));
+    renderPage();
+    expect(metricValue('Period')).toBe('1.234,500 days');
+    expect(translationCalls).toHaveBeenCalledWith('energyFlow.units.days', 'days', { count: 1234.5 });
+  });
+
+  it('uses canonical singular copy for a one-day trailing window and retains the warning', () => {
+    renderPage(['/battery/energy?from=2025-03-07&to=2025-03-07']);
+    expect(screen.getAllByText('Trailing 1 day').length).toBeGreaterThan(0);
+    expect(translationCalls).toHaveBeenCalledWith(
+      'energyFlow.summary.trailingWindow', 'Trailing {{days}} days', { count: 1, days: '1' },
+    );
+    expect(screen.getAllByText(
+      'The energy endpoint uses a trailing day count; custom calendar bounds are not applied by this source.',
+    ).length).toBeGreaterThan(0);
+    expect(en.energyFlow.units.days_one).toBe('day');
+    expect(en.energyFlow.units.days_other).toBe('days');
+    expect(en.energyFlow.summary.trailingWindow_one).toBe('Trailing {{days}} day');
+    expect(en.energyFlow.summary.trailingWindow_other).toBe('Trailing {{days}} days');
   });
 });
 

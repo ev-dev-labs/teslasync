@@ -98,6 +98,30 @@ function renderCard(table: CuratedTable) {
 // ── Header & layout ─────────────────────────────────────────────────────────────
 
 describe('SchemaCatalogCard — header & layout', () => {
+  it('uses neutral surface and text roles without losing populated catalog semantics', () => {
+    const { container } = renderCard(makeTable());
+
+    const glyph = container.querySelector('span[aria-hidden="true"]');
+    expect(glyph).toHaveClass('bg-[var(--surface-2)]', 'border-[var(--border-subtle)]');
+    expect(glyph?.querySelector('svg')).toHaveClass('text-[var(--text-secondary)]');
+    expect(screen.getByText('3 cols')).toHaveClass(
+      'bg-[var(--surface-2)]',
+      'text-[var(--text-secondary)]',
+    );
+    const table = screen.getByRole('table', { name: 'drives' });
+    expect(within(table).getAllByRole('columnheader')).toHaveLength(3);
+    expect(within(table).getAllByRole('rowheader')).toHaveLength(3);
+    for (const column of makeTable().columns) {
+      expect(within(table).getByText(column.name)).toHaveClass('text-[var(--text-primary)]');
+      expect(within(table).getByText(column.type)).toHaveClass('text-[var(--text-secondary)]');
+      expect(within(table).getByText(column.description)).toHaveClass('text-[var(--text-secondary)]');
+    }
+    expect(within(table).getByRole('img', { name: 'Primary key' })).toHaveClass(
+      'text-[var(--text-secondary)]',
+    );
+    expect(container.querySelector('[class*="cyan-"], [class*="amber-"], [class*="emerald-"], [class*="bg-white"], [class*="neon"], [class*="glow"]')).toBeNull();
+  });
+
   it('renders the table name as a level-3 heading with its description', () => {
     renderCard(makeTable());
 
@@ -212,6 +236,18 @@ describe('SchemaCatalogCard — empty & null-safety states', () => {
     expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('drives');
     // The list is replaced by the empty state, not left as a blank <ul>.
     expect(container.querySelector('ul')).toBeNull();
+  });
+
+  it('keeps the empty-state surface and copy on neutral theme roles', () => {
+    renderCard(makeTable({ columns: [] }));
+
+    expect(screen.getByText('No columns documented for this table.')).toHaveClass(
+      'bg-[var(--surface-2)]',
+      'border-[var(--border-subtle)]',
+      'text-[var(--text-secondary)]',
+    );
+    expect(screen.getByRole('heading', { level: 3, name: 'drives' })).toBeInTheDocument();
+    expect(screen.getByText('0 cols')).toBeInTheDocument();
   });
 
   it('treats a missing columns array as empty without throwing (null-safety)', () => {

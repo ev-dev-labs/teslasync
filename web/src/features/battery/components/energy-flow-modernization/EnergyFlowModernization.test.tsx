@@ -8,12 +8,12 @@ import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useEnergyFlow, useEnergyStats } from '@/api/hooks/useEnergy';
+import { useEnergyFlow, useEnergyStats, type EnergyFlowSnapshot } from '@/api/hooks/useEnergy';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { ApiError } from '@/lib/resilience';
 import { formatDateShort } from '@/lib/dateFormat';
 import { formatDistance, formatEnergy } from '@/lib/unitConversion';
-import type { EnergyFlowData, EnergyStats } from '@/types/energy';
+import type { EnergyStats } from '@/types/energy';
 import EnergyFlowPage from '../../pages/EnergyFlowPage';
 
 vi.mock('@/api/hooks/useEnergy', async importOriginal => {
@@ -41,8 +41,8 @@ const stats: EnergyStats = {
     { date: '2026-10-02', energy_wh: 9000, distance_m: 50000, efficiency_wh_per_m: 0.18, cost: 1.8 },
   ],
 };
-const flow: EnergyFlowData = {
-  dc_charging_power: 10, ac_charging_power: 2, soc: 62,
+const flow: EnergyFlowSnapshot = {
+  dc_charging_power_w: 10000, ac_charging_power_w: 2000, soc: 62,
   energy_remaining: 44, pack_voltage: 380, pack_current: 32, charge_state: 'Charging',
 };
 const statsRetry = vi.fn(async () => undefined);
@@ -67,7 +67,7 @@ function query<T>(data: T | undefined, retry: () => Promise<undefined>, override
 function setStats(data: EnergyStats | undefined, overrides: Parameters<typeof query>[2] = {}) {
   mockStats.mockReturnValue(query(data, statsRetry, overrides) as unknown as ReturnType<typeof useEnergyStats>);
 }
-function setFlow(data: EnergyFlowData | undefined, overrides: Parameters<typeof query>[2] = {}) {
+function setFlow(data: EnergyFlowSnapshot | undefined, overrides: Parameters<typeof query>[2] = {}) {
   mockFlow.mockReturnValue(query(data, flowRetry, overrides) as unknown as ReturnType<typeof useEnergyFlow>);
 }
 function card(title: string): HTMLElement {
@@ -153,7 +153,7 @@ describe('Energy flow modernization — real shared surfaces', () => {
   });
 
   it('does not turn missing SOC, either charge channel or daily values into zero', () => {
-    setFlow({ ...flow, soc: null, dc_charging_power: null, ac_charging_power: 2 });
+    setFlow({ ...flow, soc: null, dc_charging_power_w: null, ac_charging_power_w: 2000 });
     mount();
     expect(within(card('Energy flow diagram')).getAllByText('—')).toHaveLength(2);
     expect(within(card('Live power')).getByText('—')).toBeInTheDocument();

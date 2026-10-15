@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { OperationalBrief } from '@/components/data-display';
-import type { StatMetric } from '@/components/data-display/stat-reference';
+import { OperationalBrief, type StatMetric } from '@/components/data-display';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 
 interface DrivingSummaryBriefProps {

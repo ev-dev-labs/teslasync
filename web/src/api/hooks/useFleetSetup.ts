@@ -98,8 +98,11 @@ function asString(value: unknown): string {
   return typeof value === 'string' ? value : '';
 }
 
-function asBool(value: unknown): boolean {
-  return value === true;
+function requiredBool(value: unknown, source: string): boolean {
+  if (typeof value !== 'boolean') {
+    throw new Error(`Invalid ${source} response: expected a boolean status`);
+  }
+  return value;
 }
 
 /**
@@ -111,8 +114,9 @@ export function normalizeFleetApiInfo(raw: unknown): FleetApiInfo {
   return {
     base_url: asString(row.base_url ?? row.baseUrl),
     client_id: asString(row.client_id ?? row.clientId),
-    has_valid_token: asBool(
+    has_valid_token: requiredBool(
       row.has_valid_token ?? row.hasValidToken ?? row.authenticated,
+      'Fleet API info',
     ),
     public_key_url: asString(row.public_key_url ?? row.publicKeyUrl),
     hostname: asString(row.hostname) || undefined,
@@ -123,7 +127,7 @@ export function normalizePublicKeyStatus(raw: unknown): PublicKeyStatus {
   const row = asRecord(raw);
   const created = row.created_at ?? row.createdAt;
   return {
-    configured: asBool(row.configured),
+    configured: requiredBool(row.configured, 'public key status'),
     fingerprint: asString(row.fingerprint),
     well_known_path: asString(
       row.well_known_path ?? row.wellKnownPath ?? row.wellKnownUrl,
@@ -135,7 +139,11 @@ export function normalizePublicKeyStatus(raw: unknown): PublicKeyStatus {
 export function useFleetApiInfo() {
   return useQuery({
     queryKey: fleetSetupKeys.apiInfo,
-    queryFn: ({ signal }) => request<unknown>('/dev-tools/fleet-api-info', { signal }),
+    queryFn: async ({ signal }) => {
+      const raw = await request<unknown>('/dev-tools/fleet-api-info', { signal });
+      normalizeFleetApiInfo(raw);
+      return raw;
+    },
     select: normalizeFleetApiInfo,
     ...queryPolicy('reference'),
   });
@@ -144,8 +152,11 @@ export function useFleetApiInfo() {
 export function usePublicKeyStatus() {
   return useQuery({
     queryKey: fleetSetupKeys.publicKey,
-    queryFn: ({ signal }) =>
-      request<unknown>('/dev-tools/public-key-status', { signal }),
+    queryFn: async ({ signal }) => {
+      const raw = await request<unknown>('/dev-tools/public-key-status', { signal });
+      normalizePublicKeyStatus(raw);
+      return raw;
+    },
     select: normalizePublicKeyStatus,
     ...queryPolicy('reference'),
   });
@@ -155,31 +166,51 @@ export function useFleetTelemetryConfig(vin: string) {
   const trimmed = vin.trim();
   return useQuery({
     queryKey: fleetSetupKeys.telemetryConfig(trimmed),
-    queryFn: ({ signal }) =>
-      request<Record<string, unknown>>(
+    queryFn: async ({ signal }) => {
+      const raw = await request<Record<string, unknown>>(
         `/dev-tools/fleet-telemetry-config?vin=${encodeURIComponent(trimmed)}`,
         { signal },
-      ),
+      );
+      if (telemetryConfigSummary(raw).hostname === null) {
+        throw new Error('Invalid telemetry config response: expected a configuration envelope');
+      }
+      return raw;
+    },
     enabled: trimmed.length > 0,
     ...queryPolicy('operational'),
   });
 }
 
 export interface TelemetryConfigSummary {
-  hostname: string;
+  hostname: string | null;
   port: number | null;
-  field_count: number;
+  field_count: number | null;
 }
 
 /**
  * Tesla's fleet_telemetry_config payload is nested under `response.config`
- * (and camelCaseKeys may duplicate keys). Empty hostname means "not subscribed".
+ * (and camelCaseKeys may duplicate keys). Root config and flat config are also
+ * supported. An explicit null/empty config means "not subscribed"; an unknown
+ * envelope has a null hostname, not an authoritative empty string.
  */
 export function telemetryConfigSummary(raw: unknown): TelemetryConfigSummary {
   const row = asRecord(raw);
   const response = asRecord(row.response);
-  const config = asRecord(row.config ?? response.config);
+  const unknown = { hostname: null, port: null, field_count: null };
+  const nested = 'config' in row || 'config' in response;
+  const configRaw = 'config' in row ? row.config : response.config;
+  if (nested && configRaw === null) {
+    return { hostname: '', port: null, field_count: 0 };
+  }
+  if (nested && (!configRaw || typeof configRaw !== 'object' || Array.isArray(configRaw))) {
+    return unknown;
+  }
+  const config = nested ? asRecord(configRaw) : row;
+  if (!nested && typeof config.hostname !== 'string') return unknown;
+  if ('hostname' in config && typeof config.hostname !== 'string') return unknown;
+  if (!('hostname' in config) && Object.keys(config).length > 0) return unknown;
   const fields = config.fields ?? response.fields ?? row.fields;
+  if (fields != null && typeof fields !== 'object') return unknown;
   const fieldCount =
     fields && typeof fields === 'object' && !Array.isArray(fields)
       ? Object.keys(fields as object).length
@@ -187,10 +218,11 @@ export function telemetryConfigSummary(raw: unknown): TelemetryConfigSummary {
         ? fields.length
         : 0;
   const portRaw = config.port ?? row.port;
+  if (portRaw != null && (typeof portRaw !== 'number' || !Number.isFinite(portRaw))) return unknown;
   const port =
     typeof portRaw === 'number' && Number.isFinite(portRaw) ? portRaw : null;
   return {
-    hostname: asString(config.hostname ?? row.hostname),
+    hostname: asString(config.hostname),
     port,
     field_count: fieldCount,
   };
@@ -213,34 +245,45 @@ function pickErrorString(row: Record<string, unknown>, keys: string[]): string {
 
 /**
  * Tesla wraps fleet-telemetry-errors as `{response:{errors:[]}}`, a root
- * `errors` array, or a bare array. Empty + parsed means the VIN is clean.
+ * `errors` array, a response array, or a bare array. Only a parsed empty array
+ * means the VIN is clean; malformed envelopes/rows fail the query so retained
+ * errors and their last-success timestamp survive a failed refresh.
  */
 export function telemetryErrorsFrom(raw: unknown): FleetTelemetryError[] {
-  if (raw == null || typeof raw !== 'object') return [];
   const row = asRecord(raw);
   const response = asRecord(row.response);
-  const candidates: unknown[] = [row.errors, response.errors, row.response, raw];
-  const list = candidates.find((c) => Array.isArray(c)) as unknown[] | undefined;
-  if (!list) return [];
+  const list = 'errors' in row ? row.errors
+    : 'errors' in response ? response.errors
+      : Array.isArray(row.response) ? row.response : raw;
+  if (!Array.isArray(list)) {
+    throw new Error('Invalid telemetry errors response: expected an errors array');
+  }
   return list.map((item) => {
     const err = asRecord(item);
-    return {
+    const normalized = {
       code: pickErrorString(err, ['error_code', 'code', 'name', 'topic']),
       message: pickErrorString(err, ['error_message', 'message', 'body', 'description']),
       timestamp: pickErrorString(err, ['reported_at', 'timestamp', 'created_at', 'ts']),
     };
-  }).filter((item) => item.code || item.message);
+    if (!normalized.code && !normalized.message) {
+      throw new Error('Invalid telemetry errors response: expected an error code or message');
+    }
+    return normalized;
+  });
 }
 
 export function useFleetTelemetryErrors(vin: string) {
   const trimmed = vin.trim();
   return useQuery({
     queryKey: fleetSetupKeys.telemetryErrors(trimmed),
-    queryFn: ({ signal }) =>
-      request<unknown>(
+    queryFn: async ({ signal }) => {
+      const raw = await request<unknown>(
         `/dev-tools/fleet-telemetry-errors?vin=${encodeURIComponent(trimmed)}`,
         { signal },
-      ),
+      );
+      telemetryErrorsFrom(raw);
+      return raw;
+    },
     select: telemetryErrorsFrom,
     enabled: trimmed.length > 0,
     ...queryPolicy('operational'),

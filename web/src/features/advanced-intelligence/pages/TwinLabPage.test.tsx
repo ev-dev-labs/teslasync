@@ -83,6 +83,61 @@ afterEach(() => {
 });
 
 describe('TwinLabPage restrained source adoption', () => {
+  it('scopes every scenario touch target below md without overriding desktop sizes', () => {
+    renderPage();
+    for (const name of screen.getAllByLabelText(/Scenario name/)) {
+      const panel = name.closest<HTMLElement>('.glass-panel');
+      if (!panel) throw new Error('Missing semantic scenario panel');
+      for (const input of panel.querySelectorAll('input')) {
+        expect(input).toHaveClass('max-md:min-h-11', 'min-h-10');
+        expect(input).not.toHaveClass('min-h-11', 'md:min-h-10');
+      }
+      const remove = within(panel).getByRole('button', { name: 'Remove scenario' });
+      expect(remove).toHaveClass('max-md:min-h-11', 'max-md:min-w-11', 'h-9');
+    }
+    for (const label of ['Add scenario', 'Run confirmed simulation']) {
+      expect(screen.getByRole('button', { name: label }))
+        .toHaveClass('max-md:min-h-11', 'max-md:min-w-11', 'max-md:w-full', 'h-10');
+    }
+    expect(screen.getByRole('button', { name: 'Run confirmed simulation' }))
+      .toHaveClass('max-md:h-auto', 'max-md:whitespace-normal');
+  });
+
+  it('uses semantic scenario panels while retaining every field and native constraint', () => {
+    renderPage();
+    const names = screen.getAllByLabelText<HTMLInputElement>(/Scenario name/);
+    expect(names).toHaveLength(2);
+    for (const [index, name] of names.entries()) {
+      const panel = name.closest<HTMLElement>('.glass-panel');
+      expect(panel).not.toBeNull();
+      if (!panel) throw new Error('Missing semantic scenario panel');
+      expect(panel).toHaveClass('p-4');
+      expect(panel.className).not.toMatch(/bg-|border-|surface-/);
+      expect(within(panel).getByRole('heading', { name: `Scenario ${index + 1}` }))
+        .toBeInTheDocument();
+      expect(name).toHaveAttribute('required');
+      expect(name).toHaveAttribute('maxlength', '80');
+      const fields = [
+        { label: /Route distance/, min: '1', max: '2000000', required: true },
+        { label: /Average speed/, min: '0.1', max: '70', required: true },
+        { label: /Scenario horizon/, min: '60', max: null, required: true },
+        { label: /Outside temperature/, min: '-80', max: '80', required: false },
+        { label: /Auxiliary load/, min: '0', max: '50000', required: true },
+      ];
+      expect(panel.querySelectorAll('input')).toHaveLength(6);
+      for (const field of fields) {
+        const input = within(panel).getByLabelText(field.label);
+        expect(input).toHaveAttribute('type', 'number');
+        expect(input).toHaveAttribute('step', 'any');
+        expect(input).toHaveAttribute('min', field.min);
+        if (field.max === null) expect(input).not.toHaveAttribute('max');
+        else expect(input).toHaveAttribute('max', field.max);
+        if (field.required) expect(input).toHaveAttribute('required');
+        else expect(input).not.toHaveAttribute('required');
+      }
+    }
+  });
+
   it('keeps all six sections and unknown baseline before explicit simulation', () => {
     renderPage();
     expectSections();

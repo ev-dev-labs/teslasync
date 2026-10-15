@@ -6,6 +6,7 @@ import type { DrivingStats } from '@/types/driving';
 import { HeroGauges } from './HeroGauges';
 import { driveFixture, statsFixture } from './detailTestFixtures';
 import { fmtWithUnit } from '@/lib/numberFormat';
+import { driveOdometerEvidence } from './odometerEvidence';
 const state = vi.hoisted(() => ({
   distance: 'km' as 'mi' | 'km',
   speed: 'km/h' as 'mph' | 'km/h',
@@ -13,11 +14,12 @@ const state = vi.hoisted(() => ({
   error: null as Error | null,
   refetch: vi.fn(),
   deltas: [] as { current: number; previous: number; comparedTo: string; metric: { direction: string } }[],
+  translations: {} as Record<string, string>,
 }));
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, fallback?: string, opts?: Record<string, unknown>) =>
-      (fallback ?? key).replace(/\{\{(\w+)\}\}/g, (_, token: string) => String(opts?.[token] ?? token)),
+      (state.translations[key] ?? fallback ?? key).replace(/\{\{(\w+)\}\}/g, (_, token: string) => String(opts?.[token] ?? token)),
   }),
 }));
 vi.mock('@/hooks/useUnits', () => ({
@@ -43,11 +45,25 @@ const fleet: DrivingStats = {
 };
 beforeEach(() => {
   state.refetch.mockClear();
-  Object.assign(state, { distance: 'km', speed: 'km/h', data: fleet, error: null, deltas: [] });
+  Object.assign(state, { distance: 'km', speed: 'km/h', data: fleet, error: null, deltas: [], translations: {} });
 });
 const reading = (label: string) => screen.getByText(label).closest('[data-operational-metric]')?.textContent;
 
 describe('Canonical drive overview', () => {
+  it.each([
+    ['aggregate', { start_odometer_m: 120000000, end_odometer_m: 120040000 }, 'persisted', 'Persisted drive aggregate'],
+    ['sampled', {}, 'sampled', 'Recorded telemetry samples'],
+    ['mixed', { start_odometer_m: 120000000 }, 'odometerMixed', 'Recorded endpoints with telemetry fallback'],
+  ] as const)('localizes %s odometer provenance without changing the adapter enum', (source, endpoints, key, label) => {
+    const drive = driveFixture(endpoints);
+    const stats = statsFixture();
+    state.translations[`driveDetail.report.${key}`] = `Localized: ${label}`;
+    render(<HeroGauges drive={drive} stats={stats} />);
+    expect(reading('Odometer (from → to)')).toContain(`Odometer endpoints use Localized: ${label} evidence; missing endpoints are not zero.`);
+    expect(reading('Odometer (from → to)')).not.toContain(`use ${source} evidence`);
+    expect(driveOdometerEvidence(drive, stats, 'km').source).toBe(source);
+  });
+
   it('puts cost and recorded endpoint odometers in the primary summary before performance comparisons', () => {
     const { container } = render(<HeroGauges drive={driveFixture({ start_odometer_m: 120000000, end_odometer_m: 120040000 })} stats={statsFixture()} />);
     expect(reading('Drive cost')).toContain('$0.96');

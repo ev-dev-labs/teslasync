@@ -29,7 +29,7 @@ interface ColdWarmComparisonProps {
   className?: string;
 }
 
-/** Aggregate weighted comparison and the only panel allowed to claim a penalty. */
+/** Distance-weighted whole-drive cohort comparison, not a causal warm-up model. */
 export function ColdWarmComparison({
   summary,
   penaltyCostLabel,
@@ -89,7 +89,7 @@ export function ColdWarmComparison({
         <HelpTooltip
           size="sm"
           i18nKey="coldStart.comparison.help"
-          defaultValue="A drive is a cold start when the car sat parked for 6+ hours first, and a warm start when the gap is 1 hour or less. Comparing distance-weighted consumption between the groups isolates the battery- and cabin-warm-up penalty; in-between gaps are excluded as ambiguous."
+          defaultValue="A drive is a cold start when the car sat parked for 6+ hours first, and a warm start when the gap is 1 hour or less; in-between gaps are excluded as ambiguous. The comparison uses distance-weighted whole-drive consumption, not just the first kilometres. It does not adjust for temperature, route, speed or trip length, so the observed difference does not isolate battery or cabin warm-up."
           ariaLabel={t('help.coldStart.iconLabel', 'More info about cold start math')}
         />
       </PanelTitle>
@@ -121,7 +121,7 @@ export function ColdWarmComparison({
                   retained={state.retained}
                   unavailable={state.error != null}
                   period={{ kind: 'unknown', label: cohortContext,
-                    reason: t('coldStart.comparison.help', 'A drive is a cold start when the car sat parked for 6+ hours first, and a warm start when the gap is 1 hour or less. Comparing distance-weighted consumption between the groups isolates the battery- and cabin-warm-up penalty; in-between gaps are excluded as ambiguous.') }} />
+                    reason: t('coldStart.comparison.help', 'A drive is a cold start when the car sat parked for 6+ hours first, and a warm start when the gap is 1 hour or less; in-between gaps are excluded as ambiguous. The comparison uses distance-weighted whole-drive consumption, not just the first kilometres. It does not adjust for temperature, route, speed or trip length, so the observed difference does not isolate battery or cabin warm-up.') }} />
                 <Text as="p" variant="bodySm" className="mt-3">
                   {t(
                     'coldStart.comparison.samples',
@@ -158,13 +158,13 @@ export function ColdWarmComparison({
                 {!summary.sampleSufficient
                   ? t(
                       'coldStart.noData',
-                      'Not enough cold and warm starts in this period to compare fairly (5+ of each needed).',
+                      'At least five cold and five warm starts are needed to report an aggregate whole-drive difference in this observed window.',
                     )
                   : penaltyPositive
                     ? penaltyCostLabel
                       ? t(
                           'coldStart.takeawayCost',
-                          'Warm-up overhead added {{energy}} across this period — about {{cost}} at your electricity rate. Preconditioning while plugged in shifts that energy to the wall.',
+                          'Applying the observed whole-drive cold-minus-warm consumption difference to the cold cohort distance gives {{energy}} — about {{cost}} at your electricity rate. This is not measured warm-up energy or guaranteed savings. If plugged in before departure, preconditioning may shift some warm-up energy to the wall; this comparison does not estimate that benefit.',
                           {
                             energy: formatEnergy(summary.totalPenaltyWh),
                             cost: penaltyCostLabel,
@@ -172,14 +172,14 @@ export function ColdWarmComparison({
                         )
                       : t(
                           'coldStart.takeaway',
-                          'Warm-up overhead added {{energy}} across this period. Preconditioning while plugged in shifts that energy to the wall.',
+                          'Applying the observed whole-drive cold-minus-warm consumption difference to the cold cohort distance gives {{energy}}. This is not measured warm-up energy or guaranteed savings. If plugged in before departure, preconditioning may shift some warm-up energy to the wall; this comparison does not estimate that benefit.',
                           {
                             energy: formatEnergy(summary.totalPenaltyWh),
                           },
                         )
                     : t(
                         'coldStart.comparison.noPositivePenalty',
-                        'Cold starts did not consume more than the weighted warm baseline in this selected observed window, so no avoidable energy is claimed.',
+                        'The cold cohort did not consume more than the distance-weighted warm cohort in this selected observed window. No positive whole-drive difference or savings is claimed.',
                       )}
               </Text>
             </div>

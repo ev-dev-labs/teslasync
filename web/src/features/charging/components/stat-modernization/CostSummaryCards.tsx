@@ -3,7 +3,6 @@ import { DollarSign } from 'lucide-react';
 import { type StatMetric } from '@/components/data-display/stat-reference';
 import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBrief';
 import { QueryError, EmptyState } from '@/components/feedback';
-import { useSettings } from '@/hooks/useSettings';
 import type { StatPeriod } from '@/lib/metric-reference';
 import type { CoreStats } from '../cost-analysis/types';
 import { energyDisplay, kwhToCanonicalWh } from './displayBoundary';
@@ -26,9 +25,7 @@ export function CostSummaryCards({
   coreStats, gasPrice, distanceUnit, isMiles, isLoading, error, onRetry, onResetRange, period,
 }: CostSummaryCardsProps) {
   const { t } = useTranslation();
-  const { settings } = useSettings();
   const { text, preferences } = useStatFormatting();
-  const gasUnitLabel = settings.gas_unit === 'liter' ? 'L' : 'gal';
   const metrics: readonly StatMetric[] = [
     {
       metricId: 'currency', rawValue: coreStats?.totalCost,
@@ -53,7 +50,8 @@ export function CostSummaryCards({
     {
       metricId: 'currency', rawValue: coreStats?.savings,
       label: t('costAnalysis.stats.gasSavings', 'Gas Savings $'),
-      context: `${t('costAnalysis.stats.vs', 'vs')} ${text('currency', gasPrice)}/${gasUnitLabel}`,
+      // The cost model and calculator assumptions are per US gallon, independent of display preferences.
+      context: `${t('costAnalysis.stats.vs', 'vs')} ${text('currency', gasPrice)}/gal`,
     },
     {
       metricId: 'percent', rawValue: coreStats?.savingsPercent,

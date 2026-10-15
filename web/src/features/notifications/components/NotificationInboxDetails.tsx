@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { DateTime } from '@/components/data-display';
-import { Button, PanelTitle, Text, type ContextMenuItem } from '@/components/ui';
+import { Button, Caption, PanelTitle, Text, type ContextMenuItem } from '@/components/ui';
 import type { AlertRule, NotificationLog, Vehicle } from '@/api/types';
 
 import { NotificationInboxDelivery } from './NotificationInboxDelivery';
@@ -43,8 +43,8 @@ export function NotificationInboxDetails({ log, rule, vehicle, actions = [] }: N
       <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
         {items.map(({ label, value }) => (
           <div key={label} className="min-w-0">
-            <dt className="text-xs text-[var(--text-muted)]">{label}</dt>
-            <dd className="mt-1 break-words text-sm text-[var(--text-secondary)]">{value}</dd>
+            <Caption as="dt" className="break-words">{label}</Caption>
+            <Text as="dd" variant="bodySm" className="mt-1 break-words">{value}</Text>
           </div>
         ))}
       </dl>
@@ -54,7 +54,7 @@ export function NotificationInboxDetails({ log, rule, vehicle, actions = [] }: N
       </div>
       <div className="flex flex-wrap gap-2" role="group" aria-label={t('notifications.inbox.detail.actions', 'Notification actions')}>
         {actions.map(action => (
-          <Button key={action.id} size="sm" variant={action.destructive ? 'danger' : 'outline'} icon={action.icon} disabled={action.disabled} onClick={action.onClick}>
+          <Button key={action.id} size="auto" wrapLabel className="min-h-11 min-w-11 sm:min-h-d-row sm:min-w-0" variant={action.destructive ? 'danger' : 'outline'} icon={action.icon} disabled={action.disabled} onClick={action.onClick}>
             {action.label}
           </Button>
         ))}

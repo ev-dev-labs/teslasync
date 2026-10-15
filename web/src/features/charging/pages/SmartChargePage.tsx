@@ -315,7 +315,12 @@ export default function SmartChargePage() {
   ];
 
   const historyColumns = useMemo<Column<ChargePlan>[]>(
-    () => [
+    () => {
+      const currencyLabel = (value: unknown) => {
+        const amount = knownNumber(value);
+        return amount != null ? formatCurrency(amount) : '—';
+      };
+      return [
       {
         key: 'created_at',
         filterValue: (p) => p.created_at ?? null,
@@ -342,26 +347,27 @@ export default function SmartChargePage() {
       },
       {
         key: 'estimated_cost',
-        filterValue: (p) => p.estimated_cost ?? null,
-        filterValueLabel: (_, p) => p.estimated_cost != null ? formatCurrency(p.estimated_cost) : '—',
+        filterValue: (p) => knownNumber(p.estimated_cost),
+        filterValueLabel: (_, p) => currencyLabel(p.estimated_cost),
         header: t('chargePlanner.cost', 'Cost'),
         align: 'right',
         sortable: true,
         render: (p) => (
           <Text variant="bodySm" className="tabular-nums">
-            {p.estimated_cost != null ? formatCurrency(p.estimated_cost) : '—'}
+            {currencyLabel(p.estimated_cost)}
           </Text>
         ),
       },
       {
         key: 'savings',
-        filterValue: (p) => p.savings ?? null,
-        filterValueLabel: (_, p) => p.savings != null && p.savings > 0 ? formatCurrency(p.savings) : '—',
+        filterValue: (p) => knownNumber(p.savings),
+        filterValueLabel: (_, p) => currencyLabel(p.savings),
         header: t('chargePlanner.savedAmount', 'Saved'),
         align: 'right',
         sortable: true,
         render: (p) => {
-          const positive = p.savings != null && p.savings > 0;
+          const savings = knownNumber(p.savings);
+          const positive = savings != null && savings > 0;
           return (
             <Text
               as="span"
@@ -371,7 +377,7 @@ export default function SmartChargePage() {
                 positive ? neonColorMap.green.text : typography.color.muted,
               )}
             >
-              {positive ? formatCurrency(p.savings ?? 0) : '—'}
+              {currencyLabel(savings)}
             </Text>
           );
         },
@@ -387,7 +393,8 @@ export default function SmartChargePage() {
           </Badge>
         ),
       },
-    ],
+      ];
+    },
     [t, formatDate, formatTime, formatCurrency],
   );
 
@@ -511,7 +518,7 @@ export default function SmartChargePage() {
                   disabled={!vehicleIdNum || optimizeMutation.isPending}
                   loading={optimizeMutation.isPending}
                   icon={<CalendarClock className="h-4 w-4" aria-hidden="true" />}
-                  className="w-full gap-2"
+                  className="h-auto min-h-11 w-full gap-2 md:min-h-10"
                 >
                   {t('chargePlanner.optimize', 'Find cheapest window')}
                 </Button>
@@ -573,7 +580,7 @@ export default function SmartChargePage() {
                       disabled={applyMutation.isPending}
                       loading={applyMutation.isPending}
                       icon={<Zap className="h-4 w-4" aria-hidden="true" />}
-                      className="gap-2"
+                      className="h-auto min-h-11 gap-2 md:min-h-10"
                     >
                       {t('chargePlanner.applySchedule', 'Apply schedule')}
                     </Button>

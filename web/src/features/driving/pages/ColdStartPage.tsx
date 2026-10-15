@@ -89,7 +89,7 @@ export default function ColdStartPage() {
       title={t('coldStart.title', 'Cold Start Cost')}
       subtitle={t(
         'coldStart.subtitle',
-        'What the first kilometres after a long park really cost',
+        'Observed whole-drive consumption after long and short parking gaps',
       )}
       query={drivesQuery}
     >

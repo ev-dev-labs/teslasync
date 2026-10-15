@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, render as renderView, screen, waitFor } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { MemoryRouter } from 'react-router-dom';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ClipRecord } from '../../lib/types';
 import { RedactionEditor } from './RedactionEditor';
@@ -53,6 +54,67 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('redaction draft persistence', () => {
+  it('renders repeated visible shared labels with unique opaque field IDs without changing populated masks', () => {
+    const current = clip();
+    current.redactions.push({
+      ...current.redactions[0], id: 'opaque-second-mask', kind: 'plate', label: 'Existing plate',
+      x: 0.5, y: 0.6, width: 0.2, height: 0.25,
+    });
+    const { container, rerender } = render(<RedactionEditor clip={current} />);
+    const kinds = screen.getAllByRole('combobox', { name: 'Region kind' });
+    const labels = screen.getAllByRole('textbox', { name: 'Label' });
+    const fields = [...kinds, ...labels];
+    const ids = fields.map((field) => field.id);
+    expect(new Set(ids).size).toBe(4);
+    expect(ids.every((id) => id && !id.includes('Region kind') && !id.includes('Label'))).toBe(true);
+    for (const field of fields) {
+      const label = Array.from(container.querySelectorAll('label')).find((item) => item.htmlFor === field.id);
+      expect(label).toBeVisible();
+      expect(label).toHaveTextContent(field.tagName === 'SELECT' ? 'Region kind' : 'Label');
+    }
+    expect(kinds[0]).toHaveValue('face');
+    expect(kinds[1]).toHaveValue('plate');
+    expect(labels[0]).toHaveValue('a');
+    expect(labels[1]).toHaveValue('Existing plate');
+    for (const [index, name] of ['X', 'Y', 'Width', 'Height'].entries()) {
+      const values = [current.redactions[0], current.redactions[1]].map((region) =>
+        [region.x, region.y, region.width, region.height][index]);
+      screen.getAllByRole('slider', { name }).forEach((slider, regionIndex) => {
+        expect(slider).toHaveValue(String(values[regionIndex]));
+      });
+    }
+    rerender(<RedactionEditor clip={{ ...current }} />);
+    expect([...screen.getAllByRole('combobox'), ...screen.getAllByRole('textbox')].map((field) => field.id)).toEqual(ids);
+    expect(storage.mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('keeps mobile targets, desktop density and every named field keyboard reachable', async () => {
+    const user = userEvent.setup();
+    render(<RedactionEditor clip={clip()} />);
+    const add = screen.getByRole('button', { name: 'Add region' });
+    const kind = screen.getByRole('combobox', { name: 'Region kind' });
+    const label = screen.getByRole('textbox', { name: 'Label' });
+    const remove = screen.getByRole('button', { name: 'Remove region' });
+    expect(add).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0');
+    expect(kind).toHaveClass('min-h-11', 'md:min-h-9');
+    expect(label).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0');
+    expect(label.parentElement?.parentElement?.parentElement).toHaveClass('flex-1', 'basis-40', 'md:basis-0');
+    expect(remove).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-8', 'md:min-w-8', 'shrink-0');
+    add.focus();
+    expect(add).toHaveFocus();
+    for (const control of [kind, label, remove, ...['X', 'Y', 'Width', 'Height'].map((name) => screen.getByRole('slider', { name }))]) {
+      await user.tab();
+      expect(control).toHaveFocus();
+      if (control.getAttribute('type') === 'range') expect(control).toHaveClass('min-w-11');
+    }
+    remove.focus();
+    await user.keyboard('{Enter}');
+    await waitFor(() => expect(screen.queryByRole('textbox', { name: 'Label' })).not.toBeInTheDocument());
+    add.focus();
+    await user.keyboard(' ');
+    expect(screen.getByRole('textbox', { name: 'Label' })).toHaveValue('Unlabeled region');
+  });
+
   it('serializes all six fields, preserves normalized coordinates and merges current metadata', async () => {
     const first = deferred<ClipRecord>();
     storage.mutateAsync.mockReturnValueOnce(first.promise);

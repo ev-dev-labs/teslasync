@@ -677,7 +677,9 @@
     "weekendCount": "{{count}} weekend drives",
     "weeklyPunchcard": {
       "aria": "Drive starts by local weekday and hour; strongest slot {{slot}}",
-      "cell": "{{day}} {{hour}}:00 · {{count}} drives",
+      "cell": "{{day}} {{hour}} · {{count}} drives",
+      "day": "Day",
+      "scroll": "Weekly drive-start counts; scroll to see all hours",
       "timezone": "24-hour departures grouped in {{timezone}}"
     }
   },

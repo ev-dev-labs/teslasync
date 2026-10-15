@@ -35,6 +35,7 @@ import {
   useGlobalSearch,
   searchKeys,
   SEARCH_MIN_QUERY_LENGTH,
+  isSearchQueryEnabled,
   type UseGlobalSearchOptions,
 } from './useSearch';
 import type { SearchHit, SearchResponse } from '../types';
@@ -89,6 +90,23 @@ describe('SEARCH_MIN_QUERY_LENGTH', () => {
   });
 });
 
+describe('isSearchQueryEnabled', () => {
+  it.each([
+    ['', false],
+    ['   ', false],
+    ['a', false],
+    ['\u00e9', false],
+    [' \u{1f697} ', false],
+    ['ab', true],
+    ['\u00e9a', true],
+    [' \u{1f697}a ', true],
+    ['\u{1f697}\u{1f697}', true],
+    ['e\u0301', true],
+  ])('counts trimmed Unicode code points for %j', (query, enabled) => {
+    expect(isSearchQueryEnabled(query)).toBe(enabled);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // searchKeys
 // ---------------------------------------------------------------------------
@@ -134,6 +152,41 @@ describe('searchKeys.global', () => {
 // ---------------------------------------------------------------------------
 
 describe('useGlobalSearch', () => {
+  it('drops populated hits for a single astral code point and fetches two code points with the existing key and signal', async () => {
+    const first = makeResponse([makeHit()]);
+    const query = '\u{1f697}a';
+    const next = makeResponse([makeHit({ id: 2 })], query);
+    requestMock.mockResolvedValueOnce(first).mockResolvedValueOnce(next);
+    const { Wrapper, qc } = makeWrapper();
+    const { result, rerender } = renderHook((q: string) => useGlobalSearch(q), {
+      wrapper: Wrapper,
+      initialProps: 'tesla',
+    });
+
+    await waitFor(() => expect(result.current.data).toEqual(first));
+    rerender(' \u{1f697} ');
+    expect(result.current.data).toBeUndefined();
+    expect(result.current.fetchStatus).toBe('idle');
+    expect(requestMock).toHaveBeenCalledTimes(1);
+
+    rerender(` ${query} `);
+    await waitFor(() => expect(result.current.data).toEqual(next));
+    expect(requestMock).toHaveBeenCalledTimes(2);
+    expect(lastRequestParams().get('q')).toBe(query);
+    expect(requestMock.mock.calls[1][1].signal).toBeInstanceOf(AbortSignal);
+    expect(qc.getQueryData(searchKeys.global(query, undefined, undefined))).toEqual(next);
+  });
+
+  it('keeps an eligible Unicode query idle when explicitly disabled by the palette', () => {
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(
+      () => useGlobalSearch('\u{1f697}\u{1f697}', { disabled: true, limit: 5 }),
+      { wrapper: Wrapper },
+    );
+    expect(result.current.fetchStatus).toBe('idle');
+    expect(requestMock).not.toHaveBeenCalled();
+  });
+
   it('does not fire a request for a query shorter than the minimum', async () => {
     const { Wrapper } = makeWrapper();
 

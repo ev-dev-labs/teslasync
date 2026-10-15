@@ -28,7 +28,7 @@ export function CabinThermalMethodology({
       title: t('cabinThermal.method.sourceTitle', 'Source contract'),
       body: t(
         'cabinThermal.method.sourceBody',
-        'The existing climate-history endpoint returns a seven-day signal timeline by default. Forward-filled values are returned rows, not independent thermal experiments.',
+        'Climate history is requested for the selected workspace range, with both start and end bounds applied by the server. Unscoped callers use the endpoint’s seven-day default. Forward-filled values are returned rows, not independent thermal experiments.',
       ),
     },
     {

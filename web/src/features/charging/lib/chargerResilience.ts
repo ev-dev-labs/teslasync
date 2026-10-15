@@ -35,22 +35,28 @@
 import type { ChargingSession } from '@/types/charging';
 
 export type SiteGroupedBy = 'place' | 'geo' | 'charger_type';
+export type EnergyDenominator = 'available' | 'missing' | 'nonpositive';
 
 export interface ResilienceSite {
   key: string;
-  label: string;
+  label: string | null;
   groupedBy: SiteGroupedBy;
   sessions: number;
   totalEnergyWh: number;
-  /** Share of total fleet-wide energy delivered at this site, 0..1. */
+  recordedEnergySessions: number;
+  positiveEnergyWh: number;
+  /** Positive-energy share, 0..1; meaningful only with an available denominator. */
   energyShare: number;
 }
 
 export interface WhatIfTopSiteLoss {
-  topSiteLabel: string;
+  topSiteLabel: string | null;
   energyAtRiskWh: number;
-  /** Same value as `topSiteDependencyPct / 100` — how much energy disappears. */
-  energyAtRiskShare: number;
+  /** Positive-energy share lost; null when the energy denominator is unavailable. */
+  energyAtRiskShare: number | null;
+  energyAtRiskAvailable: boolean;
+  remainingSiteCount: number;
+  energyDenominator: EnergyDenominator;
   newTopSiteLabel: string | null;
   /** The new top site's share of the *remaining* energy after removal, 0..1. */
   newTopSiteShare: number | null;
@@ -63,10 +69,11 @@ export interface ChargerResilienceSummary {
   sites: ResilienceSite[];
   totalSessions: number;
   totalEnergyWh: number;
-  /** Energy-weighted concentration index, 0 (spread out) .. 1 (single site). */
-  hhi: number;
+  energyDenominator: EnergyDenominator;
+  /** Energy-weighted concentration index; null without a complete positive denominator. */
+  hhi: number | null;
   /** 1/hhi — the number of equally-sized sites this portfolio behaves like. */
-  effectiveSiteCount: number;
+  effectiveSiteCount: number | null;
   topSiteDependencyPct: number;
   /**
    * Share of SESSIONS (not energy) that happened somewhere other than the
@@ -74,7 +81,7 @@ export interface ChargerResilienceSummary {
    * a mathematical complement of dependency.
    */
   fallbackCoveragePct: number;
-  /** Composite 0-100 score; see `computeResilienceScore` for the weights. */
+  /** Composite 0-100 score; uses disclosed session/site-count fallback without energy. */
   resilienceScore: number;
   topSite: ResilienceSite | null;
   whatIfTopSiteLoss: WhatIfTopSiteLoss | null;
@@ -100,7 +107,7 @@ function num(v: number | null | undefined): number | null {
  */
 export function resolveResilienceSite(
   session: ChargingSession,
-): { key: string; label: string; groupedBy: SiteGroupedBy } {
+): { key: string; label: string | null; groupedBy: SiteGroupedBy } {
   const place = session.start_place?.trim();
   if (place != null && place.length > 0) {
     return { key: `place:${place.toLowerCase()}`, label: place, groupedBy: 'place' };
@@ -120,14 +127,16 @@ export function resolveResilienceSite(
   if (type != null && type.length > 0) {
     return { key: `type:${type.toLowerCase()}`, label: type, groupedBy: 'charger_type' };
   }
-  return { key: 'type:unknown', label: 'Unknown location', groupedBy: 'charger_type' };
+  return { key: 'type:unknown', label: null, groupedBy: 'charger_type' };
 }
 
 interface SiteAccumulator {
-  label: string;
+  label: string | null;
   groupedBy: SiteGroupedBy;
   sessions: number;
   totalEnergyWh: number;
+  recordedEnergySessions: number;
+  positiveEnergyWh: number;
 }
 
 function buildSites(
@@ -135,18 +144,24 @@ function buildSites(
 ): { sites: ResilienceSite[]; totalEnergyWh: number; totalSessions: number } {
   const groups = new Map<string, SiteAccumulator>();
   let totalEnergyWh = 0;
+  let positiveEnergyWh = 0;
+  let recordedEnergySessions = 0;
 
   for (const s of sessions) {
     const { key, label, groupedBy } = resolveResilienceSite(s);
-    const energyWh = Math.max(0, num(s.total_energy_added_wh) ?? 0);
-    totalEnergyWh += energyWh;
+    const energyWh = num(s.total_energy_added_wh);
+    totalEnergyWh += energyWh ?? 0;
+    positiveEnergyWh += Math.max(0, energyWh ?? 0);
+    if (energyWh != null) recordedEnergySessions += 1;
     let acc = groups.get(key);
     if (acc == null) {
-      acc = { label, groupedBy, sessions: 0, totalEnergyWh: 0 };
+      acc = { label, groupedBy, sessions: 0, totalEnergyWh: 0, recordedEnergySessions: 0, positiveEnergyWh: 0 };
       groups.set(key, acc);
     }
     acc.sessions += 1;
-    acc.totalEnergyWh += energyWh;
+    acc.totalEnergyWh += energyWh ?? 0;
+    acc.positiveEnergyWh += Math.max(0, energyWh ?? 0);
+    if (energyWh != null) acc.recordedEnergySessions += 1;
   }
 
   const sites: ResilienceSite[] = Array.from(groups.entries()).map(([key, acc]) => ({
@@ -154,13 +169,21 @@ function buildSites(
     label: acc.label,
     groupedBy: acc.groupedBy,
     sessions: acc.sessions,
-    totalEnergyWh: Math.round(acc.totalEnergyWh),
-    energyShare: totalEnergyWh > 0 ? acc.totalEnergyWh / totalEnergyWh : 0,
+    totalEnergyWh: acc.totalEnergyWh,
+    recordedEnergySessions: acc.recordedEnergySessions,
+    positiveEnergyWh: acc.positiveEnergyWh,
+    energyShare: recordedEnergySessions === sessions.length && positiveEnergyWh > 0
+      ? acc.positiveEnergyWh / positiveEnergyWh : 0,
   }));
 
-  sites.sort((a, b) => b.totalEnergyWh - a.totalEnergyWh || b.sessions - a.sessions || a.key.localeCompare(b.key));
+  sites.sort((a, b) => b.positiveEnergyWh - a.positiveEnergyWh || b.sessions - a.sessions || a.key.localeCompare(b.key));
 
-  return { sites, totalEnergyWh: Math.round(totalEnergyWh), totalSessions: sessions.length };
+  return { sites, totalEnergyWh, totalSessions: sessions.length };
+}
+
+function energyDenominator(sites: readonly ResilienceSite[]): EnergyDenominator {
+  if (sites.some(site => site.recordedEnergySessions !== site.sessions)) return 'missing';
+  return sites.some(site => site.positiveEnergyWh > 0) ? 'available' : 'nonpositive';
 }
 
 /** Energy-weighted HHI, 0..1. Empty input yields 0 (nothing to concentrate). */
@@ -205,14 +228,17 @@ export function analyzeChargerResilience(
 ): ChargerResilienceSummary {
   const opts = { ...DEFAULTS, ...options };
   const { sites, totalEnergyWh, totalSessions } = buildSites(sessions);
+  const denominator = energyDenominator(sites);
+  const energyAvailable = denominator === 'available';
 
   if (sites.length === 0) {
     return {
       sites: [],
       totalSessions: 0,
       totalEnergyWh: 0,
-      hhi: 0,
-      effectiveSiteCount: 0,
+      energyDenominator: denominator,
+      hhi: null,
+      effectiveSiteCount: null,
       topSiteDependencyPct: 0,
       fallbackCoveragePct: 0,
       resilienceScore: 0,
@@ -221,18 +247,16 @@ export function analyzeChargerResilience(
     };
   }
 
-  const hhi = computeHHI(sites);
-  const effectiveSiteCount = totalEnergyWh > 0 && hhi > 0 ? 1 / hhi : sites.length;
+  const hhi = energyAvailable ? computeHHI(sites) : null;
+  const effectiveSiteCount = hhi != null && hhi > 0 ? 1 / hhi : null;
 
-  // When no energy was ever recorded (all-zero sessions), fall back to
-  // ranking "top site" by session count so the summary degrades gracefully
-  // instead of reporting a meaningless 0% dependency.
+  // Session fallback is explicitly disclosed by consumers, never energy evidence.
   const topSite =
-    totalEnergyWh > 0
+    energyAvailable
       ? sites[0]!
       : [...sites].sort((a, b) => b.sessions - a.sessions)[0]!;
 
-  const topShare = totalEnergyWh > 0 ? topSite.energyShare : topSite.sessions / Math.max(1, totalSessions);
+  const topShare = energyAvailable ? topSite.energyShare : topSite.sessions / Math.max(1, totalSessions);
   const topSiteDependencyPct = Math.round(topShare * 1000) / 10;
 
   const sessionsElsewhere = totalSessions - topSite.sessions;
@@ -242,18 +266,19 @@ export function analyzeChargerResilience(
   const resilienceScore = computeResilienceScore(
     topShare,
     fallbackCoverageFraction,
-    effectiveSiteCount,
+    effectiveSiteCount ?? sites.length,
     opts.diversificationCapSites,
   );
 
-  const whatIfTopSiteLoss = computeWhatIfTopSiteLoss(sites, topSite, totalEnergyWh, totalSessions, resilienceScore, opts);
+  const whatIfTopSiteLoss = computeWhatIfTopSiteLoss(sites, topSite, totalSessions, resilienceScore, opts);
 
   return {
     sites,
     totalSessions,
     totalEnergyWh,
-    hhi: Math.round(hhi * 1000) / 1000,
-    effectiveSiteCount: Math.round(effectiveSiteCount * 100) / 100,
+    energyDenominator: denominator,
+    hhi: hhi == null ? null : Math.round(hhi * 1000) / 1000,
+    effectiveSiteCount: effectiveSiteCount == null ? null : Math.round(effectiveSiteCount * 100) / 100,
     topSiteDependencyPct,
     fallbackCoveragePct,
     resilienceScore,
@@ -265,20 +290,27 @@ export function analyzeChargerResilience(
 function computeWhatIfTopSiteLoss(
   sites: readonly ResilienceSite[],
   topSite: ResilienceSite,
-  totalEnergyWh: number,
   totalSessions: number,
   resilienceScoreBefore: number,
   opts: Required<ChargerResilienceOptions>,
 ): WhatIfTopSiteLoss {
   const remaining = sites.filter((s) => s.key !== topSite.key);
-  const remainingEnergyWh = totalEnergyWh - topSite.totalEnergyWh;
+  const remainingEnergyWh = remaining.reduce((sum, site) => sum + site.positiveEnergyWh, 0);
   const remainingSessions = totalSessions - topSite.sessions;
+  const denominator = energyDenominator(remaining);
+  const energyAvailable = denominator === 'available';
+  const risk = {
+    energyAtRiskWh: topSite.totalEnergyWh,
+    energyAtRiskAvailable: topSite.recordedEnergySessions === topSite.sessions,
+    energyAtRiskShare: energyDenominator(sites) === 'available' ? topSite.energyShare : null,
+    remainingSiteCount: remaining.length,
+    energyDenominator: denominator,
+  };
 
-  if (remaining.length === 0 || remainingEnergyWh <= 0) {
+  if (remaining.length === 0) {
     return {
       topSiteLabel: topSite.label,
-      energyAtRiskWh: topSite.totalEnergyWh,
-      energyAtRiskShare: totalEnergyWh > 0 ? topSite.totalEnergyWh / totalEnergyWh : 1,
+      ...risk,
       newTopSiteLabel: null,
       newTopSiteShare: null,
       resilienceScoreBefore,
@@ -288,8 +320,8 @@ function computeWhatIfTopSiteLoss(
   }
 
   const rescaled = remaining
-    .map((s) => ({ ...s, energyShare: s.totalEnergyWh / remainingEnergyWh }))
-    .sort((a, b) => b.energyShare - a.energyShare);
+    .map((s) => ({ ...s, energyShare: energyAvailable ? s.positiveEnergyWh / remainingEnergyWh : 0 }))
+    .sort((a, b) => energyAvailable ? b.energyShare - a.energyShare : b.sessions - a.sessions);
 
   const newTop = rescaled[0]!;
   const hhiAfter = computeHHI(rescaled);
@@ -298,7 +330,7 @@ function computeWhatIfTopSiteLoss(
     remainingSessions > 0 ? (remainingSessions - newTop.sessions) / remainingSessions : 0;
 
   const resilienceScoreAfter = computeResilienceScore(
-    newTop.energyShare,
+    energyAvailable ? newTop.energyShare : newTop.sessions / remainingSessions,
     fallbackFractionAfter,
     effectiveAfter,
     opts.diversificationCapSites,
@@ -306,10 +338,9 @@ function computeWhatIfTopSiteLoss(
 
   return {
     topSiteLabel: topSite.label,
-    energyAtRiskWh: topSite.totalEnergyWh,
-    energyAtRiskShare: totalEnergyWh > 0 ? topSite.totalEnergyWh / totalEnergyWh : 1,
+    ...risk,
     newTopSiteLabel: newTop.label,
-    newTopSiteShare: Math.round(newTop.energyShare * 1000) / 1000,
+    newTopSiteShare: energyAvailable ? Math.round(newTop.energyShare * 1000) / 1000 : null,
     resilienceScoreBefore,
     resilienceScoreAfter,
     resilienceScoreDelta: resilienceScoreAfter - resilienceScoreBefore,

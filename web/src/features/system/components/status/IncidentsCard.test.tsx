@@ -15,6 +15,7 @@ const query = vi.hoisted(() => ({
   error: null as Error | null,
   refetch: vi.fn(),
   useIncidents: vi.fn(),
+  fetchStatus: 'fetching' as 'fetching' | 'paused' | 'idle',
 }))
 vi.mock('@/api/hooks/useIncidents', () => ({
   useIncidents: (params: unknown) => {
@@ -22,7 +23,8 @@ vi.mock('@/api/hooks/useIncidents', () => ({
     return {
       data: query.data, error: query.error, isError: !!query.error,
       isPending: !query.data && !query.error, isLoading: !query.data && !query.error,
-      isFetching: false, dataUpdatedAt: query.data ? 1 : 0, refetch: query.refetch,
+      isFetching: query.fetchStatus === 'fetching', fetchStatus: query.fetchStatus,
+      dataUpdatedAt: query.data ? 1 : 0, refetch: query.refetch,
     }
   },
 }))
@@ -50,12 +52,15 @@ function incident(count: number | null | undefined): Incident {
     created_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString(),
   }
 }
-function renderCard() {
-  return render(
+function card() {
+  return (
     <I18nextProvider i18n={english}>
       <MemoryRouter><IncidentsCard now={now} /></MemoryRouter>
-    </I18nextProvider>,
+    </I18nextProvider>
   )
+}
+function renderCard() {
+  return render(card())
 }
 beforeAll(async () => {
   await english.init({
@@ -67,6 +72,7 @@ beforeAll(async () => {
 beforeEach(() => {
   query.data = undefined
   query.error = null
+  query.fetchStatus = 'idle'
   query.refetch.mockClear()
   query.useIncidents.mockClear()
 })
@@ -97,12 +103,32 @@ describe('incident update count with real generated English', () => {
   })
 
   it('keeps initial loading distinct from confirmed empty data', () => {
+    query.fetchStatus = 'fetching'
     const view = renderCard()
     expect(screen.getByRole('status', { name: 'Loading Active incidents' })).toBeInTheDocument()
     expect(screen.queryByRole('list')).not.toBeInTheDocument()
     view.unmount()
     query.data = { incidents: [], count: 0 }
-    expect(renderCard().container.firstChild).toBeNull()
+    renderCard()
+    expect(screen.getByText('No active incidents recorded.')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Active incidents/ })).toHaveTextContent('0')
+    fireEvent.click(screen.getByRole('button', { name: 'Log incident' }))
+    expect(screen.getByRole('dialog', { name: 'Incident form' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Close form' }))
+    expect(screen.getByText('No active incidents recorded.')).toBeInTheDocument()
+  })
+
+  it('does not claim loading or empty evidence while the initial query is paused', () => {
+    query.fetchStatus = 'paused'
+    renderCard()
+    expect(screen.getByRole('status')).toHaveTextContent('Refresh paused')
+    expect(screen.queryByRole('status', { name: 'Loading Active incidents' })).not.toBeInTheDocument()
+    expect(screen.queryByText('No active incidents recorded.')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Active incidents/ })).toHaveTextContent('—')
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+    expect(query.refetch).toHaveBeenCalledOnce()
+    fireEvent.click(screen.getByRole('button', { name: 'Log incident' }))
+    expect(screen.getByRole('dialog', { name: 'Incident form' })).toBeInTheDocument()
   })
 
   it('retains fatal-error recovery and form access', () => {
@@ -123,5 +149,48 @@ describe('incident update count with real generated English', () => {
     expect(screen.getByText('Started 5m ago · 3 updates')).toBeInTheDocument()
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Log incident' })).toBeEnabled()
+  })
+
+  it.each([true, false])('retains populated=%s evidence through refresh failure and empty recovery', populated => {
+    query.data = { incidents: populated ? [incident(3)] : [], count: populated ? 1 : 0 }
+    const view = renderCard()
+    query.error = new Error('Refresh failed')
+    view.rerender(card())
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    if (populated) {
+      expect(screen.getByRole('link', { name: /Wall connector offline/ })).toBeInTheDocument()
+    } else {
+      expect(screen.getByText('No active incidents recorded.')).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: /Active incidents/ })).toHaveTextContent('0')
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+    expect(query.refetch).toHaveBeenCalledOnce()
+    query.error = null
+    query.fetchStatus = 'fetching'
+    view.rerender(card())
+    expect(screen.queryByRole('status', { name: 'Loading Active incidents' })).not.toBeInTheDocument()
+    query.data = { incidents: [], count: 0 }
+    query.fetchStatus = 'idle'
+    view.rerender(card())
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument()
+    expect(screen.getByText('No active incidents recorded.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Log incident' })).toBeEnabled()
+  })
+
+  it('recovers an initial failure through retry without losing the shell', () => {
+    query.error = new Error('Incident source unavailable')
+    const view = renderCard()
+    fireEvent.click(screen.getByRole('button', { name: /Retry/i }))
+    expect(query.refetch).toHaveBeenCalledOnce()
+    query.error = null
+    query.fetchStatus = 'fetching'
+    view.rerender(card())
+    expect(screen.getByRole('status', { name: 'Loading Active incidents' })).toBeInTheDocument()
+    query.data = { incidents: [incident(2)], count: 1 }
+    query.fetchStatus = 'idle'
+    view.rerender(card())
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Wall connector offline/ })).toBeInTheDocument()
   })
 })

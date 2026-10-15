@@ -234,28 +234,51 @@ describe('MetricBar missing readings and supplied bounds', () => {
   })
 
   it.each([
-    { value: 0, bounded: 0, width: '0%', text: '0.00' },
-    { value: -10, bounded: 0, width: '0%', text: '-10.00' },
-    { value: 100, bounded: 100, width: '100%', text: '100.00' },
-    { value: 500, bounded: 100, width: '100%', text: '500.00' },
-  ])('preserves the zero-based clamp and unbounded readout for $value', ({ value, bounded, width, text }) => {
+    { value: 0, width: '0%', text: '0.00' },
+    { value: 100, width: '100%', text: '100.00' },
+  ])('preserves valid boundary readings for $value', ({ value, width, text }) => {
     render(<MetricBar value={value} max={100} color="#22c55e" label="Power" />)
     const bar = screen.getByRole('progressbar')
     expect(bar).toHaveAttribute('aria-valuemin', '0')
-    expect(bar).toHaveAttribute('aria-valuenow', String(bounded))
+    expect(bar).toHaveAttribute('aria-valuenow', String(value))
     expect(bar).not.toHaveAttribute('aria-valuetext')
     expect(screen.getByText(text)).toBeInTheDocument()
     expect(state.fill).toHaveBeenLastCalledWith(expect.objectContaining({ animate: { width } }))
   })
 
+  it.each([
+    { value: -10, width: '0%', text: '-10.00' },
+    { value: 500, width: '100%', text: '500.00' },
+  ])('bounds only visual extent, not the accessible reading for $value', ({ value, width, text }) => {
+    render(<MetricBar value={value} max={100} color="var(--text-secondary)" label="Recovery share" />)
+    const bar = screen.getByRole('group', { name: 'Recovery share' })
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
+    expect(bar).not.toHaveAttribute('aria-valuenow')
+    expect(bar).not.toHaveAttribute('aria-valuemin')
+    expect(bar).not.toHaveAttribute('aria-valuemax')
+    expect(bar).toHaveAccessibleDescription(text)
+    expect(screen.getByText('Recovery share')).toBeInTheDocument()
+    expect(screen.getAllByText(text)).toHaveLength(2)
+    expect(state.fill).toHaveBeenLastCalledWith(expect.objectContaining({ animate: { width } }))
+  })
+
+  it('retains the raw accessible reading with a suppressed header and readout', () => {
+    render(<MetricBar value={-12.5} max={100} color="var(--text-secondary)"
+      ariaLabel="Recovery share" showHeader={false} sublabel="" />)
+    expect(screen.getByRole('group', { name: 'Recovery share' })).toHaveAccessibleDescription('-12.50')
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
+  })
+
   it.each([0, -1, NaN, Infinity, -Infinity])(
-    'preserves the existing degenerate maximum behavior for %s',
+    'preserves the reading without inventing a range or fill for maximum %s',
     (max) => {
       render(<MetricBar value={42.5} max={max} color="#22c55e" label="Power" />)
-      expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuemax', '0')
-      expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0')
-      expect(screen.getByText('42.50')).toBeInTheDocument()
-      expect(state.fill).toHaveBeenLastCalledWith(expect.objectContaining({ animate: { width: '0%' } }))
+      const bar = screen.getByRole('group', { name: 'Power' })
+      expect(bar).not.toHaveAttribute('aria-valuemax')
+      expect(bar).not.toHaveAttribute('aria-valuenow')
+      expect(bar).toHaveAccessibleDescription('42.50')
+      expect(screen.getAllByText('42.50')).toHaveLength(2)
+      expect(state.fill).not.toHaveBeenCalled()
     },
   )
 
@@ -270,6 +293,94 @@ describe('MetricBar missing readings and supplied bounds', () => {
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0')
     expect(screen.getByRole('progressbar')).not.toHaveAttribute('aria-valuetext')
     expect(screen.getByText('0.00')).toBeInTheDocument()
+  })
+})
+
+describe('MetricBar CSS color compatibility', () => {
+  it.each([
+    'var(--theme-success)',
+    'var(--chart-series-1, var(--text-secondary))',
+    'rgb(145 185 165)',
+    'rgba(145, 185, 165, 0.5)',
+    'hsl(150 25% 60% / 0.5)',
+    'oklch(70% 0.1 150)',
+    'color-mix(in srgb, var(--theme-success) 50%, transparent)',
+    '#abc',
+    '#abcd',
+    '#91b9a580',
+    'currentColor',
+    'transparent',
+  ])('preserves %s with a CSS-valid alpha gradient and unchanged solid fill', (color) => {
+    const { rerender } = render(
+      <MetricBar value={0.125} max={0.5} color={color} label="Measured share" />,
+    )
+    const bar = screen.getByRole('progressbar', { name: 'Measured share' })
+    expect(bar).toHaveAttribute('aria-valuenow', '0.125')
+    expect(bar).toHaveAttribute('aria-valuemax', '0.5')
+    expect(screen.getByText('0.13')).toBeInTheDocument()
+    expect(state.fill).toHaveBeenLastCalledWith(expect.objectContaining({
+      animate: { width: '25%' },
+      style: { background: `linear-gradient(90deg, color-mix(in srgb, ${color} 60%, transparent), ${color})` },
+    }))
+    rerender(<MetricBar value={0.125} max={0.5} color={color} label="Measured share" fill="solid" />)
+    expect(state.fill).toHaveBeenLastCalledWith(expect.objectContaining({
+      animate: { width: '25%' },
+      style: { background: color },
+    }))
+  })
+
+  it('keeps gradient palette identity when the caller changes series colors', () => {
+    const { rerender } = render(
+      <MetricBar value={12} max={24} color="var(--chart-series-1)" label="Measured energy" />,
+    )
+    rerender(
+      <MetricBar value={12} max={24} color="var(--chart-series-2)" label="Measured energy" />,
+    )
+    expect(state.fill).toHaveBeenLastCalledWith(expect.objectContaining({
+      animate: { width: '50%' },
+      style: {
+        background: 'linear-gradient(90deg, color-mix(in srgb, var(--chart-series-2) 60%, transparent), var(--chart-series-2))',
+      },
+    }))
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '12')
+    expect(screen.getByText('12.00')).toBeInTheDocument()
+  })
+
+  it.each([null, undefined, NaN, Infinity, -Infinity])(
+    'keeps %s unavailable with a functional color instead of fabricating zero',
+    (value) => {
+      render(<MetricBar value={value} max={1} color="var(--chart-series-1)" label="Measured share" />)
+      const bar = screen.getByRole('progressbar', { name: 'Measured share' })
+      expect(bar).not.toHaveAttribute('aria-valuenow')
+      expect(bar).toHaveAttribute('aria-valuetext', 'No reading')
+      expect(screen.getByText('—')).toBeInTheDocument()
+      expect(state.fill).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([
+    { value: 0, width: '0%', text: '0.00', role: 'progressbar' },
+    { value: 0.125, width: '25%', text: '0.13', role: 'progressbar' },
+    { value: -0.125, width: '0%', text: '-0.13', role: 'group' },
+    { value: 0.75, width: '100%', text: '0.75', role: 'group' },
+  ])('retains measured signed/fractional value $value with a variable gradient', ({ value, width, text, role }) => {
+    render(<MetricBar value={value} max={0.5} color="var(--chart-series-1)" label="Measured share" />)
+    const bar = screen.getByRole(role, { name: 'Measured share' })
+    expect(bar).not.toHaveAttribute('aria-valuetext')
+    if (role === 'group') {
+      expect(bar).not.toHaveAttribute('aria-valuenow')
+      expect(bar).toHaveAccessibleDescription(text)
+    } else {
+      expect(bar).toHaveAttribute('aria-valuenow', String(value))
+      expect(bar).toHaveAttribute('aria-valuemax', '0.5')
+      expect(screen.getByText(text)).toBeInTheDocument()
+    }
+    expect(state.fill).toHaveBeenLastCalledWith(expect.objectContaining({
+      animate: { width },
+      style: {
+        background: 'linear-gradient(90deg, color-mix(in srgb, var(--chart-series-1) 60%, transparent), var(--chart-series-1))',
+      },
+    }))
   })
 })
 

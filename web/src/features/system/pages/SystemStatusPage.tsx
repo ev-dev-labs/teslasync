@@ -40,13 +40,11 @@ import {
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useDataState } from '@/hooks/useDataState'
 import { useMotionPreference } from '@/hooks/useMotionPreference'
-import { useSystemHealth, useBackupRuns, useBackupConfigs, useMaintenanceState } from '@/api/hooks/useAdmin'
+import { useSystemHealth, useExtendedSystemHealth, useBackupRuns, useBackupConfigs, useMaintenanceState } from '@/api/hooks/useAdmin'
 import { useAuthStatus } from '@/api/hooks/useSettings'
 import { useVehicles } from '@/api/hooks/useVehicles'
-import {
-  getVersionInfo, getExtendedHealth, checkForUpdates,
-  getBackupStats, getWorkersHealth,
-} from '@/api/devtools'
+import { request } from '@/api/client'
+import type { VersionInfo, UpdateCheckResult, BackupStats, WorkersHealth } from '@/api/types'
 
 import { cn } from '@/lib/cn'
 import { typography } from '@/lib/tokens'
@@ -105,34 +103,31 @@ export default function SystemStatusPage() {
   // offline fallback.
   const { state: liveState, lastUpdateAt: liveLastUpdate, reconnect: liveReconnect } = useStatusLiveSSE()
 
-  const extendedQuery = useQuery({
-    queryKey: ['system-status', 'extended-health'],
-    queryFn: getExtendedHealth,
-    refetchInterval: STATUS_REFRESH_MS,
-  })
+  const extendedQuery = useExtendedSystemHealth()
 
+  // Settings hooks use different keys; keep these in the status refresh/SSE scope.
   const versionQuery = useQuery({
     queryKey: ['system-status', 'version'],
-    queryFn: getVersionInfo,
+    queryFn: ({ signal }) => request<VersionInfo>('/system/version', { signal }),
     refetchInterval: 60_000,
   })
 
   const updateQuery = useQuery({
     queryKey: ['system-status', 'update-check'],
-    queryFn: checkForUpdates,
+    queryFn: ({ signal }) => request<UpdateCheckResult>('/system/update-check', { signal }),
     refetchInterval: UPDATE_CHECK_MS,
     staleTime: UPDATE_CHECK_MS,
   })
 
   const backupStatsQuery = useQuery({
     queryKey: ['system-status', 'backup-stats'],
-    queryFn: getBackupStats,
+    queryFn: ({ signal }) => request<BackupStats>('/system/backup/stats', { signal }),
     refetchInterval: STATUS_REFRESH_MS,
   })
 
   const workersQuery = useQuery({
     queryKey: ['system-status', 'workers'],
-    queryFn: getWorkersHealth,
+    queryFn: ({ signal }) => request<WorkersHealth>('/system/workers', { signal }),
     refetchInterval: STATUS_REFRESH_MS,
   })
 

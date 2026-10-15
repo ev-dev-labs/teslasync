@@ -3,8 +3,8 @@
  * health (total sent, failed, pending, and active-channel ratio). Owns its
  * own loading state: renders four skeletons inside a labelled, `aria-busy`
  * status region until the stats query resolves, then four null-safe metric
- * cards. Every value falls back to `0` (and the channel ratio to `0/0`) so the
- * band never renders a blank or `NaN` cell. A failed stats query renders an
+ * cards. Missing counts and ratio operands remain unknown through the shared
+ * numeric metric API. A failed stats query renders an
  * inline error with retry instead of zeros that would read as healthy.
  */
 
@@ -28,26 +28,28 @@ interface ChannelStatsBandProps {
 export function ChannelStatsBand({ stats, isLoading, error, onRetry, retained = false, source }: ChannelStatsBandProps) {
   const { t } = useTranslation();
 
-  const enabled = stats?.enabled_channels ?? 0;
-  const total = stats?.total_channels ?? 0;
+  const enabled = stats?.enabled_channels;
+  const total = stats?.total_channels;
   const metrics: StatMetric[] = [
     {
-      metricId: 'count', occurrenceId: 'channels-sent', rawValue: stats?.sent ?? 0,
+      metricId: 'count', occurrenceId: 'channels-sent', rawValue: stats?.sent,
       label: t('notifications.stats.sent', 'Total sent'),
       context: <CheckCircle className="h-4 w-4" aria-hidden="true" />,
     },
     {
-      metricId: 'count', occurrenceId: 'channels-failed', rawValue: stats?.failed ?? 0,
+      metricId: 'count', occurrenceId: 'channels-failed', rawValue: stats?.failed,
       label: t('notifications.stats.failed', 'Failed'),
       context: <XCircle className="h-4 w-4" aria-hidden="true" />,
     },
     {
-      metricId: 'count', occurrenceId: 'channels-pending', rawValue: stats?.pending ?? 0,
+      metricId: 'count', occurrenceId: 'channels-pending', rawValue: stats?.pending,
       label: t('notifications.stats.pending', 'Pending'),
       context: <Bell className="h-4 w-4" aria-hidden="true" />,
     },
     {
-      metricId: 'count', occurrenceId: 'channels-active', rawValue: enabled,
+      metricId: 'count', occurrenceId: 'channels-active', rawValue: total == null ? null : enabled,
+      missingReason: total == null
+        ? t('developerReference.stats.reason.missing', 'No measurement supplied') : undefined,
       display: { countTotal: total },
       label: t('notifications.stats.activeChannels', 'Active channels'),
       context: <Bell className="h-4 w-4" aria-hidden="true" />,

@@ -6,7 +6,7 @@ import {
   Text,
 } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import type { DepartureDirectoryItem } from '../../lib/preconditioningEffectiveness';
 import {
@@ -37,10 +37,10 @@ function Detail({ label, value }: { label: string; value: string }) {
 
 export function PreconditioningDepartureCard({
   item,
-  locale,
   formatDuration,
   formatDelta,
 }: PreconditioningDepartureCardProps) {
+  const { formatDateTime } = useDateFormat();
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
 
@@ -54,7 +54,7 @@ export function PreconditioningDepartureCard({
             })}
           </Text>
           <Text as="p" variant="caption" className="mt-1">
-            {formatDateTime(new Date(item.departureMs), { locale })}
+            {formatDateTime(new Date(item.departureMs))}
           </Text>
         </div>
         <div className="flex flex-wrap gap-2">

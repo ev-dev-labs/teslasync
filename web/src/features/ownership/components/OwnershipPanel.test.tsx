@@ -35,6 +35,7 @@ describe('OwnershipPanel source preservation', () => {
       const refetch = vi.fn();
       const { rerender } = render(panel({ isPending: true, fetchStatus: 'paused', refetch }, { empty: true }));
       expect(screen.getByText(/initial query is paused/)).toBeInTheDocument();
+      expect(screen.queryByRole('status', { name: 'Loading Statement evidence' })).not.toBeInTheDocument();
       expect(screen.queryByText('Select a statement.')).not.toBeInTheDocument();
       expect(screen.queryByText('Retained statement lines')).not.toBeInTheDocument();
       expect(screen.queryByText(/Previously loaded data remains visible/)).not.toBeInTheDocument();
@@ -76,13 +77,23 @@ describe('OwnershipPanel source preservation', () => {
 
     it('keeps an independent unsaved editor mounted through pending, offline and first-read failure', () => {
       const save = vi.fn();
+      const refetch = vi.fn();
       const children = <Button onClick={save}>Save entered statement</Button>;
-      const { rerender } = render(panel({ isPending: true }, { editing: true, empty: true, children }));
+      const { rerender } = render(panel({ isPending: true, refetch }, { editing: true, empty: true, children }));
       const button = screen.getByRole('button', { name: 'Save entered statement' });
-      rerender(panel({ fetchStatus: 'paused' }, { editing: true, empty: true, children }));
+      rerender(panel({ fetchStatus: 'paused', refetch }, { editing: true, empty: true, children }));
       expect(screen.getByRole('button', { name: 'Save entered statement' })).toBe(button);
-      rerender(panel({ error: new Error('register failed') }, { editing: true, empty: true, children }));
+      expect(screen.getByText(/initial query is paused/)).toBeInTheDocument();
+      expect(screen.queryByRole('status', { name: 'Loading Statement evidence' })).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      expect(refetch).toHaveBeenCalledOnce();
+      rerender(panel({ error: new Error('register failed'), refetch }, { editing: true, empty: true, children }));
       expect(screen.getByRole('button', { name: 'Save entered statement' })).toBe(button);
+      expect(screen.getByText('This source could not be loaded.')).toBeInTheDocument();
+      expect(screen.queryByText(/initial query is paused/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Previously loaded data remains visible/)).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      expect(refetch).toHaveBeenCalledTimes(2);
       fireEvent.click(button);
       expect(save).toHaveBeenCalledOnce();
       expect(screen.queryByText('Select a statement.')).not.toBeInTheDocument();
@@ -164,14 +175,40 @@ describe('OwnershipPanel source preservation', () => {
 
   it('keeps an open editor reachable even when its register has never loaded', () => {
     const save = vi.fn();
-    render(panel({ error: new Error('register failed') }, {
+    const refetch = vi.fn();
+    render(panel({ error: new Error('register failed'), refetch }, {
       editing: true,
       empty: true,
       children: <Button onClick={save}>Save entered statement</Button>,
     }));
     fireEvent.click(screen.getByRole('button', { name: 'Save entered statement' }));
     expect(save).toHaveBeenCalledOnce();
-    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(screen.getByText('This source could not be loaded.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledOnce();
+  });
+
+  it('shows successful empty evidence without a loading or paused notice', () => {
+    render(panel({ data: [], isSuccess: true, fetchStatus: 'idle' }, { empty: true }));
+    expect(screen.getByText('Select a statement.')).toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.queryByText('Retained statement lines')).not.toBeInTheDocument();
+  });
+
+  it('retains register evidence and its open editor with a failed refresh notice and retry', () => {
+    const refetch = vi.fn();
+    const save = vi.fn();
+    render(panel({ data: [7], error: new Error('refresh failed'), refetch }, {
+      editing: true,
+      children: <><p>Invoice seven</p><Button onClick={save}>Save entered statement</Button></>,
+    }));
+    expect(screen.getByText('Invoice seven')).toBeInTheDocument();
+    expect(screen.getByText(/Previously loaded data remains visible/)).toBeInTheDocument();
+    expect(screen.queryByText('This source could not be loaded.')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole('button', { name: 'Save entered statement' }));
+    expect(save).toHaveBeenCalledOnce();
   });
 
   it('preserves the prerequisite message for a disabled query', () => {

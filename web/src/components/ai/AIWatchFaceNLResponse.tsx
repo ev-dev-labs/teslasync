@@ -76,6 +76,7 @@ import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { withAiFeature } from '@/components/ai/withAiFeature'
 import { Textarea } from '@/components/ui'
 import { useAiStream } from '@/hooks/useAiStream'
+import { useUnits } from '@/hooks/useUnits'
 
 // MaxMessageChars mirrors the backend handler's
 // aiWatchFaceNLResponseMaxMessageLen cap so a parser-rejection
@@ -84,25 +85,20 @@ const MaxMessageChars = 1000
 
 function InnerSection() {
   const { t } = useTranslation()
+  const { unitPrefs } = useUnits()
   const [message, setMessage] = useState('')
 
   const trimmedMessage = message.trim()
 
-  // Body shape mirrors the Go handler's
-  // aiWatchFaceNLResponseRequest: a single optional `message`
-  // string. We send `undefined` for an empty/whitespace-only
-  // textarea so the body serializes as `{}` and the handler
-  // falls back to its deterministic "give a glance summary"
-  // default prompt. Sending an explicit empty string would
-  // pass the parser (the handler's empty-message guard is
-  // post-trim), but `undefined` is the honest "user did not
-  // supply a question" signal and matches the way other
-  // optional-field bodies in this codebase are shaped.
+  // Omit an empty question to use the default summary, but retain display
+  // preferences so narration chooses the same units as the fixed watch face.
   const body = useMemo(
     () => ({
       message: trimmedMessage.length > 0 ? trimmedMessage : undefined,
+      unit_of_length: unitPrefs.distance,
+      unit_of_temp: unitPrefs.temperature === '°F' ? 'F' : 'C',
     }),
-    [trimmedMessage],
+    [trimmedMessage, unitPrefs.distance, unitPrefs.temperature],
   )
 
   // NARRATIVE render contract: the strategy never emits a

@@ -9,6 +9,7 @@ import {
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { formatDate } from '@/lib/dateFormat';
 import { chartTokens } from '@/lib/tokens';
@@ -17,19 +18,19 @@ import type { Drive } from '@/api/types';
 export function VehicleDriveChart({ drives }: { drives: Drive[] | undefined }) {
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
-  // Exact source calculations/order and preference boundary, not new metrics.
+  const { fmtNumber } = useNumberFormatting();
   const driveChartData = useMemo(() =>
     (drives ?? []).map((d) => ({
       date: formatDate(d.start_ts),
-      distance: Math.round(convertDistanceFromSI(d.distance_m ?? 0, unitPrefs.distance)),
-      duration: Math.round((d.duration_s ?? 0) / 60),
+      distance: convertDistanceFromSI(d.distance_m ?? 0, unitPrefs.distance),
+      duration: (d.duration_s ?? 0) / 60,
     })).reverse(),
   [drives, unitPrefs.distance]);
   const driveColumns = useMemo<ChartDataColumn[]>(() => [
     { key: 'date', label: t('common.date', 'Date') },
-    { key: 'distance', label: `${t('common.distance', 'Distance')} (${unitPrefs.distance})`, format: (v) => String(v ?? 0) },
-    { key: 'duration', label: t('common.duration', 'Duration (min)'), format: (v) => String(v ?? 0) },
-  ], [t, unitPrefs.distance]);
+    { key: 'distance', label: `${t('common.distance', 'Distance')} (${unitPrefs.distance})`, format: (v) => fmtNumber(v) },
+    { key: 'duration', label: t('common.duration', 'Duration (min)'), format: (v) => fmtNumber(v) },
+  ], [t, unitPrefs.distance, fmtNumber]);
   const title = t('vehicles.detail.driveTrend', 'Drive distance trend');
   if (!driveChartData.length) {
     return (
@@ -51,8 +52,9 @@ export function VehicleDriveChart({ drives }: { drives: Drive[] | undefined }) {
             {areaGradient('driveTrendDurGrad', CHART_COLORS[1])}
             <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} />
             <XAxis dataKey="date" stroke={chartTokens.axisStroke} fontSize={11} />
-            <YAxis stroke={chartTokens.axisStroke} fontSize={11} />
-            <Tooltip content={<ChartTooltip />} />
+            <YAxis stroke={chartTokens.axisStroke} fontSize={11}
+              tickFormatter={(value) => fmtNumber(value)} />
+            <Tooltip content={<ChartTooltip valueFormatter={(value) => fmtNumber(value)} />} />
             <ChartLegend />
             <Area {...AREA_DEFAULTS} dataKey="distance"
               name={`${t('common.distance', 'Distance')} (${unitPrefs.distance})`}

@@ -71,6 +71,19 @@ export default function TripPlannerPage() {
 
   const activeVehicle = vehicleId != null ? String(vehicleId) : '';
   const canPlan = origin != null && destination != null && activeVehicle !== '';
+  const inputsChanged = submittedRequest != null && (
+    submittedRequest.vehicle_id !== Number(activeVehicle)
+    || submittedRequest.origin.lat !== origin?.lat
+    || submittedRequest.origin.lng !== origin?.lng
+    || submittedRequest.origin.name !== origin?.name
+    || submittedRequest.destination.lat !== destination?.lat
+    || submittedRequest.destination.lng !== destination?.lng
+    || submittedRequest.destination.name !== destination?.name
+    || submittedRequest.current_soc !== currentSOC
+    || submittedRequest.min_arrival_soc !== minArrivalSOC
+    || submittedRequest.preferences?.speed_factor !== speedFactor
+  );
+  const planning = planMutation.isPending && !planMutation.isPaused;
 
   const handleSharedDestination = useCallback(
     ({ text, location }: { text: string; location: TripLocation | null }) => {
@@ -92,7 +105,7 @@ export default function TripPlannerPage() {
   }, []);
 
   const handlePlan = useCallback(() => {
-    if (!origin || !destination || !activeVehicle) return;
+    if (!origin || !destination || !activeVehicle || planMutation.isPending) return;
 
     const req: TripPlanRequest = {
       vehicle_id: Number(activeVehicle),
@@ -132,10 +145,9 @@ export default function TripPlannerPage() {
     data: plan ?? undefined,
     error: planMutation.error,
     isError: planMutation.isError,
-    isFetching: planMutation.isPending,
+    isFetching: planning,
     fetchStatus: planMutation.isPaused ? 'paused' : planMutation.isPending ? 'fetching' : 'idle',
     dataUpdatedAt: planUpdatedAt,
-    refetch: handlePlan,
   }, { provenance: 'inferred' });
 
   const speedOptions = useMemo(() => [
@@ -149,12 +161,20 @@ export default function TripPlannerPage() {
   const legs = plan?.legs ?? [];
   const chargeStops = plan?.charge_stops ?? [];
   const weather = plan?.weather_impact;
+  const hasTemperatureEvidence = weather?.avg_temp_c != null && Number.isFinite(weather.avg_temp_c);
   const socCurve = plan?.soc_curve ?? [];
-  const planScope = !route
-    ? t('tripPlanner.brief.noPlan', 'No computed route yet')
-    : legs.length > 0
-      ? `${legs[0]?.from?.name ?? '—'} → ${legs[legs.length - 1]?.to?.name ?? '—'}`
-      : t('tripPlanner.brief.scopeUnknown', 'Last computed plan; submitted route labels were not returned');
+  const planScope = submittedRequest
+    ? [
+      `${submittedRequest.origin.name} → ${submittedRequest.destination.name}`,
+      `${t('tripPlanner.form.vehicle', 'Vehicle')}: ${submittedRequest.vehicle_id}`,
+      `${t('tripPlanner.form.currentSOC', 'Current SOC')}: ${submittedRequest.current_soc}%`,
+      `${t('tripPlanner.form.minArrival', 'Min Arrival SOC')}: ${submittedRequest.min_arrival_soc}%`,
+      `${t('tripPlanner.form.drivingSpeed', 'Driving Speed')}: ${
+        speedOptions.find((option) => Number(option.value) === submittedRequest.preferences?.speed_factor)?.label ?? PLACEHOLDER
+      }`,
+    ].join(' · ')
+    : t('tripPlanner.brief.noPlan', 'No computed route yet');
+  const retained = planState.isRefreshBlocked || planState.refreshError != null || inputsChanged;
 
   // Stable input bag for the opt-in AI agent — grouped + memoized so the
   // memoized feature card doesn't re-render on unrelated state changes.
@@ -182,19 +202,19 @@ export default function TripPlannerPage() {
       occurrenceId: 'totalTime', metricId: 'duration',
       label: t('tripPlanner.stats.totalTime', 'Total Time'),
       rawValue: route?.total_duration_s,
-      display: { formatter: (raw) => ({ value: raw < 0 ? '' : formatDuration(raw / 60), unit: '' }) },
+      display: { durationStyle: 'roundedMinutes', formatter: (raw) => ({ value: formatDuration(raw / 60), unit: '' }) },
     },
     {
       occurrenceId: 'drivingTime', metricId: 'duration',
       label: t('tripPlanner.stats.drivingTime', 'Driving'),
       rawValue: route?.driving_duration_s,
-      display: { formatter: (raw) => ({ value: raw < 0 ? '' : formatDuration(raw / 60), unit: '' }) },
+      display: { durationStyle: 'roundedMinutes', formatter: (raw) => ({ value: formatDuration(raw / 60), unit: '' }) },
     },
     {
       occurrenceId: 'chargingTime', metricId: 'duration',
       label: t('tripPlanner.stats.chargingTime', 'Charging'),
       rawValue: route?.charging_duration_s,
-      display: { formatter: (raw) => ({ value: raw < 0 ? '' : raw > 0 ? formatDuration(raw / 60) : PLACEHOLDER, unit: '' }) },
+      display: { durationStyle: 'roundedMinutes', formatter: (raw) => ({ value: formatDuration(raw / 60), unit: '' }) },
     },
     {
       occurrenceId: 'energy', metricId: 'energy',
@@ -206,7 +226,7 @@ export default function TripPlannerPage() {
       occurrenceId: 'cost', metricId: 'currency',
       label: t('tripPlanner.stats.cost', 'Est. Cost'),
       rawValue: route?.estimated_cost,
-      display: { formatter: (raw) => ({ value: raw > 0 ? formatCurrency(raw) : t('common.free', 'Free'), unit: '' }) },
+      display: { formatter: (raw) => ({ value: raw === 0 ? t('common.free', 'Free') : formatCurrency(raw), unit: '' }) },
     },
   ];
 
@@ -278,10 +298,13 @@ export default function TripPlannerPage() {
                 wrapLabel
                 onClick={handlePlan}
                 disabled={!canPlan || planMutation.isPending}
+                aria-describedby={!canPlan ? 'trip-plan-prerequisites' : undefined}
                 className="min-h-11 gap-2"
               >
                 <Route className="h-4 w-4" aria-hidden="true" />
-                {planMutation.isPending
+                {planMutation.isPaused
+                  ? t('dataSources.status.paused', 'Refresh paused')
+                  : planning
                   ? t('tripPlanner.form.planning', 'Planning...')
                   : t('tripPlanner.form.planTrip', 'Plan Trip')}
               </Button>
@@ -310,6 +333,16 @@ export default function TripPlannerPage() {
               )}
             </div>
 
+            {!canPlan && (
+              <Text as="p" variant="bodySm" role="status" id="trip-plan-prerequisites" className="mt-4">
+                {[
+                  !activeVehicle ? t('dynamics.selectVehicle', 'Select vehicle') : null,
+                  !origin ? t('tripPlanner.form.origin', 'Enter starting location...') : null,
+                  !destination ? t('tripPlanner.form.destination', 'Enter destination...') : null,
+                ].filter(Boolean).join(' ')}
+              </Text>
+            )}
+
             {planState.fatalError && (
               <AlertBanner variant="danger" className="mt-4">
                 {t('tripPlanner.form.error', 'Failed to compute trip plan. Please try again.')}
@@ -333,7 +366,18 @@ export default function TripPlannerPage() {
         </section>
       </FadeIn>
 
-      <StaleRefreshWarning state={planState} label={t('tripPlanner.title', 'Trip Planner')} />
+      <StaleRefreshWarning state={planState} label={t('tripPlanner.title', 'Trip Planner')} hideRetry />
+      {planMutation.isPaused && !plan && (
+        <Text as="p" variant="bodySm" role="status">
+          {t('dataSources.status.paused', 'Refresh paused')}
+        </Text>
+      )}
+      {inputsChanged && (
+        <Text as="p" variant="bodySm" role="status" data-testid="trip-inputs-changed">
+          {t('forms.unsavedTitle', 'Unsaved changes')}.{' '}
+          {t('tripPlanner.brief.provenance', 'Deterministic trip-plan response using the submitted route, battery level, and preferences.')}
+        </Text>
+      )}
 
       {/* Row 2 — KPI band: always rendered, placeholders until a plan exists */}
       <FadeIn delay={0.1}>
@@ -344,10 +388,17 @@ export default function TripPlannerPage() {
           metrics={kpis}
           scope={planScope}
           provenance={t('tripPlanner.brief.provenance', 'Deterministic trip-plan response using the submitted route, battery level, and preferences.')}
-          loading={planMutation.isPending && !route}
+          loading={planning && !plan}
           unavailable={!route}
-          retained={planState.isRefreshBlocked}
-          freshness={planMutation.isPending && route
+          retained={retained}
+          sourceStatus={planState.refreshError != null
+            ? t('dataSources.status.refreshFailed', 'Cached · refresh failed')
+            : planState.fatalError != null
+              ? t('dataSources.status.failed', 'Failed')
+              : planMutation.isPaused
+                ? t('dataSources.status.paused', 'Refresh paused')
+                : undefined}
+          freshness={planning && plan
             ? t('tripPlanner.brief.refreshing', 'Recomputing; showing the last computed plan') : undefined}
         />
       </FadeIn>
@@ -434,7 +485,7 @@ export default function TripPlannerPage() {
                         {t('tripPlanner.weather.title', 'Weather Impact')}
                       </Text>
                       <Text as="p" variant="bodySm" className="mt-0.5">{weather.note}</Text>
-                      {weather.avg_temp_c != null && (
+                      {hasTemperatureEvidence && (
                         <Caption className="mt-1 block">
                           {t('tripPlanner.weather.factor', 'Efficiency factor: {{factor}}×', {
                             factor: fmtNumber(weather.efficiency_factor),
@@ -445,9 +496,16 @@ export default function TripPlannerPage() {
                   </div>
                 ) : (
                   <Caption className="block">
-                    {weather
+                    {hasTemperatureEvidence
                       ? t('tripPlanner.insights.noWeather', 'No significant weather impact expected.')
                       : t('tripPlanner.insights.weatherUnavailable', 'Weather impact is unavailable for this plan.')}
+                  </Caption>
+                )}
+                {weather && (
+                  <Caption className="block">
+                    {hasTemperatureEvidence
+                      ? t('tripPlanner.weather.historicalEvidence', 'The temperature model uses historical temperature, not a departure forecast.')
+                      : t('tripPlanner.weather.missingEvidence', 'Temperature evidence is unavailable; the model factor does not establish departure weather conditions.')}
                   </Caption>
                 )}
               </div>
@@ -462,7 +520,7 @@ export default function TripPlannerPage() {
           <TripCopilotCard currentSoc={currentSOC} minArrivalSoc={minArrivalSOC} />
           <TripCostBrief comparison={plan?.cost_comparison}
             scope={planScope}
-            loading={planMutation.isPending && !plan?.cost_comparison} retained={planState.isRefreshBlocked} />
+            loading={planning && !plan} retained={retained} />
         </section>
       </FadeIn>
 

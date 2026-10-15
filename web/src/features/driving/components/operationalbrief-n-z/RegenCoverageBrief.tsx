@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import type { StatMetric } from '@/components/data-display/stat-reference';
+import type { StatMetric } from '@/components/data-display';
 import { AlertBanner, QueryError } from '@/components/feedback';
 import { Badge, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';

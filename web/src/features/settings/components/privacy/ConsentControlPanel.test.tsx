@@ -280,6 +280,21 @@ describe('ConsentControlPanel — action buttons & disabled logic', () => {
 })
 
 describe('ConsentControlPanel — a11y & form-safety hardening', () => {
+  it('gives every action a mobile touch target and wrapping label while restoring desktop sizing', () => {
+    renderPanel({ consent: 'accepted', isError: true })
+
+    for (const button of [acceptBtn(), declineBtn(), resetBtn()]) {
+      expect(button).toHaveClass('h-auto', 'min-h-11', 'md:min-h-10', 'whitespace-normal', 'max-w-full')
+      expect(button.querySelector('span')).toHaveClass('min-w-0', 'break-words')
+      expect(button).not.toHaveClass('h-10')
+    }
+
+    const retry = screen.getByRole('button', { name: /Retry/i })
+    expect(retry).toHaveClass('h-auto', 'min-h-11', 'md:min-h-9', 'whitespace-normal', 'max-w-full')
+    expect(within(retry).getByText('Retry')).toHaveClass('min-w-0', 'break-words')
+    expect(retry).not.toHaveClass('h-9')
+  })
+
   it('marks every control as type="button" so it can never submit a form', () => {
     renderPanel({ isError: true, withRetry: true })
     expect(acceptBtn()).toHaveAttribute('type', 'button')

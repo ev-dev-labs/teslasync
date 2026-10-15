@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -118,15 +118,18 @@ vi.mock('@/components/layout', async () => {
   PageLayout: ({
     title,
     actions,
+    overflowActions,
     children,
   }: {
     title: string;
     actions?: ReactNode;
+    overflowActions?: ReactNode;
     children: ReactNode;
   }) => (
     <main>
       <h1>{title}</h1>
       {actions}
+      {overflowActions}
       {children}
     </main>
   ),
@@ -283,6 +286,102 @@ beforeEach(() => {
 });
 
 describe('ShareCardPage persistent composition', () => {
+  it('copies safe effective workspace scope instead of stale or unrelated URL parameters', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+    const { rerenderPage } = renderPage('/share-card?from=2015-01-01&to=2026-08-02&vehicle_id=999&vin=private-vin&token=secret&theme=custom#private');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy link to this view' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+    const copied = new URL(writeText.mock.calls[0][0] as string);
+    expect(copied.origin).toBe(window.location.origin);
+    expect(copied.pathname).toBe('/share-card');
+    expect(Object.fromEntries(copied.searchParams)).toEqual({
+      from: '2015-01-01',
+      to: '2026-08-02',
+      time_scope: 'custom',
+      vehicle_id: '7',
+    });
+    expect(copied.hash).toBe('');
+    expect(screen.getByTestId('share-card-preview-export')).toBeInTheDocument();
+    expect(h.drivesHook).toHaveBeenLastCalledWith('7', {
+      start: '2015-01-01T08:00:00.000Z',
+      end: '2026-08-03T07:00:00.000Z',
+      limit: 1_000,
+    });
+    h.vehicleId = 8;
+    rerenderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Copy link to this view' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(2));
+    expect(new URL(writeText.mock.calls[1][0] as string).searchParams.get('vehicle_id')).toBe('8');
+  });
+
+  it('copies an inherited custom range that is absent from the current URL', async () => {
+    window.localStorage.setItem('teslasync.date-range.v2', JSON.stringify({
+      version: 2,
+      start: '2026-07-11',
+      end: '2026-07-15',
+    }));
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+    const { unmount } = renderPage('/share-card');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy link to this view' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+    const copied = new URL(writeText.mock.calls[0][0] as string);
+    expect(Object.fromEntries(copied.searchParams)).toEqual({
+      from: '2026-07-11',
+      to: '2026-07-15',
+      time_scope: 'custom',
+      vehicle_id: '7',
+    });
+    const originalOptions = h.drivesHook.mock.calls.at(-1)?.[1];
+    unmount();
+    window.localStorage.clear();
+    renderPage(`${copied.pathname}${copied.search}`);
+    expect(h.drivesHook).toHaveBeenLastCalledWith('7', originalOptions);
+  });
+
+  it('includes inherited rolling range semantics when the URL has no workspace scope', async () => {
+    window.localStorage.setItem('teslasync.date-range.v2', JSON.stringify({
+      version: 2,
+      start: '2026-08-01',
+      end: '2026-08-02',
+      presetId: '24h',
+    }));
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+    renderPage('/share-card');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy link to this view' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+    const copied = new URL(writeText.mock.calls[0][0] as string);
+    expect(copied.searchParams.get('vehicle_id')).toBe('7');
+    expect(copied.searchParams.get('time_scope')).toBe('24h');
+    expect(copied.searchParams.get('from')).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(copied.searchParams.get('to')).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    const options = h.drivesHook.mock.calls.at(-1)?.[1] as { start: string; end: string };
+    expect(Date.parse(options.end) - Date.parse(options.start)).toBe(24 * 60 * 60 * 1_000);
+  });
+
+  it('does not copy an unresolved vehicle scope that could inherit a different vehicle on arrival', () => {
+    h.vehicleId = null;
+    renderPage();
+    expect(screen.getByRole('button', { name: 'Copy link to this view' })).toBeDisabled();
+    for (const id of SECTION_IDS) {
+      expect(screen.getByTestId(id)).toBeInTheDocument();
+    }
+  });
+
   it('renders both genuine summary bands through real briefs and preserves their drawer evidence', () => {
     renderPage();
     const ledger = screen.getByTestId('share-card-evidence-ledger');

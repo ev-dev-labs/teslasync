@@ -44,6 +44,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -57,6 +58,11 @@ const h = vi.hoisted(() => ({
   recordsQuery: undefined as unknown,
   unit: { distance: 'km' as 'km' | 'mi' },
   selected: { vehicleId: 7 as number | null },
+  dates: {
+    locale: 'en-US',
+    tz_display_default: 'utc',
+    timezone_user: null as string | null,
+  },
 }));
 
 const benignQuery = {
@@ -169,12 +175,10 @@ vi.mock('@/hooks/useFormatting', () => ({
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: () => ({
     settings: {
-      locale: 'en-US',
-      tz_display_default: 'utc',
-      timezone_user: null,
+      ...h.dates,
       decimal_precision: 2,
     },
-    locale: 'en-US',
+    locale: h.dates.locale,
     isMiles: false,
     isFahrenheit: false,
     isPSI: false,
@@ -304,13 +308,13 @@ function makeQuery(overrides: Partial<QueryStub> = {}): QueryStub {
   };
 }
 
-function renderPage() {
+function renderPage(path = '/maintenance') {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={['/maintenance']}>
+      <MemoryRouter initialEntries={[path]}>
         <MaintenancePage />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -322,6 +326,9 @@ beforeEach(() => {
   idSeq = 0;
   h.unit.distance = 'km';
   h.selected.vehicleId = 7;
+  h.dates.locale = 'en-US';
+  h.dates.tz_display_default = 'utc';
+  h.dates.timezone_user = null;
   h.itemsQuery = makeQuery({ data: [] });
   h.recordsQuery = makeQuery({ data: [] });
 });
@@ -331,6 +338,136 @@ afterEach(() => {
 });
 
 describe('MaintenancePage', () => {
+  it('uses saved locale and timezone consistently across dates and evidence day links', async () => {
+    h.dates.locale = 'de-DE';
+    h.dates.tz_display_default = 'user';
+    h.dates.timezone_user = 'America/Los_Angeles';
+    const instant = '2024-03-01T01:30:00Z';
+    h.itemsQuery = makeQuery({ data: [makeItem({
+      name: 'Boundary service', due_date: instant, last_service_date: instant,
+      created_at: instant, interval_miles: 10000, last_service_mileage: 0,
+    })] });
+    h.recordsQuery = makeQuery({ data: [makeRecord({
+      description: 'Boundary record', date: instant, created_at: instant,
+    })] });
+    renderPage('/maintenance?from=2026-01-01&to=2026-01-31');
+    const expectedDate = new Date(instant).toLocaleDateString('de-DE', {
+      timeZone: 'America/Los_Angeles', year: 'numeric', month: 'short', day: 'numeric',
+    });
+    const expectedTime = new Date(instant).toLocaleString('de-DE', {
+      timeZone: 'America/Los_Angeles', year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+    expect(screen.getAllByText(`Due: ${expectedDate}`).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(expectedDate).length).toBeGreaterThan(0);
+    expect(screen.getByText(expectedTime)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Inspect service record' }));
+    const drawer = within(screen.getByRole('dialog', { name: 'Boundary record' }));
+    expect(drawer.getAllByText(expectedTime)).toHaveLength(2);
+    const href = drawer.getByRole('link', { name: 'Drive history' }).getAttribute('href');
+    expect(href).toContain('from=2024-02-29');
+    expect(href).toContain('to=2024-02-29');
+    expect(href).not.toContain('2026');
+  });
+
+  it('preserves date-only business days in a non-default timezone', async () => {
+    h.dates.locale = 'fr-FR';
+    h.dates.tz_display_default = 'user';
+    h.dates.timezone_user = 'America/Los_Angeles';
+    h.itemsQuery = makeQuery({ data: [makeItem({
+      due_date: '2024-03-01', last_service_date: '2024-03-01',
+      interval_miles: 10000, last_service_mileage: 0,
+    })] });
+    h.recordsQuery = makeQuery({ data: [makeRecord({ date: '2024-03-01' })] });
+    renderPage();
+    const label = new Date('2024-03-01T12:00:00Z').toLocaleDateString('fr-FR', {
+      timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric',
+    });
+    expect(screen.getAllByText(`Due: ${label}`).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(label).length).toBeGreaterThan(0);
+    await userEvent.click(screen.getByRole('button', { name: 'Inspect service record' }));
+    const drawer = within(screen.getByRole('dialog', { name: 'Service record' }));
+    expect(drawer.getByText(label)).toBeInTheDocument();
+    expect(drawer.getByRole('link', { name: 'Drive history' })).toHaveAttribute(
+      'href', expect.stringContaining('from=2024-03-01'),
+    );
+  });
+
+  it.each(['not-a-date', '', '2024-02-30'])('handles invalid or missing business dates: %s', async date => {
+    h.itemsQuery = makeQuery({ data: [makeItem({
+      due_date: date || null, last_service_date: date || null, created_at: 'not-a-date',
+      interval_miles: 10000, last_service_mileage: 0,
+    })] });
+    h.recordsQuery = makeQuery({ data: [makeRecord({ date, created_at: '' })] });
+    renderPage();
+    expect(screen.queryByText(/Invalid Date|NaN/)).not.toBeInTheDocument();
+    const item = document.querySelector<HTMLElement>('[data-maintenance-item]');
+    expect(item).not.toBeNull();
+    if (item) {
+      await userEvent.click(within(item).getByRole('button', {
+        name: 'Service interval and metadata',
+      }));
+      expect(within(item).getAllByText('—').length).toBeGreaterThan(0);
+    }
+    await userEvent.click(screen.getByRole('button', { name: 'Inspect service record' }));
+    const drawer = within(screen.getByRole('dialog', { name: 'Service record' }));
+    expect(drawer.getAllByText('—')).toHaveLength(2);
+    const href = drawer.getByRole('link', { name: 'Drive history' }).getAttribute('href');
+    expect(href).not.toContain('from=');
+    expect(href).not.toContain('to=');
+  });
+
+  it('keeps mobile action minimums responsive and lets the schedule label wrap', () => {
+    h.recordsQuery = makeQuery({ data: [makeRecord()] });
+    renderPage();
+
+    const refresh = screen.getByRole('button', { name: 'Refresh maintenance data' });
+    const schedule = screen.getByRole('button', { name: 'Schedule' });
+    const inspect = screen.getByRole('button', { name: 'Inspect service record' });
+    for (const action of [refresh, schedule, inspect]) {
+      expect(action).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9');
+    }
+    expect(inspect).toHaveClass('md:min-w-9');
+    expect(inspect).not.toHaveClass('h-11', 'w-11');
+    expect(schedule).toHaveClass('h-auto', 'max-w-full', 'whitespace-normal');
+    expect(schedule.querySelector('span.break-words')).toHaveTextContent('Schedule');
+  });
+
+  it('supports keyboard refresh and record inspection without losing record fields', async () => {
+    const user = userEvent.setup();
+    const itemsRefetch = vi.fn();
+    const recordsRefetch = vi.fn();
+    h.itemsQuery = makeQuery({ refetch: itemsRefetch });
+    h.recordsQuery = makeQuery({
+      refetch: recordsRefetch,
+      data: [makeRecord({
+        id: 11, description: 'Annual inspection', provider: 'Tesla Service Center',
+        mileage: 30000, cost: 120, notes: 'Brake wear documented',
+      })],
+    });
+    renderPage();
+
+    screen.getByRole('button', { name: 'Refresh maintenance data' }).focus();
+    await user.keyboard('{Enter}');
+    expect(itemsRefetch).toHaveBeenCalledTimes(1);
+    expect(recordsRefetch).toHaveBeenCalledTimes(1);
+
+    const inspect = screen.getByRole('button', { name: 'Inspect service record' });
+    inspect.focus();
+    await user.keyboard(' ');
+    const drawer = screen.getByRole('dialog', { name: 'Annual inspection' });
+    for (const label of ['Date', 'Mileage', 'Cost', 'Provider', 'Record ID', 'Vehicle', 'Created']) {
+      expect(within(drawer).getAllByText(label).length).toBeGreaterThan(0);
+    }
+    expect(within(drawer).getByText('Brake wear documented')).toBeInTheDocument();
+    expect(within(drawer).getByText('Tesla Service Center')).toBeInTheDocument();
+    expect(within(drawer).getByText('30 km')).toBeInTheDocument();
+    expect(within(drawer).getByText('$120.00')).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: 'Annual inspection' })).not.toBeInTheDocument();
+    expect(inspect).toHaveFocus();
+  });
+
   it('renders every panel with deterministic values when data is ready', () => {
     const items: MItem[] = [
       makeItem({

@@ -12,7 +12,7 @@ import { KVList } from '@/components/data-display';
 import { LayoutCard, SourceContent } from '@/components/layout';
 import { EmptyState, ErrorDisplay, ListSkeleton } from '@/components/feedback';
 import { isApiError } from '@/lib/resilience';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { safeArray } from '@/lib/safeArray';
 
 const ITEM_LABEL_KEYS = {
@@ -65,6 +65,7 @@ function statusVariant(status: ChecklistStatus) {
  * button, not an error.
  */
 export function ChecklistPanel({ session }: { session: JourneySession }) {
+  const { formatDateTime } = useDateFormat();
   const { t } = useTranslation();
 
   const runQuery = useChecklist(session.id);

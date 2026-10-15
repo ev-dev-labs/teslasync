@@ -53,6 +53,19 @@ export default function TwinLabPage() {
       itemIndex === index ? { ...scenario, ...patch } : scenario));
   };
 
+  const addScenario = () => {
+    setScenarios((current) => {
+      const names = new Set(current.map((scenario) => scenario.name));
+      let number = current.length + 1;
+      let name = t('advancedIntelligence.twin.form.scenario', 'Scenario {{number}}', { number });
+      while (names.has(name)) {
+        number += 1;
+        name = t('advancedIntelligence.twin.form.scenario', 'Scenario {{number}}', { number });
+      }
+      return [...current, createScenario(current.length, name)];
+    });
+  };
+
   const submit = (event: FormEvent) => {
     event.preventDefault();
     if (vehicleId == null || publication.pending) return;
@@ -81,13 +94,16 @@ export default function TwinLabPage() {
   ];
   const chartData = useMemo(() => (result?.scenarios ?? []).map((scenario) => ({
     name: scenario.name,
-    low: scenario.range_low_m == null
+    low: scenario.range_low_m == null || !Number.isFinite(scenario.range_low_m)
       ? null : convertDistanceFromSI(scenario.range_low_m, units.unitPrefs.distance),
-    estimate: scenario.range_delta_m == null
+    estimate: scenario.range_delta_m == null || !Number.isFinite(scenario.range_delta_m)
       ? null : convertDistanceFromSI(scenario.range_delta_m, units.unitPrefs.distance),
-    high: scenario.range_high_m == null
+    high: scenario.range_high_m == null || !Number.isFinite(scenario.range_high_m)
       ? null : convertDistanceFromSI(scenario.range_high_m, units.unitPrefs.distance),
   })), [result, units.unitPrefs.distance]);
+  const supportedScenarioCount = chartData.filter((scenario) =>
+    [scenario.low, scenario.estimate, scenario.high].some((value) =>
+      value != null && Number.isFinite(value))).length;
 
   return (
     <PageLayout
@@ -121,15 +137,7 @@ export default function TwinLabPage() {
             disabled={vehicleId == null}
             onUpdate={updateScenario}
             onRemove={(index) => setScenarios((current) => current.filter((_, i) => i !== index))}
-            onAdd={() => setScenarios((current) => [
-              ...current,
-              createScenario(
-                current.length,
-                t('advancedIntelligence.twin.form.scenario', 'Scenario {{number}}', {
-                  number: current.length + 1,
-                }),
-              ),
-            ])}
+            onAdd={addScenario}
             onSubmit={submit}
           />
           <MutationError error={publication.error} />
@@ -174,7 +182,7 @@ export default function TwinLabPage() {
             'advancedIntelligence.twin.uncertainty.aria',
             'Comparison of modeled range uncertainty across twin scenarios',
           )}
-          empty={chartData.length < 2}
+          empty={supportedScenarioCount < 2}
           loading={publication.pending && !result && !paused}
           error={sourceState.fatalError}
           emptyMessage={paused && !result
@@ -190,12 +198,12 @@ export default function TwinLabPage() {
           data={chartData}
           dataColumns={[
             { key: 'name', label: t('advancedIntelligence.twin.form.name', 'Scenario name') },
-            { key: 'low', label: t('advancedIntelligence.twin.uncertainty.low', 'Low') },
-            { key: 'estimate', label: t('advancedIntelligence.twin.uncertainty.estimate', 'Estimate') },
-            { key: 'high', label: t('advancedIntelligence.twin.uncertainty.high', 'High') },
+            { key: 'low', label: t('advancedIntelligence.twin.uncertainty.low', 'Low'), kind: 'measurement' },
+            { key: 'estimate', label: t('advancedIntelligence.twin.uncertainty.estimate', 'Estimate'), kind: 'measurement' },
+            { key: 'high', label: t('advancedIntelligence.twin.uncertainty.high', 'High'), kind: 'measurement' },
           ]}
         >
-          {chartData.length >= 2 ? (
+          {supportedScenarioCount >= 2 ? (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
                 {chartGrid}
@@ -228,14 +236,16 @@ export default function TwinLabPage() {
             {(result?.scenarios ?? []).map((scenario, scenarioIndex) => (
               <article key={scenarioIndex} className="min-w-0 rounded-panel border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
                 <Text as="h3" variant="label" className="break-words">{scenario.name}</Text>
-                {(scenario.sensitivity_drivers ?? []).length > 0 ? (scenario.sensitivity_drivers ?? []).map((driver, driverIndex) => (
+                {(scenario.sensitivity_drivers ?? []).map((driver, driverIndex) => (
                   <div key={driverIndex} className="mt-2 flex min-w-0 flex-wrap justify-between gap-x-3 gap-y-1">
                     <Text as="span" variant="bodySm" color="secondary" className="min-w-0 break-words">{driver.driver}</Text>
                     <Text as="span" variant="bodySm" className="tabular-nums">
                       {driver.effect_pct == null || !Number.isFinite(driver.effect_pct) ? '—' : `${fmtNumber(driver.effect_pct)}%`}
                     </Text>
                   </div>
-                )) : <Text as="p" variant="bodySm" color="secondary" className="mt-2">
+                ))}
+                {!(scenario.sensitivity_drivers ?? []).some((driver) =>
+                  driver.effect_pct != null && Number.isFinite(driver.effect_pct)) && <Text as="p" variant="bodySm" color="secondary" className="mt-2">
                   {t('advancedIntelligence.panel.empty', 'No supported data is available.')}
                 </Text>}
               </article>

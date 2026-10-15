@@ -176,10 +176,10 @@ describe('<TimelineScrubber> — markers', () => {
     render(<TimelineScrubber progress={0} duration={120} markers={markers} onSeek={vi.fn()} />);
     expect(
       screen.getByRole('button', { name: 'Trip start at 10%' }).className,
-    ).toContain('bg-emerald-400');
+    ).toContain('bg-[var(--semantic-success)]');
     expect(
       screen.getByRole('button', { name: 'Low battery at 90%' }).className,
-    ).toContain('bg-rose-300');
+    ).toContain('bg-[var(--semantic-danger)]');
     // count > 1 surfaces a numeric badge.
     expect(screen.getByText('3')).toBeInTheDocument();
   });
@@ -206,6 +206,38 @@ describe('<TimelineScrubber> — markers', () => {
 });
 
 describe('<TimelineScrubber> — pointer interaction', () => {
+  it('extends the mobile track hit area without widening ticks or changing temporal positions', () => {
+    const { container } = render(
+      <TimelineScrubber progress={0.5} duration={120} onSeek={vi.fn()}
+        markers={[{ at: 0, kind: 'start' }, { at: 0.5, kind: 'event' }, { at: 1, kind: 'stop' }]} />,
+    );
+    expect(getTrack()).toHaveClass('touch-target', 'h-8', 'w-full', 'md:min-h-0', 'md:min-w-0');
+    expect(getTrack()).toHaveClass('focus-visible:outline-2', 'focus-visible:outline-offset-2');
+    expect(Array.from(container.querySelectorAll<HTMLElement>('[data-timeline-marker-position]'))
+      .map((marker) => marker.style.left)).toEqual(['0%', '50%', '100%']);
+    for (const marker of screen.getAllByRole('button')) {
+      expect(marker).toHaveClass('touch-target-overlay', 'h-3', 'w-1');
+      expect(marker).toHaveClass('focus-visible:outline-[var(--focus-ring)]');
+      expect(marker).not.toHaveClass('focus:outline-none', 'focus:ring-white/40');
+    }
+    expect(container.querySelector('[data-timeline-playhead]')).toHaveStyle({ left: '50%' });
+  });
+
+  it.each([375, 1440])('preserves exact seek geometry at a %ipx viewport', (viewportWidth) => {
+    const width = viewportWidth - 48;
+    const restore = stubTrackRect(width, 24);
+    try {
+      const onSeek = vi.fn();
+      render(<TimelineScrubber progress={0.5} duration={120} onSeek={onSeek} />);
+      for (const position of [0, 0.25, 0.5, 0.75, 1]) {
+        fireEvent.click(getTrack(), { clientX: 24 + width * position });
+        expect(onSeek).toHaveBeenLastCalledWith(position);
+      }
+    } finally {
+      restore();
+    }
+  });
+
   it('seeks to the pressed position and swallows the redundant trailing click', () => {
     const restore = stubTrackRect();
     try {

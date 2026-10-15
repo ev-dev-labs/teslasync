@@ -31,11 +31,11 @@ export function MonthlyColdStartChart({ months, state, className }: MonthlyColdS
         month: formatMonth(month.month),
         cold:
           month.cold.whPerKm != null
-            ? Math.round(convertEfficiency(month.cold.whPerKm) * 10) / 10
+            ? convertEfficiency(month.cold.whPerKm)
             : null,
         warm:
           month.warm.whPerKm != null
-            ? Math.round(convertEfficiency(month.warm.whPerKm) * 10) / 10
+            ? convertEfficiency(month.warm.whPerKm)
             : null,
         coldSamples: month.cold.drives,
         warmSamples: month.warm.drives,

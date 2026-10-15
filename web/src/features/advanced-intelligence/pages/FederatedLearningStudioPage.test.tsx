@@ -2,7 +2,8 @@ import type { ReactNode } from 'react';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import type { DataStateSource } from '@/api/dataState';
 import type {
   FederatedModelCard, FederatedRoundResult, FederatedStatusPage, StartFederatedRoundRequest,
@@ -22,6 +23,8 @@ const state = vi.hoisted(() => ({
     isPending: false,
   },
 }));
+
+let savedPreferences = getFormatterPreferences();
 
 vi.mock('@/api/hooks/useAdvancedIntelligence', () => ({
   useFederatedModelCards: (...args: unknown[]) => {
@@ -101,6 +104,9 @@ function review(name = 'reviewed-local-model') {
 }
 
 beforeEach(() => {
+  savedPreferences = getFormatterPreferences();
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
   vi.clearAllMocks();
   state.vehicleId = 7;
   state.query = { fetchStatus: 'idle', refetch: state.retry };
@@ -108,7 +114,89 @@ beforeEach(() => {
   window.localStorage.clear();
 });
 
+afterEach(() => {
+  setGlobalLocale(savedPreferences.locale);
+  setGlobalPrecision(savedPreferences.precision);
+});
+
 describe('Federated learning studio scoped adoption', () => {
+  it.each([
+    { epsilon: 0.01, precision: 0, locale: 'en-US', displayed: '0.01' },
+    { epsilon: 0.1, precision: 1, locale: 'de-DE', displayed: '0,10' },
+    { epsilon: 1.25, precision: 0, locale: 'de-DE', displayed: '1,25' },
+    { epsilon: 5, precision: 3, locale: 'en-US', displayed: '5.000' },
+  ])('formats a valid $epsilon privacy spend at precision $precision without changing consent or payload', ({
+    epsilon, precision, locale, displayed,
+  }) => {
+    setGlobalPrecision(precision);
+    setGlobalLocale(locale);
+    renderPage();
+    fireEvent.change(screen.getByLabelText(/^Requested epsilon/), { target: { value: String(epsilon) } });
+    const budget = Math.max(2, epsilon);
+    fireEvent.change(screen.getByLabelText(/^Epsilon budget/), { target: { value: String(budget) } });
+    const dialog = review();
+    expect(screen.getByLabelText<HTMLInputElement>(/^Requested epsilon/).form?.checkValidity()).toBe(true);
+    expect(within(dialog).getByText(
+      `This local round may spend ${displayed} epsilon. It never uploads raw vehicle data.`,
+    )).toBeInTheDocument();
+    expect(state.mutation.mutate).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText(/^Requested epsilon/), { target: { value: '0.7' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Start local round' }));
+    expect(state.mutation.mutate).toHaveBeenCalledExactlyOnceWith({
+      vehicle_id: 7, model_name: 'reviewed-local-model', model_version: 'v1',
+      task: 'efficiency', epsilon, epsilon_budget: budget, expected_version: 0, confirmed: true,
+    }, { onSuccess: expect.any(Function) });
+  });
+
+  it('sizes only the round fields for mobile while retaining desktop sizing and native validation', () => {
+    renderPage();
+    const labels = [
+      /^Model name/, /^Model version/, /^Task/, /^Requested epsilon/,
+      /^Epsilon budget/, /^Expected model-card version/,
+    ];
+    labels.forEach(label => {
+      expect(screen.getByLabelText(label)).toHaveClass('min-h-11', 'md:min-h-10');
+    });
+    expect(screen.getByLabelText(/^Model name/)).toHaveAttribute('required');
+    expect(screen.getByLabelText(/^Model name/)).toHaveAttribute('maxlength', '120');
+    expect(screen.getByLabelText(/^Model version/)).toHaveAttribute('required');
+    expect(screen.getByLabelText(/^Requested epsilon/)).toHaveAttribute('min', '0.01');
+    expect(screen.getByLabelText(/^Requested epsilon/)).toHaveAttribute('max', '5');
+    expect(screen.getByLabelText(/^Requested epsilon/)).toHaveAttribute('step', '0.01');
+    expect(screen.getByLabelText(/^Epsilon budget/)).toHaveAttribute('min', '0.1');
+    expect(screen.getByLabelText(/^Epsilon budget/)).toHaveAttribute('max', '20');
+    expect(screen.getByLabelText(/^Expected model-card version/)).toHaveAttribute('min', '0');
+    const name = screen.getByLabelText<HTMLInputElement>(/^Model name/);
+    expect(name.form?.checkValidity()).toBe(false);
+    fireEvent.change(name, { target: { value: 'valid-local-model' } });
+    expect(name.form?.checkValidity()).toBe(true);
+    fireEvent.change(screen.getByLabelText(/^Requested epsilon/), { target: { value: '6' } });
+    expect(name.form?.checkValidity()).toBe(false);
+    expect(state.mutation.mutate).not.toHaveBeenCalled();
+  });
+
+  it('preserves successful empty model cards and zero privacy budgets through retry and recovery', () => {
+    populate([]);
+    Object.assign(state.query.data!, { total_epsilon_budget: 0, total_epsilon_spent: 0 });
+    state.query.isSuccess = true;
+    const view = renderPage();
+    const brief = screen.getByTestId('advanced-intelligence-federated-brief');
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(3);
+    expect(within(brief).getAllByText('0.00')).toHaveLength(3);
+    expect(screen.getByText('No local model cards exist for this vehicle and subject.')).toBeInTheDocument();
+    state.query.error = new Error('Zero-budget refresh failed.');
+    view.update();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(state.retry).toHaveBeenCalledOnce();
+    expect(within(brief).getAllByText('0.00')).toHaveLength(3);
+    state.query.error = null;
+    view.update();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Retained result')).not.toBeInTheDocument();
+    expect(within(brief).getAllByText('0.00')).toHaveLength(3);
+    expect(state.mutation.mutate).not.toHaveBeenCalled();
+  });
+
   it('preserves all model metadata, raw SI, zero and unknown readings with contextual calm cards', () => {
     const unknown: FederatedModelCard = {
       ...card, id: 18, model_name: 'unbroken-model-name-'.repeat(6),

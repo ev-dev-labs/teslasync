@@ -25,12 +25,20 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { type ComponentProps } from 'react';
 
 import { AutomationListTable } from './AutomationListTable';
 import type { Automation } from '@/api/types';
+import { deriveDataState } from '@/api/dataState';
+import { downloadJSON } from '@/lib/csvExport';
+
+vi.mock('@/lib/csvExport', async () => ({
+  ...await vi.importActual<typeof import('@/lib/csvExport')>('@/lib/csvExport'),
+  downloadJSON: vi.fn(),
+}));
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
@@ -151,6 +159,31 @@ const nameOrder = () => screen.getAllByRole('link').map((a) => a.textContent);
 
 beforeEach(() => {
   window.localStorage.clear();
+});
+
+describe('AutomationListTable — source state', () => {
+  it('explains and retries a paused initial source without showing loading or successful empty', () => {
+    const retry = vi.fn();
+    renderTable({
+      automations: [], totalCount: 0, isLoading: true,
+      dataState: deriveDataState({ fetchStatus: 'paused', refetch: retry }),
+    });
+    expect(screen.getByRole('heading', { name: 'All automations' })).toBeInTheDocument();
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.queryByText('No automations yet')).not.toBeInTheDocument();
+    expect(screen.queryByText('Loading automations…')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Automations' }));
+    expect(retry).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps retained rows during a refresh failure or active refresh', () => {
+    renderTable({
+      isLoading: true, error: new Error('Refresh failed'),
+      dataState: deriveDataState({ data: [alpha, bravo, charlie], error: new Error('Refresh failed'), isFetching: true }),
+    });
+    expect(screen.getByRole('link', { name: 'Alpha' })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
 });
 
 describe('AutomationListTable — shared loaded-value filters', () => {
@@ -305,6 +338,17 @@ describe('AutomationListTable — controlled sorting', () => {
 
 // ── Selection ───────────────────────────────────────────────────────────────
 describe('AutomationListTable — controlled selection', () => {
+  it('select-all adds matching loaded rows without discarding selections hidden by value filters', () => {
+    const { onSelectionChange } = renderTable({ selectedKeys: [2] });
+    fireEvent.click(screen.getByRole('button', { name: 'Runs filter' }));
+    const dialog = screen.getByRole('dialog', { name: 'Runs filter' });
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: '100' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
+    expect(nameOrder()).toEqual(['Alpha', 'Charlie']);
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all rows' }));
+    expect(onSelectionChange).toHaveBeenCalledWith([2, 1, 3]);
+  });
+
   it('emits the row key when an unselected row checkbox is toggled', () => {
     const { onSelectionChange } = renderTable();
     // Each checkbox is named after its automation (A11Y): "Select Alpha",
@@ -378,13 +422,66 @@ describe('AutomationListTable — render states', () => {
 
 // ── Null-safety & accessibility ─────────────────────────────────────────────
 describe('AutomationListTable — null-safety & a11y', () => {
+  it('keeps all seven fields and editing reachable in mobile details with keyboard selection', async () => {
+    const observers: { element: Element; callback: ResizeObserverCallback }[] = [];
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(private callback: ResizeObserverCallback) {}
+      observe(element: Element) { observers.push({ element, callback: this.callback }); }
+      unobserve() {}
+      disconnect() {}
+    });
+    try {
+      const user = userEvent.setup();
+      const description = 'Complete long description '.repeat(20);
+      const { onSelectionChange, container } = renderTable({
+        automations: [makeAutomation({ ...alpha, description })], totalCount: 1,
+      });
+      act(() => observers.forEach(({ element, callback }) => callback(
+        [{ target: element, contentRect: { width: 343 } } as ResizeObserverEntry],
+        {} as ResizeObserver,
+      )));
+      expect(container.querySelector('[data-mobile-table]')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Export list' }));
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Download as JSON' }));
+      await waitFor(() => expect(downloadJSON).toHaveBeenCalledWith('automations', [
+        expect.objectContaining({
+          name: 'Alpha', description, vehicle: 'Model 3',
+          runs: 5, failures: 0, lastTriggered: null, status: 'active',
+        }),
+      ]));
+      const row = screen.getByRole('button', { name: 'Alpha', exact: true });
+      row.focus();
+      await user.keyboard('{Enter}');
+      const dialog = screen.getByRole('dialog', { name: 'Alpha' });
+      for (const label of ['Name', 'Description', 'Vehicle', 'Runs', 'Failures', 'Last triggered', 'Status']) {
+        expect(within(dialog).getByText(label, { exact: true })).toBeInTheDocument();
+      }
+      expect(within(dialog).getByText(description.trim())).not.toHaveClass('truncate');
+      expect(within(dialog).getByRole('link', { name: 'Alpha' })).toHaveAttribute('href', '/automations/1/edit');
+      await user.keyboard('{Escape}');
+      await user.click(screen.getByRole('button', { name: 'Select', exact: true }));
+      const checkbox = screen.getByRole('checkbox', { name: 'Select Alpha' });
+      checkbox.focus();
+      await user.keyboard(' ');
+      expect(onSelectionChange).toHaveBeenCalledWith([1]);
+      act(() => observers.forEach(({ element, callback }) => callback(
+        [{ target: element, contentRect: { width: 1200 } } as ResizeObserverEntry],
+        {} as ResizeObserver,
+      )));
+      expect(screen.getByRole('table')).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Alpha' })).toBeInTheDocument();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('renders measured signed and fractional counts without substituting zero', () => {
     renderTable({
       automations: [makeAutomation({ name: 'Measured', execution_count: -2, failure_count: 0.5 })],
       totalCount: 1,
     });
     expect(screen.getByText('-2')).toBeInTheDocument();
-    expect(screen.getByText('0.5')).toBeInTheDocument();
+    expect(screen.getByText(/^0\.50*$/)).toBeInTheDocument();
   });
 
   it('renders missing status, invalid counters and invalid time as unknown', () => {

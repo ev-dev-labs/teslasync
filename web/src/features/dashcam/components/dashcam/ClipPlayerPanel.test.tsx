@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ClipRecord } from '../../lib/types';
 import { ClipPlayerPanel } from './ClipPlayerPanel';
@@ -37,6 +37,70 @@ afterEach(() => {
 });
 
 describe('local clip canonical transport preservation', () => {
+  it('keeps rejected playback visible through replay until media confirms recovery', async () => {
+    const { container } = render(<ClipPlayerPanel clip={clip()} />);
+    const video = container.querySelector('video')!;
+    const play = vi.spyOn(video, 'play').mockRejectedValueOnce(new Error('Playback denied')).mockResolvedValue();
+    const load = vi.spyOn(video, 'load').mockImplementation(() => {});
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent('This clip could not be played.');
+    expect(screen.getByRole('button', { name: 'Play' })).toBeInTheDocument();
+    fireEvent.pause(video);
+    fireEvent.loadedMetadata(video);
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Replay clip' }));
+    });
+    expect(load).toHaveBeenCalledOnce();
+    expect(play).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Play' })).toBeInTheDocument();
+    fireEvent.playing(video);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Pause' })).toBeInTheDocument();
+  });
+
+  it('reports media errors without removing populated content and resets on clip replacement', async () => {
+    const { container, rerender } = render(<ClipPlayerPanel clip={clip()} />);
+    const video = container.querySelector('video')!;
+    const play = vi.spyOn(video, 'play').mockRejectedValue(new Error('Unsupported media'));
+    vi.spyOn(video, 'load').mockImplementation(() => {});
+    video.currentTime = 30;
+    fireEvent.timeUpdate(video);
+    fireEvent.play(video);
+    fireEvent.error(video);
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Play' })).toBeInTheDocument();
+    expect(screen.getByText('Motion score not yet computed.')).toBeInTheDocument();
+    expect(screen.getByRole('slider')).toHaveAttribute('aria-valuenow', '50');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Replay clip' }));
+    });
+    expect(play).toHaveBeenCalledOnce();
+    expect(screen.getByRole('slider')).toHaveAttribute('aria-valuenow', '0');
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    rerender(<ClipPlayerPanel clip={clip('clip-b')} />);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:clip-1');
+  });
+
+  it('ignores a rejected play request belonging to a replaced clip', async () => {
+    const { container, rerender } = render(<ClipPlayerPanel clip={clip()} />);
+    const video = container.querySelector('video')!;
+    let rejectPlay: (reason: Error) => void = () => {};
+    vi.spyOn(video, 'play').mockReturnValue(new Promise<void>((_resolve, reject) => {
+      rejectPlay = reject;
+    }));
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+    rerender(<ClipPlayerPanel clip={clip('clip-b')} />);
+    await act(async () => rejectPlay(new Error('Old clip failed')));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   it('offers only restart/play/seek and uses video events as playback authority', () => {
     const currentClip = clip();
     const { container } = render(<ClipPlayerPanel clip={currentClip} />);

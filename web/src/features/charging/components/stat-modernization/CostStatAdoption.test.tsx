@@ -131,7 +131,7 @@ describe('live cost stats preserve every original numeric/text/fact/action contr
     state.gasUnit = 'liter'; state.symbol = '€';
     rerender(<CostSummaryCards {...summaryProps} isMiles={false} distanceUnit="km" />);
     expect(value(container, 'Cost Per km')).toBe(`€${fmtNumber(coreStats.costPerDist)}`);
-    expect(tile(container, 'Gas Savings $')).toHaveTextContent(`vs €${fmtNumber(3.5)}/L`);
+    expect(tile(container, 'Gas Savings $')).toHaveTextContent(`vs €${fmtNumber(3.5)}/gal`);
     expect(JSON.stringify(coreStats)).toBe(before);
   });
   it('keeps summary skeleton count, real empty/reset action and cached readings on an actionable refresh error', () => {

@@ -1,9 +1,11 @@
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   useReplanAssessment,
   useRequestReplan,
   type JourneyDeviationVerdict,
   type JourneySession,
+  type StopScores,
 } from '@/api/hooks/useJourney';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
@@ -48,16 +50,25 @@ function verdictVariant(verdict: JourneyDeviationVerdict) {
  * live view's next stop.
  */
 export function ReplanPanel({ session }: { session: JourneySession }) {
+  return <SessionReplanPanel key={`${session.vehicle_id}:${session.id}`} session={session} />;
+}
+
+function SessionReplanPanel({ session }: { session: JourneySession }) {
   const { t } = useTranslation();
   const units = useUnits();
 
   const assessQuery = useReplanAssessment(session.id);
   const assessState = useDataState(assessQuery);
-  const assessment = assessQuery.data ?? null;
+  const assessment = assessQuery.data?.session_id === session.id ? assessQuery.data : null;
   const replanEvidence = safeArray(assessment?.evidence);
 
   const replan = useRequestReplan();
-  const result = replan.data ?? null;
+  const [retainedResult, setRetainedResult] = useState<StopScores | null>(null);
+  const matchingResult = replan.data?.session_id === session.id ? replan.data : null;
+  useEffect(() => {
+    if (matchingResult) setRetainedResult(matchingResult);
+  }, [matchingResult]);
+  const result = matchingResult ?? retainedResult;
 
   return (
     <LayoutCard

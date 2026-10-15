@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 
 import type { DestinationTransitionResult } from '../../lib/destinationTransitions';
+import type { DestinationTransitionsQueryState } from './types';
 import {
   DestinationTransitionsMetricGroup,
   type DestinationTransitionsEvidenceMetric,
@@ -10,10 +11,12 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DestinationRowAccountingMetricsProps {
   model: DestinationTransitionResult;
+  state: DestinationTransitionsQueryState;
 }
 
 export function DestinationRowAccountingMetrics({
   model,
+  state,
 }: DestinationRowAccountingMetricsProps) {
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
@@ -124,6 +127,7 @@ export function DestinationRowAccountingMetrics({
         'Mutually exclusive returned-row accounting',
       )}
       metrics={metrics}
+      state={state}
       testId="destination-row-accounting-brief"
     />
   );

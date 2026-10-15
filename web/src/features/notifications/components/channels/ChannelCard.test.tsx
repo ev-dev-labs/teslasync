@@ -30,20 +30,25 @@
  * matchMedia.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { act, render, renderHook, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
 import type { NotificationChannel } from '@/api/types';
-import { ToastProvider } from '@/components/feedback/Toast';
+import { ToastProvider } from '@/components/feedback';
 import { ChannelCard } from './ChannelCard';
+import { useNotificationChannels } from '@/api/hooks/useNotifications';
 
 // ── Controllable mutation doubles ─────────────────────────────────────────────
 type MutateOpts = {
   onSuccess?: (data?: { success?: boolean; error?: string; status_code?: number; latency_ms?: number; signature?: string }) => void;
   onError?: (err?: unknown) => void;
+  onSettled?: () => void;
 };
 
 const mutations = vi.hoisted(() => ({
+  realTest: false,
+  realCrud: false,
   togglePending: false,
   deletePending: false,
   testPending: false,
@@ -53,11 +58,24 @@ const mutations = vi.hoisted(() => ({
   webhookTest: vi.fn(),
 }));
 
-vi.mock('@/api/hooks/useNotifications', () => ({
-  useToggleChannel: () => ({ mutate: mutations.toggle, isPending: mutations.togglePending }),
-  useDeleteChannel: () => ({ mutate: mutations.del, isPending: mutations.deletePending }),
-  useTestChannel: () => ({ mutate: mutations.test, isPending: mutations.testPending }),
-}));
+const api = vi.hoisted(() => ({ request: vi.fn() }));
+vi.mock('@/api/client', () => ({ request: api.request }));
+
+vi.mock('@/api/hooks/useNotifications', async () => {
+  const actual = await vi.importActual<typeof import('@/api/hooks/useNotifications')>('@/api/hooks/useNotifications');
+  return {
+    ...actual,
+    useToggleChannel: () => mutations.realCrud
+      ? actual.useToggleChannel()
+      : { mutate: mutations.toggle, isPending: mutations.togglePending },
+    useDeleteChannel: () => mutations.realCrud
+      ? actual.useDeleteChannel()
+      : { mutate: mutations.del, isPending: mutations.deletePending },
+    useTestChannel: () => mutations.realTest
+      ? actual.useTestChannel()
+      : { mutate: mutations.test, isPending: mutations.testPending },
+  };
+});
 
 vi.mock('@/api/hooks/useNotificationChannels', () => ({
   useTestWebhookChannel: () => ({ mutate: mutations.webhookTest, isPending: false }),
@@ -101,6 +119,7 @@ vi.mock('react-i18next', async () => {
       if (third && typeof third === 'object') vars = third as Record<string, unknown>;
     } else if (second && typeof second === 'object') {
       vars = second as Record<string, unknown>;
+      if (typeof vars.defaultValue === 'string') template = vars.defaultValue;
     }
     if (!vars) return template;
     return template.replace(/\{\{(\w+)\}\}/g, (_m, name: string) =>
@@ -178,6 +197,9 @@ function renderCard(channel: NotificationChannel, onEdit = vi.fn()) {
 }
 
 beforeEach(() => {
+  mutations.realTest = false;
+  mutations.realCrud = false;
+  api.request.mockReset();
   mutations.togglePending = false;
   mutations.deletePending = false;
   mutations.testPending = false;
@@ -305,6 +327,122 @@ describe('ChannelCard — credential preview', () => {
 
 // ── 3. Toggle ─────────────────────────────────────────────────────────────────
 describe('ChannelCard — toggle', () => {
+  it.each([
+    { action: 'toggle', control: 'switch', name: 'Toggle Team Discord', title: 'Channel disabled', failure: 'Failed to toggle channel', path: '/notifications/1/toggle', method: 'POST' },
+    { action: 'delete', control: 'button', name: 'Delete Team Discord', title: 'Channel deleted', failure: 'Failed to delete channel', path: '/notifications/1', method: 'DELETE' },
+  ] as const)('emits exactly one toast per real $action attempt and retains failure recovery', async ({ control, name, title, failure, path, method }) => {
+    mutations.realCrud = true;
+    api.request
+      .mockRejectedValueOnce(new Error('Provider unavailable'))
+      .mockResolvedValueOnce({ ...DISCORD, enabled: false });
+    const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <ChannelCard channel={DISCORD} onEdit={vi.fn()} />
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+
+    fireEvent.click(screen.getByRole(control, { name }));
+    const error = await screen.findByRole('alert');
+    expect(error).toHaveTextContent(failure);
+    expect(error).toHaveTextContent('Provider unavailable');
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    await waitFor(() => expect(screen.getByRole(control, { name })).toBeEnabled());
+    fireEvent.click(within(error).getByRole('button', { name: 'Dismiss notification' }));
+
+    fireEvent.click(screen.getByRole(control, { name }));
+    expect(await screen.findByRole('status')).toHaveTextContent(title);
+    expect(screen.getAllByRole('status')).toHaveLength(1);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(api.request).toHaveBeenCalledTimes(2);
+    expect(api.request).toHaveBeenLastCalledWith(path, { method });
+    expect(screen.getByRole('heading', { name: DISCORD.name })).toBeInTheDocument();
+    client.clear();
+  });
+
+  it('disables only the switch while its toggle mutation is pending', () => {
+    mutations.togglePending = true;
+    const { onEdit } = renderCard(DISCORD);
+
+    const toggle = screen.getByRole('switch', { name: 'Toggle Team Discord' });
+    expect(toggle).toBeDisabled();
+    fireEvent.click(toggle);
+    expect(mutations.toggle).not.toHaveBeenCalled();
+    for (const name of ['Test', 'Edit', 'Delete Team Discord']) {
+      const action = screen.getByRole('button', { name });
+      expect(action).toBeEnabled();
+      fireEvent.click(action);
+    }
+    expect(mutations.test).toHaveBeenCalledWith(1, expect.any(Object));
+    expect(onEdit).toHaveBeenCalledWith(DISCORD);
+    expect(mutations.del).toHaveBeenCalledWith(1, expect.any(Object));
+  });
+
+  it.each(['success', 'error'] as const)('latches repeated clicks until %s settles and then permits retry', (outcome) => {
+    let callbacks: MutateOpts | undefined;
+    mutations.toggle.mockImplementation((_id: number, opts: MutateOpts) => {
+      callbacks = opts;
+    });
+    renderCard(DISCORD);
+    const toggle = screen.getByRole('switch', { name: 'Toggle Team Discord' });
+
+    act(() => {
+      fireEvent.click(toggle);
+      fireEvent.click(toggle);
+    });
+    expect(mutations.toggle).toHaveBeenCalledTimes(1);
+    expect(toggle).toBeDisabled();
+    expect(toggle).toHaveAttribute('aria-checked', 'true');
+
+    act(() => {
+      if (outcome === 'success') callbacks?.onSuccess?.();
+      else callbacks?.onError?.();
+      callbacks?.onSettled?.();
+    });
+    expect(toggle).toBeEnabled();
+    fireEvent.click(toggle);
+    expect(mutations.toggle).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps other channel switches and this channel actions independent of the latch', () => {
+    const onEdit = vi.fn();
+    render(
+      <ToastProvider>
+        <ChannelCard channel={DISCORD} onEdit={onEdit} />
+        <ChannelCard channel={TELEGRAM} onEdit={onEdit} />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByRole('switch', { name: 'Toggle Team Discord' }));
+    const otherToggle = screen.getByRole('switch', { name: 'Toggle Alerts Bot' });
+    expect(otherToggle).toBeEnabled();
+    fireEvent.click(otherToggle);
+    expect(mutations.toggle.mock.calls.map(([id]) => id)).toEqual([1, 2]);
+
+    const card = screen.getByRole('heading', { name: DISCORD.name }).closest('.flex-col');
+    expect(card).not.toBeNull();
+    const actions = within(card as HTMLElement);
+    for (const name of ['Test', 'Edit', 'Delete Team Discord']) {
+      const action = actions.getByRole('button', { name });
+      expect(action).toBeEnabled();
+      fireEvent.click(action);
+    }
+    expect(mutations.test).toHaveBeenCalledWith(1, expect.any(Object));
+    expect(onEdit).toHaveBeenCalledWith(DISCORD);
+    expect(mutations.del).toHaveBeenCalledWith(1, expect.any(Object));
+  });
+
+  it('allows toggling while unrelated channel mutations are pending', () => {
+    mutations.testPending = true;
+    mutations.deletePending = true;
+    renderCard(DISCORD);
+    const toggle = screen.getByRole('switch', { name: 'Toggle Team Discord' });
+    expect(toggle).toBeEnabled();
+    fireEvent.click(toggle);
+    expect(mutations.toggle).toHaveBeenCalledTimes(1);
+  });
+
   it('fires the toggle mutation with the channel id exactly once', () => {
     renderCard(DISCORD);
     fireEvent.click(screen.getByRole('switch', { name: 'Toggle Team Discord' }));
@@ -344,6 +482,71 @@ describe('ChannelCard — toggle', () => {
 
 // ── 4. Test ───────────────────────────────────────────────────────────────────
 describe('ChannelCard — test', () => {
+  it('rejects a fulfilled provider failure, emits one detailed toast, and recovers on retry', async () => {
+    mutations.realTest = true;
+    api.request
+      .mockResolvedValueOnce({ success: false, error: 'Provider rejected delivery' })
+      .mockResolvedValueOnce({ success: true, error: '' });
+    const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <ChannelCard channel={DISCORD} onEdit={vi.fn()} />
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Test' }));
+    const failure = await screen.findByRole('alert');
+    expect(failure).toHaveTextContent('Provider rejected delivery');
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(client.getMutationCache().getAll()[0].state.status).toBe('error');
+    expect(client.getMutationCache().getAll()[0].state.error).toEqual(new Error('Provider rejected delivery'));
+    fireEvent.click(within(failure).getByRole('button', { name: 'Dismiss notification' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Test' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Team Discord: Test sent!');
+    expect(screen.getAllByRole('status')).toHaveLength(1);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(api.request).toHaveBeenCalledTimes(2);
+    expect(api.request).toHaveBeenLastCalledWith('/notifications/1/test', { method: 'POST' });
+    client.clear();
+  });
+
+  it('retains transport error details and permits retry', async () => {
+    mutations.test.mockImplementation((_id: number, opts: MutateOpts) =>
+      opts.onError?.(new Error('HTTP 503: provider unavailable')),
+    );
+    renderCard(DISCORD);
+    fireEvent.click(screen.getByRole('button', { name: 'Test' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('HTTP 503: provider unavailable');
+    expect(screen.getByRole('button', { name: 'Test' })).toBeEnabled();
+  });
+
+  it.each([
+    { success: true, role: 'status', title: 'Team Discord: Test sent!' },
+    { success: false, role: 'alert', title: 'Team Discord: Test failed' },
+  ])('preserves dismissible $role feedback through the shared barrel', async ({ success, role, title }) => {
+    mutations.test.mockImplementation((_id: number, opts: MutateOpts) => {
+      if (success) opts.onSuccess?.({ success });
+      else opts.onError?.(new Error('Provider rejected delivery'));
+    });
+
+    renderCard(DISCORD);
+    fireEvent.click(screen.getByRole('button', { name: 'Test' }));
+
+    const toast = await screen.findByRole(role);
+    expect(toast).toHaveTextContent(title);
+    if (!success) expect(toast).toHaveTextContent('Provider rejected delivery');
+    fireEvent.click(within(toast).getByRole('button', { name: 'Dismiss notification' }));
+
+    expect(screen.queryByRole(role)).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: DISCORD.name })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Test' })).toBeEnabled();
+    expect(mutations.test).toHaveBeenCalledWith(DISCORD.id, expect.any(Object));
+  });
+
   it('uses signed delivery for a webhook and displays the response status', async () => {
     const webhook: NotificationChannel = {
       id: 41, name: 'Ops hook', kind: 'webhook', enabled: true,
@@ -373,7 +576,7 @@ describe('ChannelCard — test', () => {
 
   it("surfaces the provider's error message when a test is rejected", async () => {
     mutations.test.mockImplementation((_id: number, opts: MutateOpts) =>
-      opts.onSuccess?.({ success: false, error: 'invalid webhook signature' }),
+      opts.onError?.(new Error('invalid webhook signature')),
     );
     renderCard(DISCORD);
     fireEvent.click(screen.getByRole('button', { name: 'Test' }));
@@ -383,7 +586,7 @@ describe('ChannelCard — test', () => {
   });
 
   it('toasts a generic failure when the test request errors out', async () => {
-    mutations.test.mockImplementation((_id: number, opts: MutateOpts) => opts.onError?.());
+    mutations.test.mockImplementation((_id: number, opts: MutateOpts) => opts.onError?.(new Error()));
     renderCard(DISCORD);
     fireEvent.click(screen.getByRole('button', { name: 'Test' }));
 
@@ -398,6 +601,73 @@ describe('ChannelCard — test', () => {
     const btn = screen.getByRole('button', { name: /Testing/ });
     expect(btn).toBeDisabled();
     expect(btn).toHaveAttribute('aria-busy', 'true');
+  });
+});
+
+describe('notification channels — source states', () => {
+  function setup() {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+    return { client, ...renderHook(() => useNotificationChannels(), { wrapper }) };
+  }
+
+  it('distinguishes active loading from a successful empty result', async () => {
+    let resolve!: (channels: NotificationChannel[]) => void;
+    api.request.mockImplementation(() => new Promise<NotificationChannel[]>(done => { resolve = done; }));
+    const source = setup();
+    expect(source.result.current.isLoading).toBe(true);
+    expect(source.result.current.data).toBeUndefined();
+    await act(async () => resolve([]));
+    await waitFor(() => expect(source.result.current.isSuccess).toBe(true));
+    expect(source.result.current.data).toEqual([]);
+    expect(source.result.current.isLoading).toBe(false);
+    source.unmount();
+    source.client.clear();
+  });
+
+  it('keeps paused-without-data distinct from active loading and resumes', async () => {
+    onlineManager.setOnline(false);
+    const source = setup();
+    try {
+      expect(source.result.current.fetchStatus).toBe('paused');
+      expect(source.result.current.isLoading).toBe(false);
+      expect(source.result.current.data).toBeUndefined();
+      expect(api.request).not.toHaveBeenCalled();
+      api.request.mockResolvedValue([]);
+      act(() => onlineManager.setOnline(true));
+      await waitFor(() => expect(source.result.current.isSuccess).toBe(true));
+      expect(source.result.current.data).toEqual([]);
+    } finally {
+      onlineManager.setOnline(true);
+      source.unmount();
+      source.client.clear();
+    }
+  });
+
+  it('retains confirmed zero values through refresh failure and recovery', async () => {
+    const zeroChannel: NotificationChannel = { ...EMAIL, smtp_port: 0 };
+    api.request.mockResolvedValueOnce([zeroChannel]);
+    const source = setup();
+    await waitFor(() => expect(source.result.current.isSuccess).toBe(true));
+    expect(source.result.current.data).toEqual([zeroChannel]);
+
+    api.request.mockRejectedValueOnce(new Error('Refresh unavailable'));
+    await act(async () => { await source.result.current.refetch(); });
+    await waitFor(() => expect(source.result.current.isRefetchError).toBe(true));
+    expect(source.result.current.data).toEqual([zeroChannel]);
+    expect(source.result.current.error?.message).toBe('Refresh unavailable');
+
+    api.request.mockResolvedValueOnce([]);
+    await act(async () => { await source.result.current.refetch(); });
+    await waitFor(() => expect(source.result.current.isSuccess).toBe(true));
+    expect(source.result.current.data).toEqual([]);
+    expect(source.result.current.error).toBeNull();
+    source.unmount();
+    source.client.clear();
   });
 });
 

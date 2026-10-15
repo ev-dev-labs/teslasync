@@ -15,6 +15,7 @@ import { typography } from '@/lib/tokens';
 import { isFiniteNumber } from '@/lib/numberFormat';
 
 import { EvidencePanel, InsightPanel } from '../components';
+import { qualityStatusLabel } from '../components/EvidencePanel';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const PAGE_SIZE = 10;
@@ -35,6 +36,13 @@ export default function FirmwareCanaryPage() {
   const query = useFirmwareCanary(vehicleId, PAGE_SIZE, (page - 1) * PAGE_SIZE);
   const items = query.data?.items ?? [];
   const latest = items[0] ?? null;
+  const decisionLabel = (decision: string) => {
+    if (decision === 'rollout') return t('advancedIntelligence.firmware.decision.rollout', 'Rollout');
+    if (decision === 'hold') return t('advancedIntelligence.firmware.decision.hold', 'Hold');
+    if (decision === 'investigate') return t('advancedIntelligence.firmware.decision.investigate', 'Investigate');
+    if (decision === 'insufficient') return t('advancedIntelligence.brief.quality.insufficient', 'Insufficient evidence');
+    return t('advancedIntelligence.firmware.decision.unknownCode', 'Unknown decision: {{code}}', { code: decision });
+  };
   const formatRegression = (value: unknown) => isFiniteNumber(value) ? `${fmtNumber(value)}%` : null;
   usePageTitle(t('advancedIntelligence.firmware.title', 'Firmware canary'));
 
@@ -81,7 +89,7 @@ export default function FirmwareCanaryPage() {
                         {item.version ?? t('advancedIntelligence.firmware.version.unsupported', 'Version unsupported')}
                       </Text>
                     </div>
-                    <Badge variant={decisionVariant(item.decision)} dot>{item.decision}</Badge>
+                    <Badge variant={decisionVariant(item.decision)} dot>{decisionLabel(item.decision)}</Badge>
                   </div>
                   <Grid cols={{ default: 1, sm: 2, lg: 4 }} gap={3}>
                     <StatCard
@@ -137,13 +145,7 @@ export default function FirmwareCanaryPage() {
                                 target: formatRegression(item.vehicle_regression_pct) ?? '—',
                                 peer: formatRegression(item.peer_regression_pct) ?? '—',
                                 excess: formatRegression(item.matched_excess_pct) ?? '—',
-                                quality: item.window_quality?.status === 'sufficient'
-                                  ? t('advancedIntelligence.brief.quality.sufficient', 'Sufficient evidence')
-                                  : item.window_quality?.status === 'limited'
-                                    ? t('advancedIntelligence.brief.quality.limited', 'Limited evidence')
-                                    : item.window_quality?.status === 'insufficient'
-                                      ? t('advancedIntelligence.brief.quality.insufficient', 'Insufficient evidence')
-                                      : t('advancedIntelligence.brief.quality.unknown', 'Quality not supplied'),
+                                quality: qualityStatusLabel(item.window_quality?.status, t),
                               },
                             ),
                             t(

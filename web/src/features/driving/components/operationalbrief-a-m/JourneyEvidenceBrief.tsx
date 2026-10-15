@@ -3,10 +3,11 @@ import { useTranslation } from 'react-i18next';
 import type { StatMetric } from '@/components/data-display/stat-reference';
 import type { EvidenceBand } from '../journey-fragmentation/EvidenceBand';
 import { DrivingSummaryBrief } from './DrivingSummaryBrief';
+import type { JourneyFragmentationSectionProps } from '../journey-fragmentation/_types';
 
-type Props = ComponentProps<typeof EvidenceBand> & { available: boolean; retained: boolean };
+type Props = ComponentProps<typeof EvidenceBand> & Pick<JourneyFragmentationSectionProps, 'state'> & { available: boolean; retained: boolean };
 
-export function JourneyEvidenceBrief({ result, loading = false, hasVehicle, error, onRetry, available, retained }: Props) {
+export function JourneyEvidenceBrief({ result, state, loading = false, hasVehicle, error, onRetry, available, retained }: Props) {
   const { t } = useTranslation();
   const ready = hasVehicle && available && !loading;
   const evidenceBandLabel = {
@@ -53,7 +54,9 @@ export function JourneyEvidenceBrief({ result, loading = false, hasVehicle, erro
       </> : t('driving.brief.pending', 'Drive evidence is not available yet.')}
       provenance={t('journeyFragmentation.brief.source', 'Returned drive-history continuity at the selected parking-gap threshold, using local days and weeks.')}
       statusLabel={!hasVehicle ? t('driving.brief.noVehicle', 'Choose a vehicle')
-        : !available && !loading && error == null ? t('driving.brief.unavailable', 'Source unavailable') : undefined}
+        : !available && state?.isRefreshBlocked && error == null
+          ? t('advancedIntelligence.panel.paused', 'The initial evidence query is paused; no empty result is inferred.')
+          : !available && !loading && error == null ? t('driving.brief.pending', 'Drive evidence is not available yet.') : undefined}
       loading={loading} error={error} retained={retained} onRetry={onRetry} />
   </section>;
 }

@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
-import { GlassPanel, PanelTitle, Text, StatusPill, SelectableCard, Icon } from '@/components/ui';
+import { GlassPanel, PanelTitle, Text, StatusPill, SelectableCard, Icon, Button } from '@/components/ui';
 
 import { MetricBar } from '@/components/data-display';
 import {
@@ -14,7 +14,7 @@ import {
   ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ReferenceLine, ResponsiveContainer,
   EmbeddedChart, type ChartDataColumn,
 } from '@/components/charts';
-import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, StaleRefreshWarning, DataStateNotice, resolveDataSourceStatus } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { useRUL, useComponentRUL, type ComponentRUL, type RULStatus } from '@/api/hooks/useRUL';
@@ -26,6 +26,8 @@ import { useMotionPreference } from '@/hooks/useMotionPreference';
 
 import { gaugeTone, neonColorMap, chartTokens, type GaugeTone } from '@/lib/tokens';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { formatDayKey } from '@/lib/dateFormat';
 import { NextServiceBrief } from '../components/operationalbrief-all/NextServiceBrief';
 
 const DASH = '—';
@@ -59,8 +61,35 @@ const COMPONENT_ICON: Record<string, LucideIcon> = {
   cabin_filter: Wind,
 };
 
+const COMPONENT_LABELS: Record<string, string> = {
+  hv_battery: 'High-voltage battery',
+  lv_battery: 'Low-voltage battery',
+  tires: 'Tires',
+  brakes: 'Brakes',
+  cabin_filter: 'Cabin filter',
+};
+
+const BASIS_LABELS: Record<string, string> = {
+  soh_trend: 'State-of-health trend',
+  no_measurable_decline: 'No measurable decline',
+  missing_history: 'Missing history',
+  invalid_input: 'Invalid inputs',
+  missing_configuration: 'Missing configuration',
+  whole_life_odometer: 'Whole-life odometer model',
+  enrollment_age: 'Enrollment-age model',
+};
+
+function finiteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
 export default function RemainingUsefulLifePage() {
   const { fmtNumber, fmtInt, precision: displayPrecision } = useNumberFormatting();
+  const { opts: dateOptions, formatDateTime } = useDateFormat();
+  const formatProjectionDate = useCallback((value: unknown): string => (
+    typeof value !== 'string' ? DASH
+      : value.includes('T') ? formatDateTime(value) : formatDayKey(value, dateOptions)
+  ), [dateOptions, formatDateTime]);
   const { formatDistance } = useUnits();
   const { reduce, durationMs } = useMotionPreference();
   const { t } = useTranslation();
@@ -70,8 +99,9 @@ export default function RemainingUsefulLifePage() {
   const noVehicle = vehicleId === null;
 
   const boardQuery = useRUL(vehicleId);
-  const { data: board, isLoading: boardLoading, refetch: refetchBoard } = boardQuery;
+  const { data: board, refetch: refetchBoard } = boardQuery;
   const boardState = useDataState(boardQuery, { provenance: 'inferred' });
+  const boardLoading = resolveDataSourceStatus({ id: 'board', label: '', query: boardQuery }) === 'loading';
   const boardError = boardState.fatalError;
 
   const components = board?.components ?? [];
@@ -87,17 +117,64 @@ export default function RemainingUsefulLifePage() {
   );
 
   const detailQuery = useComponentRUL(vehicleId, activeComponent);
-  const { data: detail, isLoading: detailLoading, refetch: refetchDetail } = detailQuery;
+  const { data: detail, refetch: refetchDetail } = detailQuery;
   const detailState = useDataState(detailQuery, { provenance: 'inferred' });
+  const detailLoading = resolveDataSourceStatus({ id: 'forecast', label: '', query: detailQuery }) === 'loading';
   const detailError = detailState.fatalError;
 
   const handleSelect = useCallback((component: string) => setSelected(component), []);
   const onRetryBoard = useCallback(() => { refetchBoard(); }, [refetchBoard]);
   const onRetryDetail = useCallback(() => { refetchDetail(); }, [refetchDetail]);
+  const unresolvedSource = (paused: boolean, onRetry: () => void) => (
+    <DataStateNotice
+      state="partial"
+      title={paused
+        ? t('dataSources.status.paused', 'Refresh paused')
+        : t('dataSources.status.pending', 'Pending')}
+      role="status"
+    >
+      <Text as="p" variant="bodySm">
+        {t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}
+      </Text>
+      <Button variant="secondary" size="sm" onClick={onRetry}>
+        {t('error.retry', 'Retry')}
+      </Button>
+    </DataStateNotice>
+  );
+
+  const componentLabel = useCallback((component: string, rawLabel?: string): string => (
+    Object.prototype.hasOwnProperty.call(COMPONENT_LABELS, component)
+      ? t(`rul.components.${component}`, COMPONENT_LABELS[component])
+      : rawLabel || component
+  ), [t]);
+
+  const rationaleFacts = (c: ComponentRUL) => {
+    const facts = [
+      { key: 'health', fallback: 'Measured health: {{value}}%', unavailable: 'Measured health: unavailable', value: c.health_pct, available: c.observation_available },
+      { key: 'wearRate', fallback: 'Daily health decline: {{value}} percentage points', unavailable: 'Daily health decline: unavailable', value: c.wear_rate_per_day, available: c.observation_available },
+      { key: 'remainingDays', fallback: 'Projected remaining life: {{value}} days', unavailable: 'Projected remaining life: unavailable', value: c.remaining_days, available: c.projection_available },
+      { key: 'confidence', fallback: 'Model confidence: {{value}}%', unavailable: 'Model confidence: unavailable', value: finiteNumber(c.confidence) ? c.confidence * 100 : null, available: c.observation_available },
+    ];
+    const model = Object.prototype.hasOwnProperty.call(BASIS_LABELS, c.basis_kind)
+      ? t(`rul.basisKinds.${c.basis_kind}`, BASIS_LABELS[c.basis_kind])
+      : c.basis_kind;
+    return (
+      <div className="space-y-1">
+        {model ? <Text as="p" variant="caption">{t('rul.facts.model', 'Model: {{value}}', { value: model })}</Text> : null}
+        {facts.map((fact) => (
+          <Text as="p" variant="caption" key={fact.key}>
+            {fact.available && finiteNumber(fact.value)
+              ? t(`rul.facts.${fact.key}`, fact.fallback, { value: fmtNumber(fact.value) })
+              : t(`rul.facts.${fact.key}Unavailable`, fact.unavailable)}
+          </Text>
+        ))}
+      </div>
+    );
+  };
 
   /* ── null-safe display helpers ── */
   const remainingText = useCallback((c: ComponentRUL): string => {
-    if (c.projected_eol_date != null) {
+    if (c.projection_available && finiteNumber(c.remaining_days)) {
       if (c.remaining_days >= 365) {
         return `${fmtNumber(c.remaining_days / 365)} ${t('rul.units.years', 'yr')}`;
       }
@@ -109,7 +186,7 @@ export default function RemainingUsefulLifePage() {
 
   // The deferred RUL wire contract is kilometres; the display formatter takes SI metres.
   const remainingDistanceText = useCallback((c: ComponentRUL): string => (
-    c.remaining_km == null ? DASH : formatDistance(c.remaining_km * 1000, { precision: 0 })
+    !c.projection_available || !finiteNumber(c.remaining_km) ? DASH : formatDistance(c.remaining_km * 1000, { precision: 0 })
   ), [formatDistance]);
 
   const confLabel = useCallback((conf: number): string => {
@@ -121,8 +198,8 @@ export default function RemainingUsefulLifePage() {
   const nextServiceLabel = useMemo(() => {
     if (!nextService) return null;
     const match = components.find((c) => c.component === nextService.component);
-    return match?.label ?? nextService.component;
-  }, [nextService, components]);
+    return componentLabel(nextService.component, match?.label);
+  }, [nextService, components, componentLabel]);
 
   /* ── forecast chart data: fold the projection band into a [low, high] tuple
      so a single Recharts range-Area shades the confidence interval. ── */
@@ -139,7 +216,7 @@ export default function RemainingUsefulLifePage() {
     [detail],
   );
   const forecastColumns = useMemo<readonly ChartDataColumn[]>(() => [
-    { key: 'date', label: t('common.date', 'Date') },
+    { key: 'date', label: t('common.date', 'Date'), format: formatProjectionDate },
     {
       key: 'projected_health', label: t('rul.forecast.projected', 'Projected health'),
       format: (value) => typeof value === 'number' ? `${fmtNumber(value)}%` : DASH,
@@ -152,7 +229,7 @@ export default function RemainingUsefulLifePage() {
       key: 'confidence_high', label: t('costAnalysis.forecast.upperBound', 'Upper bound'),
       format: (value) => typeof value === 'number' ? `${fmtNumber(value)}%` : DASH,
     },
-  ], [t, fmtNumber]);
+  ], [t, fmtNumber, formatProjectionDate]);
   const eol = detail?.eol_threshold ?? null;
   const yMin = eol != null && eol > 0 ? Math.max(0, Math.floor(eol) - 10) : 0;
   const activeMeta = detail ? statusMeta(detail.status) : UNKNOWN_STATUS_META;
@@ -174,6 +251,7 @@ export default function RemainingUsefulLifePage() {
           noVehicle={noVehicle}
           componentLabel={nextServiceLabel}
           projectedDate={nextService?.date || null}
+          formatProjectedDate={formatProjectionDate}
         />
       </FadeIn>
 
@@ -202,6 +280,10 @@ export default function RemainingUsefulLifePage() {
             <GlassPanel className="p-4 sm:p-5">
               <QueryError error={boardError} onRetry={onRetryBoard} />
             </GlassPanel>
+          ) : !boardState.hasData ? (
+            <GlassPanel className="p-4 sm:p-5">
+              {unresolvedSource(boardState.isRefreshBlocked, onRetryBoard)}
+            </GlassPanel>
           ) : components.length === 0 ? (
             <GlassPanel className="p-4 sm:p-5">
               <EmptyState /* no-action: transient — cards populate once telemetry is available */
@@ -214,20 +296,20 @@ export default function RemainingUsefulLifePage() {
               {components.map((c) => {
                 const meta = statusMeta(c.status);
                 const componentIcon = COMPONENT_ICON[c.component] ?? Gauge;
-                const confPct = Math.round(c.confidence * 100);
+                const confPct = c.observation_available && finiteNumber(c.confidence) ? Math.round(c.confidence * 100) : null;
                 return (
                   <SelectableCard
                     key={c.component}
                     selected={activeComponent === c.component}
                     onClick={() => handleSelect(c.component)}
-                    aria-label={t('rul.card.aria', 'Show forecast for {{label}}', { label: c.label })}
+                    aria-label={t('rul.card.aria', 'Show forecast for {{label}}', { label: componentLabel(c.component, c.label) })}
                     className="@container flex flex-col gap-3"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex min-w-0 items-center gap-2">
                         <Icon icon={componentIcon} className={neonColorMap.neutral.text} />
                         <Text as="span" variant="subhead" weight="semibold" className="break-words">
-                          {c.label}
+                          {componentLabel(c.component, c.label)}
                         </Text>
                       </div>
                       <StatusPill color={meta.dot}>
@@ -237,7 +319,7 @@ export default function RemainingUsefulLifePage() {
 
                     <div className="flex flex-col items-start gap-4 @sm:flex-row @sm:items-center">
                       <LinearGauge
-                        value={c.health_pct}
+                        value={c.observation_available && finiteNumber(c.health_pct) ? c.health_pct : null}
                         max={100}
                         unit="%"
                         label={t('rul.card.health', 'Health')}
@@ -260,7 +342,7 @@ export default function RemainingUsefulLifePage() {
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <Text as="dt" variant="caption">{t('rul.card.replaceBy', 'Replace by')}</Text>
                           <Text as="dd" variant="bodySm" className="tabular-nums">
-                            {c.projected_eol_date ?? DASH}
+                            {formatProjectionDate(c.projected_eol_date)}
                           </Text>
                         </div>
                       </dl>
@@ -272,8 +354,9 @@ export default function RemainingUsefulLifePage() {
                       color={gaugeTone.info}
                       fill="solid"
                       label={t('rul.card.confidence', 'Confidence')}
-                      sublabel={`${confPct}% · ${confLabel(c.confidence)}`}
+                      sublabel={confPct == null ? t('common.unknown', 'Unknown') : `${fmtInt(confPct)}% · ${confLabel(c.confidence)}`}
                     />
+                    {rationaleFacts(c)}
                     {c.basis ? (
                       <Text as="p" variant="caption">
                         {t('rul.forecast.basis', 'Basis')}: {c.basis}
@@ -293,7 +376,7 @@ export default function RemainingUsefulLifePage() {
           <PanelTitle className="mb-1 flex flex-wrap items-center gap-2">
             <Icon icon={TrendingDown} className={neonColorMap.neutral.text} />
             {t('rul.forecast.title', 'Health forecast')}
-            {detail ? <Text as="span" variant="bodySm" className="break-words">· {detail.label}</Text> : null}
+            {detail ? <Text as="span" variant="bodySm" className="break-words">· {componentLabel(detail.component, detail.label)}</Text> : null}
           </PanelTitle>
           <StaleRefreshWarning state={detailState} label={t('rul.forecast.title', 'Health forecast')} />
           <Text as="p" variant="caption" className="mb-3">
@@ -314,6 +397,8 @@ export default function RemainingUsefulLifePage() {
             <Skeleton height={340} className="rounded-xl" />
           ) : detailError ? (
             <QueryError error={detailError} onRetry={onRetryDetail} />
+          ) : !detailState.hasData ? (
+            unresolvedSource(detailState.isRefreshBlocked, onRetryDetail)
           ) : chartData.length === 0 ? (
             <EmptyState /* no-action: transient — forecast needs a projectable trend */
               icon={<TrendingDown className="h-8 w-8" />}
@@ -340,7 +425,7 @@ export default function RemainingUsefulLifePage() {
                         tickLine={false}
                         axisLine={false}
                         minTickGap={28}
-                        tickFormatter={(d: string) => (typeof d === 'string' ? d.slice(0, 7) : String(d))}
+                        tickFormatter={formatProjectionDate}
                       />
                       <YAxis
                         width={44}
@@ -352,6 +437,7 @@ export default function RemainingUsefulLifePage() {
                       />
                       <Tooltip content={
                         <ChartTooltip
+                          labelFormatter={formatProjectionDate}
                           valueFormatter={(v) => (
                             Array.isArray(v)
                               ? `${fmtInt(v[0])}–${fmtInt(v[1])}%`
@@ -397,6 +483,7 @@ export default function RemainingUsefulLifePage() {
               </div>
             </>
           )}
+          {detail ? rationaleFacts(detail) : null}
           {detail?.basis ? (
             <Text as="p" variant="caption" className="mt-3">
               {t('rul.forecast.basis', 'Basis')}: {detail.basis}

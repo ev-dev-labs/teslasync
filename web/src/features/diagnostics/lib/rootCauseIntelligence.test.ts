@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { createInstance } from 'i18next';
+import en from '@/i18n/en.json';
 import {
   analyzeRootCause,
   buildNormalizedTimeline,
@@ -6,6 +8,7 @@ import {
   CONCURRENT_TOLERANCE_MS,
   findStrongestRobustShift,
   isAnalysisDefensible,
+  localizeRootCause,
   mad,
   MAX_EFFECT_SIZE,
   MAX_RELATED_SIGNALS,
@@ -25,6 +28,114 @@ import {
 
 const MIN = 60_000;
 const BASE = Date.UTC(2024, 0, 1, 0, 0, 0);
+
+describe('diagnostic display localization', () => {
+  it('has catalog-backed descriptors for every emitted narrative and preserves English statistics and disclaimers', async () => {
+    const i18n = createInstance();
+    await i18n.init({ lng: 'en', resources: { en: { translation: en } }, initImmediate: false });
+    const focalPoints = flatStep({ count: 120, before: -2.5, after: 0.125, shiftAtIndex: 60 });
+    const relatedSeries = ['BatteryTemp', 'BatteryCurrent'].map(signal => ({
+      signal, points: flatStep({ count: 120, before: 0, after: -0.125, shiftAtIndex: 55 }),
+    }));
+    const analyses = [
+      analyzeRootCause({ focalSignal: '', catalog: [], focalPoints: [], relatedSeries: [] }),
+      analyzeRootCause({ focalSignal: 'BatteryVoltage', catalog: [], focalPoints: flatConstant({ count: 120, value: 0 }), relatedSeries: [] }),
+      analyzeRootCause({ focalSignal: 'BatteryVoltage', catalog: ['BatteryTemp'], focalPoints, relatedSeries: [] }),
+      analyzeRootCause({ focalSignal: 'BatteryVoltage', catalog: relatedSeries.map(s => s.signal), focalPoints, relatedSeries }),
+    ];
+    const presentations = [
+      ...analyses.map(analysis => presentRootCause(analysis, [])),
+      presentRootCause(analyses[2]!, [{ signal: 'BatteryVoltage', points: focalPoints }]),
+      presentRootCause(analyses[2]!, [{ signal: 'BatteryVoltage', points: [{ ts: BASE, value: 'invalid' }] }]),
+    ];
+    for (const result of [...analyses, ...presentations]) {
+      expect(result.limitationReasons).toHaveLength(result.limitations.length);
+      for (const reason of [result.summaryReason!, ...result.limitationReasons!]) {
+        expect(i18n.exists(`rootCauseIntelligence.reasons.${reason.id}`)).toBe(true);
+      }
+      const display = localizeRootCause(result, i18n.t);
+      expect(display.summary).toBe(result.summary);
+      expect(display.limitations).toEqual(result.limitations);
+    }
+    const ranked = analyses[3]!;
+    expect(ranked.summaryReason?.args.count).toBe(2);
+    expect(ranked.summary).toContain('2 ranked, evidence-based hypotheses');
+    expect(ranked.focalShift?.before.median).toBe(-2.5);
+    expect(ranked.focalShift?.after.median).toBe(0.125);
+    for (const hypothesis of ranked.hypotheses) {
+      expect(i18n.exists(`rootCauseIntelligence.reasons.${hypothesis.rationaleReason!.id}`)).toBe(true);
+      expect(localizeRootCause(ranked, i18n.t).hypotheses.find(h => h.signal === hypothesis.signal)?.rationale)
+        .toBe(hypothesis.rationale);
+    }
+  });
+
+  it.each([
+    ['concurrent', 60], ['leads', 55], ['lags', 65],
+  ] as const)('preserves the populated %s rationale through English display formatting', async (relation, shiftAtIndex) => {
+    const analysis = analyzeRootCause({
+      focalSignal: 'BatteryVoltage', catalog: ['BatteryTemp'],
+      focalPoints: flatStep({ count: 120, before: -20, after: 0, shiftAtIndex: 60 }),
+      relatedSeries: [{
+        signal: 'BatteryTemp', points: flatStep({ count: 120, before: 0, after: -10, shiftAtIndex }),
+      }],
+    });
+    const i18n = createInstance();
+    await i18n.init({ lng: 'en', resources: { en: { translation: en } }, initImmediate: false });
+    expect(analysis.hypotheses[0]!.rationaleReason?.id).toBe(relation);
+    const display = localizeRootCause(analysis, i18n.t);
+    expect(display.hypotheses[0]!.rationale).toBe(analysis.hypotheses[0]!.rationale);
+    expect(display.hypotheses[0]!.shift.after.median).toBe(-10);
+    expect(display.hypotheses[0]!.shift.before.median).toBe(0);
+    expect(display.hypotheses[0]!.lagMs).toBe((shiftAtIndex - 60) * MIN);
+  });
+
+  it('localizes stable reasons without changing canonical text, signed raw facts or identifiers', async () => {
+    const focalPoints = flatStep({ count: 120, before: -20, after: 0, shiftAtIndex: 60 });
+    const relatedSeries = [
+      { signal: 'BatteryTemp<&>', points: flatStep({ count: 120, before: -10, after: 0, shiftAtIndex: 55 }) },
+    ];
+    const analysis = analyzeRootCause({
+      focalSignal: 'BatteryVoltage<&>', catalog: ['BatteryTemp<&>'], focalPoints, relatedSeries,
+    });
+    expect(analysis.hypotheses).toHaveLength(1);
+    const canonical = JSON.stringify(analysis);
+    const i18n = createInstance();
+    await i18n.init({ lng: 'en', resources: { en: { translation: en } }, initImmediate: false });
+    const english = localizeRootCause(analysis, i18n.t);
+    expect(english.summary).toBe(analysis.summary);
+    expect(english.limitations).toEqual(analysis.limitations);
+    expect(english.hypotheses[0]!.rationale).toBe(analysis.hypotheses[0]!.rationale);
+    const reason = analysis.hypotheses[0]!.rationaleReason!;
+    expect(reason.id).toBe('leads');
+    expect(reason.args).toMatchObject({
+      focalSignal: 'BatteryVoltage<&>', signal: 'BatteryTemp<&>', minutes: 5,
+    });
+    i18n.addResourceBundle('de', 'translation', {
+      rootCauseIntelligence: { reasons: {
+        leads: '{{signal}} vor {{focalSignal}}: {{minutes}} min, Effekt {{effectSize}}; keine Diagnose.',
+        association: 'Statistische Assoziation, keine Diagnose oder Kausalitätsbeweis.',
+        temporalLimit: 'Zeitliche Nähe ist kein Kausalitätsbeweis.',
+        rankedSummary: '{{focalSignal}}: {{count}} {{hypothesisLabel}}, {{band}}.',
+        hypothesis: 'Hypothese', band: { moderate: 'mäßig', strong: 'stark', weak: 'schwach' },
+        coverage: '{{resolved}}/{{selected}} aufgelöst; {{usable}} nutzbar; {{unknown}} unbekannt.',
+      } },
+    });
+    await i18n.changeLanguage('de');
+    const display = localizeRootCause(analysis, i18n.t);
+    expect(display.hypotheses[0]!.rationale).toContain('BatteryTemp<&> vor BatteryVoltage<&>: 5 min');
+    expect(display.limitations[0]).toBe('Statistische Assoziation, keine Diagnose oder Kausalitätsbeweis.');
+    expect(display.summary).toContain('1 Hypothese');
+    expect(display.hypotheses[0]!.shift.before.median).toBe(-10);
+    expect(display.focalShift!.before.median).toBe(-20);
+    expect(display.graph).toBe(analysis.graph);
+    expect(display.timeline).toBe(analysis.timeline);
+    expect(JSON.stringify(analysis)).toBe(canonical);
+    expect(analysis.limitations[0]).toContain(NO_CAUSAL_PROOF_DISCLAIMER);
+    const presentation = presentRootCause(analysis, [{ signal: analysis.focalSignal, points: focalPoints }]);
+    expect(presentation.limitationReasons?.some(({ id }) => id === 'coverage')).toBe(true);
+    expect(localizeRootCause(presentation, i18n.t).limitations).toContain('0/1 aufgelöst; 0 nutzbar; 1 unbekannt.');
+  });
+});
 
 /**
  * Deterministic pseudo-noise (sine-hash trick) — no `Math.random`, fully

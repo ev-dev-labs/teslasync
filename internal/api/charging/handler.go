@@ -139,7 +139,12 @@ func (h *ChargingHandler) ListByVehicle(w http.ResponseWriter, r *http.Request) 
 	}
 
 	limit, offset := apiparams.Pagination(r)
-	startTime, endTime := apiparams.ParseDateRange(r)
+	startTime, endTime, err := apiparams.ParseDateRangeValues(r.URL.Query().Get("start"), r.URL.Query().Get("end"))
+	if err != nil {
+		span.RecordError(err)
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	sessions, err := h.chargingRepo.GetByVehicle(ctx, vehicleID, limit, offset, startTime, endTime)
 	if err != nil {
 		span.RecordError(err)

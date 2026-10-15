@@ -14,6 +14,26 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
+const datePreferences = vi.hoisted(() => ({
+  override: null as { locale: string; timezone: string } | null,
+}));
+
+vi.mock('@/hooks/useSettings', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useSettings')>('@/hooks/useSettings');
+  return {
+    ...actual,
+    useSettings: () => {
+      const result = actual.useSettings();
+      const override = datePreferences.override;
+      return override ? {
+        ...result,
+        locale: override.locale,
+        settings: { ...result.settings, tz_display_default: 'user', timezone_user: override.timezone },
+      } : result;
+    },
+  };
+});
+
 vi.mock('react-i18next', () => {
   const interpolate = (str: string, vars?: Record<string, unknown> | null): string => {
     if (!vars) return str;
@@ -145,6 +165,7 @@ function renderPage() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  datePreferences.override = null;
   mockSelected.mockReturnValue({
     vehicleId: 7,
     vehicle: null,
@@ -174,6 +195,113 @@ beforeEach(() => {
 });
 
 describe('InsuranceTelematicsPage — confirm-gated delete', () => {
+  it('refreshes chart and policy dates with locale and zone preferences without rewriting source or form instants', () => {
+    const start = '2026-03-01T00:30:00Z';
+    const end = '2026-03-02T00:30:00Z';
+    const profile = makeProfile({
+      window: { from: start, to: end, days: 1 },
+      policy: makePolicy({ coverage_start: start, coverage_end: end }),
+      trend: [
+        { bucket_start: start, risk_score: 35, loss_cost_index: 0.99, distance_m: 10000, drive_count: 4 },
+        { bucket_start: end, risk_score: 30, loss_cost_index: 0.9, distance_m: 5000, drive_count: 2 },
+      ],
+    });
+    const source = JSON.stringify(profile);
+    const mutate = vi.fn();
+    mockProfile.mockReturnValue(makeQuery(profile));
+    mockUpsert.mockReturnValue(makeMutation({ mutate }));
+    datePreferences.override = { locale: 'en-US', timezone: 'America/Los_Angeles' };
+    const view = renderScopePage();
+
+    const trend = card('Risk trajectory');
+    const premium = card('Premium simulation');
+    expect(trend).toHaveTextContent('Feb 28, 2026');
+    expect(trend).toHaveTextContent('America/Los_Angeles');
+    expect(premium).toHaveTextContent('Coverage Feb 28, 2026 → Mar 1, 2026 · America/Los_Angeles');
+    expect(card('Underwriting position')).toHaveTextContent('Recorded bounds Feb 28, 2026, 04:30 PM');
+    fireEvent.click(screen.getByRole('button', { name: 'Edit policy' }));
+    expect(screen.getByLabelText('Coverage start', { exact: false })).toHaveValue('2026-03-01');
+    expect(screen.getByLabelText('Coverage end (optional)')).toHaveValue('2026-03-02');
+
+    datePreferences.override = { locale: 'en-US', timezone: 'UTC' };
+    view.rerender(<InsuranceTelematicsPage />);
+    expect(trend).toHaveTextContent('Mar 1, 2026');
+    expect(trend).not.toHaveTextContent('Feb 28, 2026');
+    expect(premium).toHaveTextContent('Coverage Mar 1, 2026 → Mar 2, 2026 · UTC');
+
+    datePreferences.override = { locale: 'de-DE', timezone: 'UTC' };
+    view.rerender(<InsuranceTelematicsPage />);
+    expect(trend).toHaveTextContent('1. März 2026');
+    expect(premium).toHaveTextContent('Coverage 1. März 2026 → 2. März 2026 · UTC');
+    expect(card('Underwriting position')).toHaveTextContent('Recorded bounds 1. März 2026');
+    expect(screen.getByLabelText('Coverage start', { exact: false })).toHaveValue('2026-03-01');
+    const form = screen.getByRole('button', { name: 'Save policy baseline' }).closest('form');
+    if (!form) throw new Error('Missing policy form');
+    fireEvent.submit(form);
+    expect(mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ vehicle_id: 7, coverage_start: start, coverage_end: end }),
+      expect.any(Object),
+    );
+    expect(JSON.stringify(profile)).toBe(source);
+  });
+
+  it.each([
+    ['missing', undefined, 'neutral'],
+    ['null', null, 'neutral'],
+    ['invalid', Number.NaN, 'neutral'],
+    ['positive infinity', Number.POSITIVE_INFINITY, 'neutral'],
+    ['negative infinity', Number.NEGATIVE_INFINITY, 'neutral'],
+    ['numeric text', '0.25', 'neutral'],
+    ['measured zero', 0, 'neutral'],
+    ['negative zero', -0, 'neutral'],
+    ['positive fractional deviation', 0.25, 'warning'],
+    ['small positive deviation', 0.001, 'warning'],
+    ['negative fractional deviation', -0.25, 'success'],
+    ['small negative deviation', -0.001, 'success'],
+    ['maximum worsening', 3, 'warning'],
+    ['maximum improving', -1, 'success'],
+  ])('presents %s using signed factor semantics', (_label, score, tone) => {
+    const factor: RiskFactor = {
+      code: 'synthetic', label: 'Synthetic factor', narrative: 'Fixture evidence only',
+      observed_rate: 3, baseline_rate: 2, rate_unit: 'fraction', score: 0,
+      weight: 0.4, contribution_pct: 100, direction: 'higher_is_worse',
+      sample_count: 19, percentile: null,
+    };
+    mockProfile.mockReturnValue(makeQuery({
+      ...makeProfile(), factors: [{ ...factor, score }],
+    }));
+    renderPage();
+    const row = within(card('Factor decomposition')).getAllByRole('row')[1];
+    const scoreCell = within(row).getAllByRole('cell')[3];
+    const value = scoreCell.querySelector('span');
+    expect(value).toHaveClass(tone === 'neutral'
+      ? 'text-[var(--text-secondary)]' : `text-[var(--semantic-${tone})]`);
+    if (typeof score === 'number' && Number.isFinite(score)) {
+      expect(scoreCell).not.toHaveTextContent('—');
+      if (score !== 0) expect(scoreCell.textContent).toContain(String(score));
+      else expect(scoreCell).toHaveTextContent('0');
+    } else expect(scoreCell).toHaveTextContent('—');
+    expect(row).toHaveTextContent('Higher is worse');
+    expect(row).toHaveTextContent('Fixture evidence only');
+  });
+
+  it('does not invert an already normalized score for a higher-is-better factor', () => {
+    mockProfile.mockReturnValue(makeQuery(makeProfile({
+      factors: [{
+        code: 'regen', label: 'Synthetic regen', narrative: 'Fixture evidence only',
+        observed_rate: 0.175, baseline_rate: 0.14, rate_unit: 'fraction', score: -0.25,
+        weight: 0.06, contribution_pct: 100, direction: 'higher_is_better',
+        sample_count: 19, percentile: null,
+      }],
+    })));
+    renderPage();
+    const row = within(card('Factor decomposition')).getAllByRole('row')[1];
+    expect(within(row).getAllByRole('cell')[3].querySelector('span'))
+      .toHaveClass('text-[var(--semantic-success)]');
+    expect(row).toHaveTextContent('-0.25');
+    expect(row).toHaveTextContent('Higher is better');
+  });
+
   it.each([null, 0, 35, 100])('does not present returned percentile %s as a peer or history comparison', (percentile) => {
     const profile = makeProfile({ peer_percentile: percentile });
     mockProfile.mockReturnValue(makeQuery(profile));
@@ -269,6 +397,25 @@ describe('InsuranceTelematicsPage — confirm-gated delete', () => {
     expect(summaryMetric('Premium simulation', 'delta')).toHaveTextContent(delta < 0 ? '-$12.50' : '$12.50');
   });
 
+  it.each([1000, 0])('labels %s m as a UTC trip-start proxy without claiming measured night distance', (nightDistance) => {
+    datePreferences.override = { locale: 'en-US', timezone: 'America/Los_Angeles' };
+    const profile = makeProfile({ night_distance_m: nightDistance });
+    const source = JSON.stringify(profile);
+    mockProfile.mockReturnValue(makeQuery(profile));
+    renderPage();
+
+    const metric = summaryMetric('Underwriting position', 'night');
+    expect(metric).toHaveAttribute('data-value-state', 'value');
+    expect(metric).toHaveTextContent('Distance of trips starting overnight (UTC)');
+    expect(metric).toHaveTextContent('at or after 22:00 or before 05:00 UTC');
+    expect(metric).toHaveTextContent('Includes distance outside the band on qualifying trips');
+    expect(metric).toHaveTextContent('excludes distance inside the band on other trips');
+    expect(metric).toHaveTextContent('neither an upper nor a lower bound on actual night distance');
+    expect(metric).toHaveTextContent('Actual night-distance measurement requires owned model support');
+    expect(metric).toHaveTextContent(nightDistance ? /10(?:\.0+)?%/ : /0(?:\.0+)?%/);
+    expect(JSON.stringify(profile)).toBe(source);
+  });
+
   it('retains all four real briefs with exposure, policy units, caps and no insurer-quote claim', () => {
     mockProfile.mockReturnValue(makeQuery(makeProfile()));
     renderPage();
@@ -290,6 +437,36 @@ describe('InsuranceTelematicsPage — confirm-gated delete', () => {
     expect(screen.getByRole('dialog')).toHaveTextContent('never an insurer quote');
     expect(screen.getByRole('dialog')).toHaveTextContent(/Cap 20(?:\.0+)?%/);
     expect(mockUpsert().mutate).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [0, '0'],
+    [0.45, '45'],
+    [0.545, '54.5'],
+    [0.7, '70'],
+    [0.95, '95'],
+    [1, '100'],
+  ])('displays confidence fraction %s as a percentage without changing the response', (confidence, percentage) => {
+    const lever: RiskLever = {
+      factor_code: 'speed_exposure', label: 'Lower motorway cruise speed',
+      payoff_rank: 1, target_reduction_pct: 25, projected_score_delta: -4,
+      projected_premium_save_minor: 900, difficulty: 'moderate',
+      effort_hours_per_week: 0.25, confidence,
+    };
+    const profile = makeProfile({ levers: [lever] });
+    mockProfile.mockReturnValue(makeQuery(profile));
+    renderPage();
+
+    const table = within(card('Ranked improvement levers')).getByRole('table');
+    const headers = within(table).getAllByRole('columnheader');
+    const confidenceIndex = headers.findIndex(header => header.textContent === 'Confidence');
+    expect(confidenceIndex).toBeGreaterThanOrEqual(0);
+    const row = within(table).getAllByRole('row')[1];
+    const cell = within(row).getAllByRole('cell')[confidenceIndex];
+    expect(cell.textContent).toMatch(new RegExp(`^${percentage.replace('.', '\\.')}(?:\\.0+)?%$`));
+    expect(row).toHaveTextContent('Lower motorway cruise speed');
+    expect(row).toHaveTextContent('$9.00');
+    expect(profile.levers[0].confidence).toBe(confidence);
   });
 
   function renderScopePage() {
@@ -414,7 +591,7 @@ describe('InsuranceTelematicsPage — confirm-gated delete', () => {
       const lever = (factor_code: string, saving: number | null): RiskLever => ({
         factor_code, label: `Synthetic ${factor_code}`, payoff_rank: 1, target_reduction_pct: 10,
         projected_score_delta: 4, projected_premium_save_minor: saving, difficulty: 'moderate',
-        effort_hours_per_week: 2, confidence: 70,
+        effort_hours_per_week: 2, confidence: 0.7,
       });
       const factors = [factor('first', 12, 70), factor('second', 85, 20)];
       const levers = [lever('first', 100), lever('second', 900), lever('unknown', null)];
@@ -444,6 +621,38 @@ describe('InsuranceTelematicsPage — confirm-gated delete', () => {
       expect(factors.map(row => row.code)).toEqual(['first', 'second']);
       expect(levers.map(row => row.factor_code)).toEqual(['first', 'second', 'unknown']);
     });
+  });
+
+  it('discloses the limited checksum scope without claiming complete evidence or verified identity', () => {
+    const profile = makeProfile({
+      factors: [{
+        code: 'synthetic', label: 'Synthetic factor', narrative: 'Fixture evidence only',
+        observed_rate: 3, baseline_rate: 2, rate_unit: 'events/m', score: 0.25,
+        weight: 0.4, contribution_pct: 100, direction: 'higher_is_worse',
+        sample_count: 19, percentile: null,
+      }],
+    });
+    mockProfile.mockReturnValue(makeQuery(profile));
+    renderPage();
+
+    const checksum = card('Risk-summary checksum');
+    expect(checksum).toHaveTextContent('Limited risk-summary checksum (SHA-256)');
+    expect(checksum).toHaveTextContent('vehicle ID, window bounds');
+    expect(checksum).toHaveTextContent('ordered factor codes and observed rates at fixed precision');
+    expect(checksum).toHaveTextContent('It does not verify identity or hash the complete evidence packet');
+    expect(checksum).toHaveTextContent('raw exposure, other factor details, policy, premium, trend and evidence are not included');
+    expect(checksum).toHaveTextContent('Matching checksums do not establish that the complete datasets are identical');
+    expect(within(checksum).getByText(profile.evidence_packet_hash)).toBeInTheDocument();
+    expect(screen.queryByText(/A stable content hash over the exposure/)).not.toBeInTheDocument();
+    expect(card('Factor decomposition')).toHaveTextContent('Synthetic factor');
+    expect(card('Premium simulation')).toHaveTextContent('$1,080.00');
+    expect(summaryMetric('Underwriting position', 'exposure')).toHaveTextContent('4 drives');
+    expect(summaryMetric('Underwriting position', 'duration')).toHaveAttribute('data-value-state', 'value');
+    expect(summaryMetric('Underwriting position', 'night')).toHaveTextContent(/10(?:\.0+)?%/);
+    expect(card('Underwriting position')).toHaveTextContent('Recorded bounds');
+    expect(card('Underwriting position')).not.toHaveTextContent('Recorded analysis bounds not supplied');
+    expect(profile.exposure_distance_m).toBe(10000);
+    expect(profile.window).toEqual({ from: '2026-01-01T00:00:00Z', to: '2026-03-01T00:00:00Z', days: 60 });
   });
 
   it('keeps every modelled premium amount, cap and full digest during a refresh failure', () => {

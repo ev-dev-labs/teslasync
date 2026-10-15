@@ -30,8 +30,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
+
+vi.unmock('@/api/hooks/useAnnotations')
 
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client')
@@ -189,6 +191,8 @@ const emptySummary: TeslaChargingSessionSummary = {
 
 interface InstallOpts {
   vehicles?: Vehicle[]
+  vehiclesPending?: boolean
+  vehiclesError?: boolean
   sessions?: TeslaChargingSession[]
   summary?: TeslaChargingSessionSummary
   sessionsPending?: boolean
@@ -199,6 +203,8 @@ interface InstallOpts {
 function install(opts: InstallOpts = {}) {
   const {
     vehicles = [makeVehicle()],
+    vehiclesPending = false,
+    vehiclesError = false,
     sessions = defaultSessions,
     summary = defaultSummary,
     sessionsPending = false,
@@ -207,7 +213,11 @@ function install(opts: InstallOpts = {}) {
   } = opts
 
   mockedRequest.mockImplementation((path: string) => {
-    if (path === '/vehicles') return Promise.resolve(vehicles)
+    if (path === '/vehicles') {
+      if (vehiclesPending) return never()
+      if (vehiclesError) return Promise.reject(new Error('vehicles boom'))
+      return Promise.resolve(vehicles)
+    }
     // Refresh must be matched BEFORE the GET prefix (it shares the stem).
     if (path.startsWith('/tesla/charging/sessions/refresh')) {
       if (refreshImpl) return refreshImpl(path)
@@ -223,6 +233,11 @@ function install(opts: InstallOpts = {}) {
   })
 }
 
+function LocationProbe() {
+  const location = useLocation()
+  return <div data-testid="scope-location">{location.search}</div>
+}
+
 function renderPage(initialEntries: string[] = ['/tesla/charging/sessions']) {
   const client = new QueryClient({
     defaultOptions: {
@@ -236,6 +251,7 @@ function renderPage(initialEntries: string[] = ['/tesla/charging/sessions']) {
         <ToastProvider>
           <SelectedVehicleProvider>
             <TeslaChargingSessionsPage />
+            <LocationProbe />
           </SelectedVehicleProvider>
         </ToastProvider>
       </QueryClientProvider>
@@ -357,6 +373,92 @@ afterEach(() => {
 })
 
 describe('TeslaChargingSessionsPage', () => {
+  it('gates reads and import during active vehicle resolution instead of querying fleet scope', async () => {
+    install({ vehiclesPending: true })
+    const { client } = renderPage()
+    await act(async () => {
+      client.setQueryData(['tesla-charging-sessions'], { sessions: defaultSessions, summary: defaultSummary })
+    })
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledWith('/vehicles', expect.anything()))
+    expect(mockedRequest.mock.calls.some(([path]) => String(path).startsWith('/tesla/charging/sessions'))).toBe(false)
+    expect(screen.getByRole('button', { name: 'Refresh from Tesla' })).toBeDisabled()
+    expect(within(screen.getByTestId('charging-operational-brief')).getByText('Updating')).toBeInTheDocument()
+    expect(screen.queryByText('No sessions in this analysis window')).toBeNull()
+    expect(screen.queryByText('123.00 kWh')).toBeNull()
+  })
+
+  it('allows an explicit vin=* fleet read and import without a vehicle source', async () => {
+    install({ vehiclesError: true })
+    renderPage(['/tesla/charging/sessions?vin=*'])
+    await screen.findByText('123.00 kWh')
+    expect(mockedRequest.mock.calls.some(([path]) => path === '/tesla/charging/sessions')).toBe(true)
+    expect(screen.queryByTestId('vehicle-source-state')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh from Tesla' }))
+    await waitFor(() => expect(mockedRequest.mock.calls.some(([path]) => path === '/tesla/charging/sessions/refresh')).toBe(true))
+    expect(screen.getByTestId('scope-location')).toHaveTextContent('vin=*')
+  })
+
+  it('preserves an unresolved VIN bookmark through empty vehicle results and recovers its concrete scope', async () => {
+    install({ vehicles: [] })
+    const { client } = renderPage(['/tesla/charging/sessions?vin=VIN00000000000008&from=2025-01-01&to=2025-12-31'])
+    await screen.findByRole('button', { name: 'Retry' })
+    expect(screen.getByTestId('scope-location')).toHaveTextContent('vin=VIN00000000000008')
+    expect(mockedRequest.mock.calls.some(([path]) => String(path).startsWith('/tesla/charging/sessions'))).toBe(false)
+    expect(screen.getByRole('button', { name: 'Refresh from Tesla' })).toBeDisabled()
+    install({ vehicles: [makeVehicle(), makeVehicle({ id: 8, vin: 'VIN00000000000008' })] })
+    await act(async () => { await client.refetchQueries({ queryKey: ['vehicles'] }) })
+    await screen.findByText('123.00 kWh')
+    expect(mockedRequest.mock.calls.some(([path]) => path === '/tesla/charging/sessions?vin=VIN00000000000008')).toBe(true)
+    expect(mockedRequest.mock.calls.some(([path]) => path === '/tesla/charging/sessions')).toBe(false)
+    expect(screen.getByTestId('scope-location')).toHaveTextContent('from=2025-01-01')
+    expect(screen.getByTestId('scope-location')).toHaveTextContent('to=2025-12-31')
+    expect(screen.getByRole('button', { name: 'Refresh from Tesla' })).toBeEnabled()
+  })
+
+  it('exposes vehicle-source failure and retries it without issuing an unscoped session read', async () => {
+    install({ vehiclesError: true })
+    renderPage()
+    const source = await screen.findByTestId('vehicle-source-state')
+    await waitFor(() => expect(within(source).getByRole('button', { name: /retry/i })).toBeInTheDocument())
+    expect(screen.getByRole('button', { name: 'Refresh from Tesla' })).toBeDisabled()
+    expect(mockedRequest.mock.calls.some(([path]) => String(path).startsWith('/tesla/charging/sessions'))).toBe(false)
+    install()
+    fireEvent.click(within(source).getByRole('button', { name: /retry/i }))
+    await screen.findByText('123.00 kWh')
+    expect(screen.getByRole('button', { name: 'Refresh from Tesla' })).toBeEnabled()
+  })
+
+  it('does not show loading or measured empty sessions for a paused vehicle source without data', async () => {
+    onlineManager.setOnline(false)
+    renderPage()
+    await screen.findByRole('button', { name: 'Retry' })
+    expect(within(screen.getByTestId('charging-operational-brief')).getByText('Data unavailable')).toBeInTheDocument()
+    expect(within(screen.getByTestId('charging-operational-brief')).queryByText('Updating')).toBeNull()
+    expect(screen.queryByText('No sessions in this analysis window')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Refresh from Tesla' })).toBeDisabled()
+    expect(mockedRequest.mock.calls.some(([path]) => String(path).startsWith('/tesla/charging/sessions'))).toBe(false)
+    await act(async () => { onlineManager.setOnline(true) })
+    await screen.findByText('123.00 kWh')
+    expect(screen.getByRole('button', { name: 'Refresh from Tesla' })).toBeEnabled()
+  })
+
+  it('retains sessions on vehicle refresh failure, blocks import, and restores trust after retry', async () => {
+    const { client } = renderPage()
+    await screen.findByText('123.00 kWh')
+    install({ vehiclesError: true })
+    await act(async () => { await client.refetchQueries({ queryKey: ['vehicles'] }) })
+    const source = screen.getByTestId('vehicle-source-state')
+    expect(within(source).getByTestId('stale-refresh-warning')).toBeInTheDocument()
+    expect(screen.getByTestId('sessions-map')).toHaveTextContent('map:3')
+    expect(screen.getByText('123.00 kWh')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Refresh from Tesla' })).toBeDisabled()
+    expect(within(screen.getByTestId('charging-operational-brief')).getByText('Data may be stale')).toBeInTheDocument()
+    install()
+    fireEvent.click(within(source).getByRole('button', { name: 'Refresh' }))
+    await waitFor(() => expect(within(source).queryByTestId('stale-refresh-warning')).toBeNull())
+    expect(screen.getByRole('button', { name: 'Refresh from Tesla' })).toBeEnabled()
+  })
+
   it('matches built-in CSV and JSON values to display units and each recorded currency without changing cached SI', async () => {
     const sessions = [
       makeSession({ currency_code: 'EUR', total_cost: -5, per_kwh_rate: 0.25 }),
@@ -495,6 +597,10 @@ describe('TeslaChargingSessionsPage', () => {
     expect(within(screen.getByTestId('charging-operational-brief')).queryByText('Source measurements available')).toBeNull()
     expect(screen.getByRole('region', { name: 'Charging sessions table' })).toBeInTheDocument()
     expect(screen.queryAllByText("Can't reach server")).toHaveLength(0)
+    install()
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }))
+    await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).toBeNull())
+    expect(screen.getByTestId('sessions-map')).toHaveTextContent('map:3')
   })
   it('keeps unknown energy and billing distinct from measured zero without losing sessions or map points', async () => {
     mockedRequest.mockImplementation((path: string) => {
@@ -696,6 +802,35 @@ describe('TeslaChargingSessionsPage', () => {
     expect(screen.getAllByText('—').length).toBeGreaterThan(0)
     expect(screen.getByText('No sessions in this analysis window')).toBeInTheDocument()
     expect(screen.queryByText('123.00 kWh')).toBeNull()
+    expect(screen.queryByText('No fleet charging sessions match this analysis window.')).toBeNull()
+    expect(screen.getByText(/Scope: Model 3 Test.*View settings/)).toBeInTheDocument()
+  })
+
+  it('distinguishes a filtered no-match from an empty source while preserving section shells', async () => {
+    renderPage(['/tesla-charging-sessions?from=2024-01-01&to=2024-01-31'])
+
+    const history = screen.getByRole('region', { name: 'Charging sessions table' })
+    expect(await within(history).findByText('No fleet charging sessions match this analysis window.')).toBeInTheDocument()
+    expect(within(history).getByText(/Scope: Model 3 Test.*2024-01-01 to 2024-01-31.*widen or clear.*View settings/)).toBeInTheDocument()
+    expect(screen.getAllByText('No fleet charging sessions match this analysis window.')).toHaveLength(5)
+    expect(screen.queryByText(/No fleet charging sessions yet/)).toBeNull()
+    expect(screen.queryByText(/No cost data yet/)).toBeNull()
+    expect(screen.getByRole('region', { name: 'Cost analysis' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Session locations' })).toBeInTheDocument()
+    expect(screen.getByText('123.00 kWh')).toBeInTheDocument()
+  })
+
+  it('does not claim no matching or empty records when the scoped source is unavailable', async () => {
+    install({ sessionsError: true })
+    renderPage(['/tesla-charging-sessions?from=2024-01-01&to=2024-01-31'])
+
+    const history = screen.getByRole('region', { name: 'Charging sessions table' })
+    expect(await within(history).findByText('Fleet charging sessions have not loaded. Retry this source or reconnect to continue.')).toBeInTheDocument()
+    expect(within(history).queryByText(/Scope:/)).toBeNull()
+    expect(screen.queryByText('No fleet charging sessions match this analysis window.')).toBeNull()
+    expect(screen.queryByText(/No fleet charging sessions yet/)).toBeNull()
+    expect(screen.getByRole('region', { name: 'Cost analysis' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Session locations' })).toBeInTheDocument()
   })
 
   it('surfaces fee exposure and partial cost coverage as attention items', async () => {

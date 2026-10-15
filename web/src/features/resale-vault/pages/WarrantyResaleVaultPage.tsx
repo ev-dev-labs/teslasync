@@ -16,7 +16,7 @@
  * step since `buildVaultReport()` is pure and cheap to recompute on every
  * toggle.
  */
-import { useId, useMemo, useState } from 'react';
+import { useId, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PageLayout, LayoutCard } from '@/components/layout';
 import { Tabs, HelperText, Icon, type TabItem } from '@/components/ui';
@@ -32,6 +32,9 @@ import { useVaultEvidence } from '../hooks/useVaultEvidence';
 import { useDisclosureSelection } from '../hooks/useDisclosureSelection';
 import { useSigningVault } from '../hooks/useSigningVault';
 import { buildVaultReport } from '../lib/reportBuilder';
+import type { ExportReportPanelProps } from '../components/ExportReportPanel';
+import { getReportSourcePolicy } from '../components/ExportReportPanel';
+import { getSigningKeyCapabilitySnapshot, getSigningKeysSnapshot, subscribeSigningKeys } from '../lib/signingKeyRepository';
 
 import {
   DisclosureProfileBuilder,
@@ -59,14 +62,44 @@ export default function WarrantyResaleVaultPage() {
 
   const { vehicleId: numericVehicleId } = useSelectedVehicle();
   const vehicleId = numericVehicleId != null ? String(numericVehicleId) : null;
+  const vehicleScope = useRef({ vehicleId });
+  if (vehicleScope.current.vehicleId !== vehicleId) vehicleScope.current = { vehicleId };
+  const scope = vehicleScope.current;
+  const [retainedExport, setRetainedExport] = useState<{
+    scope: object;
+    snapshot: NonNullable<ExportReportPanelProps['retainedExport']>;
+  } | null>(null);
 
   const disclosure = useDisclosureSelection();
   const { evidence, isLoading, hasPartialErrors, sources } = useVaultEvidence(vehicleId, disclosure.selection.sensitive);
   const vault = useSigningVault();
+  const registry = useSyncExternalStore(subscribeSigningKeys, getSigningKeysSnapshot);
+  const keys = useMemo(
+    () => [...registry].reverse().sort((a, b) => b.created_at.localeCompare(a.created_at)),
+    [registry],
+  );
+  const [signingOperation, setSigningOperation] = useState<object | null>(null);
+  const signingOperationRef = useRef<object | null>(null);
+  const reconciledVault = {
+    ...vault,
+    capability: getSigningKeyCapabilitySnapshot() ?? vault.capability,
+    keys,
+    activeKey: keys.find((key) => key.revoked_at === null) ?? null,
+    isMutating: vault.isMutating || signingOperation !== null,
+  };
 
-  const report = useMemo(
+  const assembledReport = useMemo(
     () => buildVaultReport({ disclosure: disclosure.selection, evidence }),
     [disclosure.selection, evidence],
+  );
+  const sourceLimitations = getReportSourcePolicy(assembledReport, sources).limitations.join('\n');
+  const report = useMemo(
+    () => ({
+      ...assembledReport,
+      time_bounds: { ...assembledReport.time_bounds, generated_at: new Date().toISOString() },
+      limitations: [...assembledReport.limitations, ...sourceLimitations.split('\n').filter(Boolean)],
+    }),
+    [assembledReport, sourceLimitations],
   );
 
   const [activeTab, setActiveTab] = useState<VaultTabKey>('evidence');
@@ -88,8 +121,8 @@ export default function WarrantyResaleVaultPage() {
     <PageLayout
       title={pageTitle}
       subtitle={t(
-        'resaleVault.page.subtitle',
-        'Build a selectively-disclosed, cryptographically signed vehicle-history report — entirely in this browser.',
+        'resaleVault.page.localReportSubtitle',
+        'Assemble and sign a selectively disclosed vehicle-history report in this browser using evidence fetched from the server.',
       )}
     >
       <FadeIn>
@@ -97,8 +130,14 @@ export default function WarrantyResaleVaultPage() {
           actions={<Icon icon={ShieldCheck} className={typography.color.muted} />}>
           <HelperText>
             {t(
-              'resaleVault.intro.body',
-              'Nothing leaves your browser until you explicitly export it. The VIN, precise locations, coordinates, tokens, raw trip paths, and driver identity are never included unless you opt in (VIN) or are always excluded (everything else).',
+              'resaleVault.intro.localReportBody',
+              'Vault report assembly, report signing, imported report verification, signing keys, and the audit trail stay in this browser. You choose when to export or copy the vault report. The report excludes VIN unless you opt in, and always excludes precise locations, coordinates, tokens, raw trip paths, and driver identity.',
+            )}
+          </HelperText>
+          <HelperText>
+            {t(
+              'resaleVault.intro.serverCertificateBody',
+              'The battery certificate is a separate server-signed attestation: opening Evidence fetches it from the server for the selected vehicle and automatically sends its certificate payload and signature to the server for verification. These requests do not wait for a report export and are not controlled by the vault disclosure profile.',
             )}
           </HelperText>
         </LayoutCard>
@@ -125,8 +164,8 @@ export default function WarrantyResaleVaultPage() {
             <div className="space-y-4">
               <InlineCallout variant="info" icon={<Icon icon={ShieldCheck} />}>
                 {t(
-                  'resaleVault.evidence.scopeNote',
-                  'This tab shows all evidence currently available for this vehicle, regardless of your disclosure selection. Use the disclosure profile tab to control what actually leaves your browser.',
+                  'resaleVault.evidence.reportScopeNote',
+                  'This tab shows all evidence currently available for this vehicle, regardless of your disclosure selection. Use the disclosure profile tab to control what is included in the local vault report, not the separate server certificate requests.',
                 )}
               </InlineCallout>
               <EvidenceInventoryPanel
@@ -164,8 +203,28 @@ export default function WarrantyResaleVaultPage() {
           <FadeIn>
             <div className="space-y-4">
               <PrivacyPreviewPanel report={report} />
-              <SignatureKeyPanel vault={vault} />
-              <ExportReportPanel report={report} />
+              <SignatureKeyPanel vault={reconciledVault} />
+              <ExportReportPanel
+                key={vehicleId}
+                report={report}
+                sources={sources}
+                retainedExport={retainedExport?.scope === scope ? retainedExport.snapshot : null}
+                onSigned={(signed, readinessKey) => {
+                  if (vehicleScope.current === scope) {
+                    setRetainedExport({ scope, snapshot: { signed: structuredClone(signed), readinessKey } });
+                  }
+                }}
+                blocked={vault.isLoading || vault.isMutating || signingOperation !== null}
+                onSigningChange={(pending, operation) => {
+                  if (pending) {
+                    signingOperationRef.current = operation;
+                    setSigningOperation(operation);
+                  } else if (signingOperationRef.current === operation) {
+                    signingOperationRef.current = null;
+                    setSigningOperation(null);
+                  }
+                }}
+              />
             </div>
           </FadeIn>
         )}

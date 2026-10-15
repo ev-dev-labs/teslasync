@@ -7,6 +7,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
 import { ChartCard } from '@/components/layout';
+import { chartTokens } from '@/lib/tokens';
 import { FadeIn } from '@/components/motion';
 import { Table } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
@@ -24,10 +25,10 @@ type TireKey = 'tireFl' | 'tireFr' | 'tireRl' | 'tireRr';
  * compact legend name.
  */
 const TIRE_WHEELS = [
-  { key: 'tireFl', color: '#3b82f6', abbr: 'FL', labelKey: 'driveDetail.frontLeft', labelDefault: 'Front left' },
-  { key: 'tireFr', color: '#10b981', abbr: 'FR', labelKey: 'driveDetail.frontRight', labelDefault: 'Front right' },
-  { key: 'tireRl', color: '#f59e0b', abbr: 'RL', labelKey: 'driveDetail.rearLeft', labelDefault: 'Rear left' },
-  { key: 'tireRr', color: '#ef4444', abbr: 'RR', labelKey: 'driveDetail.rearRight', labelDefault: 'Rear right' },
+  { key: 'tireFl', color: chartTokens.series[0], abbr: 'FL', labelKey: 'driveDetail.frontLeft', labelDefault: 'Front left' },
+  { key: 'tireFr', color: chartTokens.series[1], abbr: 'FR', labelKey: 'driveDetail.frontRight', labelDefault: 'Front right' },
+  { key: 'tireRl', color: chartTokens.series[2], abbr: 'RL', labelKey: 'driveDetail.rearLeft', labelDefault: 'Rear left' },
+  { key: 'tireRr', color: chartTokens.series[4], abbr: 'RR', labelKey: 'driveDetail.rearRight', labelDefault: 'Rear right' },
 ] as const satisfies ReadonlyArray<{
   key: TireKey; color: string; abbr: string; labelKey: string; labelDefault: string;
 }>;
@@ -110,9 +111,9 @@ export function TirePressureSection({ chartData, stats }: TirePressureSectionPro
           <>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} interval="preserveStartEnd" />
-                <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
+                <XAxis dataKey="time" tick={{ fill: chartTokens.axisStroke, fontSize: 10 }} interval="preserveStartEnd" />
+                <YAxis tick={{ fill: chartTokens.axisStroke, fontSize: 10 }} />
                 <Tooltip content={<ChartTooltip />} />
                 <Legend wrapperStyle={LEGEND_STYLE} />
                 {wheels

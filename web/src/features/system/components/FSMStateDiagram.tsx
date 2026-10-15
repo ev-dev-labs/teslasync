@@ -1,12 +1,16 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { GlassPanel } from '@/components/ui';
+import { Caption, GlassPanel } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { cn } from '@/lib/cn';
 import { FSM_STATES, FSM_EDGES, getStateColor } from '@/types/fsm';
 import type { FSMTransition } from '@/types/fsm';
 import { VisuallyHidden } from '@/components/a11y';
 import { useA11ySummary } from '@/hooks/useA11ySummary';
+import { neonColorMap, semanticToNeon } from '@/lib/tokens';
+
+const stateCue = (fsmType: string, state: string) =>
+  neonColorMap[semanticToNeon[getStateColor(fsmType, state).variant]];
 
 interface FSMStateDiagramProps {
   fsmType: string;
@@ -79,7 +83,7 @@ export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) 
       <VisuallyHidden>{stateSummary}</VisuallyHidden>
       <div className="flex flex-wrap items-start gap-2 sm:gap-3">
         {states.map((state, i) => {
-          const color = getStateColor(fsmType, state);
+          const color = stateCue(fsmType, state);
           const count = stateCounts.get(state) ?? 0;
           const isCurrent = state === latestState;
           // Show arrow after node unless last
@@ -91,12 +95,12 @@ export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) 
                 data-testid={`fsm-node-${state}`}
                 aria-current={isCurrent ? 'true' : undefined}
                 className={cn(
-                  'relative flex flex-col items-center rounded-lg border px-3 py-2 min-w-[70px] sm:min-w-[80px] transition-all',
+                  'relative flex flex-col items-center rounded-lg border px-3 py-2 min-w-[70px] sm:min-w-[80px]',
                   isCurrent
-                    ? 'border-[var(--border-strong)] bg-white/[0.08] ring-1 ring-white/20'
+                    ? 'border-[var(--text-secondary)] bg-[var(--surface-2)]'
                     : count > 0
-                      ? 'border-[var(--border-subtle)] bg-white/[0.04]'
-                      : 'border-white/[0.05] bg-white/[0.02] opacity-50',
+                      ? 'border-[var(--border-default)] bg-[var(--surface-2)]'
+                      : 'border-[var(--border-subtle)] bg-[var(--surface-1)]',
                 )}
               >
                 <span aria-hidden="true" className={cn('h-2 w-2 rounded-full mb-1', color.dot)} />
@@ -108,9 +112,9 @@ export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) 
                   <>
                     <span
                       aria-hidden="true"
-                      className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-green-400 animate-pulse"
+                      className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-[var(--semantic-info)]"
                     />
-                    <VisuallyHidden>{t('fsm.currentState', 'current state')}</VisuallyHidden>
+                    <Caption>{t('fsm.currentState', 'current state')}</Caption>
                   </>
                 )}
               </div>
@@ -152,11 +156,11 @@ export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) 
               return (
                 <span
                   key={edge}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded bg-white/[0.03] text-2xs text-[var(--text-secondary)]"
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded bg-[var(--surface-2)] text-2xs text-[var(--text-secondary)]"
                 >
-                  <span className={getStateColor(fsmType, from).text}>{from}</span>
+                  <span className={stateCue(fsmType, from).text}>{from}</span>
                   <span className="text-[var(--text-muted)]">→</span>
-                  <span className={getStateColor(fsmType, to).text}>{to}</span>
+                  <span className={stateCue(fsmType, to).text}>{to}</span>
                   <span className="text-[var(--text-muted)] font-mono">×{count}</span>
                 </span>
               );

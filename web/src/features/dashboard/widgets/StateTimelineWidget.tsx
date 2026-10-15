@@ -6,7 +6,7 @@ import { TimeStamp } from '@/components/data-display';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { combineDataStates } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
-import { useStateSummary, useTimeline } from '@/api/hooks/useAnalytics';
+import { useStateSummary, useTimeline, type VehicleStateSummaryRow } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
 
 import { WidgetShell } from './WidgetShell';
@@ -158,7 +158,15 @@ export default function StateTimelineWidget({ vehicleId, size }: WidgetProps) {
   const isWide = size.cols >= 3;
 
   const segments = useMemo(
-    () => buildSegments(summary.data ?? []),
+    () => (summary.data ?? []).filter((row: VehicleStateSummaryRow) =>
+      Number.isFinite(row.total_seconds) && row.total_seconds >= 0
+      && Number.isFinite(row.percentage) && row.percentage >= 0 && row.percentage <= 100,
+    ).map((row) => ({
+      state: row.state,
+      pct: row.percentage,
+      totalMin: row.total_seconds / 60,
+      count: row.transition_count,
+    })),
     [summary.data],
   );
 

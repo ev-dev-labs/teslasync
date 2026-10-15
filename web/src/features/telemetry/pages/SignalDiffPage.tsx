@@ -32,7 +32,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useUrlBatch, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
-import { downloadCSV, objectsToCSV } from '@/lib/csvExport';
+import { downloadCSV, objectsToCSV, type CsvCellValue } from '@/lib/csvExport';
 import { typography } from '@/lib/tokens';
 
 import { SignalDiffTable } from '../components/SignalDiffTable';
@@ -53,6 +53,12 @@ export function toNum(v: unknown): number | null {
   }
   if (typeof v === 'boolean') return v ? 1 : 0;
   return null;
+}
+
+function csvValue(value: unknown): CsvCellValue {
+  if (value == null || typeof value === 'string' || typeof value === 'number' ||
+      typeof value === 'boolean' || typeof value === 'object') return value;
+  throw new TypeError('Unsupported signal value for CSV export');
 }
 
 /** Compact human span (e.g. "1h 5m", "45s") for the window-span KPI. */
@@ -243,17 +249,17 @@ export default function SignalDiffPage() {
       },
       {
         id: 'csv',
-        label: t('signalDiff.bulk.csv', 'Copy CSV'),
+        label: t('signalDiff.bulk.csv', 'Download CSV'),
         onClick: async (ids) => {
           const idSet = new Set(ids.map(String));
           const rowsToExport = allRows.filter((r) => idSet.has(r.name));
           const csv = objectsToCSV(
             rowsToExport.map((r) => ({
               signal: r.name,
-              window_a: String(r.value_a ?? ''),
-              window_b: String(r.value_b ?? ''),
-              source_a: String(r.source_a ?? ''),
-              source_b: String(r.source_b ?? ''),
+              window_a: csvValue(r.value_a),
+              window_b: csvValue(r.value_b),
+              source_a: r.source_a,
+              source_b: r.source_b,
             })),
           );
           downloadCSV(`signal-diff-vehicle-${vehicleId}.csv`, csv);

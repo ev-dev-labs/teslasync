@@ -243,6 +243,7 @@ export default function ChargingListPage() {
   /* ── Search filter (with structured kv tokens) ───────────────── */
   const deferredSearch = useDeferredValue(search);
   const isSearchPending = !Object.is(search, deferredSearch);
+  const hasListFilters = deferredSearch.trim().length > 0 || collection !== 'all' || hasValueFilters;
   const searchTokens = useMemo(() => parseSearchQuery(deferredSearch), [deferredSearch]);
   const searchedSessions = useMemo(() => {
     if (searchTokens.length === 0) return collectionFiltered;
@@ -1183,12 +1184,12 @@ export default function ChargingListPage() {
                 <EmptyState
                   icon={<Battery className="h-8 w-8" />}
                   title={
-                    collection !== 'all'
+                    hasListFilters
                       ? t('charging.emptyForCollection', 'No charging sessions in this view')
                       : t('charging.emptyTitle', 'No charging sessions yet')
                   }
                   message={
-                    collection !== 'all'
+                    hasListFilters
                       ? t('charging.emptyForCollectionMessage', 'Try switching to a different collection or clearing your filters.')
                       : t('charging.emptyMessage', 'Charging data will appear here once your vehicle records sessions.')
                   }
@@ -1202,7 +1203,7 @@ export default function ChargingListPage() {
                 {/* HELP-02 — governed prerequisite + likely cause. Only for
                     the unfiltered view; the filtered branch above already
                     tells the user to clear filters. */}
-                {collection === 'all' && (
+                {!hasListFilters && (
                   <EmptyStateGuidanceDetails guidanceId="charging.list" className="mx-auto" />
                 )}
               </>

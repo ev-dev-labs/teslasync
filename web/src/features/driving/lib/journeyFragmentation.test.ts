@@ -55,7 +55,88 @@ function linkedPair(firstMinute: number, secondMinute: number): Drive[] {
   ];
 }
 
+describe('formatJourneyFragmentDistance', () => {
+  it.each([0, -0, 1, -1, 0.25, -0.25])('formats finite signed value %s', (value) => {
+    const formatter = vi.fn((distanceM: number) => `${distanceM} m`);
+    expect(formatJourneyFragmentDistance(value, formatter)).toBe(`${value} m`);
+    expect(formatter).toHaveBeenCalledExactlyOnceWith(value);
+  });
+
+  it.each([null, undefined, Number.NaN, Infinity, -Infinity, '', '0', false])(
+    'uses an em dash only for unknown or invalid value %s',
+    (value) => {
+      const formatter = vi.fn((distanceM: number) => `${distanceM} m`);
+      expect(formatJourneyFragmentDistance(value, formatter)).toBe('—');
+      expect(formatter).not.toHaveBeenCalled();
+    },
+  );
+});
+
 describe('analyzeJourneyFragmentation', () => {
+  it.each([null, undefined, NaN, Infinity, -Infinity, -0.25, '', '0', false])(
+    'discloses unknown/invalid operand %s without redefining aggregates',
+    (value) => {
+      const drives = linkedPair(0, 30);
+      Object.defineProperty(drives[1]!, 'distanceM', { value });
+      const before = drives.map((drive) => ({ ...drive }));
+      const result = analyzeJourneyFragmentation(drives, NOW, 'UTC');
+      const expected = {
+        measuredRows: 1,
+        missingRows: value == null ? 1 : 0,
+        invalidRows: value == null ? 0 : 1,
+        measuredDistanceM: 10_000,
+        totalDistanceM: null,
+      };
+
+      expect(result.distanceAssessment).toEqual(expected);
+      expect(result.journeys[0]?.distanceAssessment).toEqual(expected);
+      expect(result.energyComparison.multiDrive.distanceAssessment).toEqual(expected);
+      expect(result.totalDistanceM).toBe(10_000);
+      expect(result.journeys[0]?.distanceM).toBe(10_000);
+      expect(result.energyComparison.multiDrive.totalDistanceM).toBe(10_000);
+      expect(result.energyComparison.multiDrive.distanceCoverage).toBe(0);
+      expect(result.includedDrives).toBe(2);
+      expect(result.journeyCount).toBe(1);
+      expect(result.linkedPairs).toBe(1);
+      expect(result.compactObservedChainCount).toBe(1);
+      expect(result.shortFragmentDenominator).toBe(2);
+      expect(drives).toEqual(before);
+    },
+  );
+
+  it.each([0, -0, 0.25, 1.5])('retains measured distance %s in coverage', (value) => {
+    const result = analyzeJourneyFragmentation([driveAt(0, { distanceM: value })], NOW, 'UTC');
+    expect(result.distanceAssessment).toEqual({
+      measuredRows: 1, missingRows: 0, invalidRows: 0,
+      measuredDistanceM: value === 0 ? 0 : value,
+      totalDistanceM: value === 0 ? 0 : value,
+    });
+    expect(result.shortFragmentDenominator).toBe(1);
+  });
+
+  it('does not disclose excluded rows as included-distance operands', () => {
+    const result = analyzeJourneyFragmentation([
+      driveAt(0, { distanceM: 0.25 }),
+      driveAt(300, { distanceM: NaN, durationS: 0 }),
+    ], NOW, 'UTC');
+    expect(result.distanceAssessment).toEqual({
+      measuredRows: 1, missingRows: 0, invalidRows: 0,
+      measuredDistanceM: 0.25, totalDistanceM: 0.25,
+    });
+  });
+
+  it('discloses overflowing derived totals without changing accepted operands', () => {
+    const result = analyzeJourneyFragmentation([
+      driveAt(0, { distanceM: Number.MAX_VALUE }),
+      driveAt(30, { distanceM: Number.MAX_VALUE }),
+    ], NOW, 'UTC');
+    expect(result.distanceAssessment).toEqual({
+      measuredRows: 2, missingRows: 0, invalidRows: 0,
+      measuredDistanceM: null, totalDistanceM: null,
+    });
+    expect(result.includedDrives).toBe(2);
+  });
+
   it.each([null, undefined, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, -1])(
     'keeps missing or invalid distance %s distinct from measured zero',
     (distanceM) => {
@@ -70,6 +151,15 @@ describe('analyzeJourneyFragmentation', () => {
       expect(result.shortFragmentDistanceShare).toBeNull();
       expect(result.energyComparison.singleDrive.completeEnergyJourneys).toBe(0);
       expect(result.energyComparison.singleDrive.distanceCoverage).toBeNull();
+      expect(result.distanceAssessment).toEqual({
+        measuredRows: 0,
+        missingRows: distanceM == null ? 1 : 0,
+        invalidRows: distanceM == null ? 0 : 1,
+        measuredDistanceM: null,
+        totalDistanceM: null,
+      });
+      expect(result.journeys[0]?.distanceAssessment).toEqual(result.distanceAssessment);
+      expect(result.energyComparison.singleDrive.distanceAssessment).toEqual(result.distanceAssessment);
     },
   );
 
@@ -105,12 +195,23 @@ describe('analyzeJourneyFragmentation', () => {
     expect(result.shortFragmentCount).toBe(1);
     expect(result.shortFragmentDenominator).toBe(3);
     expect(result.shortFragmentDistanceShare).toBe(1);
+    expect(result.distanceAssessment).toEqual({
+      measuredRows: 2, missingRows: 1, invalidRows: 0,
+      measuredDistanceM: 0.25, totalDistanceM: null,
+    });
+    expect(result.energyComparison.singleDrive.distanceAssessment).toEqual(result.distanceAssessment);
+    expect(result.energyComparison.singleDrive.distanceCoverage).toBe(1);
+    expect(result.energyComparison.singleDrive.completeEnergyJourneys).toBe(1);
   });
 
   it('does not report an empty history as measured zero', () => {
     const result = analyzeJourneyFragmentation([], NOW, 'UTC');
     expect(result.shortFragmentDistanceM).toBeNull();
     expect(result.shortFragmentDenominator).toBe(0);
+    expect(result.distanceAssessment).toEqual({
+      measuredRows: 0, missingRows: 0, invalidRows: 0,
+      measuredDistanceM: null, totalDistanceM: null,
+    });
   });
 
   it('sorts a copied view of input and links an inclusive selected threshold', () => {
@@ -119,23 +220,6 @@ describe('analyzeJourneyFragmentation', () => {
     const original = returnedOutOfOrder.map((drive) => ({ ...drive }));
     const result = analyzeJourneyFragmentation(returnedOutOfOrder, NOW, 'UTC', {
       maxParkingGapMin: 120,
-    });
-
-    describe('formatJourneyFragmentDistance', () => {
-      it.each([0, -0, 1, -1, 0.25, -0.25])('formats finite signed value %s', (value) => {
-        const formatter = vi.fn((distanceM: number) => `${distanceM} m`);
-        expect(formatJourneyFragmentDistance(value, formatter)).toBe(`${value} m`);
-        expect(formatter).toHaveBeenCalledExactlyOnceWith(value);
-      });
-
-      it.each([null, undefined, Number.NaN, Infinity, -Infinity, '', '0', false])(
-        'uses an em dash only for unknown or invalid value %s',
-        (value) => {
-          const formatter = vi.fn((distanceM: number) => `${distanceM} m`);
-          expect(formatJourneyFragmentDistance(value, formatter)).toBe('—');
-          expect(formatter).not.toHaveBeenCalled();
-        },
-      );
     });
 
     expect(result.journeyCount).toBe(1);

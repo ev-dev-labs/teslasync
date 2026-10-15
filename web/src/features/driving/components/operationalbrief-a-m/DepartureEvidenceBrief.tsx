@@ -7,9 +7,11 @@ import { DepartureForecastQueryStatus } from '../departure-forecast/DepartureFor
 import { departureClock, departureDateTime, departureEvidenceBandLabel, relativeDepartureLabel } from '../departure-forecast/labels';
 import { DrivingSummaryBrief } from './DrivingSummaryBrief';
 
-type Props = ComponentProps<typeof DepartureForecastKpiBand>;
+type Props = ComponentProps<typeof DepartureForecastKpiBand> & {
+  timeZoneProvenance?: string;
+};
 
-export function DepartureEvidenceBrief({ forecast, state, locale, timeZone }: Props) {
+export function DepartureEvidenceBrief({ forecast, state, locale, timeZone, timeZoneProvenance }: Props) {
   const { t } = useTranslation();
   const { fmtNumber } = useNumberFormatting();
   const ready = state.isResolved && !state.error;
@@ -66,7 +68,15 @@ export function DepartureEvidenceBrief({ forecast, state, locale, timeZone }: Pr
   return <section aria-label={t('departure.kpis.aria', 'Departure forecast evidence summary')} data-testid="departure-kpis">
     <DrivingSummaryBrief metrics={metrics} title={t('departure.kpis.title', 'Forecast evidence')}
       description={t('departure.brief.description', 'Next-24-hour modeled likelihood uses capped observed departure history; the support index is not a calibrated probability or confidence score.')}
-      scope={t('departure.brief.window', 'Next 24 hours · {{timezone}}; history coverage is limited to returned rows', { timezone: timeZone })}
+      scope={<>
+        {t('departure.brief.snapshotAnchor', 'Model snapshot anchor: ')}
+        <time dateTime={new Date(forecast.nowMs).toISOString()}>
+          {departureDateTime(forecast.nowMs, locale, timeZone)}
+        </time>
+        {' · '}{timeZone}
+        {timeZoneProvenance && <>{' · '}{timeZoneProvenance}</>}
+        {' · '}{t('departure.brief.snapshotMeaning', 'Next 24 hours and “in” times are relative to this fixed anchor, not a live countdown; history coverage is limited to returned rows.')}
+      </>}
       provenance={t('departure.brief.source', 'Returned drive starts; Poisson-derived likelihood and illustrative planning marker, with no vehicle command.')}
       loading={state.isLoading} error={state.error} showError={false} retained={ready && (state.refreshError != null || state.isRefreshBlocked || state.fetchStatus === 'fetching')} onRetry={state.onRetry}
       statusLabel={!state.vehicleSelected ? t('driving.brief.selectVehicle', 'Select a vehicle')

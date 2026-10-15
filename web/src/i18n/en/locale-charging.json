@@ -1282,6 +1282,8 @@
   },
   "tesla_charging": {
     "title": "Tesla charging history",
+    "durationHoursMinutes": "{{hours}}h {{minutes}}m",
+    "durationMinutes": "{{minutes}}m",
     "allVehicles": "All vehicles",
     "col": {
       "date": "Date",
@@ -1370,6 +1372,8 @@
     "noMapData": "No location data available yet.",
     "table": "Charging sessions",
     "noData": "No fleet charging sessions yet. Click \"Refresh from Tesla\" to import data.",
+    "noMatch": "No fleet charging sessions match this analysis window.",
+    "emptyScopeGuidance": "Scope: {{vehicle}}, {{start}} to {{end}}. Change the vehicle or widen or clear the date range in View settings to review another scope.",
     "unknown": "Unknown",
     "unknownType": "Unknown",
     "markerLabel": "{{name}} charging session",
@@ -2417,8 +2421,10 @@
     },
     "chargerResilience": {
       "effectiveSites": "The reciprocal of the energy-weighted Herfindahl-Hirschman Index (1/HHI) — the number of equally-sized sites this portfolio behaves like. Usually smaller than a raw count of distinct locations, because a handful of those were only visited once.",
-      "iconLabel": "More info about the what-if scenario",
-      "score": "A composite of three things: how much energy is NOT concentrated in your top site (40%), how often an alternate site has actually been used rather than just being available on paper (30%), and how many effectively-equal sites your charging behaves like (30%)."
+      "effectiveSitesIconLabel": "More info about the effective site count",
+      "score": "A composite of three things: how much energy is NOT concentrated in your top site (40%), how often an alternate site has actually been used rather than just being available on paper (30%), and how many effectively-equal sites your charging behaves like (30%).",
+      "scoreIconLabel": "More info about the resilience score",
+      "whatIfIconLabel": "More info about the what-if scenario"
     },
     "charging": {
       "chargeCurve": "Power vs SoC curve for the session. Tapering — the gradual drop in power as the battery approaches full — is inherent to lithium chemistry and is not a fault. Sudden drops below the curve indicate derating: the charger or battery is throttling power because of cell or ambient temperature limits.",

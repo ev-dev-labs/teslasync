@@ -12,6 +12,7 @@ import { PageLayout, SourceContent } from '@/components/layout'
 import { StaleRefreshWarning } from '@/components/feedback'
 import { deriveDataState } from '@/api/dataState'
 import { FadeIn } from '@/components/motion'
+import { HelperText } from '@/components/ui'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useAuthStatus } from '@/api/hooks/useSettings'
 import { useOnboardingStatus } from '@/api/hooks/useOnboarding'
@@ -94,10 +95,21 @@ export default function FleetSetupPage() {
             <TeslaAccountSection />
           </div>
           <div className="xl:col-span-1">
+            <HelperText className="mb-3">
+              {t(
+                'fleetSetup.telemetryScope',
+                'Progress and streaming status are fleet-wide observations. Check the selected VIN configuration below; fleet history does not confirm that VIN is streaming.',
+              )}
+            </HelperText>
             <FleetSetupProgress
-              authenticated={auth.data?.authenticated === true}
+              authenticated={auth.data?.authenticated}
               apiInfo={apiInfo.data}
               onboarding={onboarding.data}
+              sources={{
+                account: { ...authState, isLoading: auth.isFetching },
+                token: { ...apiState, isLoading: apiInfo.isFetching },
+                telemetry: { ...onboardingState, isLoading: onboarding.isFetching },
+              }}
             />
           </div>
         </section>

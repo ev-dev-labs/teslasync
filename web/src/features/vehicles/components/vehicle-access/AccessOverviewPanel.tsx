@@ -51,7 +51,7 @@ export function AccessOverviewPanel({
   driversState,
   invitationsState,
 }: AccessOverviewPanelProps) {
-  const { fmtPercent } = useNumberFormatting();
+  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
 
   // Null-safe views of the breakdown arrays — the contract types them as
@@ -124,7 +124,7 @@ export function AccessOverviewPanel({
                       max={invitations || count || 1}
                       color={slice.color}
                       fill="solid"
-                      sublabel={`${count} · ${fmtPercent(pct)}`}
+                      sublabel={`${fmtInt(count)} · ${fmtPercent(pct)}`}
                     />
                   );
                 })}
@@ -145,7 +145,7 @@ export function AccessOverviewPanel({
                   <li key={slice.role}>
                     <Badge variant="neutral">
                       {t(`vehicleAccess.role.${slice.role}`, titleCase(slice.role))}
-                      <Text color="muted" className="ml-1">{slice.count ?? 0}</Text>
+                      <Text color="muted" className="ml-1">{fmtInt(slice.count ?? 0)}</Text>
                     </Badge>
                   </li>
                 ))}

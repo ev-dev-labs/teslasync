@@ -4,6 +4,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 
 import type { TripConfidence, TripConfidenceRequest } from '@/types/driving';
@@ -59,6 +60,33 @@ beforeEach(() => {
 });
 
 describe('TripCopilotCard', () => {
+  it('declares mobile targets and wrapping with explicit desktop sizing restoration', () => {
+    render(<TripCopilotCard currentSoc={80} minArrivalSoc={10} />);
+    const field = screen.getByRole('spinbutton', { name: 'Remaining (km)' });
+    const button = screen.getByRole('button', { name: 'Will I make it?' });
+    expect(field).toHaveClass('min-h-11', 'md:min-h-10');
+    expect(field.parentElement?.parentElement?.parentElement).toHaveClass('min-w-0', 'basis-full', 'md:basis-40');
+    expect(button).toHaveClass('min-h-11', 'min-w-11', 'w-full', 'md:min-h-10', 'md:min-w-0', 'md:w-auto', 'h-auto', 'whitespace-normal');
+    expect(button.firstElementChild).toHaveClass('min-w-0', 'break-words');
+  });
+
+  it('keeps the field and check action keyboard reachable and submits with Enter and Space', async () => {
+    const user = userEvent.setup();
+    const mutate = vi.fn();
+    mockConfidence.mockReturnValue({ mutate, data: null, isPending: false, isError: false, error: null });
+    render(<TripCopilotCard currentSoc={80} minArrivalSoc={10} />);
+    await user.tab();
+    expect(screen.getByRole('spinbutton', { name: 'Remaining (km)' })).toHaveFocus();
+    await user.type(screen.getByRole('spinbutton'), '150');
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Will I make it?' })).toHaveFocus();
+    await user.keyboard('{Enter}');
+    await user.keyboard(' ');
+    expect(mutate).toHaveBeenCalledTimes(2);
+    expect(mutate.mock.calls[0][0]).toEqual({ current_soc: 80, remaining_km: 150, min_arrival_soc: 10 });
+    expect(mutate.mock.calls[1][0]).toEqual(mutate.mock.calls[0][0]);
+  });
+
   it('shows a loading body only while the initial check is actively running', () => {
     mockConfidence.mockReturnValue({
       mutate: vi.fn(), data: undefined, isPending: true, isPaused: false, isError: false, error: null,

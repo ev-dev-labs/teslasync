@@ -27,6 +27,20 @@ import { ChartTimeRangeProvider } from '@/components/charts';
 import { DriveOverviewChart } from './DriveOverviewChart';
 import type { ChartDataPoint } from './types';
 import type { DriveDetail } from '@/types/driving';
+import { chartTokens } from '@/lib/tokens';
+
+vi.mock('@/components/charts', async () => ({
+  ...await vi.importActual<typeof import('@/components/charts')>('@/components/charts'),
+  ResponsiveContainer: ({ children }: { children: ReactNode }) => <>{children}</>,
+  ComposedChart: ({ children, data }: { children: ReactNode; data: ChartDataPoint[] }) =>
+    <div data-testid="overview-plot" data-powers={JSON.stringify(data.map((point) => point.power))}>{children}</div>,
+  Line: ({ dataKey, stroke }: { dataKey: string; stroke: string }) =>
+    <span data-testid={`series-${dataKey}`} data-stroke={stroke} />,
+  Area: ({ dataKey, stroke }: { dataKey: string; stroke: string }) =>
+    <span data-testid={`series-${dataKey}`} data-stroke={stroke} />,
+  ReferenceLine: ({ y, stroke }: { y?: number; stroke: string }) =>
+    <span data-testid="overview-reference" data-y={y} data-stroke={stroke} />,
+}));
 
 // Return the English fallback so assertions read naturally. Option objects
 // (interpolation) fall through to the key — this component only passes string
@@ -106,6 +120,20 @@ function renderChart(
 }
 
 describe('DriveOverviewChart', () => {
+  it('shares signal colors with the detail charts without changing signed power or range sources', () => {
+    renderChart([
+      point({ power: -5.25, idealRange: 100, estRange: 90, ratedRange: 80, usableSoc: 50 }),
+      point({ power: 12.5, idealRange: 95, estRange: null, ratedRange: 75, usableSoc: 49 }),
+    ]);
+    for (const [key, index] of Object.entries({
+      speed: 0, battery: 1, power: 2, idealRange: 4, estRange: 6, ratedRange: 7, usableSoc: 5,
+    })) {
+      expect(screen.getByTestId(`series-${key}`)).toHaveAttribute('data-stroke', chartTokens.series[index]);
+    }
+    expect(screen.getByTestId('overview-plot')).toHaveAttribute('data-powers', '[-5.25,12.5]');
+    expect(screen.getByTestId('overview-reference')).toHaveAttribute('data-y', '0');
+    expect(screen.getByTestId('overview-reference')).toHaveAttribute('data-stroke', chartTokens.axisStroke);
+  });
   it.each([{ points: [] }, { points: [point()] }])('suppresses image export for an ineligible overview ($points.length samples)', ({ points }) => {
     const { container } = renderChart(points);
     expect(container.querySelector('[data-chart-state]')).toHaveAttribute('data-chart-state', 'empty');

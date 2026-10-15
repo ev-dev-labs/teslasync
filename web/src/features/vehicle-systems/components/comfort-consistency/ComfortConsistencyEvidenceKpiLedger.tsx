@@ -52,7 +52,7 @@ export function ComfortConsistencyEvidenceKpiLedger({
       metricId: 'number', occurrenceId: 'consistency-score',
       label: t('comfortConsistency.kpis.score', 'Adjusted consistency score'),
       rawValue: resolved ? summary.consistencyScore ?? null : null,
-      display: { formatter: raw => ({ value: String(raw), unit: '' }) },
+      display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) },
       context: <><ShieldCheck aria-hidden="true" className={`h-5 w-5 ${
         summary.consistencyScore == null ? 'text-cyan-300'
           : summary.consistencyScore >= 80 ? 'text-emerald-300'

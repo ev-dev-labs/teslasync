@@ -29,6 +29,7 @@ import {
   QueryError,
   AlertBanner,
   DataStateNotice,
+  DataSourceNotice,
   StaleRefreshWarning,
   StatGridSkeleton,
 } from '@/components/feedback';
@@ -179,42 +180,6 @@ function previewTrustSummary(
   }
 }
 
-/* ── Loading skeleton ──────────────────────────────────────── */
-
-/**
- * Mirrors the redesigned bento layout while the fleet list loads: KPI band →
- * overview bento (hero battery + status) → responsive vehicle-card grid.
- * Rendered inside the shared PageLayout so the title bar appears instantly
- * and layout shift stays at zero when the real content arrives.
- */
-function VehicleListSkeleton() {
-  const { t } = useTranslation();
-  return (
-    <PageLayout
-      title={t('nav.vehicles', 'Fleet')}
-      subtitle={t('vehicles.subtitle', 'View, manage, and sync your Tesla vehicles')}
-    >
-      <div className="space-y-6" data-testid="vehicle-list-skeleton">
-        <StatGridSkeleton cards={4} />
-        <VehiclePanelGrid
-          label={t('vehicles.overview', 'Fleet overview')}
-          items={[
-            { id: 'battery-loading', size: 'half', content: <Skeleton className="h-64 rounded-xl" /> },
-            { id: 'status-loading', size: 'half', content: <Skeleton className="h-64 rounded-xl" /> },
-          ]}
-        />
-        <VehiclePanelGrid
-          label={t('vehicles.allVehicles', 'All vehicles')}
-          items={Array.from({ length: 6 }, (_, i) => ({
-            id: `vehicle-loading-${i}`, size: 'quarter',
-            content: <Skeleton className="h-52 rounded-xl" />,
-          }))}
-        />
-      </div>
-    </PageLayout>
-  );
-}
-
 /* ── Small building blocks ─────────────────────────────────── */
 
 /** Compact icon + value chip used inside the vehicle card stat row. */
@@ -272,11 +237,11 @@ function FleetKpis({
         { metricId: 'count', occurrenceId: 'fleet-total', label: t('vehicles.totalVehicles', 'Total vehicles'), rawValue: totalVehicles },
         { metricId: 'percent', occurrenceId: 'fleet-average-battery', label: t('vehicles.avgBattery', 'Avg battery'),
           rawValue: avgBattery,
-          display: { formatter: raw => ({ value: `${fmtNumber(raw)}%`, unit: '' }) } },
+          display: { formatter: (raw, preferences) => ({ value: `${fmtNumber(raw, preferences.units.precision, preferences.units.locale)}%`, unit: '' }) } },
         { metricId: 'distance', occurrenceId: 'fleet-total-range',
           label: `${t('vehicles.totalRange', 'Total range')} (${unitPrefs.distance})`,
           rawValue: totalRange,
-          display: { formatter: raw => ({ value: fmtNumber(convertDistanceFromSI(raw, unitPrefs.distance)), unit: '' }) } },
+          display: { formatter: (raw, preferences) => ({ value: fmtNumber(convertDistanceFromSI(raw, preferences.units.distance), preferences.units.precision, preferences.units.locale), unit: '' }) } },
         { metricId: 'count', occurrenceId: 'fleet-charging-coverage', label: t('vehicles.chargingLiveState', 'Charging / live state'),
           rawValue: chargingCoverageCount === 0 ? null : chargingCount,
           display: { countTotal: chargingCoverageCount } },
@@ -292,14 +257,16 @@ interface FleetBatteryPanelProps {
   /** `null` when no vehicle reported a battery level — never coerced to 0. */
   avgBattery: number | null;
   isLoading: boolean;
+  isRefreshBlocked: boolean;
   isError: boolean;
   error: unknown;
   onRetry: () => void;
 }
 
 /** Per-vehicle battery bars — the hero panel of the overview bento. */
-function FleetBatteryPanel({ entries, avgBattery, isLoading, isError, error, onRetry }: FleetBatteryPanelProps) {
+function FleetBatteryPanel({ entries, avgBattery, isLoading, isRefreshBlocked, isError, error, onRetry }: FleetBatteryPanelProps) {
   const { t } = useTranslation();
+  const { fmtNumber } = useNumberFormatting();
   const { formatDistance } = useUnits();
   // A failed refresh must not delete the readings already on screen: only
   // fall back to the error surface when there is genuinely nothing retained.
@@ -315,7 +282,7 @@ function FleetBatteryPanel({ entries, avgBattery, isLoading, isError, error, onR
           {avgBattery == null ? (
             <span aria-label={t('common.unknown', 'Unknown')}>—</span>
           ) : (
-            <AnimatedNumber value={Math.round(avgBattery)} suffix="%" />
+            <AnimatedNumber value={avgBattery} kind="measurement" suffix="%" />
           )}{' '}
           {t('vehicles.avgLabel', 'avg')}
         </Text>
@@ -323,8 +290,10 @@ function FleetBatteryPanel({ entries, avgBattery, isLoading, isError, error, onR
 
       {showErrorInstead ? (
         <QueryError error={error} onRetry={onRetry} />
+      ) : isRefreshBlocked && entries.length === 0 ? (
+        <Text variant="bodySm">{t('common.unavailable', 'Unavailable')}</Text>
       ) : isLoading && entries.length === 0 ? (
-        <div className="space-y-3">
+        <div className="space-y-3" data-testid="fleet-battery-skeleton">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-8 rounded-lg" />
           ))}
@@ -354,6 +323,10 @@ function FleetBatteryPanel({ entries, avgBattery, isLoading, isError, error, onR
             // An unreported state of charge is NOT 0 %. Rendering a full-width
             // empty bar for it would read as "this car is flat".
             const level = knownNumber(state.battery_level);
+            const battery = currentFieldValue(entry, 'battery_level', (reading) => {
+              const value = knownNumber(reading.battery_level);
+              return value == null ? '—' : `${fmtNumber(value)}%`;
+            }, t);
             const range = currentFieldValue(entry, 'rated_range', (reading) => {
               const value = knownNumber(reading.rated_range);
               return value == null ? '—' : formatDistance(value);
@@ -378,9 +351,9 @@ function FleetBatteryPanel({ entries, avgBattery, isLoading, isError, error, onR
                 label={label}
                 value={level}
                 max={100}
-                color={batteryColor(level)}
+                color={isFleetStateFieldCurrent(entry, 'battery_level') ? batteryColor(level) : 'var(--text-secondary)'}
                 fill="solid"
-                sublabel={`${level}% · ${range.value}${range.detail ? ` · ${range.detail}` : ''}`}
+                sublabel={`${battery.detail ?? battery.value} · ${range.value}${range.detail ? ` · ${range.detail}` : ''}`}
               />
             );
           })}
@@ -421,6 +394,7 @@ function FleetStatusPanel({
   counts, total, currentCount, isLoading, summary, onRetry,
 }: FleetStatusPanelProps) {
   const { t } = useTranslation();
+  const { fmtNumber } = useNumberFormatting();
   const nothingResolved = summary.statefulCount === 0;
   // Transport failure with nothing to show → error surface. A successful
   // batch with no snapshots is a different, non-alarming state.
@@ -503,7 +477,7 @@ function FleetStatusPanel({
               max={total || count}
               color={statusVariant(status) === 'neutral' ? 'var(--text-secondary)' : `var(--semantic-${statusVariant(status)})`}
               fill="solid"
-              sublabel={String(count)}
+              sublabel={fmtNumber(count, 0)}
             />
           ))}
         </div>
@@ -793,11 +767,18 @@ export default function VehicleListPage() {
 
   /* ── Data ── */
   const vehiclesQuery = useVehicles();
-  const { data: vehicles, isLoading } = vehiclesQuery;
+  const { data: vehicles } = vehiclesQuery;
   const vehicleList = vehicles ?? [];
-  // Trust contract for the fleet list: `fatalError` (nothing retained) gates
-  // the page-level error surface, everything else degrades non-destructively.
   const vehiclesState = useDataState(vehiclesQuery);
+  const rosterUnknown = !vehiclesState.hasData;
+  const rosterLoading = vehiclesState.status === 'initial' && !vehiclesState.isRefreshBlocked;
+  const rosterPlaceholder = (
+    <GlassPanel padding="md">
+      <Text variant="bodySm">
+        {rosterLoading ? t('common.loading', 'Loading...') : t('common.unavailable', 'Unavailable')}
+      </Text>
+    </GlassPanel>
+  );
 
   const statesQuery = useFleetStates(vehicleList);
   const fleetStates = statesQuery.data;
@@ -1031,7 +1012,7 @@ export default function VehicleListPage() {
    * rather than silently diluting itself toward zero.
    */
   const utilizationPct = fleet.coveredCount > 0
-    ? Math.round((fleet.activeCount / fleet.coveredCount) * 100)
+    ? (fleet.activeCount / fleet.coveredCount) * 100
     : null;
   /** Rendered beneath any count whose denominator is narrower than the fleet. */
   const coverageNote = fleet.coveredCount < vehicleList.length
@@ -1373,11 +1354,11 @@ export default function VehicleListPage() {
   const postureMetrics = useOperationalMetrics([
     { metricId: 'count', occurrenceId: 'vehicles', rawValue: vehicleList.length },
     { metricId: 'count', occurrenceId: 'online', rawValue: fleetStatePending || noCoverage ? null : fleet.liveStateCount,
-      display: { formatter: raw => ({ value: `${raw}/${vehicleList.length}`, unit: '' }) } },
+      display: { countTotal: vehicleList.length } },
     { metricId: 'count', occurrenceId: 'readiness', rawValue: fleetStatePending || fleet.batteryCoverageCount === 0 ? null : fleet.readyCount,
-      display: { formatter: raw => ({ value: `${raw}/${fleet.batteryCoverageCount}`, unit: '' }) } },
+      display: { countTotal: fleet.batteryCoverageCount } },
     { metricId: 'percent', occurrenceId: 'utilization', rawValue: fleetStatePending ? null : utilizationPct,
-      display: { formatter: raw => ({ value: `${raw}%`, unit: '' }) } },
+      display: { formatter: (raw, preferences) => ({ value: `${fmtNumber(raw, preferences.units.precision, preferences.units.locale)}%`, unit: '' }) } },
     { metricId: fleet.softwareVersions.length === 1 ? 'text' : 'count', occurrenceId: 'software',
       rawValue: fleetStatePending || fleet.softwareVersions.length === 0 ? null
         : fleet.softwareVersions.length === 1 ? fleet.softwareVersions[0] : fleet.softwareVersions.length,
@@ -1390,31 +1371,6 @@ export default function VehicleListPage() {
         value: t('operations.vehicles.openWorkOrders', '{{count}} open', { count: raw }), unit: '',
       }) } },
   ]);
-
-  /* ── Loading / error short-circuits ── */
-  if (isLoading) {
-    return <VehicleListSkeleton />;
-  }
-
-  // Only an initial failure — one with NOTHING retained — may replace the
-  // page. A background refetch error over a populated fleet keeps the fleet
-  // on screen and is surfaced by <StaleRefreshWarning> below instead.
-  if (vehiclesState.status === 'initialFailure') {
-    return (
-      <PageLayout
-        title={t('nav.vehicles', 'Fleet')}
-        subtitle={t('vehicles.subtitle', 'View, manage, and sync your Tesla vehicles')}
-      >
-        <GlassPanel className="p-4 sm:p-5">
-          <QueryError
-            error={vehiclesState.fatalError}
-            onRetry={() => vehiclesQuery.refetch()}
-            resourceName={t('nav.vehicles', 'Fleet')}
-          />
-        </GlassPanel>
-      </PageLayout>
-    );
-  }
 
   /* ── Render ── */
   return (
@@ -1447,6 +1403,20 @@ export default function VehicleListPage() {
         </Button>
       }
     >
+      {vehiclesState.isRefreshBlocked && (
+        <DataSourceNotice
+          sources={[{ id: 'vehicles', label: t('nav.vehicles', 'Fleet'), query: vehiclesQuery }]}
+        />
+      )}
+      {vehiclesState.fatalError && !vehiclesState.isRefreshBlocked && (
+        <GlassPanel padding="md">
+          <QueryError
+            error={vehiclesState.fatalError}
+            onRetry={() => vehiclesQuery.refetch()}
+            resourceName={t('nav.vehicles', 'Fleet')}
+          />
+        </GlassPanel>
+      )}
       {/* Sync feedback — transient, dismissible */}
       {syncMut.isSuccess && (
         <FadeIn>
@@ -1470,7 +1440,7 @@ export default function VehicleListPage() {
           </AlertBanner>
         </FadeIn>
       )}
-      {workOrdersState.fatalError && vehicleList.length > 0 && (
+      {workOrdersState.fatalError && (
         <DataStateNotice
           state="partial"
           title={t(
@@ -1479,22 +1449,29 @@ export default function VehicleListPage() {
           )}
         >
           {t(
-            'operations.vehicles.serviceUnavailableDescription',
-            'Fleet availability and live state remain visible, but maintenance work orders could not be loaded.',
+            'dataSources.partialMessage',
+            'Available sections remain visible. Source status is tracked independently below.',
           )}
           <Button variant="ghost" wrapLabel className="mt-2 min-h-11" onClick={() => workOrdersQuery.refetch()}>
             {t('common.retry', 'Retry')}
           </Button>
         </DataStateNotice>
       )}
-      <StaleRefreshWarning
+      {!vehiclesState.isRefreshBlocked && <StaleRefreshWarning
         state={vehiclesState}
         label={t('nav.vehicles', 'Fleet')}
-      />
+      />}
       <StaleRefreshWarning
         state={fleetStateData}
         label={t('dataSources.labels.liveVehicleState', 'Live vehicle state')}
       />
+      {fleetStateData.isRefreshBlocked && (
+        <DataSourceNotice sources={[{
+          id: 'fleet-state',
+          label: t('dataSources.labels.liveVehicleState', 'Live vehicle state'),
+          query: fleetStateSource,
+        }]} />
+      )}
       <StaleRefreshWarning state={workOrdersState} label={t('operations.vehicles.workOrdersSource', 'Fleet work orders')} />
       <StaleRefreshWarning state={pinsState} label={t('pin.pinned', 'Pinned')} />
       {!pinsState.hasData && <DataStateNotice state={pinsState.fatalError ? 'unavailable' : 'partial'}
@@ -1508,7 +1485,7 @@ export default function VehicleListPage() {
         </Button>}
       </DataStateNotice>}
 
-      {vehicleList.length === 0 && (
+      {!rosterUnknown && vehicleList.length === 0 && (
         <GlassPanel padding="md">
           <EmptyState
           icon={<Car className="h-10 w-10" />}
@@ -1523,7 +1500,7 @@ export default function VehicleListPage() {
       )}
       <VehiclePanelGrid
         label={t('operations.vehicles.title', 'Availability and readiness across the fleet')}
-        items={[{ id: 'fleet-operational-posture', size: 'full', content: vehicleList.length > 0 ? (
+        items={[{ id: 'fleet-operational-posture', size: 'full', content: rosterUnknown ? rosterPlaceholder : vehicleList.length > 0 ? (
           <OperationalBrief
             compact
             testId="fleet-operational-brief"
@@ -1705,7 +1682,9 @@ export default function VehicleListPage() {
           {/* 1 — KPI band */}
           <FadeIn delay={0.05}>
             <Section id="fleet-summary" title={t('vehicles.summary', 'Fleet summary')}>
-            {vehicleList.length === 0 ? (
+            {rosterLoading ? (
+              <div data-testid="vehicle-list-skeleton"><StatGridSkeleton cards={4} /></div>
+            ) : rosterUnknown ? rosterPlaceholder : vehicleList.length === 0 ? (
               // no-action: Summary needs registered vehicles; use the existing header or fleet-empty Sync from Tesla action.
               <GlassPanel padding="md"><EmptyState message={t('vehicles.layout.noSectionRecords', 'No fleet records for {{section}}.', {
                 section: t('vehicles.summary', 'Fleet summary'),
@@ -1727,16 +1706,17 @@ export default function VehicleListPage() {
 
           {/* 2 — Existing surface-owning panels, composed by the shared grid. */}
           <Section id="fleet-overview" title={t('vehicles.overview', 'Fleet overview')}>
-            {vehicleList.length > 0 ? (
+            {rosterUnknown ? rosterPlaceholder : vehicleList.length > 0 ? (
             <VehiclePanelGrid
               label={t('vehicles.overview', 'Fleet overview')}
               items={[
                 { id: 'fleet-battery', size: 'half', content: <FadeIn delay={0.1} className="h-full">
                 <FleetBatteryPanel
-                  entries={fleet.batteryEntries}
+                  entries={fleet.entries}
                   avgBattery={fleet.avgBattery}
                   isLoading={statesQuery.isLoading}
-                  isError={fleetSummary.failedCount > 0}
+                  isRefreshBlocked={fleetStateData.isRefreshBlocked}
+                  isError={statesQuery.isError || fleetSummary.failedCount > 0}
                   error={statesQuery.error ?? new Error(t(
                     'vehicles.statusUnavailable',
                     'Live state could not be retrieved for any vehicle.',
@@ -1785,7 +1765,7 @@ export default function VehicleListPage() {
                 />
               </StaggerContainer>
             )}
-            {sortedVehicleList.length === 0 && (
+            {rosterUnknown ? rosterPlaceholder : sortedVehicleList.length === 0 && (
               // no-action: This is an empty registered fleet, not a local filter; header and fleet-empty Sync from Tesla already provide recovery.
               <GlassPanel padding="md"><EmptyState message={t('vehicles.layout.noSectionRecords', 'No fleet records for {{section}}.', {
                 section: t('vehicles.allVehicles', 'All vehicles'),
@@ -1802,8 +1782,8 @@ export default function VehicleListPage() {
         message={
           deleteTarget
             ? t('vehicles.removeMessage', {
-                name: deleteTarget.display_name || deleteTarget.vin,
-                defaultValue: `Are you sure you want to remove "${deleteTarget.display_name || deleteTarget.vin}"? This will delete all associated data including drives, charges, and state history.`,
+                name: deleteTarget.display_name || maskFor(deleteTarget.vin ?? '', 'vin'),
+                defaultValue: `Are you sure you want to remove "${deleteTarget.display_name || maskFor(deleteTarget.vin ?? '', 'vin')}"? This will delete all associated data including drives, charges, and state history.`,
               })
             : ''
         }
@@ -1818,7 +1798,7 @@ export default function VehicleListPage() {
         eyebrow={t('vehicles.preview.eyebrow', 'Vehicle preview')}
         title={
           previewTarget?.vehicle.display_name
-          || previewTarget?.vehicle.vin
+          || maskFor(previewTarget?.vehicle.vin ?? '', 'vin')
           || t('vehicles.preview.title', 'Vehicle details')
         }
         description={

@@ -92,7 +92,8 @@ export const notificationKeys = {
       },
     ] as const,
   priorityAlerts: ['alerts', 'priority'] as const,
-  alertHistory: (limit: number) => ['alerts', 'history', limit] as const,
+  alertHistory: (limit: number, scope: AlertListScope = {}) =>
+    ['alerts', 'history', limit, scope] as const,
   alertDetail: (id: number) => ['alerts', 'detail', id] as const,
   alertRules: ['alert-rules'] as const,
   packInstallations: ['alert-pack-installations'] as const,
@@ -269,16 +270,61 @@ export function usePriorityAlerts() {
   });
 }
 
-/**
- * Fetches the largest backend-supported alert page for analytical views.
- * Ordinary inbox consumers keep the lightweight polling query above.
- */
-export function useAlertHistory(limit = 1000) {
+/** Fetches complete, cursor-paginated alert history for analytical views. */
+export function useAlertHistory(limit = 1000, scope: AlertListScope = {}, enabled = true) {
   const boundedLimit = Math.max(1, Math.min(1000, Math.floor(limit)));
   return useQuery({
-    queryKey: notificationKeys.alertHistory(boundedLimit),
-    queryFn: ({ signal }) =>
-      request<Alert[]>(`/alerts?limit=${boundedLimit}`, { signal }),
+    queryKey: notificationKeys.alertHistory(boundedLimit, scope),
+    enabled,
+    queryFn: async ({ signal }) => {
+      if (!Number.isFinite(limit) || limit <= 0) {
+        throw new Error('Alert history requires a finite positive page limit');
+      }
+      if (scope.vehicle_id != null
+        && (!Number.isSafeInteger(scope.vehicle_id) || scope.vehicle_id <= 0)) {
+        throw new Error('Alert history requires a positive integer vehicle ID');
+      }
+      const from = scope.from == null ? undefined : Date.parse(scope.from);
+      const to = scope.to == null ? undefined : Date.parse(scope.to);
+      if ((from != null && !Number.isFinite(from))
+        || (to != null && !Number.isFinite(to))
+        || (from != null && to != null && from > to)) {
+        throw new Error('Alert history requires valid ordered date bounds');
+      }
+      const alerts: Alert[] = [];
+      let cursor: Pick<Alert, 'created_at' | 'id'> | undefined;
+      while (true) {
+        const query = serializeAlertListScope(scope, {
+          limit: boundedLimit,
+          before_created_at: cursor?.created_at,
+          before_id: cursor?.id,
+        });
+        const page = await request<Alert[]>(`/alerts?${query}`, { signal });
+        if (!Array.isArray(page)) {
+          throw new Error('Alert history response is not an array');
+        }
+        if (page.some((alert) => !alert || !Number.isSafeInteger(alert.id) || alert.id <= 0
+          || typeof alert.created_at !== 'string' || !Number.isFinite(Date.parse(alert.created_at))
+          || typeof alert.severity !== 'string' || !alert.severity
+          || !Number.isSafeInteger(alert.vehicle_id) || alert.vehicle_id < 0
+          || (alert.all_vehicles != null && typeof alert.all_vehicles !== 'boolean')
+          || (alert.vehicle_ids != null && (!Array.isArray(alert.vehicle_ids)
+            || alert.vehicle_ids.some((id) => !Number.isSafeInteger(id) || id <= 0))))) {
+          throw new Error('Alert history response contains invalid alert fields');
+        }
+        alerts.push(...page);
+        if (page.length < boundedLimit) return alerts;
+        const last = page[page.length - 1];
+        if (!last || !Number.isSafeInteger(last.id) || last.id <= 0
+          || !Number.isFinite(Date.parse(last.created_at))
+          || (cursor && (Date.parse(last.created_at) > Date.parse(cursor.created_at)
+            || (Date.parse(last.created_at) === Date.parse(cursor.created_at)
+              && last.id >= cursor.id)))) {
+          throw new Error('Alert history cursor did not advance');
+        }
+        cursor = { created_at: last.created_at, id: last.id };
+      }
+    },
     staleTime: STALE_TIMES.MODERATE,
     select: safeArray,
   });
@@ -1316,6 +1362,7 @@ export function useSaveChannel() {
     },
     onSuccess: (_data, vars) => {
       invalidateAndBroadcast(qc, { queryKey: notificationKeys.channels });
+      invalidateAndBroadcast(qc, { queryKey: notificationKeys.stats });
       const isUpdate = 'id' in vars && typeof vars.id === 'number';
       success(
         isUpdate ? 'toast.channels.save.updated' : 'toast.channels.save.created',
@@ -1328,43 +1375,40 @@ export function useSaveChannel() {
 
 export function useDeleteChannel() {
   const qc = useQueryClient();
-  const { success, error } = useMutationToast();
+  // ChannelCard owns feedback; keep cache invalidation here without a second toast.
   return useMutation({
     mutationFn: (id: number) =>
       request<void>(`/notifications/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
       invalidateAndBroadcast(qc, { queryKey: notificationKeys.channels });
       invalidateAndBroadcast(qc, { queryKey: notificationKeys.stats });
-      success('toast.channels.delete.success', 'Channel deleted');
     },
-    onError: (e) => error(e, 'toast.channels.delete.error', 'Failed to delete channel'),
   });
 }
 
 export function useToggleChannel() {
   const qc = useQueryClient();
-  const { success, error } = useMutationToast();
+  // ChannelCard owns state-specific feedback and releases its latch on settlement.
   return useMutation({
     mutationFn: (id: number) =>
       request<NotificationChannel>(`/notifications/${id}/toggle`, { method: 'POST' }),
     onSuccess: () => {
       invalidateAndBroadcast(qc, { queryKey: notificationKeys.channels });
       invalidateAndBroadcast(qc, { queryKey: notificationKeys.stats });
-      success('toast.channels.toggle.success', 'Channel toggled');
     },
-    onError: (e) => error(e, 'toast.channels.toggle.error', 'Failed to toggle channel'),
   });
 }
 
 export function useTestChannel() {
-  const { success, error } = useMutationToast();
+  // The card and modal own feedback so each attempt produces only one toast.
   return useMutation({
-    mutationFn: (id: number) =>
-      request<{ success: boolean; error?: string }>(`/notifications/${id}/test`, { method: 'POST' }),
-    onSuccess: () => {
-      success('toast.channels.test.success', 'Test notification sent');
+    mutationFn: async (id: number) => {
+      const result = await request<{ success: boolean; error?: string }>(
+        `/notifications/${id}/test`, { method: 'POST' },
+      );
+      if (!result.success) throw new Error(result.error);
+      return result;
     },
-    onError: (e) => error(e, 'toast.channels.test.error', 'Failed to send test'),
   });
 }
 

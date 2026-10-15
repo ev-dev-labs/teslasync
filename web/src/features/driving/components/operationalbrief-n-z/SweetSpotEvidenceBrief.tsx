@@ -25,18 +25,18 @@ export function SweetSpotEvidenceBrief({ summary, state, className, scope, resol
   const { t } = useTranslation();
   const { formatBand, formatDistance, formatEfficiency } = useSpeedSweetSpotDisplay();
   const coverage = summary.winningBandCoverage;
-  const available = resolved && summary.sweetSpot != null;
+  const available = resolved && summary.sweetSpot != null && coverage != null;
   const metrics: readonly StatMetric[] = [
-    { metricId: 'count', occurrenceId: 'eligible', rawValue: available ? summary.eligible : null,
+    { metricId: 'count', occurrenceId: 'eligible', rawValue: resolved ? summary.eligible : null,
       label: t('sweetSpot.evidence.eligible', 'Eligible drives') },
     { metricId: 'count', occurrenceId: 'winning-drives', rawValue: available ? coverage?.drives : null,
       label: t('sweetSpot.evidence.winningDrives', 'Drives in best band') },
     { metricId: 'distance', occurrenceId: 'winning-distance', rawValue: available ? coverage?.distanceM : null,
       label: t('sweetSpot.evidence.winningDistance', 'Distance in best band'),
       display: { formatter: (raw) => ({ value: formatDistance(raw), unit: '' }) } },
-    { metricId: 'percent', occurrenceId: 'distance-share', rawValue: available && coverage ? coverage.distanceShare * 100 : null,
+    { metricId: 'percent', occurrenceId: 'distance-share', rawValue: available && coverage?.distanceShare != null ? coverage.distanceShare * 100 : null,
       label: t('sweetSpot.evidence.distanceShare', 'Eligible distance share') },
-    { metricId: 'count', occurrenceId: 'qualified-bands', rawValue: available ? summary.qualifiedBandCount : null,
+    { metricId: 'count', occurrenceId: 'qualified-bands', rawValue: resolved ? summary.qualifiedBandCount : null,
       label: t('sweetSpot.evidence.qualifiedBands', 'Qualified bands') },
   ];
   return (

@@ -17,6 +17,11 @@ export type ReplaySpeed = 1 | 10 | 25 | 50 | 100;
 export const REPLAY_SPEEDS: readonly ReplaySpeed[] = [1, 10, 25, 50, 100] as const;
 
 export interface ReplayState {
+  /** Sample-aligned offsets; unknown timestamps remain unknown. */
+  timeline: readonly (number | null)[];
+  /** Ordered time domain for chart/preview/marker consumers; empty if unusable. */
+  offsets: readonly number[];
+  canPlay: boolean;
   isPlaying: boolean;
   speed: ReplaySpeed;
   currentIndex: number;
@@ -45,28 +50,26 @@ export interface ReplayControls {
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
-/** Parse position timestamps into ms-since-drive-start offsets. Positions
- *  whose timestamps don't parse are skipped so a single bad row can't
- *  poison `totalTime` (NaN propagates and produces "NaN:NaN" in the UI). */
-export function buildTimeline(positions: readonly DrivePosition[]): number[] {
+/** Preserve sample order and unknown time evidence without inventing timestamps. */
+export function buildTimeline(positions: readonly DrivePosition[]): (number | null)[] {
   if (!positions || positions.length === 0) return [];
   let t0 = NaN;
   for (const p of positions) {
-    const t = new Date(p.timestamp).getTime();
+    const t = Date.parse(p.timestamp);
     if (Number.isFinite(t)) {
       t0 = t;
       break;
     }
   }
-  if (!Number.isFinite(t0)) return [];
+  if (!Number.isFinite(t0)) return positions.map(() => null);
   return positions.map((p) => {
-    const t = new Date(p.timestamp).getTime();
-    return Number.isFinite(t) ? t - t0 : 0;
+    const t = Date.parse(p.timestamp);
+    return Number.isFinite(t) ? t - t0 : null;
   });
 }
 
 /** Binary-search for the index whose offset is closest to `target`. */
-export function indexAtTime(offsets: number[], target: number): number {
+export function indexAtTime(offsets: readonly number[], target: number): number {
   if (offsets.length === 0) return 0;
   let lo = 0;
   let hi = offsets.length - 1;
@@ -112,19 +115,27 @@ export function useTripReplay(
   // are correct on the very first render. A ref populated inside useEffect
   // lagged by one commit and surfaced as a "0:00 / 0:00" scrubber until some
   // unrelated state change forced a re-render.
-  const { offsets, totalTime } = useMemo(() => {
-    const offs = buildTimeline(positions ?? EMPTY);
-    return { offsets: offs, totalTime: offs.length > 0 ? offs[offs.length - 1] : 0 };
+  const { timeline, offsets, totalTime } = useMemo(() => {
+    const timeline = buildTimeline(positions ?? EMPTY);
+    const ordered = timeline.every((offset, index): offset is number =>
+      offset !== null && offset >= 0
+      && (index === 0 || offset >= (timeline[index - 1] ?? Infinity)),
+    );
+    const known = ordered ? timeline.filter((offset): offset is number => offset !== null) : [];
+    const totalTime = known[known.length - 1] ?? 0;
+    const offsets = totalTime > 0 ? known : [];
+    return { timeline, offsets, totalTime };
   }, [positions]);
+  const canPlay = offsets.length > 1 && totalTime > 0;
 
-  // A stable signature of the timeline's *content* (length + endpoints). The
+  // A stable signature of the timeline's timestamp content. The
   // reset effect keys off this rather than the array's referential identity so
   // a caller that rebuilds an equal `positions` array every render doesn't nuke
   // the playhead — only a genuinely different drive triggers a rewind.
   const timelineKey = useMemo(() => {
     const src = positions ?? EMPTY;
     if (src.length === 0) return '';
-    return `${src.length}:${src[0].timestamp}:${src[src.length - 1].timestamp}`;
+    return JSON.stringify(src.map((position) => position.timestamp));
   }, [positions]);
 
   // Latest-value mirrors so the stable ([]-dep) control callbacks and the
@@ -133,6 +144,8 @@ export function useTripReplay(
   offsetsRef.current = offsets;
   const totalRef = useRef(totalTime);
   totalRef.current = totalTime;
+  const timelineRef = useRef(timeline);
+  timelineRef.current = timeline;
 
   // Mutable refs for the animation loop (avoids stale closures).
   const elapsedRef = useRef(0);
@@ -198,6 +211,7 @@ export function useTripReplay(
 
   const play = useCallback(() => {
     const total = totalRef.current;
+    if (total <= 0 || offsetsRef.current.length < 2) return;
     // If parked at the end, rewind before playing.
     if (total > 0 && elapsedRef.current >= total) {
       commit(0, 0);
@@ -226,18 +240,20 @@ export function useTripReplay(
   }, []);
 
   const seekTo = useCallback((index: number) => {
-    const offs = offsetsRef.current;
+    if (!Number.isFinite(index)) return;
+    const offs = timelineRef.current;
     if (offs.length === 0) {
       commit(0, 0);
       return;
     }
-    const clamped = Math.max(0, Math.min(index, offs.length - 1));
-    commit(clamped, offs[clamped] ?? 0);
+    const clamped = Math.max(0, Math.min(Math.trunc(index), offs.length - 1));
+    commit(clamped, totalRef.current > 0 ? offs[clamped] ?? 0 : 0);
   }, [commit]);
 
   const seekToProgress = useCallback((progress: number) => {
     const total = totalRef.current;
     const offs = offsetsRef.current;
+    if (!Number.isFinite(progress) || total <= 0 || offs.length === 0) return;
     const targetMs = Math.max(0, Math.min(1, progress)) * total;
     commit(indexAtTime(offs, targetMs), targetMs);
   }, [commit]);
@@ -245,16 +261,16 @@ export function useTripReplay(
   const seekBy = useCallback((deltaSeconds: number) => {
     const total = totalRef.current;
     const offs = offsetsRef.current;
-    if (total <= 0 || offs.length === 0) return;
+    if (!Number.isFinite(deltaSeconds) || total <= 0 || offs.length === 0) return;
     const targetMs = Math.max(0, Math.min(total, elapsedRef.current + deltaSeconds * 1000));
     commit(indexAtTime(offs, targetMs), targetMs);
   }, [commit]);
 
   const stepFrame = useCallback((delta: number) => {
-    const offs = offsetsRef.current;
-    if (offs.length === 0) return;
-    const next = Math.max(0, Math.min(offs.length - 1, currentIndexRef.current + delta));
-    commit(next, offs[next] ?? 0);
+    const offs = timelineRef.current;
+    if (!Number.isFinite(delta) || offs.length === 0) return;
+    const next = Math.max(0, Math.min(offs.length - 1, currentIndexRef.current + Math.trunc(delta)));
+    commit(next, totalRef.current > 0 ? offs[next] ?? 0 : 0);
   }, [commit]);
 
   /* ---- Derived state ---- */
@@ -264,6 +280,9 @@ export function useTripReplay(
 
   return [
     {
+      timeline,
+      offsets,
+      canPlay,
       isPlaying,
       speed,
       currentIndex,

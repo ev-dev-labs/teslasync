@@ -30,8 +30,11 @@
     "subtitle": "Your driving rating and breakdown",
     "partial": {
       "title": "Score evidence is partial",
-      "message_one": "1 drive is excluded because measured energy, average power, or maximum speed is unavailable.",
-      "message_other": "{{count}} drives are excluded because measured energy, average power, or maximum speed is unavailable."
+      "message_one": "{{displayCount}} drive is excluded from the local heuristic. Reason counts may overlap.",
+      "message_other": "{{displayCount}} drives are excluded from the local heuristic. Reason counts may overlap.",
+      "missing": "{{displayCount}} with missing inputs.",
+      "invalid": "{{displayCount}} with invalid inputs.",
+      "shortDistance": "{{displayCount}} below the 1,000 m minimum distance."
     },
     "emptyTitle": "No scored drives",
     "overall": "Overall score",
@@ -78,6 +81,9 @@
     "avgEffLabel": "Avg efficiency",
     "thisWeek": "This week",
     "vsLastWeek": "vs {{val}} last week",
+    "periodIncrease": "Increased by {{val}}",
+    "periodDecrease": "Decreased by {{val}}",
+    "periodEqual": "No change",
     "thisMonth": "This month",
     "vsLastMonth": "vs {{val}} last month",
     "bestWeek": "Best week",
@@ -115,6 +121,9 @@
     "serverUnavailable": "Server drive score is unavailable; scored history remains visible",
     "serverUnavailableOnly": "Server drive score is unavailable",
     "historyUnavailable": "Drive history is unavailable; the server drive score remains visible",
+    "historyPaused": "Drive history loading is deferred.",
+    "serverPaused": "Server drive score loading is deferred.",
+    "pausedRecovery": "Retry this source now, or wait for the request to resume. No result has been received yet.",
     "selectVehicle": "Select a vehicle in the header to load drive score evidence.",
     "brief": {
       "average": "Average computed score for the returned scored-drive cohort, on a 0–100 scale.",

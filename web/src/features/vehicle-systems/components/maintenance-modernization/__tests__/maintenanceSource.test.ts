@@ -10,6 +10,17 @@ const readSource = (path: string) => readFileSync(resolve(webRoot, 'src', path),
 const directory = 'features/vehicle-systems/components/maintenance-modernization';
 
 describe('maintenance live source integration and preservation boundaries', () => {
+  it('uses existing caption roles without ad-hoc caption sizes or metadata colors', () => {
+    const card = readSource(`${directory}/MaintenanceItemCard.tsx`);
+    expect(card).toContain('Caption');
+    expect(card).toContain('<Caption as="p" className="break-words">');
+    expect(card).toContain('<Caption as="dt">');
+    expect(card).not.toMatch(/\btext-xs\b|text-\[var\(--text-(?:muted|secondary)\)\]/);
+    expect(card).toContain('className="break-words tabular-nums"');
+    expect(card).toContain('role="progressbar"');
+    expect(card).toContain('<Accordion');
+  });
+
   it('uses matching read hooks rather than inline or legacy query engines', () => {
     const page = readSource('features/vehicle-systems/pages/MaintenancePage.tsx');
     expect(page).toContain("from '@/api/hooks/useMaintenance'");

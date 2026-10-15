@@ -298,7 +298,7 @@ function parseStartHour(iso: string | null | undefined, tz?: string): number | n
 
 export type ChargingAnomalyKind =
   | 'telemetry_gap'   // 0 kWh added but >5 min duration
-  | 'cost_zero'       // Energy added but no cost recorded (data gap, not free)
+  | 'cost_zero'       // Energy added but cost is missing (recorded zero is free)
   | 'bad_power'       // peak_power_w sustained <3kW for >30m on supposed DC
   | 'expensive'       // costPerKwh > 0.50 (configurable)
   | 'trickle';        // duration > 6h AND avgPower < 5 kW
@@ -363,7 +363,7 @@ export function detectChargingAnomalies(
       });
       continue;
     }
-    if (energyKwh > 1 && (s.cost_decimal == null || s.cost_decimal === 0) &&
+    if (energyKwh > 1 && s.cost_decimal == null &&
         getChargerCategory(s.charger_type) !== 'home') {
       out.push({
         session: s,

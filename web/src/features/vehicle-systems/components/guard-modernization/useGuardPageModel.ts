@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useDataState } from '@/hooks/useDataState';
+import { useUnits } from '@/hooks/useUnits';
+import type { DataSourceDescriptor } from '@/components/feedback';
 import { isVehicleStateFieldCurrent, useVehicleState } from '@/api/hooks/useVehicles';
 import { useGeofences } from '@/api/hooks/useLocations';
 import {
@@ -13,6 +15,7 @@ import {
  * execute commands except through these explicit user-action callbacks. */
 export function useGuardPageModel() {
   const { t } = useTranslation();
+  const { formatDistance } = useUnits();
   const { vehicleId, vehicle: activeVehicle } = useSelectedVehicle();
   const activeVehicleId = vehicleId ?? 0;
   const configQuery = useGuardConfig(activeVehicleId);
@@ -30,6 +33,12 @@ export function useGuardPageModel() {
   const eventsState = useDataState(eventsQuery, { provenance: 'historical' });
   const vehicleState = useDataState(vehicleStateQuery, { provenance: 'live' });
   const geofencesState = useDataState(geofencesQuery);
+  const mapSources: DataSourceDescriptor[] = [
+    { id: 'location', label: t('guard.liveMap', 'Live vehicle location'), query: vehicleStateQuery, enabled: activeVehicleId > 0 },
+    { id: 'policy', label: t('guard.settings', 'Guard settings'), query: configQuery, enabled: activeVehicleId > 0 },
+    { id: 'geofences', label: t('guard.homeGeofence', 'Home geofence'), query: geofencesQuery },
+    { id: 'events', label: t('guard.eventTimeline', 'Event timeline'), query: eventsQuery, enabled: activeVehicleId > 0 },
+  ];
 
   const [panicDialogOpen, setPanicDialogOpen] = useState(false);
   const [sensitivity, setSensitivity] = useState<string>('');
@@ -71,10 +80,10 @@ export function useGuardPageModel() {
     ...(geofences ?? []).map(g => ({ value: String(g.id), label: g.name })),
   ], [geofences, t]);
   const sensitivityOptions = useMemo(() => [
-    { value: 'low', label: t('guard.sensitivityLowFull', 'Low — movement > 1 km') },
-    { value: 'medium', label: t('guard.sensitivityMediumFull', 'Medium — movement > 200 m') },
+    { value: 'low', label: `${t('guard.sensitivityLow', 'Low')} — > ${formatDistance(1000)}` },
+    { value: 'medium', label: `${t('guard.sensitivityMedium', 'Medium')} — > ${formatDistance(200)}` },
     { value: 'high', label: t('guard.sensitivityHighFull', 'High — any movement') },
-  ], [t]);
+  ], [t, formatDistance]);
   const sensitivityLabel = effectiveSensitivity === 'low'
     ? t('guard.sensitivityLow', 'Low')
     : effectiveSensitivity === 'high'
@@ -115,7 +124,7 @@ export function useGuardPageModel() {
   return {
     activeVehicle, activeVehicleId, noVehicle: activeVehicleId <= 0,
     configQuery, eventsQuery, vehicleStateQuery, geofencesQuery,
-    configState, eventsState, vehicleState, geofencesState,
+    configState, eventsState, vehicleState, geofencesState, mapSources,
     guardConfig, events, eventsKnown, unacknowledgedCount, latestEvent, isTriggered,
     policyEnabled, policyLabel, isArmed, stateResponse, hasLocation, vehicleLat, vehicleLng,
     isLocked, sentryOn, homeGeofence, geofenceOptions, sensitivityOptions,

@@ -13,10 +13,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, within, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import '@/i18n';
 import i18n from '@/i18n';
 import { getGlobalLocale, setGlobalLocale } from '@/lib/numberFormat';
+
+vi.unmock('react-i18next');
 
 // Mock the keys hook so we can drive the "other vehicles" section.
 vi.mock('@/api/devtools', async (importOriginal) => {
@@ -31,6 +34,7 @@ import { getRedisSignalKeys, type RedisSignalsMeta } from '@/api/devtools';
 import { ApiError } from '@/lib/resilience';
 import { RedisDiagnosticEmptyState } from '../RedisDiagnosticEmptyState';
 import { redisSignalKeys } from '@/api/hooks/useRedisSignals';
+import { BUTTON_BASE, BUTTON_VARIANTS } from '@/components/ui';
 
 const mockedGetKeys = vi.mocked(getRedisSignalKeys);
 
@@ -47,7 +51,7 @@ function makeClient() {
 
 function makeWrapper(qc = makeClient()) {
   return function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
+    return <MemoryRouter><QueryClientProvider client={qc}>{children}</QueryClientProvider></MemoryRouter>;
   };
 }
 
@@ -165,7 +169,7 @@ describe('RedisDiagnosticEmptyState — Phase-45 / Prompt 37', () => {
     });
     const section = screen.getByTestId('redis-diagnostic-key-source');
     await within(section).findByText('Previously loaded data remains visible while affected sources recover.');
-    expect(within(section).getByText('Refresh failed')).toBeInTheDocument();
+    expect(within(section).getByText('Cached · refresh failed')).toBeInTheDocument();
     expect(screen.getByTestId('redis-diagnostic-other-1')).toHaveTextContent('Retained vehicle');
     mockedGetKeys.mockResolvedValueOnce({
       keys: [{ vehicle_id: 12, field_count: 5, display_name: 'Recovered vehicle' }],
@@ -175,7 +179,7 @@ describe('RedisDiagnosticEmptyState — Phase-45 / Prompt 37', () => {
     await screen.findByTestId('redis-diagnostic-other-12');
     expect(screen.queryByTestId('redis-diagnostic-other-1')).toBeNull();
     expect(within(section).queryByRole('button', { name: 'Retry' })).toBeNull();
-    expect(within(section).queryByText('Refresh failed')).toBeNull();
+    expect(within(section).queryByText('Cached · refresh failed')).toBeNull();
     expect(mockedGetKeys).toHaveBeenCalledTimes(3);
     expect(client.getQueryState(redisSignalKeys.detail(7))).toBeUndefined();
   });
@@ -201,10 +205,10 @@ describe('RedisDiagnosticEmptyState — Phase-45 / Prompt 37', () => {
     await act(async () => {
       await client.refetchQueries({ queryKey: redisSignalKeys.keys });
     });
-    await within(section).findByText('Refresh failed');
+    await within(section).findByText('Cached · refresh failed');
     expect(within(section).getByText('No data available')).toBeInTheDocument();
     fireEvent.click(within(section).getByRole('button', { name: 'Retry' }));
-    await waitFor(() => expect(within(section).queryByText('Refresh failed')).toBeNull());
+    await waitFor(() => expect(within(section).queryByText('Cached · refresh failed')).toBeNull());
     expect(within(section).getByText('No data available')).toBeInTheDocument();
     expect(within(section).queryByRole('button', { name: 'Retry' })).toBeNull();
   });
@@ -242,6 +246,54 @@ describe('RedisDiagnosticEmptyState — Phase-45 / Prompt 37', () => {
     expect(within(banner).getByText('Redis L2 writes are disabled')).toBeInTheDocument();
     // CTA link is rendered for the docs.
     expect(within(banner).getByRole('link', { name: /live-state contract docs/i })).toBeInTheDocument();
+  });
+
+  it.each([
+    {
+      key: 'redis.diagnostic.modeLocal.cta',
+      label: 'See live-state contract docs',
+      href: '/docs/caching',
+      meta: baseMeta({ live_signal_store_mode: 'local' }),
+      serverError: undefined,
+    },
+    {
+      key: 'redis.diagnostic.cacheNotWired.cta',
+      label: 'See cache configuration docs',
+      href: '/docs/caching#configuration',
+      meta: undefined,
+      serverError: makeApiError(503, 'Redis signal cache is not available'),
+    },
+  ])('renders $key as one focusable navigation target with shared button chrome', ({ key, label, href, meta, serverError }) => {
+    const translate = vi.spyOn(i18n, 't');
+    const Wrapper = makeWrapper();
+    try {
+      render(
+        <Wrapper>
+          <RedisDiagnosticEmptyState
+            vehicleId={7}
+            meta={meta}
+            serverError={serverError}
+            onSelectVehicle={() => {}}
+          />
+        </Wrapper>,
+      );
+      const banner = screen.getByTestId('redis-diagnostic-banner');
+      const link = within(banner).getByRole('link', { name: label });
+      expect(within(banner).getAllByRole('link')).toHaveLength(1);
+      expect(link.tagName).toBe('A');
+      expect(link).toHaveAttribute('href', href);
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', 'noreferrer');
+      expect(link.querySelector('button, a, input, select, textarea, [tabindex]')).toBeNull();
+      expect(within(banner).queryByRole('button', { name: label })).toBeNull();
+      expect(link).toHaveClass(...BUTTON_BASE.split(/\s+/), ...BUTTON_VARIANTS.secondary.split(/\s+/));
+      expect(link).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'px-3');
+      link.focus();
+      expect(link).toHaveFocus();
+      expect(translate).toHaveBeenCalledWith(key, label);
+    } finally {
+      translate.mockRestore();
+    }
   });
 
   it('renders the warning banner when L1 has data but L2 is empty', () => {

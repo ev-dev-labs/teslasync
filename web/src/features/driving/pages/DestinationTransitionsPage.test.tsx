@@ -592,6 +592,28 @@ describe('DestinationTransitionsPage', () => {
     expectEverySection();
   });
 
+  it('renders the canonical standalone origin title with populated evidence', () => {
+    const rows = [
+      { origin: 'Fixture origin', concentration: 75, leadingShare: 80, outgoing: 5, successors: 2, supportIndex: 60, support: 'Thin evidence' },
+    ];
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter>
+          <OriginConcentrationPlot
+            rows={rows}
+            locale="en-US" concentrationName="Concentration" leadingName="Leading share"
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(screen.getByRole('heading', { name: 'Origin concentration', exact: true })).toBeInTheDocument();
+    expect(screen.queryByText('Origin Concentration', { exact: true })).not.toBeInTheDocument();
+    expect(screen.getByTestId('profile-plot')).toHaveAttribute('data-rows', JSON.stringify(rows));
+    expect(screen.getAllByRole('columnheader')).toHaveLength(7);
+    expect(screen.getByRole('cell', { name: 'Fixture origin' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'Thin evidence' })).toBeInTheDocument();
+  });
+
   it('preserves the standalone origin identity and all evidence columns', () => {
     render(
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>

@@ -13,12 +13,13 @@ import {
 } from '@/api/hooks/useServiceIntelligence';
 import { AlertBanner, StaleRefreshWarning } from '@/components/feedback';
 
-import { PageLayout } from '@/components/layout';
+import { LayoutCard, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Button, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useDataState } from '@/hooks/useDataState';
+import { PanelSourceContext, PanelState } from '../components/PanelState';
 
 import {
   ClaimDraftPanel,
@@ -60,13 +61,15 @@ export default function ServiceIntelligencePage() {
   const selected = vehicleId != null;
   const data = query.data;
   const communicationsSource =
-    data?.sources.find((source) => source.id === 'nhtsa_manufacturer_communications') ?? null;
+    data?.sources?.find((source) => source.id === 'nhtsa_manufacturer_communications') ?? null;
 
   const actions = (
     <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
       <Button
+        wrapLabel
         type="button"
         variant="secondary"
+        className="min-h-11 min-w-11 md:min-h-10 md:min-w-0"
         disabled={!selected}
         icon={<FileSearch className="h-4 w-4" aria-hidden="true" />}
         onClick={() =>
@@ -81,6 +84,7 @@ export default function ServiceIntelligencePage() {
   );
 
   return (
+    <PanelSourceContext.Provider value={serviceState}>
     <PageLayout
       title={t('serviceIntelligence.page.title', 'Recall & service intelligence')}
       subtitle={t(
@@ -105,7 +109,26 @@ export default function ServiceIntelligencePage() {
 
       <FadeIn>
         <StaleRefreshWarning state={catalogState} label={t('serviceIntelligence.catalog.title', 'Official NHTSA TSB catalog')} />
-        <CommunicationsCatalogPanel
+        {catalogState.status === 'initial' ? (
+          <LayoutCard
+            title={t('serviceIntelligence.catalog.title', 'Official NHTSA TSB catalog')}
+            description={t('serviceIntelligence.catalog.subtitle', 'Administrator controls for the normalized manufacturer-communications index.')}
+          >
+            <PanelState
+              source={catalogState}
+              selected
+              loading={catalogQuery.isLoading}
+              error={null}
+              empty={false}
+              icon={<Info />}
+              selectTitle=""
+              selectMessage=""
+              emptyTitle={t('serviceIntelligence.catalog.title', 'Official NHTSA TSB catalog')}
+              emptyMessage=""
+              onRetry={retryCatalog}
+            >{null}</PanelState>
+          </LayoutCard>
+        ) : <CommunicationsCatalogPanel
           status={catalogQuery.data ?? null}
           loading={!catalogState.hasData && catalogQuery.isLoading}
           error={catalogState.fatalError}
@@ -118,7 +141,7 @@ export default function ServiceIntelligencePage() {
           }
           onRetry={retryCatalog}
           onImport={importCatalog}
-        />
+        />}
       </FadeIn>
 
       <FadeIn delay={0.05}>
@@ -138,13 +161,15 @@ export default function ServiceIntelligencePage() {
 
       <FadeIn delay={0.075}>
         <StaleRefreshWarning state={warrantyState} label={t('serviceIntelligence.warranty.title', 'Warranty countdown')} />
-        <WarrantyPanel
-          selected={selected}
-          loading={!warrantyState.hasData && warrantyQuery.isLoading}
-          error={warrantyState.fatalError}
-          outlook={warrantyQuery.data ?? null}
-          onRetry={() => void warrantyQuery.refetch()}
-        />
+        <PanelSourceContext.Provider value={warrantyState}>
+          <WarrantyPanel
+            selected={selected}
+            loading={!warrantyState.hasData && warrantyQuery.isLoading}
+            error={warrantyState.fatalError}
+            outlook={warrantyQuery.data ?? null}
+            onRetry={() => void warrantyQuery.refetch()}
+          />
+        </PanelSourceContext.Provider>
       </FadeIn>
 
       <FadeIn delay={0.085}>
@@ -203,5 +228,6 @@ export default function ServiceIntelligencePage() {
         />
       </FadeIn>
     </PageLayout>
+    </PanelSourceContext.Provider>
   );
 }

@@ -19,16 +19,18 @@ import {
 import { EmptyState } from '@/components/feedback';
 import { formatTime } from '@/lib/dateFormat';
 import type { PowerwallInput, SlotResult } from '../lib/types';
+import { DEFAULT_SLOT_MINUTES } from '../lib/scenarioDefaults';
 
 interface PowerwallTrajectoryChartProps {
   slots: SlotResult[];
   powerwall: PowerwallInput | null;
+  slotMinutes?: number;
 }
 
 const CHART_HEIGHT = 260;
 
 /** Powerwall state-of-charge trajectory across the horizon, with a reference line at the reserve floor. */
-export function PowerwallTrajectoryChart({ slots, powerwall }: PowerwallTrajectoryChartProps) {
+export function PowerwallTrajectoryChart({ slots, powerwall, slotMinutes = DEFAULT_SLOT_MINUTES }: PowerwallTrajectoryChartProps) {
   const { t } = useTranslation();
 
   if (!powerwall) {
@@ -43,7 +45,14 @@ export function PowerwallTrajectoryChart({ slots, powerwall }: PowerwallTrajecto
     );
   }
 
-  const rows = slots.map((s) => ({ time: s.startIso, socPct: Math.round(s.batterySocPct * 10) / 10 }));
+  // SOC is the state after the interval, unlike the slot's power flows.
+  const rows = slots.length === 0 ? [] : [
+    { time: slots[0].startIso, socPct: Math.round(powerwall.currentSocPct * 10) / 10 },
+    ...slots.map((s) => ({
+      time: new Date(Date.parse(s.startIso) + slotMinutes * 60_000).toISOString(),
+      socPct: Math.round(s.batterySocPct * 10) / 10,
+    })),
+  ];
 
   return (
     <ChartCard

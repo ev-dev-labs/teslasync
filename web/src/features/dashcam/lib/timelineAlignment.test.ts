@@ -1,6 +1,23 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import i18n from 'i18next';
+import en from '@/i18n/en.json';
+import { fmtNumber, getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { RECONSTRUCTION } from './constants';
-import { alignSignalHistoryToClip, resolveClipEpochMs, type SignalPointLike } from './timelineAlignment';
+import { alignSignalHistoryToClip, resolveClipEpochMs, toReconstructionMarkers, type SignalPointLike } from './timelineAlignment';
+
+const preferences = getFormatterPreferences();
+beforeAll(async () => {
+  await i18n.init({
+    lng: 'en', fallbackLng: 'en',
+    resources: { en: { translation: en } },
+    interpolation: { escapeValue: false },
+  });
+});
+afterEach(async () => {
+  await i18n.changeLanguage('en');
+  setGlobalLocale(preferences.locale);
+  setGlobalPrecision(preferences.precision);
+});
 
 const clipStartEpochMs = Date.parse('2026-10-14T12:00:00Z');
 const timestamp = (seconds: number) => new Date(clipStartEpochMs + seconds * 1000).toISOString();
@@ -26,7 +43,7 @@ describe('requested-window coverage', () => {
     const result = align(samples(offsets));
     expect(result.series[0].coverage).toBe('partial');
     expect(result.overallQuality).toBe('partial');
-    expect(result.series[0].gapNotes[0]).toContain(offsets.length === 3 ? '60.0s (60%' : '80.0s (80%');
+    expect(result.series[0].gapNotes[0]).toContain(offsets.length === 3 ? `${fmtNumber(60)}s (60%` : `${fmtNumber(80)}s (80%`);
     expect(result.series[0].points.map((point) => point.atSeconds)).toEqual(offsets);
   });
 
@@ -42,7 +59,7 @@ describe('requested-window coverage', () => {
     const result = align(samples([0, 50, 100]), 100, 10);
     expect(result.reconstructionWindow).toEqual({ startSeconds: -100, endSeconds: 110 });
     expect(result.series[0].coverage).toBe('partial');
-    expect(result.series[0].gapNotes[0]).toContain('100.0s (48%');
+    expect(result.series[0].gapNotes[0]).toContain(`${fmtNumber(100)}s (48%`);
     expect(align(samples([0, 50, 100]), 10, 100).series[0].coverage).toBe('partial');
   });
 
@@ -168,7 +185,93 @@ describe('retained measurement evidence', () => {
     const result = align([{ timestamp: timestamp(0) }, ...samples([60, 80, 100])]);
     expect(result.series[0].points).toHaveLength(4);
     expect(result.series[0].coverage).toBe('partial');
-    expect(result.series[0].gapNotes[0]).toContain('60.0s');
+    expect(result.series[0].gapNotes[0]).toContain(`${fmtNumber(60)}s`);
+  });
+
+  describe('localized generated evidence', () => {
+    it('uses catalog plurals without changing sample counts or identifiers', () => {
+      const signal = 'Raw<&>{{signal}}';
+      for (const count of [1, 2]) {
+        const result = alignSignalHistoryToClip({
+          clipStartEpochMs, clipDurationSeconds: 100, preRollSeconds: 0, postRollSeconds: 0,
+          seriesInput: [{ signal, points: samples([0, 100].slice(0, count)) }],
+        });
+        expect(result.series[0].gapNotes).toEqual([
+          `Only ${count} ${count === 1 ? 'sample' : 'samples'} for "${signal}" — too few to plot a reliable trend.`,
+        ]);
+        expect(result.series[0].signal).toBe(signal);
+        expect(result.series[0].points).toHaveLength(count);
+      }
+    });
+
+    it('localizes templates, directions and hints, preserving signed raw evidence and stored descriptions', async () => {
+      i18n.addResourceBundle('de', 'translation', { dashcam: { reconstruction: {
+        clipStart: 'Clip-Anfang', clipEnd: 'Clip-Ende',
+        generated: {
+          sparse_one: '{{samples}} Messpunkt: {{signal}}',
+          sparse_other: '{{samples}} Messpunkte: {{signal}}',
+          gap: '{{signal}} Lücke {{gap}}s ({{percent}}%)',
+          decrease: 'Abnahme', increase: 'Zunahme', hardBrake: 'starkes Bremsen',
+          hintedSpike: '{{signal}} {{hint}} {{direction}} z={{z}} t={{at}}s',
+          spike: '{{signal}} {{direction}} {{delta}} z={{z}} t={{at}}s',
+          stateChange: '{{signal}} Zustand {{value}} t={{at}}s',
+          noSamples: '{{signal}} keine Messpunkte',
+          noValues: '{{signal}} keine Werte',
+          noSelection: 'Keine Signale ausgewählt',
+        },
+      } } }, true, true);
+      const params = {
+        clipStartEpochMs, clipDurationSeconds: 100, preRollSeconds: 10, postRollSeconds: 0,
+        seriesInput: [
+          { signal: 'Raw<&>', points: [0, -0.01, -0.02, -2.345].map((valueNum, i) => ({
+            timestamp: timestamp(-5 + i), valueNum,
+          })) },
+          { signal: 'VehicleBrakePressure', points: [0, 0.01, 0.02, 2.345].map((valueNum, i) => ({
+            timestamp: timestamp(i), valueNum,
+          })) },
+          { signal: 'DoorState', points: [
+            { timestamp: timestamp(-1.25), valueBool: false },
+            { timestamp: timestamp(-0.5), valueStr: 'RAW<&>{{value}}' },
+          ] },
+          { signal: 'Missing', points: [] },
+          { signal: 'Unknown', points: [{ timestamp: timestamp(0) }] },
+        ],
+      };
+      const stored = alignSignalHistoryToClip(params);
+      const snapshot = JSON.stringify(stored);
+      await i18n.changeLanguage('de');
+      setGlobalLocale('de-DE');
+      setGlobalPrecision(3);
+      const localized = alignSignalHistoryToClip(params);
+      expect(localized.series[0].gapNotes[0]).toBe('Raw<&> Lücke 102,000s (93%)');
+      expect(localized.series[2].gapNotes[0]).toBe('2 Messpunkte: DoorState');
+      expect(localized.series[3].gapNotes[0]).toBe('Missing keine Messpunkte');
+      expect(localized.series[4].gapNotes[0]).toBe('Unknown keine Werte');
+      expect(localized.incidentSequence.map((event) => event.description)).toEqual([
+        'Raw<&> Abnahme -2,325 z=232,500 t=-2,000s',
+        'DoorState Zustand RAW<&>{{value}} t=-0,500s',
+        'VehicleBrakePressure starkes Bremsen Zunahme z=232,500 t=3,000s',
+      ]);
+      expect(localized.series.map(({ gapNotes: _notes, ...series }) => series))
+        .toEqual(stored.series.map(({ gapNotes: _notes, ...series }) => series));
+      expect(localized.incidentSequence.map(({ description: _text, id: _id, ...event }) => event))
+        .toEqual(stored.incidentSequence.map(({ description: _text, id: _id, ...event }) => event));
+      expect(localized.overallQuality).toBe(stored.overallQuality);
+      const markers = toReconstructionMarkers(stored);
+      expect(markers.slice(0, 2).map((marker) => marker.label)).toEqual(['Clip-Anfang', 'Clip-Ende']);
+      expect(markers.slice(2).map((marker) => marker.label)).toEqual(stored.incidentSequence.map((event) => event.description));
+      expect(JSON.stringify(stored)).toBe(snapshot);
+      expect(alignSignalHistoryToClip({ ...params, seriesInput: [] }).qualityNotes).toEqual(['Keine Signale ausgewählt']);
+    });
+
+    it('keeps tiny negative deltas visible instead of rounding them to unsigned zero', () => {
+      setGlobalPrecision(0);
+      const result = align([0, -0.000001, -0.000002, -0.0001].map((valueNum, i) => ({
+        timestamp: timestamp(i), valueNum,
+      })));
+      expect(result.incidentSequence[0].description).toContain('-9.80E-5');
+      expect(result.series[0].points.at(-1)?.value).toBe(-0.0001);
+    });
   });
 
   it('preserves false and empty text as real observations and skips unalignable timestamps', () => {

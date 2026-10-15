@@ -13,7 +13,7 @@ import {
   Select,
   Toggle,
 } from '@/components/ui';
-import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { AlertBanner, EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useDeviceNotificationPrefs } from '@/hooks/useDeviceNotificationPrefs';
 import { useWebPush } from '@/hooks/useWebPush';
@@ -97,8 +97,6 @@ const BYPASS_LABELS: Record<NotificationSeverity, string> = {
   warn: 'Ring through: warnings',
   critical: 'Ring through: critical',
 };
-
-const WEEKDAY_ALL_MASK = 0b111_1111;
 
 export function DeviceNotificationPrefsPanel({
   className,
@@ -220,7 +218,7 @@ export function DeviceNotificationPrefsPanel({
     <GlassPanel className={cn('p-4 sm:p-5', className)}>
       <div className="space-y-4">
         <div className="flex flex-wrap items-center gap-3">
-          <IconBox color="cyan">
+          <IconBox color="neutral">
             <BellRing className="h-5 w-5" aria-hidden="true" />
           </IconBox>
           <PanelTitle>
@@ -309,7 +307,7 @@ export function DeviceNotificationPrefsPanel({
               size="sm"
               hint={t(
                 'notifications.device.vehicleScopeHint',
-                'Fleet-wide notifications with no vehicle attached are always delivered.',
+                'System notifications with no vehicle attached are exempt from the vehicle filter. The device switch, category, and minimum severity rules still apply.',
               )}
               onChange={(event) =>
                 updatePrefs({
@@ -327,10 +325,26 @@ export function DeviceNotificationPrefsPanel({
                     })}
                   </HelperText>
                 )}
-                {vehiclesQuery.isLoading && !vehiclesState.hasData ? (
+                {!vehiclesState.hasData && !vehiclesState.isRefreshBlocked && vehiclesQuery.isFetching ? (
                   <Skeleton className="h-20 w-full" />
                 ) : vehiclesState.fatalError ? (
                   <QueryError error={vehiclesState.fatalError} onRetry={() => { void vehiclesQuery.refetch(); }} />
+                ) : !vehiclesState.hasData ? (
+                  <AlertBanner variant="info" title={t('notifications.device.vehicleScope', 'Vehicle scope')} role="status">
+                    <div className="space-y-2">
+                      <HelperText className="block">
+                        {vehiclesState.isRefreshBlocked
+                          ? t('dataSources.status.paused', 'Refresh paused')
+                          : t('dataSources.status.pending', 'Pending')}
+                      </HelperText>
+                      <HelperText className="block">
+                        {t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}
+                      </HelperText>
+                      <Button size="sm" variant="ghost" className="min-h-11 md:min-h-9" onClick={() => void vehiclesQuery.refetch()}>
+                        {t('common.retry', 'Retry')}
+                      </Button>
+                    </div>
+                  </AlertBanner>
                 ) : vehicles.length === 0 ? (
                   // no-action: adding a vehicle happens in onboarding / the
                   // Vehicles page, not from a notification-scope selector.
@@ -368,7 +382,7 @@ export function DeviceNotificationPrefsPanel({
               checked={prefs.quietHours.enabled}
               onChange={(checked) =>
                 updatePrefs({
-                  quietHours: { ...prefs.quietHours, enabled: checked, weekdays: WEEKDAY_ALL_MASK },
+                  quietHours: { enabled: checked },
                 })
               }
             />
@@ -376,6 +390,7 @@ export function DeviceNotificationPrefsPanel({
               <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <Input
                   type="time"
+                  className="min-h-11 md:min-h-10"
                   label={t('notifications.device.quietStart', 'From')}
                   value={prefs.quietHours.startLocal}
                   disabled={!prefs.enabled}
@@ -387,6 +402,7 @@ export function DeviceNotificationPrefsPanel({
                 />
                 <Input
                   type="time"
+                  className="min-h-11 md:min-h-10"
                   label={t('notifications.device.quietEnd', 'Until')}
                   value={prefs.quietHours.endLocal}
                   disabled={!prefs.enabled}
@@ -400,8 +416,8 @@ export function DeviceNotificationPrefsPanel({
             )}
             <HelperText className="mt-1 block">
               {t(
-                'notifications.device.quietHint',
-                'Quiet hours silence the notification rather than dropping it, so nothing is lost. Critical alerts still ring.',
+                'notifications.device.quietBypassHint',
+                'Quiet hours silence notifications that pass your other device rules. Only severities selected below ring through while quiet hours are active; device, category, minimum severity, and vehicle filters still apply.',
               )}
             </HelperText>
             <div className="mt-2 flex flex-wrap gap-2">
@@ -433,6 +449,7 @@ export function DeviceNotificationPrefsPanel({
           <Button
             wrapLabel
             size="sm"
+            className="min-h-11 md:min-h-9"
             variant="secondary"
             onClick={() => void sendTest()}
             data-testid="device-prefs-test"
@@ -440,7 +457,7 @@ export function DeviceNotificationPrefsPanel({
             <Send className="h-4 w-4" aria-hidden="true" />
             {t('notifications.device.test.action', 'Send test notification')}
           </Button>
-          <Button wrapLabel size="sm" variant="ghost" onClick={resetPrefs} data-testid="device-prefs-reset">
+          <Button wrapLabel size="sm" className="min-h-11 md:min-h-9" variant="ghost" onClick={resetPrefs} data-testid="device-prefs-reset">
             {t('notifications.device.reset', 'Reset device rules')}
           </Button>
         </div>

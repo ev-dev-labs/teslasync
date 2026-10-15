@@ -6,9 +6,9 @@ import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 interface AutomationRulesBriefProps {
   stats: {
     total: number;
-    active: number;
-    disabled: number;
-    autoDisabled: number;
+    active?: number;
+    disabled?: number;
+    autoDisabled?: number;
     totalRuns?: number;
     totalFailures?: number;
   };

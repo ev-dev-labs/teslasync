@@ -316,4 +316,76 @@ describe('normalizeDriveProfile', () => {
       { progress: 100, a: 2, b: null },
     ]);
   });
+
+  it('retains duplicate timestamps and rounded progress samples through normalization and merging', () => {
+    const profile = normalizeDriveProfile(detail({
+      telemetry: [
+        telemetry('2026-07-01T08:10:00Z', 10, 75),
+        telemetry('2026-07-01T08:00:00Z', 0, 80),
+        telemetry('2026-07-01T08:10:00Z', 12, 74),
+        telemetry('2026-07-01T08:10:00.001Z', 14, 73),
+        telemetry('2026-07-01T08:20:00Z', 20, 70),
+      ],
+    }));
+    expect(profile.speed).toEqual([
+      { progress: 0, value: 0 },
+      { progress: 50, value: 10 },
+      { progress: 50, value: 12 },
+      { progress: 50, value: 14 },
+      { progress: 100, value: 20 },
+    ]);
+    expect(profile.soc.map((point) => point.value)).toEqual([80, 75, 74, 73, 70]);
+    expect(mergeProfileSeries(profile.speed, [{ progress: 50, value: 9 }])).toEqual([
+      { progress: 0, a: 0, b: null },
+      { progress: 50, a: 10, b: 9 },
+      { progress: 50, a: 12, b: null },
+      { progress: 50, a: 14, b: null },
+      { progress: 100, a: 20, b: null },
+    ]);
+  });
+
+  it('aligns duplicate occurrences in source order with null gaps on either side', () => {
+    const a = [
+      { progress: 50, value: 10 },
+      { progress: 0, value: 0 },
+      { progress: 50, value: 12 },
+      { progress: 100, value: 20 },
+    ];
+    const b = [
+      { progress: 50, value: 9 },
+      { progress: 0, value: 1 },
+      { progress: 50, value: 11 },
+      { progress: 50, value: 13 },
+    ];
+    const expected = [
+      { progress: 0, a: 0, b: 1 },
+      { progress: 50, a: 10, b: 9 },
+      { progress: 50, a: 12, b: 11 },
+      { progress: 50, a: null, b: 13 },
+      { progress: 100, a: 20, b: null },
+    ];
+    expect(mergeProfileSeries(a, b)).toEqual(expected);
+    expect(mergeProfileSeries(b, a)).toEqual(expected.map((point) => ({
+      progress: point.progress, a: point.b, b: point.a,
+    })));
+  });
+
+  it('preserves identical observations and rounding collisions without mutating the sources', () => {
+    const a = Object.freeze([
+      Object.freeze({ progress: 50.001, value: 0 }),
+      Object.freeze({ progress: 50.002, value: 0 }),
+      Object.freeze({ progress: 50.003, value: 2 }),
+    ]);
+    expect(mergeProfileSeries(a, [])).toEqual([
+      { progress: 50, a: 0, b: null },
+      { progress: 50, a: 0, b: null },
+      { progress: 50, a: 2, b: null },
+    ]);
+    expect(mergeProfileSeries([], a)).toEqual([
+      { progress: 50, a: null, b: 0 },
+      { progress: 50, a: null, b: 0 },
+      { progress: 50, a: null, b: 2 },
+    ]);
+    expect(mergeProfileSeries([], [])).toEqual([]);
+  });
 });

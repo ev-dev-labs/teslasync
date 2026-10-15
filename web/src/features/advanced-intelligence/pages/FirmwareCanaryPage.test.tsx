@@ -3,6 +3,9 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { I18nextProvider } from 'react-i18next';
+import type { i18n } from 'i18next';
+import { createEnglishI18n } from '@/test/createEnglishI18n';
 import type { DataStateSource } from '@/api/dataState';
 import type { AdvancedPage, FirmwareCanary } from '@/types/advancedIntelligence';
 import { ToastProvider } from '@/components/feedback';
@@ -45,14 +48,17 @@ vi.mock('@/lib/timezone', async () => {
   return { ...actual, useTimezone: () => state.timezone };
 });
 
-function renderPage() {
+function renderPage(translations?: i18n) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   function Providers({ children }: { children: ReactNode }) {
     return <QueryClientProvider client={client}>
       <MemoryRouter><ToastProvider>{children}</ToastProvider></MemoryRouter>
     </QueryClientProvider>;
   }
-  const view = render(<FirmwareCanaryPage />, { wrapper: Providers });
+  const element = translations
+    ? <I18nextProvider i18n={translations}><FirmwareCanaryPage /></I18nextProvider>
+    : <FirmwareCanaryPage />;
+  const view = render(element, { wrapper: Providers });
   return {
     ...view,
     rerender: (element: ReactElement = <FirmwareCanaryPage />) => view.rerender(element),
@@ -87,6 +93,77 @@ beforeEach(() => {
 });
 
 describe('FirmwareCanaryPage restrained decision presentation', () => {
+  it.each([
+    { code: 'rollout', label: 'Rollout', variant: 'success' },
+    { code: 'hold', label: 'Hold', variant: 'danger' },
+    { code: 'investigate', label: 'Investigate', variant: 'warning' },
+    { code: 'insufficient', label: 'Insufficient evidence', variant: 'neutral' },
+  ] as const)('localizes $code without changing its raw decision or badge variant', async ({ code, label, variant }) => {
+    const translations = await createEnglishI18n();
+    const key = code === 'insufficient'
+      ? 'advancedIntelligence.brief.quality.insufficient'
+      : `advancedIntelligence.firmware.decision.${code}`;
+    translations.addResource('en', 'translation', key, `Localized ${label}`);
+    const item = { ...firmware, decision: code };
+    populate([item]);
+    renderPage(translations);
+    const badge = within(decision()).getByText(`Localized ${label}`);
+    expect(badge).toHaveClass(variant === 'neutral'
+      ? 'bg-[var(--surface-2)]' : `bg-[var(--semantic-${variant}-bg)]`);
+    expect(within(decision()).queryByText(code)).not.toBeInTheDocument();
+    expect(state.query.data?.items[0]).toEqual(item);
+  });
+
+  it.each([
+    { code: 'sufficient', label: 'Sufficient evidence', variant: 'success', matched: true },
+    { code: 'limited', label: 'Limited evidence', variant: 'warning', matched: false },
+    { code: 'insufficient', label: 'Insufficient evidence', variant: 'danger', matched: false },
+  ] as const)('localizes $code quality in the badge and rationale without changing matched support', async ({ code, label, variant, matched }) => {
+    const translations = await createEnglishI18n();
+    translations.addResource('en', 'translation', `advancedIntelligence.brief.quality.${code}`, `Localized ${label}`);
+    const item: FirmwareCanary = {
+      ...firmware,
+      decision: 'investigate',
+      peer_regression_pct: 0,
+      matched_excess_pct: 6,
+      window_quality: { ...firmware.window_quality, status: code },
+    };
+    populate([item]);
+    renderPage(translations);
+    expect(within(screen.getByRole('region', { name: 'Data quality' }))
+      .getByText(`Localized ${label}`)).toHaveClass(`bg-[var(--semantic-${variant}-bg)]`);
+    expect(decision()).toHaveTextContent(`Window quality: Localized ${label}`);
+    expect(decision()).toHaveTextContent(matched
+      ? 'Investigation uses the returned matched-peer comparison with sufficient window quality.'
+      : 'window quality does not establish sufficient matched-peer support');
+    expect(within(decision()).getByText('Investigate')).toHaveClass('bg-[var(--semantic-warning-bg)]');
+    expect(state.query.data?.items[0]).toEqual(item);
+  });
+
+  it('shows unknown decision and quality codes explicitly without changing variants or matched-support logic', async () => {
+    const translations = await createEnglishI18n();
+    translations.addResource('en', 'translation', 'advancedIntelligence.firmware.decision.unknownCode', 'Unrecognized decision: {{code}}');
+    translations.addResource('en', 'translation', 'advancedIntelligence.quality.unknownCode', 'Unrecognized quality: {{code}}');
+    const item = { ...firmware, window_quality: { ...firmware.window_quality } };
+    Reflect.set(item, 'decision', 'future-decision');
+    Reflect.set(item.window_quality, 'status', 'future-quality');
+    populate([item, {
+      ...firmware, version: '2026.21', decision: 'investigate',
+      peer_regression_pct: 0, matched_excess_pct: 6,
+      window_quality: item.window_quality,
+    }]);
+    renderPage(translations);
+    expect(within(decision()).getByText('Unrecognized decision: future-decision'))
+      .toHaveClass('bg-[var(--surface-2)]');
+    expect(within(screen.getByRole('region', { name: 'Data quality' }))
+      .getByText('Unrecognized quality: future-quality'))
+      .toHaveClass('bg-[var(--semantic-danger-bg)]');
+    expect(decision('2026.21')).toHaveTextContent('Window quality: Unrecognized quality: future-quality');
+    expect(decision('2026.21')).toHaveTextContent('window quality does not establish sufficient matched-peer support');
+    expect(state.query.data?.items[0].decision).toBe('future-decision');
+    expect(state.query.data?.items[0].window_quality.status).toBe('future-quality');
+  });
+
   it('reactively formats generated timestamps with the display timezone and locale without mutating UTC data', () => {
     const generatedAt = '2026-06-01T00:30:00Z';
     populate([{ ...firmware, generated_at: generatedAt }]);
@@ -139,7 +216,7 @@ describe('FirmwareCanaryPage restrained decision presentation', () => {
     expect(article).not.toHaveClass('border-white/[0.08]', 'bg-white/[0.025]');
     expect(within(article).getByText('0.00%')).toBeInTheDocument();
     expect(within(article).getAllByText('—')).toHaveLength(2);
-    expect(within(article).getByText('insufficient')).toBeInTheDocument();
+    expect(within(article).getByText('Insufficient evidence')).toBeInTheDocument();
     ['Target regression', 'Peer regression', 'Matched excess', 'Decision generated']
       .forEach(label => expect(within(article).getByText(label)).toBeInTheDocument());
     const rationale = within(article).getByText('Decision rationale').parentElement;
@@ -164,9 +241,9 @@ describe('FirmwareCanaryPage restrained decision presentation', () => {
       .toEqual(['2026.20', '2026.21', '2026.22', 'Version unsupported']);
     expect(within(decision()).getAllByText('-1.00%')).toHaveLength(2);
     expect(within(decision()).getByText('0.00%')).toBeInTheDocument();
-    expect(within(decision()).getByText('rollout')).toBeInTheDocument();
-    expect(within(decision('2026.21')).getByText('hold')).toBeInTheDocument();
-    expect(within(decision('2026.22')).getByText('investigate')).toBeInTheDocument();
+    expect(within(decision()).getByText('Rollout')).toBeInTheDocument();
+    expect(within(decision('2026.21')).getByText('Hold')).toBeInTheDocument();
+    expect(within(decision('2026.22')).getByText('Investigate')).toBeInTheDocument();
     expect(within(decision()).getByText(/relative to the matched peer change and window quality/)).toBeInTheDocument();
   });
 
@@ -268,7 +345,7 @@ describe('FirmwareCanaryPage investigate rationale', () => {
           field === 'peer_regression_pct' ? 'peer regression: —' : 'matched excess: —',
         );
         expect(within(decision()).getAllByText('—')).toHaveLength(1);
-        expect(within(decision()).getByText('investigate')).toBeInTheDocument();
+        expect(within(decision()).getByText('Investigate')).toBeInTheDocument();
         expect(rationale()).not.toHaveTextContent('Investigation uses the returned matched-peer comparison');
       }
     },
@@ -287,7 +364,7 @@ describe('FirmwareCanaryPage investigate rationale', () => {
       expect(rationale()).toHaveTextContent('This is a target-only investigation');
       expect(within(decision()).getAllByText('—')).toHaveLength(3);
       expect(within(decision()).queryByText('0.00%')).not.toBeInTheDocument();
-      expect(within(decision()).getByText('investigate')).toBeInTheDocument();
+      expect(within(decision()).getByText('Investigate')).toBeInTheDocument();
     },
   );
 
@@ -310,7 +387,7 @@ describe('FirmwareCanaryPage investigate rationale', () => {
     expect(rationale()).toHaveTextContent(`matched excess: ${values.excess.toFixed(2)}%`);
     expect(rationale()).toHaveTextContent('Window quality: Sufficient evidence');
     expect(rationale()).not.toHaveTextContent('target-only investigation');
-    expect(within(decision()).getByText('investigate')).toBeInTheDocument();
+    expect(within(decision()).getByText('Investigate')).toBeInTheDocument();
   });
 
   it.each(['limited', 'insufficient', null, undefined, 'invalid'])(
@@ -327,7 +404,8 @@ describe('FirmwareCanaryPage investigate rationale', () => {
       expect(rationale()).toHaveTextContent('window quality does not establish sufficient matched-peer support');
       expect(rationale()).not.toHaveTextContent('target-only investigation');
       expect(rationale()).toHaveTextContent(status === 'limited' ? 'Limited evidence'
-        : status === 'insufficient' ? 'Insufficient evidence' : 'Quality not supplied');
+        : status === 'insufficient' ? 'Insufficient evidence'
+          : status === 'invalid' ? 'Unknown quality: invalid' : 'Quality not supplied');
       expect(within(decision()).getByText('0.00%')).toBeInTheDocument();
     },
   );
@@ -595,7 +673,7 @@ describe('FirmwareCanaryPage evidence source trust', () => {
     expect(evidenceSource()).toHaveAttribute('data-source-provenance', 'cached');
     expect(screen.getByRole('region', { name: 'Evidence sources' })).toHaveTextContent(observation.source);
     expect(screen.getByRole('region', { name: 'Limitations' })).toHaveTextContent('Matched peers are incomplete.');
-    expect(within(decision()).getByText('insufficient')).toBeInTheDocument();
+    expect(within(decision()).getByText('Insufficient evidence')).toBeInTheDocument();
     expect(screen.queryByText('Unknown')).not.toBeInTheDocument();
     expect(screen.queryByText('Intelligence evidence could not be loaded.')).not.toBeInTheDocument();
   });

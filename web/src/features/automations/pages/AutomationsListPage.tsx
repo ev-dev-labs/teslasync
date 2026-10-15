@@ -27,16 +27,18 @@ import { useDataState } from '@/hooks/useDataState';
 import { useAutomationEvents } from '@/hooks/useAutomationEvents';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
 import {
-  useAutomations,
+  useAutomationList,
+  usePinnedAutomations,
   useToggleAutomation,
   useDeleteAutomation,
   useTestRunAutomation,
   useReEnableAutomation,
   useImportAutomations,
+  automationStatus,
+  type AutomationListItem,
   type AutomationImportEnvelope,
 } from '@/api/hooks/useAutomations';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { usePinned } from '@/api/hooks/usePinned';
 import { AutomationCard } from './AutomationCard';
 import { PresetGallery } from './PresetGallery';
 import { ComfortPanel } from '../components/ComfortPanel';
@@ -44,7 +46,6 @@ import {
   Zap, Plus, Upload, ListFilter, AlertTriangle,
   Sparkles, ChevronRight,
 } from 'lucide-react';
-import type { Automation } from '@/api/types';
 import { typography } from '@/lib/tokens';
 
 // ─── Filter types ─────────────────────────────────────────────────────────────
@@ -62,22 +63,25 @@ const statusFilterOptions: { value: StatusFilter; key: string; fallback: string 
 
 interface AutomationStats {
   total: number;
-  active: number;
-  disabled: number;
-  autoDisabled: number;
+  active?: number;
+  disabled?: number;
+  autoDisabled?: number;
 }
 
-export function computeStats(automations: Automation[]): AutomationStats {
-  let active = 0;
-  let disabled = 0;
-  let autoDisabled = 0;
+export function computeStats(automations: AutomationListItem[]): AutomationStats {
+  let active: number | undefined = 0;
+  let disabled: number | undefined = 0;
+  let autoDisabled: number | undefined = 0;
 
   for (const a of automations) {
-    if (a.auto_disabled) {
+    const status = automationStatus(a);
+    if (status == null) {
+      active = disabled = autoDisabled = undefined;
+    } else if (status === 'auto-disabled' && autoDisabled != null) {
       autoDisabled++;
-    } else if (a.enabled) {
+    } else if (status === 'active' && active != null) {
       active++;
-    } else {
+    } else if (status === 'disabled' && disabled != null) {
       disabled++;
     }
   }
@@ -114,7 +118,7 @@ export default function AutomationsListPage() {
   usePageTitle(t('automations.title', 'Automations'));
 
   // Data hooks — each section below owns its own loading / empty / error state.
-  const automationsQuery = useAutomations();
+  const automationsQuery = useAutomationList();
   const {
     data: automations,
   } = automationsQuery;
@@ -142,6 +146,10 @@ export default function AutomationsListPage() {
   const importInputRef = useRef<HTMLInputElement>(null);
   const handleImportFile = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!operationalMode.canWrite || importMutation.isPending) {
+        e.target.value = '';
+        return;
+      }
       const file = e.target.files?.[0];
       if (!file) return;
       try {
@@ -155,7 +163,7 @@ export default function AutomationsListPage() {
             ),
           );
         }
-        importMutation.mutate(parsed);
+        if (operationalMode.canWrite) importMutation.mutate(parsed);
       } catch (err) {
         const message = err instanceof Error
           ? err.message
@@ -169,7 +177,7 @@ export default function AutomationsListPage() {
         if (importInputRef.current) importInputRef.current.value = '';
       }
     },
-    [t, importMutation],
+    [t, importMutation, operationalMode.canWrite],
   );
 
   // Filters
@@ -198,10 +206,7 @@ export default function AutomationsListPage() {
 
     if (statusFilter !== 'all') {
       result = result.filter((a) => {
-        if (statusFilter === 'active') return a.enabled && !a.auto_disabled;
-        if (statusFilter === 'disabled') return !a.enabled && !a.auto_disabled;
-        if (statusFilter === 'auto-disabled') return a.auto_disabled;
-        return true;
+        return automationStatus(a) === statusFilter;
       });
     }
 
@@ -218,7 +223,7 @@ export default function AutomationsListPage() {
     return result;
   }, [items, statusFilter, search]);
 
-  const pinsQuery = usePinned('automation');
+  const pinsQuery = usePinnedAutomations();
   const pinsState = useDataState(pinsQuery);
   const automationPins = pinsQuery.data ?? [];
   const sortedItems = useMemo(() => {
@@ -330,6 +335,40 @@ export default function AutomationsListPage() {
         )}
       />
       <StaleRefreshWarning state={automationsState} label={t('automations.title', 'Automations')} />
+      {importMutation.data && (
+        <AlertBanner
+          variant={importMutation.data.errors.length > 0
+            ? importMutation.data.imported.length > 0 ? 'warning' : 'danger'
+            : 'success'}
+          role="status"
+          aria-label={t('automations.import', 'Import')}
+        >
+          <Text variant="bodySm">
+            {t('bulk.result.partial', '{{ok}} succeeded, {{failed}} failed', {
+              ok: importMutation.data.imported.length,
+              failed: importMutation.data.errors.length,
+            })}
+          </Text>
+          {importMutation.data.errors.length > 0 && (
+            <>
+              <Text variant="bodySm">
+                {t('automations.importRetryFailedOnly', 'Correct and import only the failed entries listed below. Do not re-import successful entries; doing so creates duplicates.')}
+              </Text>
+              <ul className="list-disc space-y-1 ps-5">
+                {importMutation.data.errors.map((failure) => (
+                  <li key={failure.index}>
+                    <Text variant="bodySm">
+                      {t('automations.importEntryError', 'Entry {{entry}} ({{name}}): {{message}}', {
+                        entry: failure.index + 1, name: failure.name, message: failure.error,
+                      })}
+                    </Text>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </AlertBanner>
+      )}
       {auxiliarySources.map(({ id, label, state }) => !state.hasData ? (
         <section key={id} aria-label={label} className="min-w-0 space-y-2">
           <Caption>{label}</Caption>
@@ -361,7 +400,7 @@ export default function AutomationsListPage() {
       </FadeIn>
 
       {/* 2 — Auto-disabled warning (conditional, self-contained) */}
-      {stats.autoDisabled > 0 && (
+      {items.some((a) => automationStatus(a) === 'auto-disabled') && (
         <FadeIn delay={0.03}>
           <AlertBanner
             variant="danger"
@@ -371,7 +410,7 @@ export default function AutomationsListPage() {
             {t(
               'automations.autoDisabledWarning',
               '{{count}} automation(s) have been auto-disabled due to repeated failures.',
-              { count: stats.autoDisabled },
+              { count: items.filter((a) => automationStatus(a) === 'auto-disabled').length },
             )}
           </AlertBanner>
         </FadeIn>

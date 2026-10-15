@@ -25,6 +25,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.restoreAllMocks()
   __resetRecentPagesForTests()
 })
 
@@ -263,6 +264,39 @@ describe('recentPages — resolvePageLabel', () => {
 })
 
 describe('recentPages — corrupt / missing storage', () => {
+  it('handles a throwing localStorage getter without losing stored history or subscriptions', () => {
+    recordPageView({ path: '/vehicles/3', title: 'Model 3', now: 1_000 })
+    const populated = getRecentPages()
+    const handler = vi.fn()
+    const unsubscribe = subscribeRecentPages(handler)
+    const getter = vi.spyOn(window, 'localStorage', 'get').mockImplementation(() => {
+      throw new DOMException('Storage access denied', 'SecurityError')
+    })
+
+    try {
+      expect(getRecentPages()).toEqual([])
+      expect(() => recordPageView({ path: '/blocked', title: 'Blocked' })).not.toThrow()
+      expect(handler).not.toHaveBeenCalled()
+      expect(() => __resetRecentPagesForTests()).not.toThrow()
+      expect(handler).not.toHaveBeenCalled()
+      expect(() => clearRecentPages()).not.toThrow()
+      expect(handler).toHaveBeenCalledTimes(1)
+
+      window.dispatchEvent(new StorageEvent('storage', { key: RECENT_PAGES_STORAGE_KEY }))
+      expect(handler).toHaveBeenCalledTimes(2)
+      unsubscribe()
+      clearRecentPages()
+      expect(handler).toHaveBeenCalledTimes(2)
+    } finally {
+      getter.mockRestore()
+      unsubscribe()
+    }
+
+    expect(getRecentPages()).toEqual(populated)
+    recordPageView({ path: '/vehicles/4', title: 'Model Y', now: 2_000 })
+    expect(getRecentPages().map((entry) => entry.path)).toEqual(['/vehicles/4', '/vehicles/3'])
+  })
+
   it('returns an empty list when localStorage payload is malformed', () => {
     window.localStorage.setItem(RECENT_PAGES_STORAGE_KEY, '{not json')
     expect(getRecentPages()).toEqual([])

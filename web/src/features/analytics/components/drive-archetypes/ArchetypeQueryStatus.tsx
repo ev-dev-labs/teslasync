@@ -91,7 +91,15 @@ export function ArchetypeQueryStatus({
               'The history window could not refresh. The most recently loaded evidence remains visible.',
             )}
           </Text>
-          <Button type="button" variant="ghost" size="sm" onClick={state.onRetry}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="min-h-11 min-w-11 md:min-h-9"
+            onClick={state.onRetry}
+            loading={state.isFetching}
+            wrapLabel
+          >
             {t('archetypes.query.retryRefresh', 'Retry refresh')}
           </Button>
         </div>

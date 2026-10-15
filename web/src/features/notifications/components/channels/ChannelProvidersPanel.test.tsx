@@ -18,6 +18,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
+import { createInstance } from 'i18next';
+import { I18nextProvider } from 'react-i18next';
 import '../../../../i18n';
 
 import { ChannelProvidersPanel } from './ChannelProvidersPanel';
@@ -47,6 +49,26 @@ function rowFor(label: string): HTMLElement {
 const ALL_LABELS = ['Discord', 'Slack', 'Telegram', 'Email', 'Webhook', 'ntfy', 'Pushover'];
 
 describe('ChannelProvidersPanel', () => {
+  it('translates provider labels while preserving populated counts and English fallbacks', async () => {
+    const locale = createInstance();
+    await locale.init({
+      lng: 'fr',
+      fallbackLng: false,
+      resources: { fr: { translation: {
+        notifications: { channels: { providerNames: { email: 'Courriel' } } },
+      } } },
+    });
+    render(
+      <I18nextProvider i18n={locale}>
+        <ChannelProvidersPanel channels={[ch('email', 1), ch('email', 2), ch('discord', 3)]} />
+      </I18nextProvider>,
+    );
+    expect(within(rowFor('Courriel')).getByText('2 configured')).toBeInTheDocument();
+    expect(within(rowFor('Discord')).getByText('1 configured')).toBeInTheDocument();
+    expect(screen.getByText('2 of 7 provider types in use')).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem')).toHaveLength(CHANNEL_TYPES.length);
+  });
+
   it('renders the full provider catalog as a list, even with zero channels', () => {
     render(<ChannelProvidersPanel channels={[]} />);
 

@@ -13,6 +13,7 @@ import {
   type Column,
 } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 
 import type { LocationDwell, ParkingSummary } from '../../lib/parkingDwell';
@@ -35,7 +36,11 @@ export function TopParkingLocations({
   const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDuration } = useUnits();
-  const ongoing = summary.stints.find((stint) => stint.ongoing);
+  const { formatDateTime } = useDateFormat();
+  const censoredLocations = useMemo(
+    () => new Set(summary.stints.filter((stint) => stint.rightCensored).map((stint) => stint.location)),
+    [summary.stints],
+  );
   const columns = useMemo<Column<LocationDwell>[]>(
     () => [
       {
@@ -53,9 +58,9 @@ export function TopParkingLocations({
             >
               {row.location ?? t('parking.unknown', 'Unknown location')}
             </Text>
-            {ongoing?.location === row.location ? (
-              <Badge variant="info" size="sm">
-                {t('parking.now', 'now')}
+            {censoredLocations.has(row.location) ? (
+              <Badge variant="neutral" size="sm">
+                {t('comfortConsistency.directory.censored', 'Right-censored')}
               </Badge>
             ) : null}
           </span>
@@ -83,6 +88,11 @@ export function TopParkingLocations({
         render: (row) => (
           <Text variant="body" mono>
             {formatDuration(row.totalMs / 1_000)}
+            {censoredLocations.has(row.location) ? (
+              <Text as="span" variant="caption" className="block">
+                {t('batteryPassport.distribution.minimum', 'Observed minimum')}
+              </Text>
+            ) : null}
           </Text>
         ),
       },
@@ -99,7 +109,7 @@ export function TopParkingLocations({
         ),
       },
     ],
-    [formatDuration, ongoing, t, fmtInt, fmtNumber],
+    [formatDuration, censoredLocations, t, fmtInt, fmtNumber],
   );
 
   return (
@@ -110,7 +120,7 @@ export function TopParkingLocations({
     >
       <GlassPanel className="h-full p-4 sm:p-5">
         <PanelTitle className="flex items-center gap-2">
-          <MapPin className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <MapPin className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
           {t('parking.topLocations', 'Where it sits')}
           <HelpTooltip
             size="sm"
@@ -130,6 +140,20 @@ export function TopParkingLocations({
               count: summary.locations.length,
               stints: fmtInt(summary.stints.length),
             },
+          )}
+        </Text>
+        <Text as="p" variant="caption" className="mt-1">
+          {t('vehicles.detail.brief.snapshot', 'Source snapshot')}: {formatDateTime(
+            summary.coverage.observationEndMs == null
+              ? null
+              : new Date(summary.coverage.observationEndMs),
+            { tz: summary.coverage.timeZone },
+          )}
+        </Text>
+        <Text as="p" variant="caption" className="mt-1">
+          {t(
+            'parking.briefDescription',
+            'Parking is reconstructed between usable drives, not observed continuously. Missing locations and incomplete history remain explicit.',
           )}
         </Text>
         <ParkingSectionBody state={state} className="mt-3 min-h-72">

@@ -26,7 +26,9 @@ export function ThermalTaxStats({ session, selected, summary, samples, state, lo
   const evidence = heaterEvidence(samples);
   const hasIntegral = selected && evidence.hasIntegral;
   const missingReason = selected
-    ? t('chargingThermalTax.metrics.missingHeater', 'Not enough recorded heater readings for this metric.')
+    ? summary.sampleCount > 0 && !evidence.hasPeak
+      ? t('chargingThermalTax.unsupportedHeaterPower', 'Heater-power analysis is unsupported for these samples: no measured heater power is available. Recorded charging telemetry is preserved; heater state is not a power measurement.')
+      : t('chargingThermalTax.metrics.missingHeater', 'Not enough recorded heater readings for this metric.')
     : t('chargingThermalTax.noSession', 'no session selected');
   const estimate = t('chargingThermalTax.metrics.estimated', 'Estimated from sampled heater power');
   const period: StatPeriod = session ? {
@@ -106,7 +108,7 @@ export function ThermalTaxStats({ session, selected, summary, samples, state, lo
     } : period}
     loading={loading}
     retained={selected && state.hasData && state.status === 'stale'}
-    secondary={selected && evidence.incomplete ? (
+    secondary={selected && evidence.incomplete && evidence.hasPeak ? (
       <Text as="p" variant="bodySm">
         {t('chargingThermalTax.metrics.incomplete',
           'Some heater readings are missing. Derived totals retain the existing zero-fill analysis and are incomplete estimates; missing readings do not mean no heater draw.')}

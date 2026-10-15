@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { DataState } from '@/api/dataState';
 import type { GasPriceHistory } from '@/api/types';
 import { LayoutCard } from '@/components/layout';
-import { Badge, Text, DataTable, useSortToggle, type Column } from '@/components/ui';
+import { Badge, Text, DataTable, useSortToggle, type Column, type MobileDataTablePresentation } from '@/components/ui';
 import { Skeleton } from '@/components/feedback';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -50,10 +50,24 @@ export function GasHistoryTable({ source }: { source: DataState<GasPriceHistory[
       filterValueLabel: (_value, r) => r.effective_to ? formatDateTime(r.effective_to) : t('gas.current', 'Current'),
       render: (r) => r.effective_to ? <Text size="sm" color="secondary">{formatDateTime(r.effective_to)}</Text> : <Badge variant="success" size="sm">{t('gas.current', 'Current')}</Badge> },
   ], [t, formatCurrency, fmtNumber]);
+  const mobilePresentation = useMemo<MobileDataTablePresentation<GasPriceHistory>>(() => ({
+    roles: { effective_from: 'title', price_per_unit: 'primary', unit: 'meta', efficiency_mpg: 'meta', effective_to: 'meta' },
+    displayValue: (row, key) => {
+      switch (key) {
+        case 'effective_from': return formatDateTime(row.effective_from);
+        case 'price_per_unit': return row.price_per_unit == null ? '—' : `${formatCurrency(row.price_per_unit)}/${row.unit ?? '—'}`;
+        case 'unit': return row.unit ?? '—';
+        case 'efficiency_mpg': return row.efficiency_mpg == null ? '—' : `${fmtNumber(row.efficiency_mpg)} ${t('gas.mpg', 'mpg')}`;
+        case 'effective_to': return row.effective_to ? formatDateTime(row.effective_to) : t('gas.current', 'Current');
+        default: return null;
+      }
+    },
+  }), [t, formatCurrency, fmtNumber]);
   return (
     <LayoutCard title={t('gas.historyTitle', 'Price history')}>
       <AdminSourceContent source={source} label={t('gas.historyTitle', 'Price history')} emptyMessage={t('gas.noHistoryRows', 'No price history recorded yet.')} loadingContent={<Skeleton height={240} className="rounded-xl" />}>
         <DataTable tableId="admin:gas-price-history" columns={columns} mobileColumns={['effective_from', 'price_per_unit', 'effective_to']}
+          mobilePresentation={mobilePresentation} caption={t('gas.historyTitle', 'Price history')}
           data={sortedRows} enableValueFilters keyExtractor={(r) => r.id} sortKey={sortKey} sortDir={sortDir} onSort={onSort}
           emptyMessage={t('gas.noHistoryRows', 'No price history recorded yet.')} pagination />
       </AdminSourceContent>

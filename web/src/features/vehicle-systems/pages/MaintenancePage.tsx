@@ -18,7 +18,8 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { formatDate } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { formatMaintenanceDate } from '../components/maintenance-modernization/serviceColumns';
 import {
   MaintenanceGridSlot, MaintenanceSummary, MaintenanceItemsPanel,
   MaintenanceProjectionsPanel, MaintenanceCostPanel, MaintenanceCategoriesPanel,
@@ -35,6 +36,15 @@ export default function MaintenancePage() {
   const { formatDistance } = useUnits();
   const { formatCurrency } = useFormatting();
   const { precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
+  const { formatDate, formatDateTime, locale } = useDateFormat();
+  const formatDueDate = useCallback(
+    (value: string | null | undefined) => formatMaintenanceDate(value, formatDate, locale),
+    [formatDate, locale],
+  );
+  const formatServiceDate = useCallback(
+    (value: string | Date | null | undefined) => formatMaintenanceDate(value, formatDateTime, locale),
+    [formatDateTime, locale],
+  );
 
   const itemsQuery = useMaintenance(vehicleId);
   const recordsQuery = useServiceRecords(vehicleId);
@@ -74,10 +84,10 @@ export default function MaintenancePage() {
   );
   const costStats = useMemo(() => calculateCostStatistics(records), [records]);
   const categoryBreakdown = useMemo(() => countCategories(items), [items]);
-  const projections = useMemo(() => projectServices(items, formatDate), [items]);
+  const projections = useMemo(() => projectServices(items, formatDueDate), [items, formatDueDate]);
   const serviceColumns = useMemo(
-    () => buildServiceColumns(t, formatDistance, setPreviewRecord),
-    [t, formatDistance, displayPrecision, displayLocale],
+    () => buildServiceColumns(t, formatDistance, setPreviewRecord, formatServiceDate),
+    [t, formatDistance, displayPrecision, displayLocale, formatServiceDate],
   );
   const dataSources = useMemo(() => [
     {
@@ -152,10 +162,12 @@ export default function MaintenancePage() {
       title={t('maintenance.title', 'Maintenance')}
       subtitle={t('maintenance.subtitle', 'Service schedule, records, and upcoming maintenance')}
       secondaryActions={<Button variant="ghost" size="sm" onClick={handleRefresh}
+        className="min-h-11 min-w-11 md:min-h-9 md:min-w-9"
         aria-label={t('maintenance.refresh', 'Refresh maintenance data')}>
         <RefreshCw className="h-4 w-4" aria-hidden="true" />
       </Button>}
       primaryAction={<Button variant="primary" size="sm"
+        wrapLabel className="min-h-11 min-w-11 md:min-h-9"
         icon={<CalendarPlus className="h-4 w-4" aria-hidden="true" />} onClick={handleSchedule}>
         {t('maintenance.schedule', 'Schedule')}
       </Button>}

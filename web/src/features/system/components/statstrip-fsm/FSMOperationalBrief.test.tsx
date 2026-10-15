@@ -7,6 +7,15 @@ import type { FSMTransition } from '@/types/fsm';
 import type { StatPeriod } from '@/lib/metric-reference';
 import { computeFlapIds } from '../FSMHealthPanel';
 import { FSMOperationalBrief, fsmMetrics } from './FSMOperationalBrief';
+import { formatDateTime } from '@/lib/dateFormat';
+
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({ settings: { tz_display_default: 'user' }, locale: 'de-DE' }),
+}));
+vi.mock('@/lib/timezone', async importOriginal => ({
+  ...await importOriginal<typeof import('@/lib/timezone')>(),
+  useTimezone: () => 'Asia/Tokyo',
+}));
 
 vi.mock('react-i18next', async () => {
   const { createInstance: create } = await import('i18next');
@@ -34,6 +43,21 @@ const period: StatPeriod = {
 };
 
 describe('FSM shared OperationalBrief', () => {
+  it('formats independent freshness timestamps in the saved locale and zone across midnight', () => {
+    const historyAt = Date.parse('2026-10-01T14:59:00Z');
+    const liveAt = Date.parse('2026-10-01T15:01:00Z');
+    const { rerender } = render(<MemoryRouter><FSMOperationalBrief
+      transitions={{ data: { data: [], total: 0 }, dataUpdatedAt: historyAt }}
+      stateQuery={{ data: {}, dataUpdatedAt: liveAt }} currentState="parked"
+      period={period} onRetry={vi.fn()} /></MemoryRouter>);
+    const opts = { locale: 'de-DE', tz: 'Asia/Tokyo' };
+    expect(screen.getByTestId('fsm-summary')).toHaveTextContent(formatDateTime(new Date(historyAt), opts));
+    expect(screen.getByTestId('fsm-summary')).toHaveTextContent(formatDateTime(new Date(liveAt), opts));
+    rerender(<MemoryRouter><FSMOperationalBrief transitions={{ data: { data: [] }, dataUpdatedAt: NaN }}
+      stateQuery={{ data: {} }} currentState={null} period={period} onRetry={vi.fn()} /></MemoryRouter>);
+    expect(screen.getByTestId('fsm-summary')).toHaveTextContent('Fetch time not supplied');
+    expect(screen.getByTestId('fsm-summary')).not.toHaveTextContent('Invalid Date');
+  });
   it('retains numeric page versus total, detector-backed flaps and textual current state', () => {
     const rows = Array.from({ length: 7 }, (_, index): FSMTransition => ({
       id: index + 1, ts: `2026-10-01T00:00:0${index}Z`, vehicle_id: 7,

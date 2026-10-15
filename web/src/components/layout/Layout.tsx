@@ -876,6 +876,7 @@ export default function Layout() {
       }
     },
   })
+  // The shell is the sole SSE browser-notification and sound delivery owner.
   useNotificationListener()
   // Browser tab badging. These three hooks
   // share the SSE singleton with `useNotificationListener` above; no

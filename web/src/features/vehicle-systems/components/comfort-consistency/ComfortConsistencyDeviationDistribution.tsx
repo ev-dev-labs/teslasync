@@ -45,8 +45,8 @@ export function ComfortConsistencyDeviationDistribution({
   const data = summary.deviationDistribution.map((bin) => ({
     band:
       bin.upperC == null
-        ? t('comfortConsistency.deviation.over', '> {{value}}', {
-            value: formatDelta(bin.lowerC),
+        ? t('preconditioningEffectiveness.distribution.atLeast', 'At least {{lower}}', {
+            lower: formatDelta(bin.lowerC),
           })
         : t('comfortConsistency.deviation.range', '{{lower}}-{{upper}}', {
             lower: formatDelta(bin.lowerC),

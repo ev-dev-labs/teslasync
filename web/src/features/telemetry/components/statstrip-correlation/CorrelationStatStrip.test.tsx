@@ -98,7 +98,7 @@ describe('Correlation canonical summary preservation', () => {
     expect(within(details).getByText('-0,8123')).toBeInTheDocument();
     expect(within(details).getByText('-120 s')).toBeInTheDocument();
     expect(details).toHaveTextContent('Cabin temperature leads');
-    expect(details).toHaveTextContent('from 1.111 raw points');
+    expect(details).toHaveTextContent('from 1.111 overlapping resampled pairs');
     expect(details).toHaveTextContent('needs |r| > 0,3012');
   });
 
@@ -120,7 +120,7 @@ describe('Correlation canonical summary preservation', () => {
     expect(tiles[1]?.querySelector('[data-operational-value]')).toHaveTextContent(/^-120 s$/);
     expect(tiles[1]).toHaveTextContent('Cabin temperature leads');
     expect(tiles[2]).toHaveTextContent('needs |r| > 0,3012');
-    expect(tiles[3]).toHaveTextContent('from 1.111 raw points');
+    expect(tiles[3]).toHaveTextContent('from 1.111 overlapping resampled pairs');
     expect(screen.getByTestId('signal-correlation-summary')).toHaveTextContent('Last 24 hours requested; overlapping samples only');
     expect(screen.getByTestId('signal-correlation-summary')).toHaveTextContent('exact request bounds are not supplied');
     expect(frozen.bestR).toBe(-0.812345);
@@ -132,14 +132,45 @@ describe('Correlation canonical summary preservation', () => {
     const { container, rerender } = setup({ result: null });
     expect([...container.querySelectorAll('[data-operational-metric]')].map(tile => tile.getAttribute('data-value-state')))
       .toEqual(['missing', 'missing', 'missing', 'missing']);
-    expect(container).toHaveTextContent('from — raw points');
-    expect(container).not.toHaveTextContent('from 0 raw points');
+    expect(container).toHaveTextContent('from — overlapping resampled pairs');
+    expect(container).not.toHaveTextContent('from 0 overlapping resampled pairs');
     rerender(<CorrelationStatStrip result={{ ...result, bestR: 0, zeroLagR: 0, bestLagS: 0, bestN: 0,
       effectiveN: 0, significant: false }} leadLabel="Simultaneous" loading={false} retained={false}
       errorA={null} errorB={null} onRetryA={vi.fn()} onRetryB={vi.fn()} />);
     expect([...container.querySelectorAll('[data-operational-metric]')].every(tile => tile.getAttribute('data-value-state') === 'value')).toBe(true);
     expect(container).toHaveTextContent('Noise');
-    expect(container).toHaveTextContent('from 0 raw points');
+    expect(container).toHaveTextContent('from 0 overlapping resampled pairs');
+  });
+
+  it('discloses original counts only when supplied, without inferring them from grid coverage', () => {
+    setGlobalLocale('en-US');
+    const { container } = setup();
+    expect(container).not.toHaveTextContent('Signal A:');
+    expect(container).not.toHaveTextContent('Signal B:');
+    cleanup();
+    const supplied = setup({ result: { ...result, sourceCountA: 20, validCountA: 12,
+      sourceCountB: 15, validCountB: 10 } }).container;
+    expect(supplied).toHaveTextContent('from 1,111 overlapping resampled pairs');
+    expect(supplied).toHaveTextContent('Signal A: 20 source records');
+    expect(supplied).toHaveTextContent('Signal A: 12 valid timestamp-deduplicated measurements');
+    expect(supplied).toHaveTextContent('Signal B: 15 source records');
+    expect(supplied).toHaveTextContent('Signal B: 10 valid timestamp-deduplicated measurements');
+  });
+
+  it.each([undefined, Number.NaN, Number.POSITIVE_INFINITY, -1, 1.5])(
+    'omits unavailable or invalid original counts rather than showing zero (%s)', count => {
+      const { container } = setup({ result: { ...result, sourceCountA: count,
+        validCountA: count, sourceCountB: 0, validCountB: 0 } });
+      expect(container).not.toHaveTextContent('Signal A:');
+      expect(container).toHaveTextContent('Signal B: 0 source records');
+      expect(container).toHaveTextContent('Signal B: 0 valid timestamp-deduplicated measurements');
+    },
+  );
+
+  it.each([Number.NaN, Number.POSITIVE_INFINITY])('does not display invalid pair counts as measured zero (%s)', bestN => {
+    const { container } = setup({ result: { ...result, bestN } });
+    expect(container).toHaveTextContent('from — overlapping resampled pairs');
+    expect(container).not.toHaveTextContent('from 0 overlapping resampled pairs');
   });
 
   it('retains measurements and independently retries each failed history source', () => {

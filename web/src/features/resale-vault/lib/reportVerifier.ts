@@ -128,13 +128,25 @@ export async function verifyReport(signed: SignedVaultReport): Promise<Verificat
   let localKeyRevoked: boolean | null = null;
   try {
     const localKeys = await listSigningKeys();
-    const match = localKeys.find((k) => k.key_id === keyId);
+    // Key IDs are editable report metadata, not a signing-key identity.
+    const publicJwk = signed.signature?.public_key_jwk;
+    const match = publicJwk?.kty === 'EC' &&
+      publicJwk.crv === 'P-256' &&
+      typeof publicJwk.x === 'string' && publicJwk.x.length > 0 &&
+      typeof publicJwk.y === 'string' && publicJwk.y.length > 0
+      ? localKeys.find((k) =>
+          k.public_jwk.kty === publicJwk.kty &&
+          k.public_jwk.crv === publicJwk.crv &&
+          k.public_jwk.x === publicJwk.x &&
+          k.public_jwk.y === publicJwk.y,
+        )
+      : undefined;
     if (match) {
       isKnownLocalKey = true;
       localKeyRevoked = match.revoked_at !== null;
       if (localKeyRevoked) {
         errors.push(
-          `This report was signed with local key "${keyId}", which has since been revoked in this browser's key registry. The signature is still cryptographically valid for the content at signing time, but the key is no longer trusted for new signatures.`,
+          `The embedded public key matches local key "${match.key_id}", which has since been revoked in this browser's key registry. Revocation does not change cryptographic verification, but the key is no longer trusted for new signatures.`,
         );
       }
     }

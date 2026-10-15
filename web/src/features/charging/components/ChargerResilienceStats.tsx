@@ -17,6 +17,11 @@ export function ChargerResilienceStats({ summary, state, loading }: Props) {
   const { t } = useTranslation();
   const { fmtPercent, fmtNumber } = useNumberFormatting();
   const available = state.hasData && summary.sites.length > 0;
+  const energyAvailable = summary.energyDenominator === 'available';
+  const topSiteLabel = summary.topSite == null
+    ? t('chargerResilience.none', 'None yet')
+    : summary.topSite.label ?? t('chargerResilience.unknownLocation', 'Unknown location');
+  const fallbackHint = t('chargerResilience.sessionFallback', 'Session-based fallback, not energy-weighted; diversification uses the observed site count.');
   const metrics: StatMetric[] = [
     {
       metricId: 'number', occurrenceId: 'resilience-score',
@@ -24,9 +29,10 @@ export function ChargerResilienceStats({ summary, state, loading }: Props) {
       rawValue: available ? summary.resilienceScore : null,
       display: { formatter: raw => ({ value: fmtNumber(raw), unit: '' }) },
       context: <div className="flex flex-wrap items-center gap-1">
-        {t('chargerResilience.scoreHint', 'out of 100')}
+        {available && !energyAvailable ? fallbackHint : t('chargerResilience.scoreHint', 'out of 100')}
         <HelpTooltip
           i18nKey="help.chargerResilience.score"
+          ariaLabel={t('help.chargerResilience.scoreIconLabel', 'More info about the resilience score')}
           defaultValue="A composite of three things: how much energy is NOT concentrated in your top site (40%), how often an alternate site has actually been used rather than just being available on paper (30%), and how many effectively-equal sites your charging behaves like (30%)."
         />
       </div>,
@@ -40,6 +46,7 @@ export function ChargerResilienceStats({ summary, state, loading }: Props) {
         {t('chargerResilience.effectiveSitesHint', '{{n}} locations seen', { n: state.hasData ? summary.sites.length : '—' })}
         <HelpTooltip
           i18nKey="help.chargerResilience.effectiveSites"
+          ariaLabel={t('help.chargerResilience.effectiveSitesIconLabel', 'More info about the effective site count')}
           defaultValue="The reciprocal of the energy-weighted Herfindahl-Hirschman Index (1/HHI) — the number of equally-sized sites this portfolio behaves like. Usually smaller than a raw count of distinct locations, because a handful of those were only visited once."
         />
       </div>,
@@ -49,7 +56,9 @@ export function ChargerResilienceStats({ summary, state, loading }: Props) {
       label: t('chargerResilience.topDependency', 'Top-Site Dependency'),
       rawValue: available ? summary.topSiteDependencyPct : null,
       display: { formatter: raw => ({ value: fmtPercent(raw), unit: '' }) },
-      context: summary.topSite?.label ?? t('chargerResilience.none', 'None yet'),
+      context: available && !energyAvailable
+        ? t('chargerResilience.sessionDependency', '{{site}} — share of sessions, not energy', { site: topSiteLabel })
+        : topSiteLabel,
     },
     {
       metricId: 'percent', occurrenceId: 'fallback-coverage',
@@ -64,6 +73,11 @@ export function ChargerResilienceStats({ summary, state, loading }: Props) {
     id="charger-resilience-metrics"
     title={t('chargerResilience.kpis', 'Charger resilience metrics')}
     metrics={metrics}
+    description={available && !energyAvailable
+      ? summary.energyDenominator === 'missing'
+        ? t('chargerResilience.energyMissing', 'Energy denominator unavailable: some sessions have missing or invalid energy measurements.')
+        : t('chargerResilience.energyNonpositive', 'Energy denominator unavailable: no positive recorded energy.')
+      : undefined}
     loading={loading}
     retained={state.hasData && (state.refreshError != null || state.isRefreshBlocked)}
     footer={state.fatalError

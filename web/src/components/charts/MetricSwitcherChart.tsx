@@ -224,7 +224,7 @@ export function MetricSwitcherChart<P extends { date: string }>({
       items={items}
       activeKey={activeMetric}
       onChange={onMetricChange}
-      ariaLabel={`${title} metric`}
+      ariaLabel={t('chart.a11y.metricSelector', '{{title}} metric', { title })}
       scrollable
       className="w-full text-xs md:w-auto md:flex-1"
     />

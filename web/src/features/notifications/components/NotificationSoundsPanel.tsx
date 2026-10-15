@@ -74,7 +74,7 @@ export function NotificationSoundsPanel({ className }: NotificationSoundsPanelPr
     <GlassPanel className={cn('p-4 sm:p-5', className)} data-testid="notification-sounds">
       <div className="space-y-4">
         <div className="flex items-center gap-3">
-          <IconBox color="cyan">
+          <IconBox color="neutral">
             <Volume2 className="h-5 w-5" aria-hidden="true" />
           </IconBox>
           <div className="min-w-0">

@@ -4,7 +4,7 @@ import { GlassPanel, Toggle, CopyButton, Caption, PanelTitle, Button } from '@/c
 import { SourceLayerBadge, type SignalSource } from '@/components/data-display';
 import { StateBadge } from '@/features/system/components/StateBadge';
 import { cn } from '@/lib/cn';
-import { formatRelative } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import type { FSMTransition } from '@/types/fsm';
 import type { SignalSnapshotResponse } from '@/api/hooks/useTelemetry';
@@ -83,7 +83,8 @@ export function SnapshotInspector({
   onJumpToLast,
   className,
 }: SnapshotInspectorProps) {
-  const { fmtInt } = useNumberFormatting();
+  const { formatDurationMs } = useNumberFormatting();
+  const { formatRelative } = useDateFormat();
   const { t } = useTranslation();
   const [diffMode, setDiffMode] = useState(false);
   const canCompare = snapshot != null && previousSnapshot != null;
@@ -244,7 +245,8 @@ export function SnapshotInspector({
           <div>
             <Caption>{t('debugger.inspector.duration', 'Duration')}</Caption>
             <div className="mt-1 text-[var(--text-primary)]">
-              {(typeof transition.details?.duration_in_state_ms === 'number' ? fmtInt(transition.details.duration_in_state_ms) : null) ?? '—'} ms
+              {formatDurationMs(typeof transition.details?.duration_in_state_ms === 'number'
+                ? transition.details.duration_in_state_ms : null)}
             </div>
           </div>
         </div>

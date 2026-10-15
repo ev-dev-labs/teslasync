@@ -1,12 +1,15 @@
 import { useTranslation } from 'react-i18next';
 import { BookOpen, History } from 'lucide-react';
 
-import { EmptyState } from '@/components/feedback';
+import { EmptyState, StaleRefreshWarning } from '@/components/feedback';
+import { deriveDataState, type DataState } from '@/api/dataState';
+import { DataProvenanceBadge } from '@/components/data-display';
 import type { StatMetric } from '@/components/data-display/stat-reference';
 import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { safeArray } from '@/lib/safeArray';
+import { neonColorMap, typography } from '@/lib/tokens';
 
 import type {
   FsdInsights,
@@ -21,17 +24,33 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 interface FsdObservatoryPanelProps {
   insights: FsdInsights | undefined;
   state: FsdSectionState;
+  dataState?: DataState<FsdInsights>;
 }
 
 /**
  * Reset-safe journal of reported FSD kilometres. Unknown and ambiguous
  * distance stay first-class. This is not an engagement map.
  */
-export function FsdObservatoryPanel({ insights, state }: FsdObservatoryPanelProps) {
+export function FsdObservatoryPanel({ insights, state, dataState }: FsdObservatoryPanelProps) {
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
-  const observatory = insights?.drive_analytics?.observatory;
+  const source = dataState ?? deriveDataState({
+    data: insights,
+    error: state.error,
+    isLoading: state.isLoading,
+    refetch: state.onRetry,
+  }, { provenance: 'historical' });
+  const data = source.data;
+  const retained = source.hasData && (source.status === 'stale'
+    || source.status === 'partial' || source.isRefreshing || source.isRefreshBlocked);
+  const bodyState: FsdSectionState = {
+    ...state,
+    isLoading: !source.hasData && source.status === 'initial' && !source.isRefreshBlocked,
+    error: source.hasData ? null : source.fatalError,
+    onRetry: source.retry ?? state.onRetry,
+  };
+  const observatory = data?.drive_analytics?.observatory;
   const totals = observatory?.totals;
   const timeline = safeArray(observatory?.timeline);
   const stories = safeArray(observatory?.commute_stories);
@@ -69,18 +88,26 @@ export function FsdObservatoryPanel({ insights, state }: FsdObservatoryPanelProp
     >
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
-          <History className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <History className={`h-4 w-4 ${typography.color.muted}`} aria-hidden="true" />
           {t('fsd.observatory.title', 'FSD observatory')}
         </PanelTitle>
         <Text as="p" variant="caption" className="mb-4">
           {honesty}
         </Text>
-        <FsdSectionBody state={state} className="min-h-28">
+        <FsdSectionBody state={bodyState} className="min-h-28">
+          {!source.hasData && source.isRefreshBlocked ? (
+            <Text as="p" variant="bodySm" role="status">
+              {t('dataSources.status.paused', 'Refresh paused')}
+            </Text>
+          ) : <>
+          <StaleRefreshWarning state={source} label={t('fsd.observatory.title', 'FSD observatory')} />
+          <DataProvenanceBadge provenance={source.provenance} status={source.status} updatedAt={source.updatedAt} />
           <NestedDrivingBrief metrics={metrics}
             title={t('fsd.brief.observatoryMetrics', 'Reset-safe counter quantities')}
-            description={honesty} loading={state.isLoading} unavailable={state.error != null || insights == null}
+            description={honesty} loading={bodyState.isLoading} retained={retained}
+            unavailable={!source.hasData || source.status === 'unavailable'}
             period={{ kind: 'unknown',
-              label: insights ? `${insights.period.start_at} – ${insights.period.end_at} · ${insights.period.timezone}` : t('fsd.notMeasured', 'Not measured'),
+              label: data ? `${data.period.start_at} – ${data.period.end_at} · ${data.period.timezone}` : t('fsd.notMeasured', 'Not measured'),
               reason: honesty }} />
 
           <div className="mt-6">
@@ -88,7 +115,7 @@ export function FsdObservatoryPanel({ insights, state }: FsdObservatoryPanelProp
               {t('fsd.observatory.timeline', 'Stitched journal')}
             </Text>
             {observatory?.truncated ? (
-              <Text as="p" variant="caption" className="mb-2">
+              <Text as="p" variant="caption" className={`mb-2 ${neonColorMap.amber.text}`}>
                 {t(
                   'fsd.observatory.truncated',
                   'Oldest drives were omitted so every counter reset still appears.',
@@ -110,7 +137,7 @@ export function FsdObservatoryPanel({ insights, state }: FsdObservatoryPanelProp
 
           <div className="mt-6">
             <Text as="h3" size="sm" weight="semibold" className="mb-1 flex items-center gap-2">
-              <BookOpen className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              <BookOpen className={`h-4 w-4 ${typography.color.muted}`} aria-hidden="true" />
               {t('fsd.observatory.commute', 'Commute stories')}
             </Text>
             <Text as="p" variant="caption" className="mb-3">
@@ -135,6 +162,7 @@ export function FsdObservatoryPanel({ insights, state }: FsdObservatoryPanelProp
               </Text>
             )}
           </div>
+          </>}
         </FsdSectionBody>
       </GlassPanel>
     </section>

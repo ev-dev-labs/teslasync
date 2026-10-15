@@ -128,6 +128,7 @@ vi.mock('../components/power-flow', async () => {
 // ChartContainer unconditionally reaches for the annotation hooks (network +
 // ToastProvider). Neither is relevant here — stub them to inert no-ops.
 vi.mock('@/api/hooks/useAnnotations', () => ({
+  useChartAnnotations: () => ({ data: [], isSuccess: true }),
   useChartAnnotationsAsData: () => ({ annotations: [] }),
   useCreateAnnotation: () => ({ mutate: vi.fn(), isPending: false }),
   useDeleteAnnotation: () => ({ mutate: vi.fn(), isPending: false }),
@@ -204,13 +205,13 @@ function setHistory(over: Record<string, unknown>) {
 
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <MemoryRouter>
-      <QueryClientProvider client={client}>
-        <PowerFlowDashboardPage />
-      </QueryClientProvider>
-    </MemoryRouter>,
-  );
+  return render(<PowerFlowDashboardPage />, {
+    wrapper: ({ children }: { children: ReactNode }) => (
+      <MemoryRouter>
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      </MemoryRouter>
+    ),
+  });
 }
 
 const statusRegion = () => screen.getByRole('region', { name: 'System status' });
@@ -264,6 +265,108 @@ describe('PowerFlowDashboardPage — loading', () => {
     // Panel titles are structural and remain visible in every state.
     expect(within(overviewRegion()).getByText('Battery State')).toBeInTheDocument();
     expect(within(overviewRegion()).getByText('Site Details')).toBeInTheDocument();
+  });
+});
+
+describe('PowerFlowDashboardPage — unresolved source authority', () => {
+  it.each([
+    { name: 'paused', query: { isPending: true, fetchStatus: 'paused' }, status: 'Refresh paused' },
+    { name: 'pending', query: { isPending: true, fetchStatus: 'idle' }, status: 'Pending' },
+  ])('keeps separate shells for $name sources without claiming empty responses', ({ query, status }) => {
+    setLive(query);
+    setHistory(query);
+    renderPage();
+
+    expect(within(statusRegion()).getByText(`Live energy status: ${status}`)).toBeInTheDocument();
+    expect(within(overviewRegion()).getAllByText(`Live energy status: ${status}`)).toHaveLength(3);
+    expect(within(historyRegion()).getAllByText(`Energy status history: ${status}`)).toHaveLength(2);
+    expect(within(kpiRegion()).getAllByText('—')).toHaveLength(4);
+    for (const title of ['Battery State', 'Power Flow', 'Site Details']) {
+      expect(within(overviewRegion()).getByText(title)).toBeInTheDocument();
+    }
+    expect(within(historyRegion()).getByText('Power Over Time')).toBeInTheDocument();
+    expect(within(historyRegion()).getByText('Battery State of Charge')).toBeInTheDocument();
+    expect(screen.queryByText('No battery data — refresh to fetch')).not.toBeInTheDocument();
+    expect(screen.queryByText('No power flow data yet')).not.toBeInTheDocument();
+    expect(screen.queryByText('No site data — refresh to fetch')).not.toBeInTheDocument();
+    expect(within(historyRegion()).queryByText(/no data/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/device.*offline/i)).not.toBeInTheDocument();
+  });
+
+  it('uses active-fetch loading instead of pending or empty content', () => {
+    setLive({ isPending: true, isFetching: true, fetchStatus: 'fetching' });
+    setHistory({ isPending: true, isFetching: true, fetchStatus: 'fetching' });
+    renderPage();
+
+    expect(statusRegion()).toBeInTheDocument();
+    expect(kpiRegion()).toBeInTheDocument();
+    expect(overviewRegion()).toBeInTheDocument();
+    expect(historyRegion()).toBeInTheDocument();
+    expect(within(overviewRegion()).queryByText(/Live energy status: Pending/)).not.toBeInTheDocument();
+    expect(within(historyRegion()).queryByText(/Energy status history: Pending|no data/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('No battery data — refresh to fetch')).not.toBeInTheDocument();
+    expect(within(overviewRegion()).queryByRole('meter')).not.toBeInTheDocument();
+  });
+
+  it.each(['live', 'history'] as const)('isolates an initially paused %s source from successful evidence', source => {
+    if (source === 'live') setLive({ isPending: true, fetchStatus: 'paused' });
+    else setHistory({ isPending: true, fetchStatus: 'paused' });
+    renderPage();
+
+    if (source === 'live') {
+      expect(within(overviewRegion()).getAllByText('Live energy status: Refresh paused')).toHaveLength(3);
+      expect(within(historyRegion()).getByRole('img', { name: /line chart/i })).toBeInTheDocument();
+    } else {
+      expect(within(historyRegion()).getAllByText('Energy status history: Refresh paused')).toHaveLength(2);
+      expect(within(kpiRegion()).getByText('-1.50 kW')).toBeInTheDocument();
+      expect(within(overviewRegion()).getByRole('meter')).toHaveAttribute('aria-valuenow', '46.3');
+    }
+  });
+
+  it('transitions from pending to resolved empty without treating measured zero as missing', () => {
+    setLive({ isPending: true, fetchStatus: 'paused' });
+    setHistory({ isPending: true, fetchStatus: 'paused' });
+    const page = renderPage();
+
+    setLive({ data: { message: 'no data' }, isSuccess: true });
+    setHistory({ data: [], isSuccess: true });
+    page.rerender(<PowerFlowDashboardPage />);
+    expect(within(overviewRegion()).getByText('No battery data — refresh to fetch')).toBeInTheDocument();
+    expect(within(historyRegion()).queryByText(/Energy status history: Refresh paused/)).not.toBeInTheDocument();
+    expect(within(historyRegion()).getAllByText(/no data/i).length).toBeGreaterThanOrEqual(2);
+
+    setLive({ data: makeLive({
+      solar_power: 0, battery_power: 0, load_power: 0, grid_power: 0,
+      percentage_charged: 0, energy_left: 0,
+    }), isSuccess: true });
+    setHistory({ data: [makeLive({ percentage_charged: 0, solar_power: 0 })], isSuccess: true });
+    page.rerender(<PowerFlowDashboardPage />);
+    expect(within(kpiRegion()).getAllByText('0.00 W')).toHaveLength(4);
+    expect(within(overviewRegion()).getByRole('meter')).toHaveAttribute('aria-valuenow', '0');
+    expect(within(historyRegion()).getByRole('img', { name: /line chart/i })).toBeInTheDocument();
+    expect(screen.queryByText('No battery data — refresh to fetch')).not.toBeInTheDocument();
+  });
+
+  it('retains both payloads through active refresh, failure, pause and recovery', () => {
+    const page = renderPage();
+    for (const query of [
+      { isFetching: true, fetchStatus: 'fetching' },
+      { isError: true, error: new Error('refresh failed'), fetchStatus: 'idle' },
+      { fetchStatus: 'paused' },
+      { isSuccess: true, fetchStatus: 'idle' },
+    ]) {
+      setLive({ data: makeLive(), ...query });
+      setHistory({ data: HISTORY, ...query });
+      page.rerender(<PowerFlowDashboardPage />);
+      expect(within(kpiRegion()).getByText('-1.50 kW')).toBeInTheDocument();
+      expect(within(statusRegion()).getByText('Grid: Active')).toBeInTheDocument();
+      expect(within(overviewRegion()).getByRole('meter')).toHaveAttribute('aria-valuenow', '46.3');
+      expect(within(historyRegion()).getByRole('group', { name: /stacked area chart/i })).toBeInTheDocument();
+      expect(within(historyRegion()).getByRole('img', { name: /line chart/i })).toBeInTheDocument();
+      expect(screen.queryAllByTestId('stale-refresh-warning')).toHaveLength(
+        query.isError || query.fetchStatus === 'paused' ? 2 : 0,
+      );
+    }
   });
 });
 

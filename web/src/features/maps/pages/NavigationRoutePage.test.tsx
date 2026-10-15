@@ -35,7 +35,7 @@
  *  10. HEADING     — headingToCardinal maps degrees to a cardinal, wraps
  *                    negatives (the hardening), and falls back when unknown.
  *
- * Network is never hit: the data hooks, the direct `request()` history
+ * Network is never hit: the data hooks, the page-owned history hook's request,
  * fetch, the live-connection hook, the unit formatters, the chart
  * primitives, shared vehicle context, and the heavy DataTable are all stubbed.
  * i18n is stubbed so visible copy is the English fallback with
@@ -210,16 +210,16 @@ vi.mock('@/api/hooks/useVehicles', async (importOriginal) => {
   };
 });
 
-// The location-history list is fetched via a direct request() inside a real
-// useQuery — so we mock the client, not the query, keeping the react-query
+// The location-history hook uses a real useQuery — mock the client, not
+// the query, keeping the react-query
 // loading/error/refetch machinery exercised end-to-end.
 vi.mock('@/api/client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/client')>();
   return {
     ...actual,
-    request: (path: string, _options?: unknown) => {
+    request: (path: string, options?: RequestInit) => {
       if (path.startsWith('/location-snapshots?')) {
-        h.requestSpy(path);
+        h.requestSpy(path, options);
         if (h.historyMode === 'reject') return Promise.reject(new Error('history boom'));
         if (h.historyMode === 'pending') return new Promise(() => {});
         return Promise.resolve(h.history);
@@ -472,6 +472,78 @@ afterEach(() => {
 });
 
 describe('NavigationRoutePage — independent source posture', () => {
+  it('preserves the latest-200 request, key and inherited retry/stale policy without range bounds', async () => {
+    const qc = new QueryClient({
+      defaultOptions: { queries: { retry: 2, retryDelay: 0, staleTime: 60_000 } },
+    });
+    h.historyMode = 'reject';
+    const view = render(buildTree(qc));
+    await waitFor(() => expect(h.requestSpy).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(qc.getQueryState(['location-history', 7])?.status).toBe('error'));
+    const query = qc.getQueryCache().find({ queryKey: ['location-history', 7], exact: true });
+    expect(query?.options).toMatchObject({ retry: 2, staleTime: 60_000 });
+    expect(h.requestSpy).toHaveBeenCalledWith(
+      '/location-snapshots?vehicle_id=7&limit=200',
+      { signal: expect.any(AbortSignal) },
+    );
+
+    h.historyMode = 'resolve';
+    fireEvent.click(getHeaderRefresh());
+    await screen.findByTestId('maps:navigation-location-history');
+    expect(qc.getQueryData(['location-history', 7])).toBe(h.history);
+    const calls = h.requestSpy.mock.calls.length;
+    view.unmount();
+    render(buildTree(qc));
+    expect(screen.getByTestId('maps:navigation-location-history')).toBeInTheDocument();
+    expect(h.requestSpy).toHaveBeenCalledTimes(calls);
+  });
+
+  it('cancels the old vehicle request and keys the next request by the selected vehicle', async () => {
+    h.historyMode = 'pending';
+    const { qc, rerender, unmount } = renderPage();
+    await waitFor(() => expect(h.requestSpy).toHaveBeenCalledTimes(1));
+    const firstOptions = h.requestSpy.mock.calls[0][1] as RequestInit;
+    expect(firstOptions.signal?.aborted).toBe(false);
+    expect(qc.getQueryState(['location-history', 7])?.fetchStatus).toBe('fetching');
+
+    h.vehicleId = 8;
+    rerender(buildTree(qc));
+    await waitFor(() => expect(h.requestSpy).toHaveBeenCalledTimes(2));
+    expect(firstOptions.signal?.aborted).toBe(true);
+    expect(h.requestSpy).toHaveBeenLastCalledWith(
+      '/location-snapshots?vehicle_id=8&limit=200',
+      { signal: expect.any(AbortSignal) },
+    );
+    const nextOptions = h.requestSpy.mock.calls[1][1] as RequestInit;
+    unmount();
+    expect(nextOptions.signal?.aborted).toBe(true);
+  });
+
+  it('retains history charts, rows and measured zero through refresh failure and recovers on Refresh', async () => {
+    h.history = [{ ...baseHistory()[0], speed_mph: 0, destination_name: 'Retained destination' }];
+    const { qc } = renderPage();
+    await screen.findByTestId('maps:navigation-location-history');
+    const retained = qc.getQueryData(['location-history', 7]);
+    h.historyMode = 'reject';
+    fireEvent.click(getHeaderRefresh());
+    await waitFor(() => expect(qc.getQueryState(['location-history', 7])?.status).toBe('error'));
+    await screen.findByText('Retained source data');
+    expect(qc.getQueryData(['location-history', 7])).toBe(retained);
+    expect(screen.getByTestId('area-chart')).toHaveAttribute('data-points', '1');
+    expect(screen.getByTestId('line-chart')).toHaveAttribute('data-points', '1');
+    expect(within(screen.getByTestId('maps:navigation-location-history')).getByText('Retained destination')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Route metrics' })).getByText('0.00 km/h')).toBeInTheDocument();
+    expect(screen.queryByText('No location snapshots recorded yet.')).not.toBeInTheDocument();
+
+    h.historyMode = 'resolve';
+    h.history = [{ ...baseHistory()[0], destination_name: 'Recovered destination' }];
+    fireEvent.click(getHeaderRefresh());
+    await waitFor(() => expect(qc.getQueryState(['location-history', 7])?.status).toBe('success'));
+    await waitFor(() => expect(within(screen.getByTestId('maps:navigation-location-history')).getByText('Recovered destination')).toBeInTheDocument());
+    expect(screen.queryByText('Retained source data')).not.toBeInTheDocument();
+    expect(qc.getQueryState(['location-history', 7])?.error).toBeNull();
+  });
+
   it('preserves unknown measurement gaps and false/zero facts without changing history order or complete tables', async () => {
     h.latest = { ...baseLatest(), miles_to_arrival: undefined, minutes_to_arrival: undefined, route_traffic_delay_s: undefined };
     h.history = [

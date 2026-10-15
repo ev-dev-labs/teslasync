@@ -25,6 +25,7 @@ import { isFiniteNumber } from '@/lib/numberFormat'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useDateFormat } from '@/hooks/useDateFormat'
 import { useDataState } from '@/hooks/useDataState'
+import { useOperationalMode } from '@/hooks/useOperationalMode'
 import {
   useBulkUpdateFeedback,
   useFeedbackList,
@@ -55,6 +56,7 @@ export default function FeedbackQueuePage() {
   const { t } = useTranslation()
   usePageTitle(t('feedback.queue.title', 'Feedback queue'))
   const { formatDateTime } = useDateFormat()
+  const { canWrite, writeBlockReason } = useOperationalMode()
 
   const [statusFilter, setStatusFilter] = useState<'' | FeedbackStatus>('')
   const [categoryFilter, setCategoryFilter] = useState<'' | FeedbackCategory>('')
@@ -75,6 +77,7 @@ export default function FeedbackQueuePage() {
   const listState = useDataState(listQuery)
   const update = useUpdateFeedback()
   const bulkUpdate = useBulkUpdateFeedback()
+  const manualActionsBlocked = !canWrite || isPlaceholderData || update.isPending || bulkUpdate.isPending
 
   // Whole-queue counts (independent of the table filter). Each call is a cheap
   // limit:1 read whose `.total` is the count for that facet.
@@ -255,9 +258,17 @@ export default function FeedbackQueuePage() {
     [t, formatDateTime],
   )
 
+  const handleUpdate = useCallback<ReturnType<typeof useUpdateFeedback>['mutate']>(
+    (...args) => {
+      if (manualActionsBlocked) return
+      update.mutate(...args)
+    },
+    [manualActionsBlocked, update],
+  )
+
   const handleBulkStatus = useCallback(
     async (rows: FeedbackEntry[], status: FeedbackStatus) => {
-      if (isPlaceholderData) return
+      if (manualActionsBlocked) return
       setBulkTargetStatus(status)
       try {
         await bulkUpdate.mutateAsync({
@@ -272,7 +283,7 @@ export default function FeedbackQueuePage() {
         setBulkTargetStatus(null)
       }
     },
-    [bulkUpdate, isPlaceholderData],
+    [bulkUpdate, manualActionsBlocked],
   )
 
   const renderBulkActions = useCallback(
@@ -284,7 +295,8 @@ export default function FeedbackQueuePage() {
           size="sm"
           icon={<Icon icon={CheckCircle} />}
           loading={bulkTargetStatus === 'triaged'}
-          disabled={isPlaceholderData || bulkUpdate.isPending || rows.every((row) => row.status === 'triaged')}
+          title={writeBlockReason ?? undefined}
+          disabled={manualActionsBlocked || rows.every((row) => row.status === 'triaged')}
           onClick={() => void handleBulkStatus(rows, 'triaged')}
         >
           {t('feedback.queue.bulk.triage', 'Mark triaged')}
@@ -295,7 +307,8 @@ export default function FeedbackQueuePage() {
           size="sm"
           icon={<Icon icon={Archive} />}
           loading={bulkTargetStatus === 'closed'}
-          disabled={isPlaceholderData || bulkUpdate.isPending || rows.every((row) => row.status === 'closed')}
+          title={writeBlockReason ?? undefined}
+          disabled={manualActionsBlocked || rows.every((row) => row.status === 'closed')}
           onClick={() => void handleBulkStatus(rows, 'closed')}
         >
           {t('feedback.queue.bulk.close', 'Close selected')}
@@ -306,14 +319,15 @@ export default function FeedbackQueuePage() {
           size="sm"
           icon={<Icon icon={RotateCcw} />}
           loading={bulkTargetStatus === 'new'}
-          disabled={isPlaceholderData || bulkUpdate.isPending || rows.every((row) => row.status === 'new')}
+          title={writeBlockReason ?? undefined}
+          disabled={manualActionsBlocked || rows.every((row) => row.status === 'new')}
           onClick={() => void handleBulkStatus(rows, 'new')}
         >
           {t('feedback.queue.bulk.reopen', 'Reopen selected')}
         </Button>
       </>
     ),
-    [bulkTargetStatus, bulkUpdate.isPending, handleBulkStatus, isPlaceholderData, t],
+    [bulkTargetStatus, handleBulkStatus, manualActionsBlocked, t, writeBlockReason],
   )
 
   const actions = (
@@ -428,6 +442,9 @@ export default function FeedbackQueuePage() {
           </div>
 
           <StaleRefreshWarning state={listState} label={t('feedback.queue.tableTitle', 'Queue')} hideRetry />
+          {!canWrite && writeBlockReason && (
+            <Text as="p" variant="helper" role="status">{writeBlockReason}</Text>
+          )}
           {isPlaceholderData && <Text as="p" variant="helper" role="status">{t('common.loading', 'Loading...')}</Text>}
           {listState.fatalError ? (
             <QueryError error={listState.fatalError} onRetry={() => refetch()} />
@@ -490,12 +507,14 @@ export default function FeedbackQueuePage() {
                 expandedKeys={expandedRows}
                 onExpandedChange={(next) => setExpandedRows(next)}
                 renderExpanded={(row) => (
-                  <FeedbackExpansion
-                    row={row}
-                    bridgeEnabled={bridgeEnabled}
-                    onUpdate={update.mutate}
-                    updating={update.isPending || isPlaceholderData}
-                  />
+                  <div title={writeBlockReason ?? undefined}>
+                    <FeedbackExpansion
+                      row={row}
+                      bridgeEnabled={bridgeEnabled}
+                      onUpdate={handleUpdate}
+                      updating={manualActionsBlocked}
+                    />
+                  </div>
                 )}
                 compact
               />

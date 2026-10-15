@@ -9,14 +9,16 @@ interface NextServiceBriefProps {
   noVehicle: boolean;
   componentLabel: string | null;
   projectedDate: string | null;
+  formatProjectedDate: (value: unknown) => string;
 }
 
 export function NextServiceBrief({
-  state, loading, noVehicle, componentLabel, projectedDate,
+  state, loading, noVehicle, componentLabel, projectedDate, formatProjectedDate,
 }: NextServiceBriefProps) {
   const { t } = useTranslation();
   const available = !noVehicle && state.hasData;
   const projected = available && projectedDate != null;
+  const dateLabel = formatProjectedDate(projectedDate);
   const metrics: readonly StatMetric[] = [
     {
       metricId: 'text', occurrenceId: 'rul-next-service-component',
@@ -26,18 +28,18 @@ export function NextServiceBrief({
     },
     {
       metricId: 'text', occurrenceId: 'rul-next-service-date',
-      rawValue: projected ? projectedDate : null,
+      rawValue: projected && dateLabel !== '—' ? dateLabel : null,
       label: t('rul.card.replaceBy', 'Replace by'),
       context: t('rul.nextService.by', 'projected by'),
       description: t('rul.nextService.assumption', 'Projected service date, not a guaranteed failure date; component forecasts retain their own confidence and basis below.'),
     },
   ];
   const briefMetrics = useOperationalMetrics(metrics);
-  const retained = state.refreshError != null || state.isRefreshBlocked;
+  const retained = state.hasData && (state.refreshError != null || state.isRefreshBlocked);
   const description = noVehicle ? t('rul.selectVehicle', 'Select a vehicle to view its component prognostics.')
     : state.fatalError ? t('rul.nextService.error', 'Unable to load service projection.')
-      : projected ? `${componentLabel} — ${t('rul.nextService.by', 'projected by')} ${projectedDate}`
-        : available ? t('rul.nextService.none', 'No upcoming service projected — all components healthy.')
+      : projected ? `${componentLabel} — ${t('rul.nextService.by', 'projected by')} ${dateLabel}`
+        : available ? t('rul.nextService.none', 'No upcoming service projected.')
           : t('rul.nextService.unavailable', 'Service projection unavailable.');
 
   return (
@@ -52,6 +54,7 @@ export function NextServiceBrief({
       statusLabel={noVehicle ? t('rul.nextService.chooseVehicle', 'Choose a vehicle')
         : loading && !state.hasData ? t('common.loading', 'Loading')
           : state.fatalError ? t('error.loadFailed', 'Failed to load data')
+            : !state.hasData && state.isRefreshBlocked ? t('dataSources.status.paused', 'Refresh paused')
             : retained ? t('developerReference.stats.state.retained', 'Showing retained measurements')
               : available ? t('rul.nextService.available', 'Component board available')
                 : t('rul.nextService.unavailable', 'Service projection unavailable.')}

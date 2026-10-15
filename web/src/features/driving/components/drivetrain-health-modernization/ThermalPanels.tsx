@@ -51,6 +51,7 @@ export function ThermalPanels({
             const band = temperatureBand(sensor.value, sensor.maxTemp);
             return <div key={sensor.key} className="min-w-0 space-y-2">
               <LinearGauge label={t(sensor.labelKey, sensor.label)}
+                preserveReadingAndScale
                 value={sensor.value == null ? null : sensor.value / sensor.maxTemp * 100}
                 min={0} max={100} unit="%" status={t(`drivetrain.modernization.band.${band}`, band)}
                 tone={band === 'unknown' ? 'neutral' : band === 'critical' ? 'danger' : band === 'warning' ? 'warning' : 'success'} />
@@ -73,6 +74,7 @@ export function ThermalPanels({
             const band = temperatureBand(sensor.value, sensor.maxTemp);
             return <div key={sensor.key} className="min-w-0">
               <LinearGauge label={t(sensor.labelKey, sensor.label)}
+                preserveReadingAndScale
                 value={sensor.value == null ? null : sensor.value / sensor.maxTemp * 100} max={100} unit="%"
                 tone={band === 'unknown' ? 'neutral' : band === 'critical' ? 'danger' : band === 'warning' ? 'warning' : 'success'}
                 status={t(`drivetrain.modernization.band.${band}`, band)} />

@@ -4,20 +4,33 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import WhatIfPage from './WhatIfPage';
 import type { StatMetric } from '@/components/data-display/stat-reference';
+import type { Drive, DriveTelemetryPoint } from '@/types/driving';
+import { DEFAULT_KNOBS, simulateWhatIf } from '../lib/whatIfModel';
+import * as drivingHooks from '@/api/hooks/useDriving';
+import { formatDateShort } from '@/lib/dateFormat';
+import type { DateFormatter } from '@/hooks/useDateFormat';
 
-const state = vi.hoisted(() => ({ vehicleId: 1 as number | undefined, listLoading: false, listPaused: false, listMissing: false, detailPaused: false, detailRefreshing: false, firstId: 1, zeroEnergy: false, listError: false, detailError: false, telemetryError: false, empty: false, loading: false, noEnergy: false, unknownSoc: false, retainedDetail: false, twoDrives: false, detailId: '', telemetryId: '', summary: vi.fn(), detailRetry: vi.fn(), telemetryRetry: vi.fn() }));
+const dateState = vi.hoisted(() => ({
+  formatter: undefined as DateFormatter | undefined,
+  formatDistance: (v: number) => `${v} m`,
+}));
+vi.mock('@/hooks/useDateFormat', () => ({
+  useDateFormat: () => ({ formatDateShort: dateState.formatter }),
+}));
+
+const state = vi.hoisted(() => ({ driveOverrides: {} as Partial<Drive>, telemetry: [] as DriveTelemetryPoint[], vehicleId: 1 as number | undefined, listLoading: false, listPaused: false, listMissing: false, detailPaused: false, detailRefreshing: false, firstId: 1, zeroEnergy: false, listError: false, detailError: false, telemetryError: false, empty: false, loading: false, noEnergy: false, unknownSoc: false, retainedDetail: false, twoDrives: false, detailId: '', telemetryId: '', summary: vi.fn(), detailRetry: vi.fn(), telemetryRetry: vi.fn() }));
 vi.mock('@/hooks/useSelectedVehicle', () => ({ useSelectedVehicle: () => ({ vehicleId: state.vehicleId }) }));
 vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: () => undefined }));
 vi.mock('@/hooks/useNumberFormatting', () => ({ useNumberFormatting: () => ({ fmtNumber: (v: number) => String(v) }) }));
-vi.mock('@/hooks/useUnits', () => ({ useUnits: () => ({ formatDistance: (v: number) => `${v} m`, formatEnergy: (v: number) => `${v} Wh`, formatDuration: (v: number) => `${v} s`, formatTemperature: (v: number) => `${v} C` }) }));
+vi.mock('@/hooks/useUnits', () => ({ useUnits: () => ({ formatDistance: dateState.formatDistance, formatEnergy: (v: number) => `${v} Wh`, formatDuration: (v: number) => `${v} s`, formatTemperature: (v: number) => `${v} C` }) }));
 vi.mock('../components/operationalbrief-n-z/DrivingSummaryBrief', () => ({ DrivingSummaryBrief: (props: { metrics: readonly StatMetric[]; loading: boolean; unavailable: boolean; retained: boolean; sourceStatus: string }) => { state.summary(props); return <div>Simulated drive outcome</div>; } }));
 vi.mock('@/api/hooks/useDriving', () => {
   const drive = { id: 1, startTs: '2026-01-01T00:00:00Z', distanceM: 10000, durationS: 600, avgSpeedMps: 16.67, energyUsedWh: 2000, startBatteryPct: 80, endBatteryPct: 76 };
   const query = (data: unknown, error: boolean, loading = false) => ({ data, error: error ? new Error('source failed') : null, isError: error, isSuccess: !error && !loading && data !== undefined, isLoading: loading, isPending: !error && data === undefined, isFetching: loading, fetchStatus: loading ? 'fetching' : 'idle', dataUpdatedAt: data === undefined ? 0 : 1, refetch: vi.fn() });
   return {
     useDrives: () => ({ ...query(state.listMissing || state.listLoading || state.listPaused || state.vehicleId == null ? undefined : state.empty ? [] : state.twoDrives ? [{ ...drive, id: state.firstId }, { ...drive, id: 2, distanceM: 20000 }] : [{ ...drive, id: state.firstId }], state.listError, state.listLoading), fetchStatus: state.listPaused ? 'paused' : state.listLoading ? 'fetching' : 'idle' }),
-    useDrive: (id: string) => { state.detailId = id; return { ...query(!id || ((state.detailError || state.detailPaused) && !state.retainedDetail) || state.empty || state.loading ? undefined : { ...drive, id: Number(id), energyUsedWh: state.noEnergy ? null : state.zeroEnergy ? 0 : 2000, startBatteryPct: state.unknownSoc ? null : 80 }, Boolean(id) && state.detailError, Boolean(id) && state.loading), isFetching: Boolean(id) && (state.loading || state.detailRefreshing), fetchStatus: state.detailPaused ? 'paused' : state.loading || state.detailRefreshing ? 'fetching' : 'idle', refetch: state.detailRetry }; },
-    useDriveTelemetry: (id: string) => { state.telemetryId = id; return { ...query(!id || state.telemetryError ? undefined : [], Boolean(id) && state.telemetryError), refetch: state.telemetryRetry }; },
+    useDrive: (id: string) => { state.detailId = id; return { ...query(!id || ((state.detailError || state.detailPaused) && !state.retainedDetail) || state.empty || state.loading ? undefined : { ...drive, id: Number(id), energyUsedWh: state.noEnergy ? null : state.zeroEnergy ? 0 : 2000, startBatteryPct: state.unknownSoc ? null : 80, ...state.driveOverrides }, Boolean(id) && state.detailError, Boolean(id) && state.loading), isFetching: Boolean(id) && (state.loading || state.detailRefreshing), fetchStatus: state.detailPaused ? 'paused' : state.loading || state.detailRefreshing ? 'fetching' : 'idle', refetch: state.detailRetry }; },
+    useDriveTelemetry: (id: string) => { state.telemetryId = id; return { ...query(!id || state.telemetryError ? undefined : state.telemetry, Boolean(id) && state.telemetryError), refetch: state.telemetryRetry }; },
   };
 });
 function mount() {
@@ -26,8 +39,54 @@ function mount() {
   const rendered = render(page());
   return () => rendered.rerender(page());
 }
-beforeEach(() => { cleanup(); Object.assign(state, { vehicleId: 1, listLoading: false, listPaused: false, listMissing: false, detailPaused: false, detailRefreshing: false, firstId: 1, zeroEnergy: false, listError: false, detailError: false, telemetryError: false, empty: false, loading: false, noEnergy: false, unknownSoc: false, retainedDetail: false, twoDrives: false, detailId: '', telemetryId: '' }); state.summary.mockClear(); state.detailRetry.mockClear(); state.telemetryRetry.mockClear(); });
+beforeEach(() => { cleanup(); dateState.formatter = formatDateShort; Object.assign(state, { driveOverrides: {}, telemetry: [], vehicleId: 1, listLoading: false, listPaused: false, listMissing: false, detailPaused: false, detailRefreshing: false, firstId: 1, zeroEnergy: false, listError: false, detailError: false, telemetryError: false, empty: false, loading: false, noEnergy: false, unknownSoc: false, retainedDetail: false, twoDrives: false, detailId: '', telemetryId: '' }); state.summary.mockClear(); state.detailRetry.mockClear(); state.telemetryRetry.mockClear(); });
 describe('WhatIfPage independent source boundaries', () => {
+  it('reactively formats picker labels and summary scope without changing UTC instants or drive selection', () => {
+    state.twoDrives = true;
+    const listQuery = drivingHooks.useDrives();
+    const listSpy = vi.spyOn(drivingHooks, 'useDrives').mockReturnValue(listQuery);
+    const utcFormatter = vi.fn<DateFormatter>((value) => formatDateShort(value, { locale: 'en-US', tz: 'UTC' }));
+    dateState.formatter = utcFormatter;
+    try {
+      const refresh = mount();
+      const picker = screen.getByRole('combobox', { name: 'Choose a drive' });
+      expect(screen.getByRole('option', { name: 'Jan 1 · 10000 m' })).toBeTruthy();
+      expect(state.summary.mock.lastCall?.[0].scope).toBe('Jan 1');
+      fireEvent.change(picker, { target: { value: '2' } });
+      fireEvent.change(screen.getByRole('slider', { name: 'Average speed' }), { target: { value: '1.2' } });
+      const originalMetrics = state.summary.mock.lastCall?.[0].metrics.map((metric: StatMetric) => metric.rawValue);
+
+      const localFormatter = vi.fn<DateFormatter>((value) => formatDateShort(value, { locale: 'en-US', tz: 'America/Los_Angeles' }));
+      dateState.formatter = localFormatter;
+      refresh();
+      expect(screen.getByRole('option', { name: 'Dec 31 · 10000 m' })).toBeTruthy();
+      expect(screen.getByRole('option', { name: 'Dec 31 · 20000 m' })).toBeTruthy();
+      expect(state.summary.mock.lastCall?.[0].scope).toBe('Dec 31');
+
+      const localizedFormatter = vi.fn<DateFormatter>((value) => formatDateShort(value, { locale: 'de-DE', tz: 'America/Los_Angeles' }));
+      dateState.formatter = localizedFormatter;
+      refresh();
+      const localizedDate = formatDateShort('2026-01-01T00:00:00Z', { locale: 'de-DE', tz: 'America/Los_Angeles' });
+      expect(localizedDate).not.toBe('Dec 31');
+      expect(screen.getByRole('option', { name: `${localizedDate} · 20000 m` })).toBeTruthy();
+      expect(state.summary.mock.lastCall?.[0].scope).toBe(localizedDate);
+      for (const formatter of [utcFormatter, localFormatter, localizedFormatter]) {
+        expect(formatter).toHaveBeenCalledWith('2026-01-01T00:00:00Z');
+        expect(formatter.mock.calls.every(([value]) => value === '2026-01-01T00:00:00Z')).toBe(true);
+      }
+      expect(listQuery.data?.map((drive) => drive.startTs)).toEqual(['2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z']);
+      expect(picker).toHaveValue('2');
+      expect(state.detailId).toBe('2');
+      expect(state.telemetryId).toBe('2');
+      expect(screen.getByRole('slider', { name: 'Average speed' })).toHaveValue('1.2');
+      expect(state.summary.mock.lastCall?.[0].metrics.map((metric: StatMetric) => metric.rawValue)).toEqual(originalMetrics);
+      expect(screen.getByText('Actual drive')).toBeTruthy();
+      expect(screen.getByText('What-if')).toBeTruthy();
+    } finally {
+      listSpy.mockRestore();
+    }
+  });
+
   it.each(['loading', 'paused'] as const)('does not claim an empty list or missing energy while the list is %s without data', (status) => {
     state.listLoading = status === 'loading';
     state.listPaused = status === 'paused';
@@ -198,7 +257,7 @@ describe('WhatIfPage independent source boundaries', () => {
   });
   it('explains incomplete telemetry while preserving valid model output', () => {
     state.telemetryError = true; mount();
-    expect(screen.getByText(/Telemetry is incomplete/)).toBeTruthy();
+    expect(screen.getByText(/Field presence does not establish complete drive observations/)).toHaveTextContent('elevation 0, climate state 0, ambient temperature 0');
     expect(screen.getByText('What-if')).toBeTruthy();
   });
   it('keeps original sections and browse recovery mounted with no drives', () => {
@@ -228,6 +287,158 @@ describe('WhatIfPage preserved scenario actions and physical inputs', () => {
     expect(picker).toHaveValue('2');
     expect(state.detailId).toBe('2');
     expect(state.telemetryId).toBe('2');
+  });
+
+  function telemetryPoint(overrides: Partial<DriveTelemetryPoint> = {}): DriveTelemetryPoint {
+    return {
+      timestamp: '2026-01-01T00:00:00Z', speed: null, power: null,
+      batteryLevel: null, outsideTemp: null, insideTemp: null,
+      driverTemp: null, passengerTemp: null, elevation: null,
+      idealRange: null, ratedRange: null, estRange: null, odometer: null,
+      soc: null, usableSoc: null, tirePressureFl: null, tirePressureFr: null,
+      tirePressureRl: null, tirePressureRr: null, isClimateOn: null,
+      fanStatus: null, latitude: null, longitude: null, ...overrides,
+    };
+  }
+
+  describe('WhatIfPage model provenance and numeric evidence', () => {
+    it('retains the model-versus-observed brief and qualifies the decomposition', () => {
+      mount();
+      expect(state.summary.mock.lastCall?.[0].description).toBe(
+        'Scenario estimates compared with the selected recorded drive; these are model outputs, not observed savings.',
+      );
+      expect(screen.getByText(/The recorded energy total anchors an estimated decomposition/)).toHaveTextContent(
+        'Other is a signed unexplained residual; a negative value means the model exceeds the recorded total.',
+      );
+      expect(screen.queryByText(/no guesswork/)).toBeNull();
+      expect(screen.getAllByText('Other')).toHaveLength(2);
+    });
+
+    it('does not treat nonempty telemetry with missing or invalid fields as complete observations', () => {
+      state.telemetry = [
+        telemetryPoint({ speed: 10 }),
+        telemetryPoint({ elevation: Number.NaN, outsideTemp: Number.POSITIVE_INFINITY }),
+      ];
+      mount();
+      expect(screen.getByText(/Valid telemetry fields/)).toHaveTextContent(
+        'Valid telemetry fields in 2 returned samples: elevation 0, climate state 0, ambient temperature 0.',
+      );
+      expect(screen.getByText(/Valid telemetry fields/)).toHaveTextContent('missing ambient temperature assumes 18 C');
+      expect(screen.getByText('What-if')).toBeTruthy();
+    });
+
+    it('counts measured zero, false, signed and fractional telemetry independently by field', () => {
+      state.telemetry = [
+        telemetryPoint({ elevation: 0, outsideTemp: 0, isClimateOn: false }),
+        telemetryPoint({ elevation: -1.25, outsideTemp: -2.5 }),
+        telemetryPoint({ elevation: 0.5, isClimateOn: true }),
+        telemetryPoint({ elevation: Number.NaN, outsideTemp: Number.NEGATIVE_INFINITY }),
+      ];
+      mount();
+      expect(screen.getByText(/Valid telemetry fields/)).toHaveTextContent(
+        'Valid telemetry fields in 4 returned samples: elevation 3, climate state 2, ambient temperature 2.',
+      );
+      expect(screen.getByText(/Valid telemetry fields/)).toHaveTextContent(
+        'Field presence does not establish complete drive observations.',
+      );
+      expect(screen.getAllByText('9.5375 Wh')).toHaveLength(2);
+    });
+
+    it('continues to qualify observations when every returned field is valid', () => {
+      state.telemetry = [telemetryPoint({ elevation: 0, outsideTemp: 0, isClimateOn: false })];
+      mount();
+      expect(screen.getByText(/Valid telemetry fields/)).toHaveTextContent(
+        'elevation 1, climate state 1, ambient temperature 1. Field presence does not establish complete drive observations.',
+      );
+      expect(screen.getAllByText('0 Wh').length).toBeGreaterThan(0);
+    });
+
+    it.each([
+      { energyUsedWh: null }, { energyUsedWh: undefined },
+      { energyUsedWh: Number.NaN }, { energyUsedWh: Number.POSITIVE_INFINITY },
+      { distanceM: undefined },
+      { distanceM: 0 }, { distanceM: -0.5 }, { distanceM: Number.NaN },
+      { durationS: undefined },
+      { durationS: 0 }, { durationS: -0.5 }, { durationS: Number.POSITIVE_INFINITY },
+      { avgSpeedMps: 0 }, { avgSpeedMps: -0.5 }, { avgSpeedMps: Number.NaN },
+    ] satisfies Partial<Drive>[])('keeps missing or invalid model inputs unavailable: %j', (overrides) => {
+      state.driveOverrides = overrides;
+      mount();
+      expect(state.summary.mock.lastCall?.[0].unavailable).toBe(true);
+      expect(state.summary.mock.lastCall?.[0].metrics.every((metric: StatMetric) => metric.rawValue == null)).toBe(true);
+      expect(screen.queryByText('What-if')).toBeNull();
+      expect(screen.queryByText(/Current modeled capacity/)).toBeNull();
+      expect(screen.getByText('Energy breakdown')).toBeTruthy();
+    });
+
+    it.each([null, undefined])('infers missing average speed from valid fractional distance and duration: %s', (avgSpeedMps) => {
+      state.driveOverrides = { distanceM: 10000.5, durationS: 600.25, avgSpeedMps };
+      mount();
+      const metrics = state.summary.mock.lastCall?.[0].metrics as readonly StatMetric[];
+      expect(state.summary.mock.lastCall?.[0].unavailable).toBe(false);
+      expect(metrics[2].rawValue).toBe(600.25);
+      expect(metrics[0].context).toBe('was 2000 Wh');
+      expect(screen.getByText('What-if')).toBeTruthy();
+    });
+
+    it.each([null, undefined, Number.NaN, Number.POSITIVE_INFINITY])('does not replace missing or invalid starting battery with measured zero: %s', (startBatteryPct) => {
+      state.driveOverrides = { startBatteryPct };
+      mount();
+      const metrics = state.summary.mock.lastCall?.[0].metrics as readonly StatMetric[];
+      expect(state.summary.mock.lastCall?.[0].unavailable).toBe(false);
+      expect(metrics[1].rawValue).toBeNull();
+      expect(metrics[1].context).toBeUndefined();
+      expect(screen.getByText(/Current modeled capacity/)).toHaveTextContent('75000 Wh');
+    });
+
+    it('preserves a measured zero starting battery as an available arrival estimate', () => {
+      state.driveOverrides = { startBatteryPct: 0, endBatteryPct: 0 };
+      mount();
+      const metrics = state.summary.mock.lastCall?.[0].metrics as readonly StatMetric[];
+      expect(metrics[1].rawValue).toBe(0);
+      expect(metrics[1].context).toBe('+0%');
+      expect(screen.getByText(/Current modeled capacity/)).toHaveTextContent('75000 Wh');
+    });
+
+    it.each([0, -125.75, 2000.125])('preserves raw recorded energy %s and every modeled component', (energyUsedWh) => {
+      const drive: Drive = {
+        id: 1, vehicleId: 1, startTs: '2026-01-01T00:00:00Z', endTs: null,
+        distanceM: 10000, durationS: 600, avgSpeedMps: 16.67, energyUsedWh,
+        startBatteryPct: 80, endBatteryPct: 76, startAddress: null, endAddress: null,
+        startLat: null, startLon: null, endLat: null, endLon: null,
+        regenEnergyWh: null, maxSpeedMps: null, avgPowerW: null,
+        outsideTempAvgC: null, insideTempAvgC: null, score: null, endedStatus: null,
+        createdAt: '', updatedAt: '',
+      };
+      state.driveOverrides = drive;
+      mount();
+      const result = simulateWhatIf(drive, [], DEFAULT_KNOBS);
+      const metrics = state.summary.mock.lastCall?.[0].metrics as readonly StatMetric[];
+      expect(state.summary.mock.lastCall?.[0].unavailable).toBe(false);
+      expect(metrics.map((metric) => metric.rawValue)).toEqual([
+        result.scenario.total, result.scenarioArrivalSoc, result.scenarioDurationS,
+      ]);
+      expect(metrics[0].context).toBe(`was ${energyUsedWh} Wh`);
+      for (const value of Object.values(result.baseline)) {
+        expect(screen.getAllByText(`${value} Wh`).length).toBeGreaterThan(0);
+      }
+      expect(screen.queryByText('This drive lacks the energy data needed to simulate.')).toBeNull();
+    });
+
+    it.each([
+      [{}, '50000 Wh'],
+      [{ endBatteryPct: null }, '75000 Wh'],
+      [{ startBatteryPct: 80, endBatteryPct: 80 }, '75000 Wh'],
+      [{ endBatteryPct: 79.9 }, '75000 Wh'],
+      [{ energyUsedWh: 3000 }, '75000 Wh'],
+    ] satisfies [Partial<Drive>, string][])('qualifies inferred and default pack capacity: %j', (overrides, capacity) => {
+      state.driveOverrides = overrides;
+      mount();
+      const help = screen.getByText(/Arrival battery is modeled using a pack inferred/);
+      expect(help).toHaveTextContent(`Current modeled capacity: ${capacity}.`);
+      expect(help).toHaveTextContent('otherwise it uses the default pack');
+      expect(help).toHaveTextContent('Neither capacity nor arrival battery is a direct pack measurement.');
+    });
   });
 
   it('preserves all four accessible knobs, physical bounds and reset defaults', () => {

@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 
 import type { DestinationTransitionResult } from '../../lib/destinationTransitions';
+import type { DestinationTransitionsQueryState } from './types';
 import {
   destinationBits,
   destinationIndex,
@@ -15,11 +16,13 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DestinationSupportMetricsProps {
   model: DestinationTransitionResult;
+  state: DestinationTransitionsQueryState;
   locale: string;
 }
 
 export function DestinationSupportMetrics({
   model,
+  state,
   locale,
 }: DestinationSupportMetricsProps) {
   const { fmtInt, fmtNumber } = useNumberFormatting();
@@ -146,6 +149,7 @@ export function DestinationSupportMetrics({
         'Descriptive shape and separate support ingredients',
       )}
       metrics={metrics}
+      state={state}
       testId="destination-descriptive-support-brief"
     />
   );

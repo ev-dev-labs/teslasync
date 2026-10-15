@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 
 import type { DestinationTransitionResult } from '../../lib/destinationTransitions';
+import type { DestinationTransitionsQueryState } from './types';
 import {
   DestinationTransitionsMetricGroup,
   type DestinationTransitionsEvidenceMetric,
@@ -10,11 +11,13 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DestinationContinuityMetricsProps {
   model: DestinationTransitionResult;
+  state: DestinationTransitionsQueryState;
   locale: string;
 }
 
 export function DestinationContinuityMetrics({
   model,
+  state,
   locale,
 }: DestinationContinuityMetricsProps) {
   const { fmtInt, fmtNumber } = useNumberFormatting();
@@ -91,11 +94,6 @@ export function DestinationContinuityMetrics({
         'GPS continuity tolerance',
       ),
       metricId: 'distance', rawValue: model.config.gpsToleranceM,
-      displayValue: t(
-        'destinationTransitions.quality.pairs.meters',
-        '{{count}} m',
-        { count: Math.round(model.config.gpsToleranceM) },
-      ),
     },
     {
       label: t(
@@ -133,6 +131,7 @@ export function DestinationContinuityMetrics({
         'Mutually exclusive adjacency and continuity accounting',
       )}
       metrics={metrics}
+      state={state}
       testId="destination-continuity-accounting-brief"
     />
   );

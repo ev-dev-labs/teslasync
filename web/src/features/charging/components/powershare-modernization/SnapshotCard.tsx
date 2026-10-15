@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { LayoutCard } from '@/components/layout/layout-reference';
+import { LayoutCard } from '@/components/layout';
 import { Caption, Text, DataTable, useSortToggle, type Column } from '@/components/ui';
 import { Skeleton, QueryError } from '@/components/feedback';
 import { DateTime } from '@/components/data-display';

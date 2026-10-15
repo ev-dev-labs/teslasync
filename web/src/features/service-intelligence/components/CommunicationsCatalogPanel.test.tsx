@@ -1,10 +1,16 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const preferences = vi.hoisted(() => ({ locale: 'en-US', tz: 'UTC' }));
+
+vi.mock('@/lib/timezone', () => ({
+  useTimezone: () => preferences.tz,
+}));
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: () => ({
-    settings: { locale: 'en-US', decimal_precision: 2, currency_symbol: '$' },
+    settings: { locale: preferences.locale, tz_display_default: 'user', decimal_precision: 2, currency_symbol: '$' },
     settingsUnavailable: false,
   }),
 }));
@@ -69,6 +75,24 @@ const baseProps = {
 };
 
 describe('CommunicationsCatalogPanel', () => {
+  beforeEach(() => {
+    preferences.locale = 'en-US';
+    preferences.tz = 'UTC';
+  });
+
+  it('renders the successful observation in the selected locale and timezone with seconds', () => {
+    preferences.locale = 'de-DE';
+    preferences.tz = 'America/Los_Angeles';
+    render(
+      <CommunicationsCatalogPanel {...baseProps} status={successfulStatus('2026-08-05T02:30:47Z')} />,
+    );
+    const observation = screen.getByTitle('2026-08-05T02:30:47.000Z (America/Los_Angeles)');
+    expect(observation).toHaveTextContent('4. Aug. 2026');
+    expect(observation).toHaveTextContent('19:30:47');
+    expect(screen.getByText('321')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /Import official NHTSA artifact/ })).toHaveLength(5);
+  });
+
   it('retains last-success counts and provenance when a later import fails, rather than relabeling the catalog unimported', () => {
     const status = successfulStatus(new Date(Date.now() - 60_000).toISOString());
     status.latest_attempt = {
@@ -89,6 +113,12 @@ describe('CommunicationsCatalogPanel', () => {
     expect(screen.getByText('Fresh')).toBeInTheDocument();
     expect(screen.queryByText('TSB catalog is not populated')).not.toBeInTheDocument();
     expect(screen.getByTitle('a'.repeat(64))).toHaveTextContent('SHA-256 aaaaaaaaaaaa…');
+    const artifact = screen.getByText('188 Tesla rows').parentElement?.parentElement;
+    expect(artifact).toHaveClass('bg-[var(--surface-2)]', 'border-[var(--border-subtle)]');
+    expect(artifact?.querySelector('svg')).toHaveClass('text-[var(--text-secondary)]');
+    expect(screen.getByText('Latest successful')).toHaveClass('text-[var(--semantic-success)]');
+    expect(screen.getByText('Latest import failed').parentElement?.parentElement)
+      .toHaveClass('border-[var(--semantic-danger-border)]');
     expect(screen.getByRole('button', { name: 'Import official NHTSA artifact for 2025–2026' }))
       .toHaveTextContent('Refresh');
   });
@@ -103,7 +133,10 @@ describe('CommunicationsCatalogPanel', () => {
     );
     const actions = screen.getAllByRole('button', { name: /Import official NHTSA artifact/ });
     expect(actions).toHaveLength(5);
-    for (const action of actions) expect(action).toBeDisabled();
+    for (const action of actions) {
+      expect(action).toBeDisabled();
+      expect(action).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0');
+    }
     expect(actions.filter((action) => action.getAttribute('aria-busy') === 'true')).toHaveLength(1);
     const button = screen.getByRole('button', { name: `Import official NHTSA artifact for ${pending.period}` });
     expect(button).toHaveAttribute('aria-busy', 'true');

@@ -6,7 +6,7 @@ import { KVList } from '@/components/data-display';
 import { LayoutCard, SourceContent } from '@/components/layout';
 import { ListSkeleton } from '@/components/feedback';
 import { JourneyEvidenceList } from './continuation-mobility-trips-watch/JourneyEvidenceList';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { safeArray } from '@/lib/safeArray';
 
 const VERDICT_LABEL_KEYS: Record<JourneyNudgeVerdict, string> = {
@@ -42,6 +42,7 @@ function verdictVariant(verdict: JourneyNudgeVerdict) {
  * checklist re-runs and on the ambient operational tick.
  */
 export function NudgePanel({ session }: { session: JourneySession }) {
+  const { formatDateTime } = useDateFormat();
   const { t } = useTranslation();
 
   const nudgeQuery = useNudge(session.id);

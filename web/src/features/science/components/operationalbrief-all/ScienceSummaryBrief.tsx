@@ -4,7 +4,7 @@ import { OperationalBrief } from '@/components/data-display';
 import type { StatMetric } from '@/components/data-display/stat-reference/types';
 import { Caption } from '@/components/ui';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { useT } from '../helpers';
 
@@ -22,14 +22,16 @@ interface ScienceSummaryBriefProps {
 export function ScienceSummaryBrief({
   title, description, metrics, states, window, report, limited, testId,
 }: ScienceSummaryBriefProps) {
+  const { formatDateTime } = useDateFormat();
   const t = useT();
   const operationalMetrics = useOperationalMetrics(metrics);
-  const loading = states.every((state) => state.status === 'initial');
+  const loading = states.every((state) => state.status === 'initial' && !state.isRefreshBlocked);
   const retained = states.some((state) => state.hasData);
   const failed = states.some((state) => state.fatalError != null);
   const pending = states.some((state) => state.status === 'initial');
   const refreshFailed = states.some((state) => state.refreshError != null);
-  const offline = states.some((state) => state.isRefreshBlocked);
+  const initialPaused = states.some((state) => !state.hasData && state.isRefreshBlocked && !state.fatalError);
+  const refreshPaused = states.some((state) => state.hasData && state.isRefreshBlocked);
   const stale = states.some((state) => state.status === 'stale');
   const statusLabel = loading
     ? t('science.overview.loading', 'Loading')
@@ -39,15 +41,17 @@ export function ScienceSummaryBrief({
         : t('science.overview.failed', 'Unavailable')
       : refreshFailed
         ? t('science.overview.cached', 'Cached · refresh failed')
-        : offline
-          ? t('science.brief.offline', 'Cached · refresh paused')
-          : stale
-            ? t('science.brief.stale', 'Retained report')
-            : pending
-              ? t('science.brief.pending', 'Some reports loading')
-              : limited || !retained
-                ? t('science.overview.limited', 'Limited evidence')
-                : t('science.overview.available', 'Evidence available');
+        : initialPaused
+          ? t('dataSources.status.paused', 'Refresh paused')
+          : refreshPaused
+            ? t('science.brief.offline', 'Cached · refresh paused')
+            : stale
+              ? t('science.brief.stale', 'Retained report')
+              : pending
+                ? t('science.brief.pending', 'Some reports loading')
+                : limited || !retained
+                  ? t('science.overview.limited', 'Limited evidence')
+                  : t('science.overview.available', 'Evidence available');
   const updatedAt = states.length === 1 ? states[0].updatedAt : null;
   const start = report?.start ?? window.start;
   const end = report?.end ?? window.end;
@@ -64,7 +68,7 @@ export function ScienceSummaryBrief({
       title={title}
       description={description}
       statusLabel={statusLabel}
-      statusTone={loading || failed || pending || refreshFailed || offline || stale || limited || !retained ? 'warning' : 'info'}
+      statusTone={loading || failed || pending || refreshFailed || initialPaused || refreshPaused || stale || limited || !retained ? 'warning' : 'info'}
       metrics={operationalMetrics}
       loading={loading}
       scope={<Caption>{scope}</Caption>}

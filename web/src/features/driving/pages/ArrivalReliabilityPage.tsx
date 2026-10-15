@@ -64,7 +64,9 @@ export default function ArrivalReliabilityPage() {
   const state: ArrivalReliabilityQueryState = {
     vehicleSelected: vehicleId != null,
     isLoading:
-      vehicleId != null && drivesState.status === 'initial',
+      vehicleId != null && drivesState.status === 'initial' && drivesQuery.fetchStatus === 'fetching',
+    fetchStatus: drivesQuery.fetchStatus,
+    isRefreshBlocked: vehicleId != null && drivesState.isRefreshBlocked,
     isResolved,
     error:
       drivesState.fatalError,
@@ -84,7 +86,7 @@ export default function ArrivalReliabilityPage() {
         'Observed timing consistency and evidence coverage for directional routes in the vehicle timezone',
       )}
     >
-      {drivesState.isRefreshBlocked && (
+      {hasCachedData && state.isRefreshBlocked && !state.refreshError && (
         <StaleRefreshWarning state={drivesState} label={t('arrivalReliability.title', 'Arrival Reliability')} />
       )}
       <FadeIn>

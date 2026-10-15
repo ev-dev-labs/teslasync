@@ -36,6 +36,10 @@ const SEVERITY_OPTIONS = [
 
 type Severity = (typeof SEVERITY_OPTIONS)[number]['value'];
 
+export function presentationSeverity(value: string): string {
+  return value === 'warning' ? 'warn' : value;
+}
+
 export interface NotificationFilterBarProps {
   filters: NotificationFilters;
   onChange: (next: NotificationFilters) => void;
@@ -59,8 +63,8 @@ export function NotificationFilterBar({
   const toggleSeverity = useCallback(
     (sev: Severity) => {
       const current = filters.severity ?? [];
-      const next = current.includes(sev)
-        ? current.filter(s => s !== sev)
+      const next = current.some(s => presentationSeverity(s) === sev)
+        ? current.filter(s => presentationSeverity(s) !== sev)
         : [...current, sev];
       onChange({ ...filters, severity: next.length ? next : undefined });
     },
@@ -95,7 +99,7 @@ export function NotificationFilterBar({
   );
 
   const selectedSeverities = useMemo(
-    () => new Set<Severity>(filters.severity ?? []),
+    () => new Set((filters.severity ?? []).map(presentationSeverity)),
     [filters.severity],
   );
 
@@ -131,13 +135,16 @@ export function NotificationFilterBar({
 
   const activeFilterChips = useMemo<FilterChipDescriptor[]>(() => {
     const chips: FilterChipDescriptor[] = [];
-    const severityLabels: Record<Severity, string> = {
+    const severityLabels: Record<string, string> = {
       info: t('notifications.inbox.filter.severity.info', 'Info'),
       warn: t('notifications.inbox.filter.severity.warn', 'Warn'),
       critical: t('notifications.inbox.filter.severity.critical', 'Critical'),
     };
     if (filters.severity?.length) {
-      const summary = filters.severity.map(s => severityLabels[s]).join(', ');
+      const summary = filters.severity.map(s => {
+        const severity = presentationSeverity(s);
+        return Object.hasOwn(severityLabels, severity) ? severityLabels[severity] : s;
+      }).join(', ');
       chips.push({
         key: 'severity',
         label: t('notifications.inbox.filter.severity', 'Severity'),

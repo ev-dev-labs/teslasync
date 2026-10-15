@@ -6,7 +6,8 @@ import { useDriveHistory } from '@/api/hooks/useDriving';
 
 import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { StaleRefreshWarning } from '@/components/feedback';
+import { AlertBanner, StaleRefreshWarning } from '@/components/feedback';
+import { Button, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -70,9 +71,10 @@ export default function DestinationTransitionsPage() {
     [drives, nowMs, selectedTimeZone],
   );
   const state: DestinationTransitionsQueryState = {
+    sourceTrust: drivesState,
     vehicleSelected: vehicleId != null,
     isLoading:
-      vehicleId != null && drivesState.status === 'initial',
+      vehicleId != null && drivesState.status === 'initial' && !drivesState.isRefreshBlocked,
     isResolved,
     error:
       drivesState.fatalError,
@@ -91,8 +93,26 @@ export default function DestinationTransitionsPage() {
         'Continuity-safe historical destination flows, support, temporal profiles, and complete returned-row accounting',
       )}
     >
-      {drivesState.isRefreshBlocked && (
-        <StaleRefreshWarning state={drivesState} label={t('destinationTransitions.title', 'Destination Transitions')} />
+      {state.vehicleSelected && drivesState.isRefreshBlocked && !drivesState.hasData && !state.error && (
+        <AlertBanner
+          variant="info"
+          role="status"
+          aria-live="polite"
+          title={t('dataSources.status.paused', 'Refresh paused')}
+          data-testid="destination-transitions-initial-pause"
+        >
+          <Text as="p" variant="bodySm">
+            {t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}
+          </Text>
+          {drivesState.retry != null && (
+            <Button type="button" variant="ghost" size="sm" onClick={drivesState.retry}>
+              {t('destinationTransitions.states.retry', 'Retry')}
+            </Button>
+          )}
+        </AlertBanner>
+      )}
+      {drivesState.isRefreshBlocked && drivesState.hasData && (
+        <StaleRefreshWarning state={drivesState} hideRetry={drivesState.refreshError != null} label={t('destinationTransitions.title', 'Destination Transitions')} />
       )}
       <FadeIn>
         <DestinationEvidenceBrief

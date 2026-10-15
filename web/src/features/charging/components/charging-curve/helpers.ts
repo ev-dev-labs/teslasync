@@ -1,4 +1,5 @@
 import type { ChargingSession } from '@/api/types';
+import i18n, { type TFunction } from 'i18next';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { getChargerCategory } from '@/lib/chargingAggregation';
@@ -9,11 +10,26 @@ export function isDcSession(s: ChargingSession): boolean {
   return !explicitAC && !!(s.charger_type || (s.peak_power_w && s.peak_power_w > 20_000));
 }
 
-export function getChargerLabel(s: ChargingSession): string {
+export type ChargerCategoryId = 'Home / AC' | 'Supercharger' | 'DC Fast';
+
+/** Keep the original grouping and color keys independent of the display language. */
+export function getChargerCategoryId(s: ChargingSession): ChargerCategoryId {
   if (!isDcSession(s)) return 'Home / AC';
   if (s.charger_type === 'Tesla' || (s.charger_type ?? '').toLowerCase().includes('tesla'))
     return 'Supercharger';
   return 'DC Fast';
+}
+
+export function getChargerCategoryLabel(category: ChargerCategoryId, t: TFunction = i18n.t): string {
+  switch (category) {
+    case 'Home / AC': return t('charging.curve.chargerLabels.homeAc', 'Home / AC');
+    case 'Supercharger': return t('charging.curve.chargerLabels.supercharger', 'Supercharger');
+    case 'DC Fast': return t('charging.curve.chargerLabels.dcFast', 'DC Fast');
+  }
+}
+
+export function getChargerLabel(s: ChargingSession, t: TFunction = i18n.t): string {
+  return getChargerCategoryLabel(getChargerCategoryId(s), t);
 }
 
 /** Provenance describes evidence, not a replacement for the accepted curve buckets. */

@@ -34,7 +34,8 @@ const (
 	// industryLossRatio converts written premium into expected incurred loss.
 	// It is an explicit, disclosed assumption — never inferred from the data.
 	industryLossRatio = 0.62
-	// nightStartHour and nightEndHour bound the elevated-risk overnight band.
+	// nightStartHour and nightEndHour bound trip starts in UTC, not distance
+	// actually travelled during the overnight band.
 	nightStartHour = 22
 	nightEndHour   = 5
 )
@@ -80,11 +81,11 @@ var riskFactorSpecs = []riskFactorSpec{
 		effort:    0.5,
 	},
 	{
-		code: "night_exposure", label: "Overnight distance share",
+		code: "night_exposure", label: "Distance share of trips starting overnight (UTC)",
 		rateUnit: "fraction", baseline: 0.10, weight: 0.12,
 		direction: domain.DirectionHigherIsWorse, frequency: true,
-		narrative: "Share of distance driven between 22:00 and 05:00.",
-		lever:     "Shift one recurring late trip earlier in the evening.",
+		narrative: "Trip-start proxy: full distance of completed trips starting at or after 22:00 or before 05:00 UTC, divided by total exposure distance. Includes distance outside the band on qualifying trips and excludes distance inside the band on other trips; this is neither an upper nor a lower bound on actual night distance. Actual night-distance measurement requires owned model support for distance within time bands.",
+		lever:     "Review recurring departures in the 22:00–05:00 UTC band; shifting a trip start changes this proxy, not necessarily actual night distance.",
 		effort:    1.0,
 	},
 	{
@@ -433,7 +434,9 @@ func isNight(at time.Time) bool {
 }
 
 // factorDeviation converts an observed rate into a signed, bounded deviation
-// where positive always means "worse than baseline".
+// in [-1, 3]: zero is neutral (at baseline), positive is worse than baseline,
+// and negative is better, after normalizing the factor's direction. Fractions
+// retain their magnitude; this is not the profile's separate 0–100 risk score.
 func factorDeviation(spec riskFactorSpec, observed float64) float64 {
 	if spec.baseline <= 0 {
 		return 0
@@ -532,6 +535,7 @@ func riskLevers(
 		improvedDeviation := factorDeviation(spec, improvedRate)
 		scoreDelta := (improvedDeviation - factor.Score) * spec.weight * 50
 		rank++
+		// Confidence stays a fraction on the wire; only the UI scales it to a percentage.
 		lever := domain.RiskLever{
 			FactorCode:          factor.Code,
 			Label:               spec.lever,
@@ -600,6 +604,11 @@ func simulatePremium(policy port.PolicyRecord, profile *domain.InsuranceRiskProf
 	return simulation
 }
 
+// insuranceDigest is a limited risk-summary checksum, not verified identity or a
+// hash of the complete evidence packet. It covers vehicle ID, UTC window bounds,
+// four risk indices (six decimal places), and ordered factor codes/observed rates
+// (eight decimal places). Raw exposure, other factor details, policy, premium,
+// trend, evidence and remaining window facts are outside its scope.
 func insuranceDigest(vehicleID int64, window domain.Window, profile *domain.InsuranceRiskProfile) string {
 	hasher := sha256.New()
 	fmt.Fprintf(hasher, "v1|%d|%s|%s|", vehicleID, window.From.UTC().Format(time.RFC3339), window.To.UTC().Format(time.RFC3339))

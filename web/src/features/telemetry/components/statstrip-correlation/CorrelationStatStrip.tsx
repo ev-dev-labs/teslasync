@@ -20,6 +20,20 @@ interface Props {
 export function CorrelationStatStrip({ result, leadLabel, loading, retained, errorA, errorB, onRetryA, onRetryB }: Props) {
   const { t } = useTranslation();
   const { fmtScientificNumber, fmtInt, precision } = useNumberFormatting();
+  const pairCount = result?.bestN;
+  const sampleContext = [
+    t('telemetry.correlationBrief.resampledPairs', 'from {{n}} overlapping resampled pairs', {
+      n: pairCount != null && Number.isFinite(pairCount) ? fmtInt(pairCount) : '—',
+    }),
+    ...([
+      [result?.sourceCountA, 'telemetry.correlationBrief.sourceRecordsA', 'Signal A: {{n}} source records'],
+      [result?.validCountA, 'telemetry.correlationBrief.validMeasurementsA', 'Signal A: {{n}} valid timestamp-deduplicated measurements'],
+      [result?.sourceCountB, 'telemetry.correlationBrief.sourceRecordsB', 'Signal B: {{n}} source records'],
+      [result?.validCountB, 'telemetry.correlationBrief.validMeasurementsB', 'Signal B: {{n}} valid timestamp-deduplicated measurements'],
+    ] as const).flatMap(([count, key, fallback]) =>
+      count != null && Number.isInteger(count) && count >= 0
+        ? [t(key, fallback, { n: fmtInt(count) })] : []),
+  ].join('; ');
   const metrics: StatMetric[] = [
     { metricId: 'ratio', occurrenceId: 'peak-r', rawValue: result?.bestR,
       display: { precision: Math.max(3, precision) },
@@ -42,10 +56,8 @@ export function CorrelationStatStrip({ result, leadLabel, loading, retained, err
       }) },
     { metricId: 'number', occurrenceId: 'effective-n', rawValue: result?.effectiveN,
       display: { precision: 0 }, label: t('signalCorrelation.effectiveN', 'Effective samples'),
-      description: t('telemetry.correlationBrief.samplesDescription', 'Autocorrelation-adjusted effective sample size at the best lag; raw points are overlapping samples at that lag.'),
-      context: t('signalCorrelation.rawN', 'from {{n}} raw points', {
-        n: result == null ? '—' : fmtInt(result.bestN),
-      }) },
+      description: t('telemetry.correlationBrief.resampledSamplesDescription', 'Autocorrelation-adjusted effective sample size at the best lag; overlapping resampled pairs are not original source records. Valid measurement counts, when available, are timestamp-deduplicated before overlap clipping or resampling.'),
+      context: sampleContext },
   ];
   const operationalMetrics = useOperationalMetrics(metrics);
   return <section aria-label={t('signalCorrelation.kpis', 'Correlation metrics')}>

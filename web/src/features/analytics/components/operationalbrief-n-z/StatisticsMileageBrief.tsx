@@ -1,7 +1,8 @@
 import type { ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 import { OperationalBrief, type StatMetric } from '@/components/data-display';
-import { EmptyState } from '@/components/feedback';
+import { DataSourceNotice, EmptyState, StaleRefreshWarning } from '@/components/feedback';
+import { useDataState } from '@/hooks/useDataState';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { StatisticsSource } from '../statistics-modernization/StatisticsSource';
@@ -13,6 +14,9 @@ export function StatisticsMileageBrief({
   const { t } = useTranslation();
   const { fmtInt, fmtNumber } = useNumberFormatting();
   const mileage = query.data;
+  const source = useDataState({ ...query, data: mileage ?? undefined }, { provenance: 'historical' });
+  const loading = query.isLoading && !source.isRefreshBlocked;
+  const label = t('statistics.mileage', 'Mileage summary');
   const metrics: StatMetric[] = [
     { metricId: 'distance', occurrenceId: 'statistics-lifetime-mileage', label: t('statistics.totalMileage', 'Total distance'),
       rawValue: mileage ? (mileage.lifetime_km ?? 0) * 1000 : null,
@@ -33,18 +37,23 @@ export function StatisticsMileageBrief({
   ];
   const operationalMetrics = useOperationalMetrics(metrics);
   return <>
-    <OperationalBrief compact title={t('statistics.mileage', 'Mileage summary')} testId="statistics-mileage-brief"
+    <StaleRefreshWarning state={source} label={label} />
+    <OperationalBrief compact title={label} testId="statistics-mileage-brief"
       eyebrow={t('statistics.title', 'Statistics')}
       description={t('statistics.brief.mileageDescription', 'Lifetime distance and drive counts alongside a last-30-day average and its yearly projection.')}
-      metrics={operationalMetrics} loading={query.isLoading && !mileage}
-      statusLabel={mileage ? query.error ? t('statistics.brief.retained', 'Retained statistics') : t('statistics.brief.available', 'Returned statistics')
-        : query.isLoading ? t('statistics.brief.loading', 'Loading statistics') : t('statistics.brief.unavailable', 'Statistics unavailable')}
-      statusTone={query.error ? 'warning' : 'neutral'}
+      metrics={operationalMetrics} loading={loading && !source.hasData}
+      statusLabel={source.isRefreshBlocked ? t('dataSources.status.paused', 'Refresh paused')
+        : source.isRefreshing ? t('dataSources.status.refreshing', 'Refreshing')
+        : source.hasData ? source.refreshError ? t('statistics.brief.retained', 'Retained statistics') : t('statistics.brief.available', 'Returned statistics')
+        : loading ? t('statistics.brief.loading', 'Loading statistics') : t('statistics.brief.unavailable', 'Statistics unavailable')}
+      statusTone={source.refreshError || source.isRefreshBlocked ? 'warning' : 'neutral'}
       scope={t('statistics.brief.mixed', 'Mixed lifetime and last-30-day windows')}
       provenance={t('statistics.mileage', 'Mileage summary')} />
-    <StatisticsSource hasData={mileage != null} loading={query.isLoading} error={query.error}
+    <StatisticsSource hasData={source.hasData} loading={loading} error={source.fatalError}
       onRetry={() => { void query.refetch(); }} skeleton={null}
-      empty={<EmptyState message={t('statistics.noMileage', 'No mileage data available')}
+      empty={source.isRefreshBlocked
+        ? <DataSourceNotice sources={[{ id: 'statistics-mileage', label, query: { ...query, data: mileage ?? undefined } }]} />
+        : <EmptyState message={t('statistics.noMileage', 'No mileage data available')}
         description={t('statistics.noMileageDescription', 'Distance totals and projections appear after the first completed drive is recorded.')}
         actionTo={{ label: t('statistics.viewDrives', 'View drives'), to: '/drives' }} className="py-8" />}
     >{null}</StatisticsSource>

@@ -41,6 +41,7 @@ export function VehicleMetadataCards({ vehicleId }: VehicleMetadataCardsProps) {
         prerequisite="user"
         kind="options"
         data={options.data?.data}
+        source={options}
         fetchedAt={options.data?.fetched_at}
         loading={options.isLoading}
         error={refreshOptions.error ?? options.error}
@@ -61,6 +62,7 @@ export function VehicleMetadataCards({ vehicleId }: VehicleMetadataCardsProps) {
         prerequisite="user"
         kind="warranty"
         data={warranty.data?.data}
+        source={warranty}
         fetchedAt={warranty.data?.fetched_at}
         loading={warranty.isLoading}
         error={refreshWarranty.error ?? warranty.error}
@@ -84,6 +86,7 @@ export function VehicleMetadataCards({ vehicleId }: VehicleMetadataCardsProps) {
         prerequisite="user"
         kind="subscriptions"
         data={subscriptions.data?.data}
+        source={subscriptions}
         fetchedAt={subscriptions.data?.fetched_at}
         loading={subscriptions.isLoading}
         error={refreshSubscriptions.error ?? subscriptions.error}
@@ -104,6 +107,7 @@ export function VehicleMetadataCards({ vehicleId }: VehicleMetadataCardsProps) {
         prerequisite="user"
         kind="upgrades"
         data={upgrades.data?.data}
+        source={upgrades}
         fetchedAt={upgrades.data?.fetched_at}
         loading={upgrades.isLoading}
         error={refreshUpgrades.error ?? upgrades.error}

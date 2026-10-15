@@ -7,7 +7,7 @@ export interface VehicleOptionData {
   colorCode: string | null
 }
 
-export type WarrantyCoverageState = 'active' | 'upcoming' | 'expired'
+export type WarrantyCoverageState = 'active' | 'upcoming' | 'expired' | 'unknown'
 
 export interface WarrantyCoverageData {
   state: WarrantyCoverageState
@@ -23,6 +23,7 @@ export interface WarrantyDetailsData {
   active: WarrantyCoverageData[]
   upcoming: WarrantyCoverageData[]
   expired: WarrantyCoverageData[]
+  unknown?: WarrantyCoverageData[]
 }
 
 export interface SubscriptionBillingData {
@@ -309,55 +310,15 @@ export function parseWarrantyDetails(value: unknown): WarrantyDetailsData {
       'display_name',
     ])
   ) {
-    return {
-      active: [
-        {
-          state: 'active',
-          displayName: readString(record, [
-            'warrantyDisplayName',
-            'warranty_display_name',
-            'displayName',
-            'display_name',
-          ]),
-          code: readString(record, [
-            'warrantyCode',
-            'warranty_code',
-            'code',
-            'type',
-          ]),
-          coverageAgeYears: readNumber(record, [
-            'coverageAgeInYears',
-            'coverage_age_in_years',
-            'coverageYears',
-            'coverage_years',
-          ]),
-          coverageAgeMonths: readNumber(record, [
-            'coverageAgeInMonths',
-            'coverage_age_in_months',
-            'coverageMonths',
-            'coverage_months',
-          ]),
-          expirationOdometer: readNumber(record, [
-            'expirationOdometer',
-            'expiration_odometer',
-            'odometerLimit',
-            'odometer_limit',
-          ]),
-          expirationDate: readString(record, [
-            'warrantyExpiredOn',
-            'warranty_expired_on',
-            'warrantyExpirationDate',
-            'warranty_expiration_date',
-            'expirationDate',
-            'expiration_date',
-            'expiryDate',
-            'expiry_date',
-          ]),
-        },
-      ],
-      upcoming: [],
-      expired: [],
-    }
+    const status = readString(record, [
+      'warrantyStatus', 'warranty_status', 'status', 'state',
+    ])?.toLowerCase()
+    const state: WarrantyCoverageState =
+      status === 'active' || status === 'upcoming' || status === 'expired'
+        ? status
+        : 'unknown'
+    const coverage = parseWarrantyGroup({ coverage: record }, state, ['coverage'])
+    return { active: [], upcoming: [], expired: [], [state]: coverage }
   }
 
   return { active, upcoming, expired }

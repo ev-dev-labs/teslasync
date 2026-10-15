@@ -42,24 +42,26 @@ export function DestinationTransitionsEvidenceQuality({
             'Every returned row and every chronologically adjacent candidate pair enters one mutually exclusive category.',
           )}
         </Text>
+          <div className="space-y-5">
+            <DestinationRowAccountingMetrics model={model} state={state} />
+            <DestinationContinuityMetrics
+              model={model}
+              state={state}
+              locale={locale}
+            />
+            <DestinationCoverageMetrics
+              model={model}
+              state={state}
+              locale={locale}
+              timeZone={timeZone}
+            />
+            <DestinationSupportMetrics model={model} state={state} locale={locale} />
+          </div>
         <DestinationTransitionsSectionBody
           model={model}
           state={state}
           requirement="none"
         >
-          <div className="space-y-5">
-            <DestinationRowAccountingMetrics model={model} />
-            <DestinationContinuityMetrics
-              model={model}
-              locale={locale}
-            />
-            <DestinationCoverageMetrics
-              model={model}
-              locale={locale}
-              timeZone={timeZone}
-            />
-            <DestinationSupportMetrics model={model} locale={locale} />
-          </div>
           <AlertBanner className="mt-4" variant="info">
             <Text as="p" variant="caption">
               {t(

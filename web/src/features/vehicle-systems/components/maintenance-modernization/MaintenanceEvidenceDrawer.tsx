@@ -4,7 +4,9 @@ import {
 } from 'lucide-react';
 import { EntityPreviewDrawer } from '@/components/data-display';
 import { buildContextHref } from '@/lib/contextNavigation';
-import { formatDateTime } from '@/lib/dateFormat';
+import { formatDayKey } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { formatMaintenanceDate } from './serviceColumns';
 import { localDayKey } from '@/lib/drivesAggregation';
 import type { DistanceFormatter, ServiceRecord } from './maintenanceModel';
 
@@ -22,7 +24,11 @@ export function MaintenanceEvidenceDrawer({
   formatCurrency: (amount: number) => string;
 }) {
   const { t } = useTranslation();
-  const day = localDayKey(record?.date);
+  const { formatDateTime, locale, tz } = useDateFormat();
+  const date = record?.date;
+  const day = date && /^\d{4}-\d{2}-\d{2}$/.test(date)
+    ? (formatDayKey(date, { locale }) === '—' ? null : date)
+    : localDayKey(date, tz);
   return (
     <EntityPreviewDrawer
       open={record !== null}
@@ -36,7 +42,7 @@ export function MaintenanceEvidenceDrawer({
         {
           key: 'date',
           label: t('maintenance.col.date', 'Date'),
-          value: formatDateTime(record.date),
+          value: formatMaintenanceDate(record.date, formatDateTime, locale),
         },
         {
           key: 'mileage',

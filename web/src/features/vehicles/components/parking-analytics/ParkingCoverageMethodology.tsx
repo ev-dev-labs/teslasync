@@ -6,6 +6,7 @@ import {
   Badge,
   GlassPanel,
   PanelTitle,
+  Text,
 } from '@/components/ui';
 
 
@@ -35,16 +36,24 @@ export function ParkingCoverageMethodology({
   rangeEnd,
   className,
   sourceStatus,
-  hasSource = true,
+  hasSource = false,
 }: ParkingCoverageMethodologyProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const coverage = summary.coverage;
+  const hasEvidence = hasSource && sourceStatus !== 'initial' && sourceStatus !== 'initialFailure';
+  const hasCapEvidence = hasEvidence
+    && Number.isSafeInteger(coverage.recordsReturned) && coverage.recordsReturned >= 0
+    && Number.isSafeInteger(coverage.rowLimit) && coverage.rowLimit > 0;
+  const hasLocationEvidence = hasEvidence
+    && Number.isSafeInteger(coverage.knownLocationStints) && coverage.knownLocationStints >= 0
+    && Number.isSafeInteger(coverage.missingLocationStints) && coverage.missingLocationStints >= 0
+    && coverage.knownLocationStints + coverage.missingLocationStints === summary.stints.length;
   const locationCoverage =
-    summary.stints.length > 0
+    hasLocationEvidence && summary.stints.length > 0
       ? (coverage.knownLocationStints / summary.stints.length) * 100
       : null;
-  const status = sourceStatus ?? (state.isLoading ? 'initial' : state.error ? 'initialFailure' : hasSource ? 'ok' : 'unavailable');
+  const status = sourceStatus ?? (state.isLoading ? 'initial' : state.error ? 'initialFailure' : hasEvidence ? 'ok' : 'initial');
 
   return (
     <section
@@ -58,14 +67,16 @@ export function ParkingCoverageMethodology({
       <GlassPanel className="p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <PanelTitle className="flex items-center gap-2">
-            <Database className="h-4 w-4 text-purple-300" aria-hidden="true" />
+            <Database className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
             {t('parking.coverage.title', 'Coverage & method')}
           </PanelTitle>
           <Badge
-            variant={coverage.possiblyCapped ? 'warning' : 'success'}
+            variant={!hasCapEvidence ? 'neutral' : coverage.possiblyCapped ? 'warning' : 'success'}
             dot
           >
-            {coverage.possiblyCapped
+            {!hasCapEvidence
+              ? t('dataSources.status.pending', 'Pending')
+              : coverage.possiblyCapped
               ? t('parking.coverage.cappedBadge', 'Potentially capped')
               : t('parking.coverage.withinCapBadge', 'Within request cap')}
           </Badge>
@@ -74,26 +85,26 @@ export function ParkingCoverageMethodology({
         <VehicleEvidenceBrief id="parking-coverage-summary"
           title={t('parking.coverage.title', 'Coverage & method')}
           description={t('parking.briefDescription', 'Parking is reconstructed between usable drives, not observed continuously. Missing locations and incomplete history remain explicit.')}
-          status={status === 'ok' && coverage.possiblyCapped ? 'partial' : status}
+          status={status === 'ok' && hasCapEvidence && coverage.possiblyCapped ? 'partial' : status}
           loading={state.isLoading}
           provenance={t('parking.briefSource', 'Drive-derived parking reconstruction')}
-          scope={t('parking.coverage.briefWindow', 'Requested UTC window: {{start}} → {{end}}', { start: rangeStart, end: rangeEnd })}
+          scope={t('parking.coverage.briefWindow', 'Requested instant window: {{start}} → {{end}} (exclusive)', { start: rangeStart, end: rangeEnd })}
           metrics={[
-            { metricId: 'count', occurrenceId: 'returned', label: t('parking.coverage.returned', 'Records returned'), rawValue: hasSource ? coverage.recordsReturned : null },
-            { metricId: 'count', occurrenceId: 'usable', label: t('parking.coverage.usable', 'Usable drives'), rawValue: hasSource ? coverage.validDrives : null },
-            { metricId: 'count', occurrenceId: 'stints', label: t('parking.coverage.reconstructed', 'Reconstructed stints'), rawValue: hasSource ? summary.stints.length : null },
-            { metricId: 'percent', occurrenceId: 'located', label: t('parking.coverage.located', 'Location coverage'), rawValue: hasSource ? locationCoverage : null,
+            { metricId: 'count', occurrenceId: 'returned', label: t('parking.coverage.returned', 'Records returned'), rawValue: hasEvidence ? coverage.recordsReturned : null },
+            { metricId: 'count', occurrenceId: 'usable', label: t('parking.coverage.usable', 'Usable drives'), rawValue: hasEvidence ? coverage.validDrives : null },
+            { metricId: 'count', occurrenceId: 'stints', label: t('parking.coverage.reconstructed', 'Reconstructed stints'), rawValue: hasEvidence ? summary.stints.length : null },
+            { metricId: 'percent', occurrenceId: 'located', label: t('parking.coverage.located', 'Location coverage'), rawValue: hasEvidence ? locationCoverage : null,
               display: { formatter: raw => ({ value: `${fmtNumber(raw)}%`, unit: '' }) },
-              context: t('parking.kpis.locationQuality', '{{known}} located · {{missing}} missing', { known: coverage.knownLocationStints, missing: coverage.missingLocationStints }) },
+              context: hasLocationEvidence ? t('parking.kpis.locationQuality', '{{known}} located · {{missing}} missing', { known: coverage.knownLocationStints, missing: coverage.missingLocationStints }) : null },
           ]} />
         <ParkingSectionBody state={state} className="mt-4 min-h-64">
-          {coverage.recordsReturned === 0 ? (
+          {hasEvidence && coverage.recordsReturned === 0 ? (
             <EmptyState
               className="py-6"
               icon={<Info className="h-8 w-8" aria-hidden="true" />}
               message={t(
                 'parking.coverage.empty',
-                'No drive records were returned for this selected UTC window.',
+                'No drive records were returned for this selected window.',
               )}
               actionTo={{
                 label: t('parking.browseDrives', 'Browse drives'),
@@ -102,11 +113,13 @@ export function ParkingCoverageMethodology({
             />
           ) : null}
 
-          <ParkingMethodCaveats
+          {hasCapEvidence && hasLocationEvidence ? <ParkingMethodCaveats
             summary={summary}
             rangeStart={rangeStart}
             rangeEnd={rangeEnd}
-          />
+          /> : <Text variant="bodySm">
+            {t('system.outage.awaitingSource', 'This source has not resolved yet; missing evidence is not a confirmed empty result.')}
+          </Text>}
         </ParkingSectionBody>
       </GlassPanel>
     </section>

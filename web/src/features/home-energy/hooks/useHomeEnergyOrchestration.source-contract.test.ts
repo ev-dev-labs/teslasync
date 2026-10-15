@@ -29,6 +29,10 @@ describe('home-energy source and business policy preservation', () => {
       expect(hook).toContain(`useDataState(${query},`);
     expect(hook).toContain('deriveDataState(fleetStatesQuery,');
     expect(hook).toContain('partial: fleetSummary.failedCount > 0');
+    expect(hook).toContain('fleetSummary.missingCount > 0');
+    expect(hook).toContain('fleetSummary.unverifiedCount > 0');
+    expect(hook).toContain('combineDataStates(fleetMemberStates.map((member) => member.state))');
+    expect(hook).toContain('...fleetMemberStates,');
     expect(hook).toContain('error: vehiclesState.fatalError');
     expect(hook).toContain('vehiclesQuery.isLoading && !vehiclesState.hasData');
     expect(hook).toContain('...(siteId != null ? [');

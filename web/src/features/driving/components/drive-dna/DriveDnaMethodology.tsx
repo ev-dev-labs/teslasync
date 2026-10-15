@@ -131,7 +131,6 @@ export function DriveDnaMethodology({
           </Text>
         </AlertBanner>
         <DriveDnaMethodologyCards />
-        <DriveDnaMethodologyCards />
       </GlassPanel>
     </section>
   );

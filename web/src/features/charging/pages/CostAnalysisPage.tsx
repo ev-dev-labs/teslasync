@@ -57,7 +57,9 @@ export default function CostAnalysisPage() {
   const { vehicleId } = useSelectedVehicle();
 
   // ── Filters ──────────────────────────────────────────────────────────
-  const { start: startDate, end: endDate, reset: resetRange } = useRangeState({
+  const {
+    start: startDate, end: endDate, startInstant, endInstantExclusive, reset: resetRange,
+  } = useRangeState({
     persistKey: 'cost-analysis.range',
     defaultPresetId: '1y',
   });
@@ -71,8 +73,8 @@ export default function CostAnalysisPage() {
   // ── Data ─────────────────────────────────────────────────────────────
   const sessionsQuery = useChargingSessionsPaginated(vehicleId, {
     limit: PAGINATION.MAX_LIMIT,
-    start: startDate,
-    end: endDate,
+    start: startInstant,
+    end: endInstantExclusive,
   });
   const { data: sessions } = sessionsQuery;
   const sessionsState = useDataState(sessionsQuery, { provenance: 'historical' });

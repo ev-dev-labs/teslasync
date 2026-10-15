@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import type { StatMetric } from '@/components/data-display/stat-reference';
+import type { StatMetric } from '@/components/data-display';
 import { EmptyState, QueryError } from '@/components/feedback';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useUnits } from '@/hooks/useUnits';

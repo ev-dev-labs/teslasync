@@ -50,7 +50,7 @@ export function StopScoreTable({ stops, tableId }: { stops: ScoredStop[]; tableI
             <MetricBar
               value={row.score}
               max={100}
-              color="var(--color-emerald-400, #34d399)"
+              color="var(--text-secondary)"
               fill="solid"
               size="slim"
               showHeader={false}
@@ -120,6 +120,22 @@ export function StopScoreTable({ stops, tableId }: { stops: ScoredStop[]; tableI
       enableValueFilters
       columns={columns}
       mobileColumns={['stop', 'score', 'wait']}
+      rowLabel={(row) => row.site}
+      mobilePresentation={{
+        roles: { stop: 'title', score: 'primary', wait: 'meta', price: 'meta', health: 'hidden', corridor: 'meta' },
+        displayValue: (row, key) => {
+          switch (key) {
+            case 'stop': return row.site;
+            case 'score': return fmtNumber(row.score);
+            case 'wait': return row.wait_s == null ? '—'
+              : t('journey.scoring.min', '{{min}} min', { min: fmtNumber(row.wait_s / 60) });
+            case 'price': return row.unit_price == null ? '—' : formatCurrency(row.unit_price);
+            case 'health': return row.health == null ? '—' : fmtNumber(row.health);
+            case 'corridor': return units.formatDistance(row.corridor_m);
+            default: return null;
+          }
+        },
+      }}
       data={safeArray(stops)}
       keyExtractor={(row) => row.site}
       tableId={tableId}

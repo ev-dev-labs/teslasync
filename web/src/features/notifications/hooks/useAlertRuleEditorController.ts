@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef, type Dispatch, type SetStateAction } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   useAlertMetrics, useNotificationChannels, useSaveAlertRule, useTestAlertRule,
@@ -52,7 +52,7 @@ export function useAlertRuleEditorController({ rule, onSaved, onCancel }: AlertR
   const draftKey = `alertstudio:rule:${rule?.id ?? 'new'}`
   const freshEditorJsonRef = useRef<string>(JSON.stringify(freshEditor()))
   const {
-    value: editor, setValue: setEditor, hasDraft, draftSavedAt, discardDraft,
+    value: editor, setValue: setDraftEditor, hasDraft, draftSavedAt, discardDraft,
   } = useFormDraft<EditorState>(draftKey, rule ? ruleToEditor(rule) : freshEditor(), {
     // Version 6 rejects drafts without message/escalation/event typed defaults.
     version: 6,
@@ -61,10 +61,22 @@ export function useAlertRuleEditorController({ rule, onSaved, onCancel }: AlertR
     skipPersist: v =>
       saveRuleMut.isPending || rule != null || JSON.stringify(v) === freshEditorJsonRef.current,
   })
+  const draftRevisionRef = useRef({ key: draftKey, editor, revision: 0 })
+  if (draftRevisionRef.current.key !== draftKey || draftRevisionRef.current.editor !== editor) {
+    draftRevisionRef.current = {
+      key: draftKey, editor, revision: draftRevisionRef.current.revision + 1,
+    }
+  }
+  const setEditor: Dispatch<SetStateAction<EditorState>> = useCallback(next => {
+    // Invalidate pending saves immediately, even before React renders the edit.
+    draftRevisionRef.current.revision += 1
+    setDraftEditor(next)
+  }, [setDraftEditor])
   // Restoring an existing local draft is not itself a new edit.
   const initialEditorRef = useRef<string>(JSON.stringify(editor))
   const isDirty = JSON.stringify(editor) !== initialEditorRef.current
   const handleDiscardDraft = useCallback(() => {
+    draftRevisionRef.current.revision += 1
     initialEditorRef.current = JSON.stringify(freshEditor())
     discardDraft()
   }, [discardDraft])
@@ -170,8 +182,10 @@ export function useAlertRuleEditorController({ rule, onSaved, onCancel }: AlertR
       return
     }
     setFormError(null)
+    const submittedRevision = draftRevisionRef.current.revision
     saveRuleMut.mutate(rule ? { ...payload, id: rule.id } : payload, {
       onSuccess: saved => {
+        if (draftRevisionRef.current.revision !== submittedRevision) return
         if (rule) {
           initialEditorRef.current = JSON.stringify(editor)
           setEditor(current => ({ ...current }))

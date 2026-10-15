@@ -4,7 +4,27 @@
  */
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const preferences = vi.hoisted(() => ({
+  locale: 'en-US', tz: 'UTC', distance: 'km', precision: 1,
+}));
+
+vi.mock('@/lib/timezone', () => ({
+  useTimezone: () => preferences.tz,
+}));
+
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({
+    locale: preferences.locale,
+    settings: {
+      locale: preferences.locale,
+      tz_display_default: 'user',
+      unit_of_length: preferences.distance,
+      decimal_precision: preferences.precision,
+    },
+  }),
+}));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -38,7 +58,104 @@ const outlook: WarrantyOutlook = {
 };
 
 describe('WarrantyPanel', () => {
-  it('preserves null versus real zero distance allowance, supplied coverage ordering and countdown clamping', () => {
+  beforeEach(() => {
+    preferences.locale = 'en-US';
+    preferences.tz = 'UTC';
+    preferences.distance = 'km';
+    preferences.precision = 1;
+  });
+
+  it('formats source kilometers using saved units, locale and precision without mutating the outlook', () => {
+    const source = JSON.stringify(outlook);
+    const view = render(
+      <WarrantyPanel selected loading={false} error={null} outlook={outlook} onRetry={vi.fn()} />,
+    );
+    expect(screen.getByText(/ends Jan 1, 2028/)).toHaveTextContent('50,000 km remaining');
+    expect(screen.getByText(/ends Jan 1, 2032/)).toHaveTextContent('160,000 km remaining');
+
+    preferences.distance = 'mi';
+    preferences.precision = 2;
+    view.rerender(
+      <WarrantyPanel selected loading={false} error={null} outlook={outlook} onRetry={vi.fn()} />,
+    );
+    expect(screen.getByText(/ends Jan 1, 2028/)).toHaveTextContent('31,068.56 mi remaining');
+    expect(screen.getByText(/ends Jan 1, 2032/)).toHaveTextContent('99,419.39 mi remaining');
+
+    preferences.locale = 'de-DE';
+    preferences.precision = 0;
+    view.rerender(
+      <WarrantyPanel selected loading={false} error={null} outlook={outlook} onRetry={vi.fn()} />,
+    );
+    expect(screen.getByText(/ends 1\. Jan\. 2028/)).toHaveTextContent('31.069 mi remaining');
+    expect(JSON.stringify(outlook)).toBe(source);
+  });
+
+  it.each(['America/Los_Angeles', 'Pacific/Kiritimati'])(
+    'localizes calendar expiration dates without shifting their day in %s',
+    (tz) => {
+      preferences.locale = 'de-DE';
+      preferences.tz = tz;
+      render(
+        <WarrantyPanel selected loading={false} error={null}
+          outlook={{
+            ...outlook,
+            coverages: [
+              { ...outlook.coverages[0], expires_at: '2028-01-01', days_remaining: 400 },
+              { ...outlook.coverages[1], expires_at: '2028-02-29', days_remaining: -3, km_remaining: -10 },
+            ],
+          }}
+          onRetry={vi.fn()} />,
+      );
+      expect(screen.getByText(/ends 1\. Jan\. 2028/)).toHaveTextContent('400 days left');
+      expect(screen.getByText(/ends 29\. Feb\. 2028/)).toHaveTextContent('0 days left');
+      expect(screen.getByText(/ends 29\. Feb\. 2028/)).toHaveTextContent(/0(?:[,.]0+)? km remaining/);
+      expect(screen.getByText(outlook.assumption)).toBeInTheDocument();
+      expect(screen.queryByText(/31\. Dez\. 2027|2\. Jan\. 2028|1\. März 2028/)).not.toBeInTheDocument();
+    },
+  );
+
+  it('updates expiration labels when saved locale and timezone change', () => {
+    const view = render(
+      <WarrantyPanel selected loading={false} error={null} outlook={outlook} onRetry={vi.fn()} />,
+    );
+    expect(screen.getByText(/ends Jan 1, 2028/)).toBeInTheDocument();
+    preferences.locale = 'de-DE';
+    preferences.tz = 'America/Los_Angeles';
+    view.rerender(
+      <WarrantyPanel selected loading={false} error={null} outlook={outlook} onRetry={vi.fn()} />,
+    );
+    expect(screen.getByText(/ends 1\. Jan\. 2028/)).toBeInTheDocument();
+    expect(screen.queryByText(/ends Jan 1, 2028/)).not.toBeInTheDocument();
+  });
+
+  it.each(['not-a-date', '2028-01', ''])(
+    'shows the shared missing-date placeholder for %j without losing the countdown',
+    (expires_at) => {
+      render(
+        <WarrantyPanel selected loading={false} error={null}
+          outlook={{ ...outlook, coverages: [{ ...outlook.coverages[0], expires_at }] }}
+          onRetry={vi.fn()} />,
+      );
+      expect(screen.getByText(/ends —/)).toHaveTextContent('400 days left');
+      expect(screen.getByText('Basic Limited')).toBeInTheDocument();
+      expect(screen.getByText(outlook.assumption)).toBeInTheDocument();
+    },
+  );
+
+  it.each([null, undefined])('handles a missing expiration date (%s) in the runtime payload', (expires_at) => {
+    const payload: WarrantyOutlook = JSON.parse(JSON.stringify({
+      ...outlook,
+      coverages: [{ ...outlook.coverages[0], expires_at }],
+    }));
+    render(
+      <WarrantyPanel selected loading={false} error={null} outlook={payload} onRetry={vi.fn()} />,
+    );
+    expect(screen.getByText(/ends —/)).toHaveTextContent('400 days left');
+    expect(screen.getByText(outlook.assumption)).toBeInTheDocument();
+  });
+
+  it.each(['km', 'mi'])('preserves null versus real zero distance allowance, supplied coverage ordering and countdown clamping in %s', (distance) => {
+    preferences.distance = distance;
     render(
       <WarrantyPanel selected loading={false} error={null}
         outlook={{
@@ -53,9 +170,9 @@ describe('WarrantyPanel', () => {
     const timeOnly = screen.getByText('Time-only coverage').parentElement;
     const exhausted = screen.getByText('Exhausted distance allowance').parentElement;
     expect(timeOnly).toHaveTextContent('0 days left');
-    expect(timeOnly).not.toHaveTextContent('km left');
+    expect(timeOnly).not.toHaveTextContent(`${distance} remaining`);
     expect(exhausted).toHaveTextContent('0 days left');
-    expect(exhausted).toHaveTextContent(/0(?:[,.]0+)? km left/);
+    expect(exhausted).toHaveTextContent(`0 ${distance} remaining`);
     expect(screen.getByText('Expiring soon')).toBeInTheDocument();
     expect(screen.getByText('Expired')).toBeInTheDocument();
     expect(timeOnly?.parentElement?.nextElementSibling).toBe(exhausted?.parentElement);

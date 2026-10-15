@@ -53,6 +53,21 @@ function renderBar(overrides: Omit<Partial<NotificationFilterBarProps>, 'onChang
 }
 
 describe('NotificationFilterBar — severity chips', () => {
+  it('presents warning as Warn without rewriting raw aliases or unknown values on unrelated edits', () => {
+    const filters = Object.assign({ severity: ['warn'] as ('info' | 'warn' | 'critical')[], archived: true }, {
+      severity: ['warning', 'custom', 'constructor'],
+    });
+    const { onChange } = renderBar({ filters });
+    expect(screen.getByRole('button', { name: /^warn$/i })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(screen.getByTestId('active-filter-chips')).getByText('Warn, custom, constructor')).toBeInTheDocument();
+    expect(onChange).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByRole('combobox', { name: 'Vehicle' }), { target: { value: '2' } });
+    expect(onChange).toHaveBeenLastCalledWith({ ...filters, vehicle_id: [2] });
+    fireEvent.click(screen.getByRole('button', { name: /^warn$/i }));
+    expect(onChange).toHaveBeenLastCalledWith({ ...filters, severity: ['custom', 'constructor'] });
+    expect(filters.severity).toEqual(['warning', 'custom', 'constructor']);
+  });
+
   it('renders a labelled severity group with pressed state driven by filters', () => {
     renderBar({ filters: { severity: ['warn'] } });
 

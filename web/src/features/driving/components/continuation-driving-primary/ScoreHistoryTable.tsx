@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { DataTable, type Column } from '@/components/ui';
+import { formatDateShort } from '@/lib/dateFormat';
 import type { HistoryRow } from '../../pages/DriveScorePage';
 
 interface ScoreHistoryTableProps {
@@ -22,6 +23,17 @@ export function ScoreHistoryTable({ rows, columns, sortKey, sortDir, onSort }: S
       sortDir={sortDir}
       onSort={onSort}
       mobileColumns={['date', 'score', 'grade']}
+      mobilePresentation={{
+        roles: { date: 'title', score: 'primary', grade: 'badge' },
+        displayValue: (row, key) => {
+          switch (key) {
+            case 'date': return formatDateShort(row.ts);
+            case 'score': return `${row.total}/100`;
+            case 'grade': return row.grade;
+            default: return null;
+          }
+        },
+      }}
       exportable
       exportFilename="drive-score-history"
       exportRow={(row) => ({

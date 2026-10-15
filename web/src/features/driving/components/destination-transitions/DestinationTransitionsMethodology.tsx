@@ -12,6 +12,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { AlertBanner } from '@/components/feedback';
 import { GlassPanel, Heading, PanelTitle, Text } from '@/components/ui';
+import { typography } from '@/lib/tokens';
 
 import type { DestinationTransitionResult } from '../../lib/destinationTransitions';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -163,10 +164,10 @@ export function DestinationTransitionsMethodology({
     <section data-testid="destination-methodology">
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
-          <FlaskConical className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <FlaskConical className={`h-4 w-4 ${typography.color.muted}`} aria-hidden="true" />
           {t('destinationTransitions.method.title', 'Methodology and limitations')}
         </PanelTitle>
-        <Text as="p" variant="caption" className="mb-4">
+        <Text as="p" variant="bodySm" className="mb-4">
           {t(
             'destinationTransitions.method.subtitle',
             'Definitions, continuity rules, descriptive formulas, evidence gates, calendar scope, and omitted inputs.',
@@ -178,16 +179,16 @@ export function DestinationTransitionsMethodology({
               key={item.key}
               className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4"
             >
-              <div className="mb-2 flex items-center gap-2 text-cyan-300">
+              <div className={`mb-2 flex items-center gap-2 ${typography.color.muted}`}>
                 {item.icon}
-                <Heading level="sub">{item.title}</Heading>
+                <Heading level="sub" className={typography.color.primary}>{item.title}</Heading>
               </div>
               <Text as="p" variant="bodySm">{item.body}</Text>
             </article>
           ))}
         </div>
         <AlertBanner className="mt-4" variant="warning">
-          <Text as="p" variant="caption">
+          <Text as="p" variant="bodySm">
             {t(
               'destinationTransitions.method.notice',
               'Use this workspace only as returned historical evidence; no future destination is promised.',

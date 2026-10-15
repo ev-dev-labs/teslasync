@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen, within } from '@testing-library/react';
+import { createInstance } from 'i18next';
+import canonicalEnglish from '@/i18n/en.json';
+import generatedEnglish from '@/i18n/en/locale-home-energy.json';
 import { severityTokens } from '@/lib/tokens';
 import type { Violation } from '../lib/types';
 import { ConstraintViolationsPanel } from './ConstraintViolationsPanel';
@@ -22,6 +25,34 @@ function expectDecorativeIcon(container: HTMLElement, glyph: string, foreground:
 }
 
 describe('ConstraintViolationsPanel severity icon presentation', () => {
+  it('resolves every violation template from canonical and generated English without fallbacks', async () => {
+    const messages = [
+      ['deadlineInfeasible', { vehicleName: 'Family vehicle' }, 'Family vehicle cannot reach its target state of charge before its departure deadline.'],
+      ['vehicleShortfall', { vehicleName: 'Second vehicle', unmet: '1.25 kWh' }, 'Second vehicle is projected to fall short of its target by 1.25 kWh.'],
+      ['panelImportExceeded', { slot: 0 }, 'Grid import limit exceeded in slot #0.'],
+      ['panelExportExceeded', { slot: 4 }, 'Grid export limit exceeded in slot #4.'],
+      ['powerwallReserveBreach', { slot: 5 }, 'Powerwall dropped below its reserve floor in slot #5.'],
+      ['invalidInput', { detail: 'forecast_length_mismatch' }, 'Some plan inputs were invalid and were adjusted or dropped: forecast_length_mismatch'],
+      ['unknownVehicle', {}, 'A vehicle'],
+    ] as const;
+
+    for (const catalog of [canonicalEnglish, generatedEnglish]) {
+      const translations = createInstance();
+      await translations.init({
+        lng: 'en',
+        fallbackLng: false,
+        resources: { en: { translation: catalog } },
+        interpolation: { escapeValue: false },
+      });
+      for (const [name, variables, message] of messages) {
+        const key = `homeEnergy.violation.${name}`;
+        expect(translations.exists(key)).toBe(true);
+        expect(translations.t(key, variables)).toBe(message);
+      }
+    }
+    expect(generatedEnglish.homeEnergy.violation).toEqual(canonicalEnglish.homeEnergy.violation);
+  });
+
   it('uses a decorative semantic success icon only for the existing clean report', () => {
     const { container } = render(<ConstraintViolationsPanel violations={[]} />);
 

@@ -40,7 +40,12 @@ func (h *DriveHandler) ListByVehicle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	limit, offset := pagination(r)
-	startTime, endTime := parseDateRange(r)
+	startTime, endTime, err := apiparams.ParseDateRangeValues(r.URL.Query().Get("start"), r.URL.Query().Get("end"))
+	if err != nil {
+		span.RecordError(err)
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	drives, err := h.driveRepo.GetByVehicle(ctx, vehicleID, limit, offset, startTime, endTime)
 	if err != nil {
 		span.RecordError(err)

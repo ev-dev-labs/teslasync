@@ -18,8 +18,8 @@
  *   6. Empty via a zero-length window.
  *   7. Quiet window — non-empty gap-filled days with zero counts still render the
  *      chart (not the empty state) and summarise "0 actions".
- *   8. Null-safety (NEW hardening) — NaN / null / negative / fractional counts are
- *      coerced so the summary total is exact and no `NaN` ever reaches the DOM.
+ *   8. Numeric validity — unknown counts remain gaps, not measured zeros;
+ *      signed nonnegative safe integers are valid, negative/fractional counts are not.
  *   9. Precedence — loading beats error when both flags are set.
  *  10. Null `data` prop — degrades to the empty state instead of throwing.
  *  11. className passthrough + decorative header icon.
@@ -35,6 +35,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { chartTokens } from '@/lib/tokens';
 
 import { ActivityTrendPanel, type ActivityTrendPanelProps } from './ActivityTrendPanel';
 import type { TrendPoint } from './myActivityAnalytics';
@@ -75,12 +76,12 @@ vi.mock('@/components/charts', async () => {
     chartGrid: null,
     axisTickSm: {},
     BarChart: ({ data, children }: { data?: unknown[]; children?: ReactNode }) => (
-      <div data-testid="bar-chart" data-count={String((data ?? []).length)}>
+      <div data-testid="bar-chart" data-count={String((data ?? []).length)} data-rows={JSON.stringify(data)}>
         {children}
       </div>
     ),
-    Bar: ({ dataKey }: { dataKey?: string }) => (
-      <div data-testid="bar" data-key={String(dataKey ?? '')} />
+    Bar: ({ dataKey, fill, name }: { dataKey?: string; fill?: string; name?: string }) => (
+      <div data-testid="bar" data-key={String(dataKey ?? '')} data-fill={fill} data-name={name} />
     ),
     XAxis: Inert,
     YAxis: Inert,
@@ -123,6 +124,20 @@ afterEach(() => {
 });
 
 describe('ActivityTrendPanel — populated', () => {
+  it('uses the neutral secondary role for the decorative heading icon without changing the series', () => {
+    renderPanel({ data: [point({ count: 4 })] });
+
+    const heading = screen.getByRole('heading', { name: TITLE });
+    const icon = heading.querySelector('svg');
+    expect(icon).toHaveClass('h-4', 'w-4', 'text-[var(--text-secondary)]');
+    expect(icon).not.toHaveClass('text-cyan-300');
+    expect(icon).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getByRole('img', { name: '4 actions across 1 days' })).toBeInTheDocument();
+    expect(screen.getByTestId('bar')).toHaveAttribute('data-key', 'count');
+    expect(screen.getByTestId('bar')).toHaveAttribute('data-name', 'Actions');
+    expect(screen.getByTestId('bar')).toHaveAttribute('data-fill', chartTokens.series[5]);
+  });
+
   it('renders a single labelled chart region summarising total actions × days', () => {
     renderPanel({
       data: [
@@ -235,21 +250,64 @@ describe('ActivityTrendPanel — empty states', () => {
 });
 
 describe('ActivityTrendPanel — null safety + a11y', () => {
-  it('coerces NaN / null / negative / fractional counts so the summary total is exact and NaN-free', () => {
+  it.each([
+    ['missing', undefined],
+    ['null', null],
+    ['NaN', Number.NaN],
+    ['positive infinity', Number.POSITIVE_INFINITY],
+    ['negative infinity', Number.NEGATIVE_INFINITY],
+    ['negative count', -4],
+    ['fractional count', 2.9],
+    ['negative fractional count', -2.9],
+    ['sub-unit fractional count', 0.1],
+    ['unsafe integer', Number.MAX_SAFE_INTEGER + 1],
+    ['numeric string', '4'],
+  ])('keeps %s counts unknown without discarding valid neighboring days', (_, count) => {
     const { container } = renderPanel({
       data: [
         point({ label: 'A', count: 3 }),
-        point({ label: 'B', count: Number.NaN as unknown as number }),
-        point({ label: 'C', count: null as unknown as number }),
-        point({ label: 'D', count: -4 }),
-        point({ label: 'E', count: 2.9 }),
-      ] as TrendPoint[],
+        // Exercise malformed runtime payloads without weakening the production type.
+        { day: '2024-04-02', label: 'B', count } as TrendPoint,
+        point({ label: 'C', count: 0 }),
+      ],
     });
 
-    // 3 + 0 (NaN) + 0 (null) + 0 (negative) + 2 (trunc 2.9) = 5 across 5 days.
-    expect(screen.getByRole('img', { name: '5 actions across 5 days' })).toBeInTheDocument();
-    // No arithmetic ever leaks to the DOM.
+    expect(screen.getByRole('img', { name: '— actions across 3 days' })).toBeInTheDocument();
+    expect(JSON.parse(screen.getByTestId('bar-chart').getAttribute('data-rows') ?? '[]'))
+      .toEqual([
+        { day: '2024-04-01', label: 'A', count: 3 },
+        { day: '2024-04-02', label: 'B', count: null },
+        { day: '2024-04-01', label: 'C', count: 0 },
+      ]);
+    expect(screen.queryByText(EMPTY)).toBeNull();
     expect(container.textContent).not.toContain('NaN');
+  });
+
+  it.each([0, -0, +4])('preserves the valid signed count %s', (count) => {
+    renderPanel({ data: [point({ count })] });
+
+    expect(screen.getByRole('img', { name: `${count} actions across 1 days` })).toBeInTheDocument();
+    expect(JSON.parse(screen.getByTestId('bar-chart').getAttribute('data-rows') ?? '[]')[0].count)
+      .toBe(count === 0 ? 0 : count);
+  });
+
+  it('does not announce an unsafe aggregate as an exact total', () => {
+    renderPanel({ data: [point({ count: Number.MAX_SAFE_INTEGER }), point({ count: 1 })] });
+
+    expect(screen.getByRole('img', { name: '— actions across 2 days' })).toBeInTheDocument();
+  });
+
+  it('keeps an all-unknown window distinct from an empty or measured-zero window', () => {
+    renderPanel({ data: [point({ count: Number.NaN }), point({ count: Number.POSITIVE_INFINITY })] });
+
+    expect(screen.getByRole('img', { name: '— actions across 2 days' })).toBeInTheDocument();
+    expect(screen.queryByText(EMPTY)).toBeNull();
+    expect(screen.queryByRole('img', { name: '0 actions across 2 days' })).toBeNull();
+    expect(JSON.parse(screen.getByTestId('bar-chart').getAttribute('data-rows') ?? '[]'))
+      .toEqual([
+        { day: '2024-04-01', label: 'Apr 1', count: null },
+        { day: '2024-04-01', label: 'Apr 1', count: null },
+      ]);
   });
 
   it('applies the caller className to the panel shell and marks the header icon decorative', () => {

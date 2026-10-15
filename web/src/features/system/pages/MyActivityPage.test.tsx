@@ -20,9 +20,9 @@
  *   7.  401 hard-gate — sign-in-required notice; sections suppressed.
  *   8.  Non-gate 500 — each section shows an inline error + Retry; the gate
  *       notice is NOT shown, and Retry re-issues the query.
- *   9.  Default window — the request carries a 30-day ISO range + limit=200.
- *   10. URL-driven range — start/end query params flow verbatim into the
- *       request as snake_case params.
+ *   9.  Default window — the request carries precise range instants + limit=200.
+ *   10. URL-driven range — legacy start/end bookmarks migrate to the shared
+ *       range without changing saved preferences.
  *   11. Header range interaction — changing the shared URL window refetches
  *       without a redundant page-level picker.
  *
@@ -33,10 +33,14 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter, useSearchParams } from 'react-router-dom';
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter, useLocation } from 'react-router-dom';
+import { SHARED_RANGE_STORAGE_KEY, useRangeState } from '@/hooks/useRangeState';
 import { Button } from '@/components/ui';
 import type { ReactNode } from 'react';
+import englishCatalog from '@/i18n/en.json';
+import activityCatalog from '@/i18n/en/locale-detail-activity.json';
+import systemCatalog from '@/i18n/en/locale-system.json';
 
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client');
@@ -142,19 +146,21 @@ function routeRequest(url: string, _opts?: ReqOpts): Promise<unknown> {
 }
 
 function HeaderRangeControl() {
-  const [, setParams] = useSearchParams();
-  return <Button type="button" data-testid="header-activity-range" onClick={() => setParams((params) => {
-    const next = new URLSearchParams(params);
-    next.set('start', '2015-01-01');
-    next.set('end', '2026-09-25');
-    return next;
-  })}>Change header range</Button>;
+  const { setRange, setPreset } = useRangeState();
+  const location = useLocation();
+  return <>
+    <Button type="button" data-testid="header-activity-range" onClick={() =>
+      setRange({ start: '2015-01-01', end: '2026-09-25' }, 'custom')
+    }>Change header range</Button>
+    <Button type="button" onClick={() => setPreset('24h')}>Last 24 hours</Button>
+    <output data-testid="activity-url">{location.search}</output>
+  </>;
 }
 
-function renderPage(initialEntry = '/my-activity') {
+function renderPage(initialEntry = '/me/activity', enabled = true) {
   const qc = new QueryClient({
     defaultOptions: {
-      queries: { retry: false },
+      queries: { retry: false, enabled },
       mutations: { retry: false },
     },
   });
@@ -178,6 +184,7 @@ function kpiCard(label: string): HTMLElement {
 }
 
 beforeEach(() => {
+  onlineManager.setOnline(true);
   activityResult = baseEntries();
   activityError = null;
   pending = false;
@@ -187,10 +194,44 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  onlineManager.setOnline(true);
   vi.restoreAllMocks();
 });
 
 describe('MyActivityPage — Project Apex elevation', () => {
+  it.each(['paused', 'idle'] as const)('keeps initial %s activity unknown with every shell and recovers', async (fetchStatus) => {
+    if (fetchStatus === 'paused') onlineManager.setOnline(false);
+    renderPage('/me/activity', fetchStatus !== 'idle');
+
+    expect(screen.getByText(fetchStatus === 'paused' ? 'Refresh paused' : 'Pending')).toBeInTheDocument();
+    expect(screen.getByText('No requested source has returned usable data yet.')).toBeInTheDocument();
+    for (const title of ['Activity over time', 'Top actions', 'By category', 'By hour of day', 'Activity feed']) {
+      const panel = screen.getByRole('heading', { name: title }).closest('[data-print-card]');
+      expect(panel).not.toBeNull();
+      expect(within(panel as HTMLElement).getByText('Unknown')).toBeInTheDocument();
+      expect(panel!.querySelector('[aria-busy="true"]')).toBeNull();
+    }
+    expect(screen.getByRole('region', { name: 'Activity summary' })).not.toHaveAttribute('aria-busy', 'true');
+    for (const label of ['Total actions', 'Active days', 'Action types', 'Entities touched', 'Last active']) {
+      expect(within(kpiCard(label)).getByText('—')).toBeInTheDocument();
+      expect(within(kpiCard(label)).queryByText('0')).not.toBeInTheDocument();
+    }
+    expect(screen.queryByText(/no (recent )?activity|no actions|no categories/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/offline|service unavailable|server error/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading activity feed' })).not.toBeInTheDocument();
+    expect(activityCalls()).toHaveLength(0);
+
+    if (fetchStatus === 'paused') {
+      act(() => onlineManager.setOnline(true));
+    } else {
+      fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    }
+    expect(await within(kpiCard('Total actions')).findByText('6')).toBeInTheDocument();
+    expect(screen.queryByText('Unknown')).not.toBeInTheDocument();
+    expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pending')).not.toBeInTheDocument();
+  });
+
   it('renders panel shells + skeletons while the feed query is pending', () => {
     pending = true;
     renderPage();
@@ -305,7 +346,12 @@ describe('MyActivityPage — Project Apex elevation', () => {
     renderPage();
 
     expect(await screen.findByText('Activity feed is not supported')).toBeInTheDocument();
-    expect(screen.getByText(/ForwardAuth/)).toBeInTheDocument();
+    const description = 'Per-user activity is only available when TeslaSync is deployed behind an identity provider (ForwardAuth). Ask your administrator to configure FORWARD_AUTH_HEADER.';
+    expect(screen.getByText(description)).toBeInTheDocument();
+    expect(englishCatalog.activity.myActivity.disabled.description).toBe(description);
+    expect(activityCatalog.activity.myActivity.disabled.description).toBe(description);
+    expect(systemCatalog.activity.myActivity.disabled.description).toBe(description);
+    expect(screen.queryByText(/AUTH_FORWARD_HEADER/)).not.toBeInTheDocument();
 
     // Hard gate replaces the whole bento — no panels, no KPI band.
     expect(screen.queryByText('Activity feed')).toBeNull();
@@ -361,26 +407,74 @@ describe('MyActivityPage — Project Apex elevation', () => {
     });
   });
 
-  it('requests a default 30-day ISO window with limit=200', async () => {
+  it('requests precise default range instants with limit=200', async () => {
     renderPage();
 
     await waitFor(() => {
       expect(activityCalls().length).toBeGreaterThan(0);
     });
-    expect(activityCalls()[0]).toMatch(
-      /^\/users\/me\/activity\?start=\d{4}-\d{2}-\d{2}&end=\d{4}-\d{2}-\d{2}&limit=200$/,
-    );
+    const params = new URL(activityCalls()[0], 'http://localhost').searchParams;
+    expect(params.get('start')).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(params.get('end')).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(Date.parse(params.get('end')!)).toBeGreaterThan(Date.parse(params.get('start')!));
+    expect(params.get('limit')).toBe('200');
   });
 
-  it('forwards start/end URL params verbatim as snake_case query params', async () => {
-    renderPage('/my-activity?start=2024-01-01&end=2024-02-01');
+  it('migrates legacy bookmarks to the shared calendar range and exclusive end without overwriting preferences', async () => {
+    const saved = JSON.stringify({ version: 2, start: '2025-06-01', end: '2025-06-08' });
+    window.localStorage.setItem(SHARED_RANGE_STORAGE_KEY, saved);
+    renderPage('/me/activity?start=2024-01-01&end=2024-02-01&filter=auth');
 
     await waitFor(() => {
       expect(activityCalls().length).toBeGreaterThan(0);
     });
-    expect(activityCalls()[0]).toBe(
-      '/users/me/activity?start=2024-01-01&end=2024-02-01&limit=200',
-    );
+    const params = new URL(activityCalls()[0], 'http://localhost').searchParams;
+    expect(params.get('start')).toBe(new Date('2024-01-01T00:00:00').toISOString());
+    expect(params.get('end')).toBe(new Date('2024-02-02T00:00:00').toISOString());
+    const url = new URLSearchParams(screen.getByTestId('activity-url').textContent!);
+    expect(url.get('from')).toBe('2024-01-01');
+    expect(url.get('to')).toBe('2024-02-01');
+    expect(url.get('filter')).toBe('auth');
+    expect(url.has('start')).toBe(false);
+    expect(url.has('end')).toBe(false);
+    expect(window.localStorage.getItem(SHARED_RANGE_STORAGE_KEY)).toBe(saved);
+  });
+
+  it('prefers canonical header bounds over conflicting legacy bounds', async () => {
+    renderPage('/me/activity?from=2025-06-01&to=2025-06-08&start=2024-01-01&end=2024-02-01');
+    await waitFor(() => expect(activityCalls().length).toBeGreaterThan(0));
+    const params = new URL(activityCalls()[0], 'http://localhost').searchParams;
+    expect(params.get('start')).toBe(new Date('2025-06-01T00:00:00').toISOString());
+    expect(params.get('end')).toBe(new Date('2025-06-09T00:00:00').toISOString());
+  });
+
+  it('restores the saved shared range instead of an obsolete page preference', async () => {
+    const saved = JSON.stringify({ version: 2, start: '2025-06-01', end: '2025-06-08' });
+    const pageSaved = JSON.stringify({ version: 2, start: '2024-01-01', end: '2024-02-01' });
+    window.localStorage.setItem(SHARED_RANGE_STORAGE_KEY, saved);
+    window.localStorage.setItem('my-activity.range', pageSaved);
+    renderPage();
+    await waitFor(() => expect(activityCalls().length).toBeGreaterThan(0));
+    const params = new URL(activityCalls()[0], 'http://localhost').searchParams;
+    expect(params.get('start')).toBe(new Date('2025-06-01T00:00:00').toISOString());
+    expect(params.get('end')).toBe(new Date('2025-06-09T00:00:00').toISOString());
+    expect(window.localStorage.getItem(SHARED_RANGE_STORAGE_KEY)).toBe(saved);
+    expect(window.localStorage.getItem('my-activity.range')).toBe(pageSaved);
+    expect(await within(kpiCard('Total actions')).findByText('6')).toBeInTheDocument();
+  });
+
+  it('uses exact rolling instants when the shared header selects 24 hours', async () => {
+    const now = Date.parse('2026-10-14T20:27:46.810Z');
+    vi.spyOn(Date, 'now').mockReturnValue(now);
+    renderPage();
+    await waitFor(() => expect(activityCalls().length).toBeGreaterThan(0));
+    fireEvent.click(screen.getByRole('button', { name: 'Last 24 hours' }));
+    await waitFor(() => {
+      const params = new URL(activityCalls().at(-1)!, 'http://localhost').searchParams;
+      expect(params.get('start')).toBe('2026-10-13T20:27:46.810Z');
+      expect(params.get('end')).toBe('2026-10-14T20:27:46.810Z');
+    });
+    expect(await within(kpiCard('Total actions')).findByText('6')).toBeInTheDocument();
   });
 
   it('refetches when the shared header changes the URL range', async () => {
@@ -394,7 +488,10 @@ describe('MyActivityPage — Project Apex elevation', () => {
     expect(screen.queryByTestId('my-activity-range')).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId('header-activity-range'));
     await waitFor(() => {
-      expect(activityCalls().some((u) => u.includes('start=2015-01-01'))).toBe(true);
+      expect(activityCalls().some((u) =>
+        new URL(u, 'http://localhost').searchParams.get('start') ===
+          new Date('2015-01-01T00:00:00').toISOString()
+      )).toBe(true);
     });
   });
 
@@ -457,6 +554,36 @@ describe('MyActivityPage — Project Apex elevation', () => {
     fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
     await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument());
     expect(within(kpiCard('Total actions')).getByText('6')).toBeInTheDocument();
+  });
+
+  it('retains successful empty results and measured zero through a refresh failure and recovery', async () => {
+    activityResult = [];
+    const { queryClient } = renderPage();
+    expect(await screen.findByText('No recent activity in this window.')).toBeInTheDocument();
+    expect(within(kpiCard('Total actions')).getByText('0')).toBeInTheDocument();
+
+    activityError = new ApiError('refresh unavailable', 500);
+    await act(async () => {
+      await queryClient.refetchQueries({ queryKey: ['users', 'me', 'activity'] });
+    });
+    const warning = await screen.findByTestId('stale-refresh-warning');
+    expect(within(kpiCard('Total actions')).getByText('0')).toBeInTheDocument();
+    for (const message of [
+      'No activity recorded in this window.', 'No actions in this window.',
+      'No categories to break down yet.', 'No activity to chart by hour yet.',
+      'No recent activity in this window.',
+    ]) {
+      expect(screen.getByText(message)).toBeInTheDocument();
+    }
+    expect(screen.queryByText('Unknown')).not.toBeInTheDocument();
+    expect(screen.queryByText('Server error')).not.toBeInTheDocument();
+
+    activityError = null;
+    activityResult = baseEntries();
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    expect(await within(kpiCard('Total actions')).findByText('6')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument());
+    expect(screen.queryByText('No recent activity in this window.')).not.toBeInTheDocument();
   });
 
 });

@@ -11,10 +11,10 @@ import { Badge, Button, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { VehicleEvidenceBrief } from '../components/operationalbrief-n-z/VehicleEvidenceBrief';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { useDataState } from '@/hooks/useDataState';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useAnalysisWindow } from '@/hooks/useAnalysisWindow';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { formatDateTime } from '@/lib/dateFormat';
 import { cn } from '@/lib/cn';
 import { neonColorMap } from '@/lib/tokens';
 import { PendingPanels } from '@/features/vehicles/components/physics-ledger/PendingPanels';
@@ -52,6 +52,7 @@ const UNRESOLVED_SECTIONS = [
 ] as const;
 
 export default function PhysicsLedgerPage() {
+  const { formatDateTime } = useDateFormat();
   const { t: translate } = useTranslation();
   const t: Translate = (key, fallback, options) => String(translate(key, fallback, options));
   const { selected: hours, window, pickWindow } = useAnalysisWindow('hours', WINDOW_PRESETS, 24);

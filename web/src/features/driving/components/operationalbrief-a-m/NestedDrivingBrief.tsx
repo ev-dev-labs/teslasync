@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { OperationalBrief } from '@/components/data-display';
 import { Text } from '@/components/ui';
-import type { StatMetric, StatPeriod } from '@/components/data-display/stat-reference';
+import type { StatMetric, StatPeriod } from '@/components/data-display';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
-import type { MetricPreferences } from '@/lib/metric-reference';
+import type { MetricPreferences } from '@/components/data-display';
 
 export interface NestedDrivingMetric extends StatMetric {
   /** Source presentation is retained separately from the independently validated raw operand. */

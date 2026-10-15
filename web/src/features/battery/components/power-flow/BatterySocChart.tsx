@@ -10,6 +10,8 @@ import {
 } from '@/components/charts';
 import { cn } from '@/lib/cn';
 import { formatDateShort } from '@/lib/dateFormat';
+import { fmtPercent } from '@/lib/numberFormat';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import type { PowerHistoryPoint } from './PowerHistoryChart';
 
 interface BatterySocChartProps {
@@ -36,13 +38,15 @@ export function formatSocTimeTick(value: number | string | Date | null | undefin
 }
 
 /** Format a Y-axis state-of-charge tick as a percentage label, null-safe. */
-export function formatSocPercentTick(value: number | null | undefined): string {
-  return value == null || !Number.isFinite(value) ? '—' : `${value}%`;
+export function formatSocPercentTick(value: number | null | undefined, formatPercent = fmtPercent): string {
+  return value == null || !Number.isFinite(value) ? '—' : formatPercent(value);
 }
 
 /** Battery state-of-charge percentage over the selected history window. */
 export function BatterySocChart({ data, loading, error, onRetry, className }: BatterySocChartProps) {
   const { t } = useTranslation();
+  const { fmtPercent: formatPercent } = useNumberFormatting();
+  const formatSoc = (value: number | null | undefined) => formatSocPercentTick(value, formatPercent);
 
   if (error) {
     return (
@@ -70,7 +74,7 @@ export function BatterySocChart({ data, loading, error, onRetry, className }: Ba
       exportData={evidence}
       dataColumns={[
         { key: 'time', label: t('powerFlow.lastUpdate', 'Updated'), format: value => value != null ? formatSocTimeTick(Number(value)) : '—' },
-        { key: 'soc', label: t('powerFlow.stateOfCharge', 'State of Charge'), format: value => value != null ? formatSocPercentTick(Number(value)) : '—' },
+        { key: 'soc', label: t('powerFlow.stateOfCharge', 'State of Charge'), format: value => formatSoc(typeof value === 'number' ? value : undefined) },
       ]}
     >
       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
@@ -81,8 +85,8 @@ export function BatterySocChart({ data, loading, error, onRetry, className }: Ba
             tickFormatter={(v) => formatSocTimeTick(v)}
             {...axisTick}
           />
-          <YAxis domain={[0, 100]} tickFormatter={(v: number) => formatSocPercentTick(v)} {...axisTick} />
-          <Tooltip content={<ChartTooltip />} />
+          <YAxis domain={[0, 100]} tickFormatter={formatSoc} {...axisTick} />
+          <Tooltip content={<ChartTooltip valueFormatter={value => formatSoc(typeof value === 'number' ? value : undefined)} />} />
           <Line
             {...AREA_DEFAULTS}
             dataKey="soc"

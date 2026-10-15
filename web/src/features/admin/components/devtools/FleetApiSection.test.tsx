@@ -465,6 +465,39 @@ describe('FleetTelemetrySubscribeTool', () => {
       await screen.findByRole('dialog', { name: 'Fleet Telemetry Signal Configuration' }),
     ).toBeInTheDocument()
   })
+
+  it('submits only the selected signals with their configured intervals', async () => {
+    install({
+      match: (path) => (path === '/dev-tools/fleet-telemetry-subscribe' ? { ok: true } : undefined),
+    })
+    const card = await findToolCard('Telemetry sub')
+    await selectVehicle(card, 'Car One', 'VIN1')
+    fireEvent.click(within(card).getByRole('button', { name: /Configure signals/ }))
+
+    const dialog = await screen.findByRole('dialog', { name: 'Fleet Telemetry Signal Configuration' })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Select VehicleSpeed' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Select Soc' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Select Gear' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Deselect Gear' }))
+
+    fireEvent.change(within(dialog).getByRole('combobox', { name: 'Sampling interval for VehicleSpeed' }), {
+      target: { value: '1' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Subscribe 2 Signals' }))
+
+    expect(screen.queryByRole('dialog', { name: 'Fleet Telemetry Signal Configuration' })).not.toBeInTheDocument()
+    expect(within(card).getByRole('button', { name: 'Configure signals (2)' })).toBeInTheDocument()
+    fireEvent.click(within(card).getByRole('button', { name: 'Subscribe' }))
+
+    await waitFor(() =>
+      expect(callBody('/dev-tools/fleet-telemetry-subscribe')).toMatchObject({
+        vins: ['VIN1'],
+        fields: ['VehicleSpeed', 'Soc'],
+        interval_seconds: 1,
+        field_intervals: { Soc: 30 },
+      }),
+    )
+  })
 })
 
 describe('FleetTelemetryConfigTool', () => {

@@ -11,6 +11,9 @@ import { EfficiencyTargetSectionBody } from './EfficiencyTargetSectionBody';
 import type { EfficiencyTargetSectionState } from './types';
 import { useEfficiencyTargetDisplay } from './useEfficiencyTargetDisplay';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDriveHistory } from '@/api/hooks/useDriving';
+import { useDataState } from '@/hooks/useDataState';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 
 interface GoalPulseProps {
   summary: TargetSummary;
@@ -21,6 +24,15 @@ interface GoalPulseProps {
 export function GoalPulse({ summary, state, className }: GoalPulseProps) {
   useNumberFormatting();
   const { t } = useTranslation();
+  const { vehicleId } = useSelectedVehicle();
+  const history = useDriveHistory(vehicleId != null ? String(vehicleId) : undefined, 1000);
+  const source = useDataState(history, { provenance: 'historical' });
+  const sourceState = {
+    ...state,
+    isLoading: state.isLoading || source.status === 'initial',
+    error: source.fatalError ?? state.error,
+  };
+  const retained = source.hasData && source.status === 'stale';
   const { formatDistance, formatEfficiency, formatWeek } =
     useEfficiencyTargetDisplay();
   const latest = summary.latestCompletedWeek;
@@ -74,7 +86,7 @@ export function GoalPulse({ summary, state, className }: GoalPulseProps) {
         </Badge>
       </div>
 
-      <EfficiencyTargetSectionBody state={state} className="mt-4 min-h-64">
+      <EfficiencyTargetSectionBody state={sourceState} className="mt-4 min-h-64">
         <div className="grid min-h-64 gap-3 md:grid-cols-2">
           <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
             <div className="flex items-start justify-between gap-2">
@@ -102,7 +114,8 @@ export function GoalPulse({ summary, state, className }: GoalPulseProps) {
             {latest ? (
               <div className="mt-5 space-y-3">
                 <NestedDrivingBrief title={t('effTarget.brief.completedTitle', 'Completed-week consumption')}
-                  description={marginLabel} loading={state.isLoading} unavailable={state.error != null}
+                  description={marginLabel} loading={sourceState.isLoading}
+                  retained={retained} unavailable={sourceState.error != null}
                   period={{ kind: 'unknown', label: formatWeek(latest.weekStart),
                     reason: t('effTarget.brief.completedScope', 'Latest completed eligible week; target grading and streaks exclude the active week.') }}
                   metrics={[{ metricId: 'efficiency', occurrenceId: 'completed-consumption',
@@ -154,7 +167,8 @@ export function GoalPulse({ summary, state, className }: GoalPulseProps) {
             {active ? (
               <NestedDrivingBrief title={t('effTarget.brief.activeTitle', 'Active-week observations')}
                 description={t('effTarget.status.inProgress', 'In progress · not graded')}
-                loading={state.isLoading} unavailable={state.error != null}
+                loading={sourceState.isLoading} retained={retained}
+                unavailable={sourceState.error != null}
                 period={{ kind: 'unknown', label: formatWeek(active.weekStart),
                   reason: t('effTarget.pulse.activeHint', 'Snapshot only') }}
                 metrics={[

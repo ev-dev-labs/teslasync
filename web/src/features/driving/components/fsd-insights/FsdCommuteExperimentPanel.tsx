@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Badge, DataTable, GlassPanel, PanelTitle, Text, type Column } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
+import { neonColorMap, typography } from '@/lib/tokens';
 
 import type { FsdInsights } from '@/types/fsd';
 
@@ -80,7 +81,7 @@ export function FsdCommuteExperimentPanel({
   return (
     <GlassPanel className="p-4 sm:p-5" data-testid="fsd-commute-experiment">
       <PanelTitle className="mb-1 flex items-center gap-2">
-        <FlaskConical className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <FlaskConical className={`h-4 w-4 ${typography.color.muted}`} aria-hidden="true" />
         {t('fsd.experiment.title', 'Same-route experiment')}
       </PanelTitle>
       <Text as="p" variant="caption" className="mb-3">
@@ -96,7 +97,7 @@ export function FsdCommuteExperimentPanel({
             )}
       </Text>
       {(experiment.unknownDayCount > 0 || experiment.resetCount > 0) && (
-        <Text as="p" variant="caption" className="mb-3">
+        <Text as="p" variant="caption" className={`mb-3 ${neonColorMap.amber.text}`}>
           {t(
             'fsd.experiment.honesty',
             '{{unknown}} days with no counter · {{resets}} resets. Those km are not zero.',

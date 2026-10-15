@@ -3,6 +3,7 @@ package drives
 import (
 	"context"
 	"fmt"
+	"math"
 	"net/http"
 	"time"
 
@@ -55,7 +56,7 @@ func NewDriveDetail(db *database.DB, state signal.StateReader, live signal.LiveS
 //
 // NOTE: per-row "power" is NOT mapped from a Tesla signal — Fleet Telemetry
 // does not emit PackPower. Power is computed from PackVoltage × PackCurrent
-// by derivePowerKw() AFTER projection. See enrichLiveDrive (same formula).
+// in watts AFTER projection. See enrichLiveDrive (same formula).
 //
 // Elevation is intentionally absent: Tesla Fleet Telemetry does not emit
 // an Elevation atomic (see internal/tesla/codec/flatten.go and the
@@ -96,8 +97,8 @@ var driveTelemetryFieldMappings = []signal.FieldMapping{
 // the legacy DriveTelemetryReading JSON shape with "ts" renamed to
 // "created_at" and per-row "power" derived from PackVoltage × PackCurrent.
 // Fields stay `any` so a missing signal still marshals as an explicit null
-// exactly like the map version did; "power" is omitempty so rows without
-// both pack readings omit the key rather than emitting null. Struct fields
+// exactly like the map version did; "power" is nullable watts so missing or
+// invalid pack readings remain distinct from measured zero. Struct fields
 // are declared in alphabetical JSON-key order to match encoding/json's
 // sorted map output key-for-key.
 //
@@ -119,7 +120,7 @@ type driveTelemetryRow struct {
 	PackCurrent   any       `json:"pack_current"`
 	PackVoltage   any       `json:"pack_voltage"`
 	PassengerTemp any       `json:"passenger_temp"`
-	Power         any       `json:"power,omitempty"`
+	Power         *float64  `json:"power"`
 	RatedRange    any       `json:"rated_range"`
 	Soc           any       `json:"soc"`
 	Speed         any       `json:"speed"`
@@ -130,10 +131,10 @@ type driveTelemetryRow struct {
 }
 
 // timelineRowsToDriveTelemetry converts ordered TimelineRows into the legacy
-// flat-pivot telemetry shape in a single pass, deriving per-row power (kW)
-// as PackVoltage × PackCurrent / 1000.0. Sign is preserved so downstream
+// flat-pivot telemetry shape in a single pass, deriving per-row power (W)
+// as PackVoltage × PackCurrent. Sign is preserved so downstream
 // chart consumers can distinguish drive (+) from regen (−); rows without
-// both pack readings carry no "power" key. This mirrors the formula used by
+// valid pack readings carry null power. This mirrors the formula used by
 // enrichLiveDrive() for live drive average-power — Tesla Fleet Telemetry
 // does not emit a per-row PackPower signal.
 func timelineRowsToDriveTelemetry(rows []signal.TimelineRow) []driveTelemetryRow {
@@ -163,14 +164,31 @@ func timelineRowsToDriveTelemetry(rows []signal.TimelineRow) []driveTelemetryRow
 			TireRL:        f["tire_pressure_rl"],
 			TireRR:        f["tire_pressure_rr"],
 		}
-		if v, vOk := toFloatOk(f["pack_voltage"]); vOk {
-			if c, cOk := toFloatOk(f["pack_current"]); cOk {
-				row.Power = safeFloat(v * c / 1000.0)
+		if v, vOk := drivePackReading(f["pack_voltage"]); vOk {
+			if c, cOk := drivePackReading(f["pack_current"]); cOk {
+				power := v * c
+				if !math.IsNaN(power) && !math.IsInf(power, 0) {
+					row.Power = &power
+				}
 			}
 		}
 		out[i] = row
 	}
 	return out
+}
+
+func drivePackReading(value any) (float64, bool) {
+	// The shared signal coercer accepts legacy booleans as 0/1, but those
+	// are not measured voltage/current and must not fabricate zero power.
+	raw := value
+	if envelope, ok := raw.(map[string]any); ok {
+		raw = envelope["value"]
+	}
+	if _, ok := raw.(bool); ok {
+		return 0, false
+	}
+	number, ok := toFloatOk(value)
+	return number, ok && !math.IsNaN(number) && !math.IsInf(number, 0)
 }
 
 // drivePositionFieldMappings projects the signal_log change feed into the

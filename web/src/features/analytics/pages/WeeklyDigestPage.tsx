@@ -117,6 +117,13 @@ export default function WeeklyDigestPage() {
   const parsedVehicleId = Number(selectedVehicleId);
   const aiVehicleId =
     selectedVehicleId !== '' && Number.isFinite(parsedVehicleId) ? parsedVehicleId : undefined;
+  // Compare calendar Mondays, not elapsed local hours (DST weeks vary in length).
+  // The narration tool anchors its offsets to the current UTC ISO week.
+  const now = new Date();
+  const utcMonday = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()
+    - ((now.getUTCDay() + 6) % 7));
+  const selectedMonday = Date.UTC(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate());
+  const aiWeekOffset = (selectedMonday - utcMonday) / (7 * 24 * 60 * 60 * 1000);
 
   // Period metadata describes, but never controls, the independent digest
   // week. Queries, notification identity and workspace vehicle stay owned by
@@ -329,7 +336,12 @@ export default function WeeklyDigestPage() {
         unchanged and remains the canonical baseline for every user.
       */}
       <FadeIn delay={0.25}>
-        <AIDigestNarration vehicleId={aiVehicleId} />
+        <AIDigestNarration
+          vehicleId={aiVehicleId}
+          weekOffsetWeeks={aiWeekOffset}
+          weekStart={weekStart.toISOString()}
+          weekLabel={weekLabel}
+        />
       </FadeIn>
     </PageLayout>
   );

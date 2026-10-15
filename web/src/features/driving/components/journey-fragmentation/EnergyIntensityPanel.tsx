@@ -10,6 +10,7 @@ import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 import type { EnergyGroupSummary } from '../../lib/journeyFragmentation';
 import { JourneyFragmentationSectionProps, percent } from './_types';
+import { PendingEvidence } from './PendingEvidence';
 
 function groupLabel(group: EnergyGroupSummary, t: (key: string, fallback: string, options?: Record<string, unknown>) => string) {
   return t('journeyFragmentation.energy.coverage', '{{complete}} complete-energy journeys of {{total}} ({{coverage}} distance coverage)', {
@@ -19,7 +20,7 @@ function groupLabel(group: EnergyGroupSummary, t: (key: string, fallback: string
   });
 }
 
-export function EnergyIntensityPanel({ result }: JourneyFragmentationSectionProps) {
+export function EnergyIntensityPanel({ result, state, loading = false }: JourneyFragmentationSectionProps) {
   const { t } = useTranslation();
   const { formatDistance, formatEnergy, unitPrefs } = useUnits();
   const displayIntensity = (value: number | null): string => {
@@ -28,6 +29,11 @@ export function EnergyIntensityPanel({ result }: JourneyFragmentationSectionProp
     return `${formatEnergy(value * metersPerDisplayUnit)} / ${unitPrefs.distance}`;
   };
   const comparison = result.energyComparison;
+  const supportLabels: Record<typeof comparison.supportBand, string> = {
+    supported: t('departure.weekdays.supported', 'Supported'),
+    thin: t('seasonalEfficiency.supportBand.thin', 'Thin'),
+    unavailable: t('common.unavailable', 'Unavailable'),
+  };
   const metrics: StatMetric[] = [
     ...[
       { key: 'single', label: t('journeyFragmentation.energy.single', 'Single-drive journeys'), group: comparison.singleDrive },
@@ -44,7 +50,7 @@ export function EnergyIntensityPanel({ result }: JourneyFragmentationSectionProp
       label: t('journeyFragmentation.energy.difference', 'Observed energy-intensity difference'),
       display: { formatter: raw => ({ value: displayIntensity(raw), unit: '' }) },
       context: t('journeyFragmentation.energy.support', 'Support band: {{band}}; recommended minimum: {{count}} complete-energy journeys per group', {
-        band: comparison.supportBand, count: comparison.minimumSupportedJourneys,
+        band: supportLabels[comparison.supportBand], count: comparison.minimumSupportedJourneys,
       }) },
   ];
   return (
@@ -53,7 +59,7 @@ export function EnergyIntensityPanel({ result }: JourneyFragmentationSectionProp
         <Text as="h2" variant="panelTitle">{t('journeyFragmentation.energy.title', 'Observed energy-intensity comparison')}</Text>
         <Text as="p" variant="caption" className="mt-1">{t('journeyFragmentation.energy.subtitle', 'Distance-weighted whole-journey intensity with complete-energy coverage shown for each group.')}</Text>
       </div>
-      {result.journeyCount === 0 ? (
+      {state && !state.hasData ? <PendingEvidence state={state} loading={loading} /> : result.journeyCount === 0 ? (
         <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ icon={<BatteryMedium className="h-7 w-7" />} message={t('journeyFragmentation.energy.empty', 'No observed journeys are available for energy comparison.')} />
       ) : (
         <>

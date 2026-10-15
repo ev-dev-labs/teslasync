@@ -568,6 +568,19 @@ describe('TirePressurePage — TPMS warning banners', () => {
 });
 
 describe('TirePressurePage — loading / empty / error states', () => {
+  it('distinguishes disabled vehicle prerequisites from successful empty responses', () => {
+    H.vehicleId = null;
+    renderPage();
+    expect(screen.getAllByText('No vehicle selected')).toHaveLength(3);
+    expect(screen.queryByText('No current readings available')).not.toBeInTheDocument();
+    expect(screen.queryByText('No history data')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Retry$/ })).not.toBeInTheDocument();
+    expect(H.calls).toEqual({ latest: 0, history: 0 });
+    for (const title of ['Tire pressure summary', 'Current readings', 'Pressure history', 'History table']) {
+      expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
+    }
+  });
+
   it('shows skeletons (not empty states) while both queries are in flight', async () => {
     setLatest(null, 'pending');
     setHistory([], 'pending');
@@ -576,6 +589,7 @@ describe('TirePressurePage — loading / empty / error states', () => {
     await waitFor(() => expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy());
     // Loading must not masquerade as "no data".
     expect(screen.queryByText('No current readings available')).not.toBeInTheDocument();
+    expect(screen.queryByText('No history data')).not.toBeInTheDocument();
     expect(screen.queryByText('Normal')).not.toBeInTheDocument();
     // KPIs fall back to em-dash placeholders, never a stray 0-value.
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);

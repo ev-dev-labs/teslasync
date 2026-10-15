@@ -4,8 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useDriveCalendarHistory } from '@/api/hooks/useDriving';
 
 import { Grid, PageLayout } from '@/components/layout';
-import { AlertBanner, SectionErrorBoundary, StaleRefreshWarning } from '@/components/feedback';
-import { Button } from '@/components/ui';
+import { SectionErrorBoundary, StaleRefreshWarning } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -24,6 +23,7 @@ import {
 } from '../components/driving-rhythm';
 import { buildDrivingRhythm } from '../lib/drivingRhythm';
 import { DrivingRhythmBrief } from '../components/operationalbrief-a-m/DrivingRhythmBrief';
+import { DynamicsPausedNotice } from '../components/driving-dynamics-modernization/DynamicsPausedNotice';
 
 const SPLIT_COLUMNS = { default: 1, xl: 5 } as const;
 
@@ -86,22 +86,12 @@ export default function DrivingRhythmPage() {
       busy={sourceState.status === 'initial' && !sourceState.isRefreshBlocked && drivesQuery.isFetching}
     >
       {sourceState.status === 'initial' && sourceState.isRefreshBlocked && (
-        <AlertBanner
-          data-testid="driving-rhythm-initial-paused"
-          variant="info"
-          title={t('dataSources.status.paused', 'Refresh paused')}
-        >
-          {t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}
-          <Button
-            variant="ghost"
-            size="sm"
-            wrapLabel
-            className="min-h-11 md:min-h-9"
-            onClick={sectionState.onRetry}
-          >
-            {t('common.refresh', 'Refresh')}
-          </Button>
-        </AlertBanner>
+        <div data-testid="driving-rhythm-initial-paused">
+          <DynamicsPausedNotice
+            state={sourceState}
+            label={t('rhythm.title', 'Driving Rhythm')}
+          />
+        </div>
       )}
       <StaleRefreshWarning state={sourceState} label={t('rhythm.title', 'Driving Rhythm')} />
       <SectionErrorBoundary name="DrivingRhythmBrief">

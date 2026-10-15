@@ -3,18 +3,9 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/feedback';
-import {
-  Badge,
-  DataTable,
-  GlassPanel,
-  PanelTitle,
-  Text,
-  type Column,
-} from '@/components/ui';
+import { Badge, DataTable, GlassPanel, PanelTitle, Text, type Column } from '@/components/ui';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useUnits } from '@/hooks/useUnits';
-
-
 import type { ParkingStint, ParkingSummary } from '../../lib/parkingDwell';
 import { ParkingSectionBody } from './ParkingSectionBody';
 import type { ParkingSectionState } from './types';
@@ -65,10 +56,11 @@ export function LongestParkingStints({
         key: 'location',
         header: t('parking.location', 'Location'),
         visibleOnMobile: true,
+        exportValue: (row) => row.location,
         render: (row) => (
           <Text
             variant="bodySm"
-            className="block max-w-56 truncate"
+            className="block break-words"
             title={row.location ?? undefined}
           >
             {row.location ?? t('parking.unknown', 'Unknown location')}
@@ -78,6 +70,7 @@ export function LongestParkingStints({
       {
         key: 'startMs',
         header: t('parking.longest.started', 'Parked at'),
+        exportValue: (row) => new Date(row.startMs).toISOString(),
         render: (row) => (
           <Text variant="bodySm">{formatDateTime(new Date(row.startMs))}</Text>
         ),
@@ -87,11 +80,26 @@ export function LongestParkingStints({
         header: t('parking.longest.duration', 'Observed duration'),
         align: 'right',
         visibleOnMobile: true,
+        exportValue: (row) => formatDuration(row.durationMs / 1_000),
         render: (row) => (
           <Text variant="body" mono>
             {formatDuration(row.durationMs / 1_000)}
           </Text>
         ),
+      },
+      {
+        key: 'sourceDriveId',
+        header: t('chargeDepartureAlignment.modernization.driveId', 'Drive ID'),
+        defaultVisible: false,
+        exportValue: (row) => row.sourceDriveId,
+        render: (row) => <Text variant="bodySm" mono>{String(row.sourceDriveId)}</Text>,
+      },
+      {
+        key: 'endMs',
+        header: t('parking.longest.ended', 'Ended at'),
+        defaultVisible: false,
+        exportValue: (row) => new Date(row.endMs).toISOString(),
+        render: (row) => <Text variant="bodySm">{formatDateTime(new Date(row.endMs))}</Text>,
       },
       {
         key: 'status',
@@ -122,7 +130,7 @@ export function LongestParkingStints({
     >
       <GlassPanel className="h-full p-4 sm:p-5">
         <PanelTitle className="flex items-center gap-2">
-          <ListOrdered className="h-4 w-4 text-amber-300" aria-hidden="true" />
+          <ListOrdered className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
           {t('parking.longest.title', 'Longest observed stints')}
         </PanelTitle>
         <Text as="p" variant="caption" className="mt-1">
@@ -162,6 +170,25 @@ export function LongestParkingStints({
                 'No positive parking gaps are available to rank in this window.',
               )}
               mobileColumns={['rank', 'location', 'durationMs']}
+              mobilePresentation={{
+                roles: { location: 'title', durationMs: 'primary', rank: 'meta', startMs: 'meta', status: 'badge' },
+                displayValue: (row, key) => {
+                  switch (key) {
+                    case 'rank': return fmtInt(row.rank);
+                    case 'location': return row.location ?? t('parking.unknown', 'Unknown location');
+                    case 'durationMs': return formatDuration(row.durationMs / 1_000);
+                    case 'startMs': return formatDateTime(new Date(row.startMs));
+                    case 'endMs': return formatDateTime(new Date(row.endMs));
+                    case 'sourceDriveId': return String(row.sourceDriveId);
+                    case 'status': return row.ongoing
+                      ? t('parking.longest.ongoing', 'Ongoing')
+                      : row.rightCensored
+                        ? t('parking.longest.rangeEdge', 'Range edge')
+                        : t('parking.longest.complete', 'Between drives');
+                    default: return null;
+                  }
+                },
+              }}
             />
           )}
         </ParkingSectionBody>

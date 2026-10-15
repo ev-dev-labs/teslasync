@@ -37,8 +37,8 @@ export function SystemHealthCard({ category, status }: SystemHealthCardProps) {
     : t('anomaly.status.unknown', 'Unknown');
 
   return (
-    <li className={cn('flex items-center gap-3 rounded-xl border p-3', tone.bg, tone.border)}>
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/[0.04] ring-1 ring-white/10">
+    <li className="flex items-center gap-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] p-3">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-2)] ring-1 ring-[var(--border-default)]">
         <Icon className={cn('h-4 w-4', tone.fg)} aria-hidden="true" />
       </span>
       <Text

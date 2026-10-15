@@ -35,7 +35,7 @@ export function TotpCompatibleApps() {
   return (
     <GlassPanel className="h-full space-y-4 p-4 sm:p-5">
       <div className="flex items-center gap-3">
-        <IconBox color="purple">
+        <IconBox className="bg-[var(--surface-2)] text-[var(--text-secondary)] ring-[var(--border-default)]">
           <Smartphone className="h-5 w-5" aria-hidden="true" />
         </IconBox>
         <div>
@@ -49,7 +49,7 @@ export function TotpCompatibleApps() {
             key={name}
             className="flex min-w-0 items-center gap-2 rounded-lg bg-[var(--surface-2)] px-3 py-2 ring-1 ring-[var(--border-subtle)]"
           >
-            <Smartphone className="h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
+            <Smartphone className="h-4 w-4 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
             <Text as="span" variant="body" className="min-w-0 break-words">
               {name}
             </Text>

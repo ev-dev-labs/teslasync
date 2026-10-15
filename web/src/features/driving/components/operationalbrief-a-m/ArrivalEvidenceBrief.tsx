@@ -15,7 +15,9 @@ export function ArrivalEvidenceBrief({ analysis, state, locale, formatDuration }
     ? t('arrivalReliability.states.selectVehicleKpi', 'Select a vehicle above to load timing evidence.')
     : state.isLoading ? t('arrivalReliability.states.loadingKpi', 'Waiting for returned drive history…')
       : state.error ? t('arrivalReliability.states.errorKpi', 'Drive history is unavailable; use the status below to retry.')
-        : !state.isResolved ? t('arrivalReliability.states.pendingKpi', 'Drive-history availability has not resolved.') : null;
+        : !state.isResolved && state.isRefreshBlocked
+          ? t('chargingPlaces.workspace.initialPaused', '{{source}} loading is paused. No data has been loaded yet.', { source: t('arrivalReliability.title', 'Arrival Reliability') })
+          : !state.isResolved ? t('arrivalReliability.states.pendingKpi', 'Drive-history availability has not resolved.') : null;
   const cap = analysis.accounting.historyCapReached
     ? t('arrivalReliability.kpis.capReached', 'Latest 1,000-row cap reached')
     : t('arrivalReliability.kpis.capNotReached', 'Below the 1,000-row cap');
@@ -51,8 +53,13 @@ export function ArrivalEvidenceBrief({ analysis, state, locale, formatDuration }
       description={t('arrivalReliability.brief.description', 'Descriptive timing consistency for repeated directional routes; within-allowance shares are in-sample observations, not calibrated reliability promises.')}
       scope={ready ? `${cap} · ${analysis.timeZone}` : t('driving.brief.unresolvedCoverage', 'Drive-history coverage is unresolved')}
       provenance={t('arrivalReliability.brief.source', 'Returned drive history; repeated-route support, descriptive indices and sample-weighted p90 buffers.')}
-      loading={state.isLoading} error={state.error} showError={false} retained={state.refreshError != null} onRetry={state.onRetry}
+      loading={state.isLoading} error={state.error} showError={false} retained={ready && (state.refreshError != null || state.isRefreshBlocked || state.fetchStatus === 'fetching')} onRetry={state.onRetry}
       statusLabel={!state.vehicleSelected ? t('driving.brief.selectVehicle', 'Select a vehicle')
+        : state.error || state.refreshError ? undefined
+        : state.isRefreshBlocked ? ready
+          ? t('dataSources.status.paused', 'Refresh paused')
+          : t('energyFlow.state.pausedTitle', 'Source paused')
+          : ready && state.fetchStatus === 'fetching' ? t('freshness.updating', 'Updating…')
         : !state.isResolved && !state.isLoading && !state.error ? t('driving.brief.awaiting', 'Awaiting evidence') : undefined} />
     <ArrivalReliabilityQueryStatus analysis={analysis} state={state} />
   </section>;

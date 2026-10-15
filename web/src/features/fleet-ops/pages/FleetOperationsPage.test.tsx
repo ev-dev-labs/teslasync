@@ -4,6 +4,13 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/components/feedback';
+import english from '@/i18n/en.json';
+import fleetOpsEnglish from '@/i18n/en/locale-fleet-ops.json';
+
+const scopeCalls = vi.hoisted(() => ({
+  reservations: vi.fn(),
+  forecast: vi.fn(),
+}));
 
 const operationalMode = vi.hoisted(() => ({
   canWrite: true,
@@ -19,6 +26,18 @@ const fleetPageState = vi.hoisted(() => ({
   vehiclesLoading: false,
   vehiclesEmpty: false,
   vehiclesPaused: false,
+}));
+const sectionState = vi.hoisted(() => ({
+  sources: {} as Record<string, {
+    unavailable?: boolean;
+    loading?: boolean;
+    paused?: boolean;
+    empty?: boolean;
+    zero?: boolean;
+    fetching?: boolean;
+    error?: Error;
+  }>,
+  retries: {} as Record<string, ReturnType<typeof vi.fn>>,
 }));
 
 vi.mock('@/hooks/useOperationalMode', () => ({
@@ -41,18 +60,24 @@ const refetch = vi.fn();
 const reset = vi.fn();
 const mutate = vi.fn();
 
-function query<T>(data: T, source?: 'drivers' | 'forecast') {
-  const error = source === 'drivers' ? fleetPageState.driversError
-    : source === 'forecast' ? fleetPageState.forecastError : null;
+function query<T>(data: T, source?: string) {
+  const state = source ? sectionState.sources[source] : undefined;
+  const error = state?.error ?? (source === 'drivers' ? fleetPageState.driversError
+    : source === 'forecast' ? fleetPageState.forecastError : null);
+  const payload = state?.empty && data && typeof data === 'object'
+    ? { ...data, items: [], total: 0, points: [] } : data;
+  if (source && !sectionState.retries[source]) sectionState.retries[source] = vi.fn();
   return {
-    data: source === 'drivers' && fleetPageState.driversUnavailable ? undefined : data,
-    isLoading: false,
-    isFetching: false,
+    data: state?.unavailable || (source === 'drivers' && fleetPageState.driversUnavailable) ? undefined : payload,
+    isLoading: state?.loading ?? false,
+    isFetching: state?.fetching ?? state?.loading ?? false,
+    fetchStatus: state?.paused ? 'paused' as const
+      : state?.loading || state?.fetching ? 'fetching' as const : 'idle' as const,
     isError: error != null,
     isStale: false,
     error,
     dataUpdatedAt: Date.now(),
-    refetch,
+    refetch: source ? () => { sectionState.retries[source](); refetch(); } : refetch,
   };
 }
 
@@ -105,8 +130,10 @@ vi.mock('@/api/hooks/useFleetOps', () => ({
     version: 1,
     created_at: '2026-08-01T00:00:00Z',
     updated_at: '2026-08-01T00:00:00Z',
-  }], total: fleetPageState.total, limit: 100, offset: 0 }),
-  useFleetReservations: () => query({ items: [{
+  }], total: fleetPageState.total, limit: 100, offset: 0 }, 'assignments'),
+  useFleetReservations: (...args: unknown[]) => {
+    scopeCalls.reservations(...args);
+    return query({ items: [{
     id: 3,
     vehicle_id: 7,
     vehicle_display_name: 'Pool Y',
@@ -122,7 +149,8 @@ vi.mock('@/api/hooks/useFleetOps', () => ({
     version: 1,
     created_at: '2026-08-01T00:00:00Z',
     updated_at: '2026-08-01T00:00:00Z',
-  }], total: fleetPageState.total, limit: 100, offset: 0 }),
+  }], total: fleetPageState.total, limit: 100, offset: 0 }, 'reservations');
+  },
   useFleetCostCenters: () => query({ items: [{
     id: 4,
     code: 'FIELD',
@@ -131,7 +159,7 @@ vi.mock('@/api/hooks/useFleetOps', () => ({
     version: 1,
     created_at: '2026-08-01T00:00:00Z',
     updated_at: '2026-08-01T00:00:00Z',
-  }], total: fleetPageState.total, limit: 100, offset: 0 }),
+  }], total: fleetPageState.total, limit: 100, offset: 0 }, 'costCenters'),
   useFleetChargingPolicies: () => query({ items: [{
     id: 5,
     vehicle_id: 7,
@@ -147,7 +175,7 @@ vi.mock('@/api/hooks/useFleetOps', () => ({
     created_at: '2026-08-01T00:00:00Z',
     updated_at: '2026-08-01T00:00:00Z',
     windows: [{ day_of_week: 1, start_local_time: '00:00', end_local_time: '06:00' }],
-  }], total: fleetPageState.total, limit: 100, offset: 0 }),
+  }], total: fleetPageState.total, limit: 100, offset: 0 }, 'policies'),
   useFleetWorkOrders: () => query({ items: [{
     id: 6,
     vehicle_id: 7,
@@ -162,13 +190,15 @@ vi.mock('@/api/hooks/useFleetOps', () => ({
     due_at: null,
     scheduled_start_at: null,
     scheduled_end_at: null,
-    cost_minor: 10000,
+    cost_minor: sectionState.sources.workOrders?.zero ? 0 : 10000,
     currency: 'USD',
     version: 1,
     created_at: '2026-08-01T00:00:00Z',
     updated_at: '2026-08-01T00:00:00Z',
-  }], total: 1, limit: 100, offset: 0 }),
-  useFleetUtilizationForecast: () => query({
+  }], total: 1, limit: 100, offset: 0 }, 'workOrders'),
+  useFleetUtilizationForecast: (...args: unknown[]) => {
+    scopeCalls.forecast(...args);
+    return query({
     from: '2026-08-05T00:00:00Z',
     to: '2026-08-19T00:00:00Z',
     generated_at: '2026-08-05T00:00:00Z',
@@ -184,11 +214,12 @@ vi.mock('@/api/hooks/useFleetOps', () => ({
       reserved_s: 7200,
       maintenance_downtime_s: 0,
       historical_expected_s: 3600,
-      expected_utilization_pct: 20,
-      lower_utilization_pct: 10,
-      upper_utilization_pct: 35,
+      expected_utilization_pct: sectionState.sources.forecast?.zero ? 0 : 20,
+      lower_utilization_pct: sectionState.sources.forecast?.zero ? 0 : 10,
+      upper_utilization_pct: sectionState.sources.forecast?.zero ? 0 : 35,
     }],
-  }, 'forecast'),
+  }, 'forecast');
+  },
   useCreateFleetReservation: () => ({
     mutate,
     reset,
@@ -218,6 +249,10 @@ vi.mock('@/api/hooks/useFleetOps', () => ({
 import FleetOperationsPage from './FleetOperationsPage';
 
 beforeEach(() => {
+  scopeCalls.reservations.mockClear();
+  scopeCalls.forecast.mockClear();
+  sectionState.sources = {};
+  sectionState.retries = {};
   refetch.mockReset();
   reset.mockReset();
   mutate.mockReset();
@@ -260,6 +295,154 @@ describe('FleetOperationsPage', () => {
       </MemoryRouter>,
     ) };
   }
+
+  const sections = [
+    ['reservations', 'Reservation calendar', 'No reservations found.'],
+    ['drivers', 'Fleet drivers', 'No fleet drivers are configured.'],
+    ['assignments', 'Assignment roster', 'No driver assignments are scheduled.'],
+    ['costCenters', 'Cost-center allocation', 'No cost centers have been configured.'],
+    ['policies', 'Charging policy matrix', 'No charging policies are configured.'],
+    ['workOrders', 'Maintenance work-order board', 'No maintenance work orders are open.'],
+    ['forecast', 'Utilization forecast', null],
+  ] as const;
+  function sectionCard(title: string) {
+    const card = screen.getByRole('heading', { name: title }).closest<HTMLElement>('[data-card]');
+    if (!card) throw new Error(`${title} card missing`);
+    return card;
+  }
+
+  it('uses canonical undated reservation copy without applying the forecast window to the list', () => {
+    sectionState.sources.reservations = { empty: true };
+    const { rerenderPage } = renderPage();
+    const message = 'No reservations found.';
+    expect(english.fleetOps.reservations.empty).toBe(message);
+    expect(fleetOpsEnglish.fleetOps.reservations.empty).toBe(message);
+    const card = sectionCard('Reservation calendar');
+    expect(within(card).getByText(message)).toBeInTheDocument();
+    expect(within(card).queryByText(/planning window/i)).not.toBeInTheDocument();
+    expect(within(card).getByRole('button', { name: 'Add reservation' })).toBeEnabled();
+    expect(scopeCalls.reservations).toHaveBeenLastCalledWith({ limit: 100 });
+    const [vehicleId, from, to] = scopeCalls.forecast.mock.calls.at(-1)!;
+    expect(vehicleId).toBeUndefined();
+    expect(Date.parse(to) - Date.parse(from)).toBe(14 * 24 * 60 * 60 * 1000);
+    expect(new Date(from).getUTCHours()).toBe(0);
+
+    sectionState.sources.reservations = {};
+    rerenderPage();
+    expect(within(card).queryByText(message)).not.toBeInTheDocument();
+    expect(within(card).getAllByText('Airport run').length).toBeGreaterThan(0);
+    expect(within(card).getByRole('table', { hidden: true })).toHaveTextContent('Confirmed');
+    expect(scopeCalls.reservations).toHaveBeenLastCalledWith({ limit: 100 });
+    expect(scopeCalls.forecast).toHaveBeenLastCalledWith(undefined, from, to);
+  });
+
+  it.each(sections)('keeps %s awaiting until its source resolves, with paused retry isolated', (source, title, empty) => {
+    sectionState.sources[source] = { unavailable: true, loading: true };
+    const { rerenderPage } = renderPage();
+    expect(within(sectionCard(title)).getByRole('status')).toHaveTextContent('Loading...');
+    expect(within(sectionCard(title)).getByRole('status')).toHaveAttribute('aria-busy', 'true');
+    if (empty) expect(screen.queryByText(empty)).not.toBeInTheDocument();
+    sectionState.sources[source] = { unavailable: true };
+    rerenderPage();
+    expect(within(sectionCard(title)).getByRole('status')).toHaveTextContent('Awaiting source');
+    sectionState.sources[source] = { unavailable: true, paused: true };
+    rerenderPage();
+    expect(within(sectionCard(title)).getByRole('status')).toHaveTextContent('Refresh paused');
+    expect(within(sectionCard(title)).getByRole('status')).toHaveAttribute('aria-busy', 'false');
+    fireEvent.click(within(sectionCard(title)).getByRole('button', { name: 'Retry' }));
+    expect(sectionState.retries[source]).toHaveBeenCalledTimes(1);
+    for (const [key, retry] of Object.entries(sectionState.retries)) {
+      if (key !== source) expect(retry).not.toHaveBeenCalled();
+    }
+    sectionState.sources[source] = { empty: true };
+    rerenderPage();
+    expect(within(sectionCard(title)).queryByText('Awaiting source')).not.toBeInTheDocument();
+    expect(within(sectionCard(title)).queryByText('Refresh paused')).not.toBeInTheDocument();
+    if (empty) expect(within(sectionCard(title)).getByText(empty)).toBeInTheDocument();
+    else expect(within(sectionCard(title)).getByText('No data available')).toBeInTheDocument();
+    expect(mutate).not.toHaveBeenCalled();
+  });
+
+  it.each(sections)('isolates initial %s failure and recovers without removing other sections', (source, title) => {
+    sectionState.sources[source] = { unavailable: true, error: new Error(`${title} unavailable`) };
+    const { rerenderPage } = renderPage();
+    const card = sectionCard(title);
+    fireEvent.click(within(card).getByRole('button', { name: 'Retry' }));
+    expect(sectionState.retries[source]).toHaveBeenCalledTimes(1);
+    for (const [key, retry] of Object.entries(sectionState.retries)) {
+      if (key !== source) expect(retry).not.toHaveBeenCalled();
+    }
+    for (const [, sectionTitle] of sections) {
+      expect(screen.getByRole('heading', { name: sectionTitle })).toBeInTheDocument();
+    }
+    sectionState.sources[source] = {};
+    rerenderPage();
+    expect(within(sectionCard(title)).queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(mutate).not.toHaveBeenCalled();
+  });
+
+  it.each(sections)('retains %s content through refresh, pause, failure and recovery', (source, title) => {
+    const { rerenderPage } = renderPage();
+    const card = sectionCard(title);
+    const content = card.textContent;
+    sectionState.sources[source] = { loading: true, fetching: true };
+    rerenderPage();
+    expect(sectionCard(title)).toBe(card);
+    expect(card.textContent).toBe(content);
+    sectionState.sources[source] = { paused: true };
+    rerenderPage();
+    expect(card.textContent).toBe(content);
+    sectionState.sources[source] = { error: new Error(`${title} refresh failed`) };
+    rerenderPage();
+    expect(card.textContent).toBe(content);
+    const warning = screen.getByText(`${title} may be out of date`).closest<HTMLElement>('[data-testid="stale-refresh-warning"]');
+    if (!warning) throw new Error('Refresh warning missing');
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    expect(sectionState.retries[source]).toHaveBeenCalledTimes(1);
+    for (const [key, retry] of Object.entries(sectionState.retries)) {
+      if (key !== source) expect(retry).not.toHaveBeenCalled();
+    }
+    sectionState.sources[source] = {};
+    rerenderPage();
+    expect(screen.queryByText(`${title} may be out of date`)).not.toBeInTheDocument();
+    expect(card.textContent).toBe(content);
+  });
+
+  it('keeps cost-center records and independently known totals when allocation dependencies have not resolved', () => {
+    sectionState.sources.reservations = { unavailable: true, paused: true };
+    sectionState.sources.workOrders = { unavailable: true, error: new Error('Orders unavailable') };
+    const { rerenderPage } = renderPage();
+    const card = sectionCard('Cost-center allocation');
+    expect(within(card).getByText('Field team')).toBeInTheDocument();
+    expect(within(card).getAllByText('—')).toHaveLength(2);
+    expect(within(card).getByText('Maintenance cost: —')).toBeInTheDocument();
+    const retries = within(card).getAllByRole('button', { name: 'Retry' });
+    fireEvent.click(retries[0]);
+    expect(sectionState.retries.reservations).toHaveBeenCalledTimes(1);
+    expect(sectionState.retries.workOrders).not.toHaveBeenCalled();
+    fireEvent.click(retries[1]);
+    expect(sectionState.retries.workOrders).toHaveBeenCalledTimes(1);
+    expect(sectionState.retries.costCenters).not.toHaveBeenCalled();
+    sectionState.sources.reservations = { empty: true };
+    sectionState.sources.workOrders = { empty: true };
+    rerenderPage();
+    expect(within(card).getAllByText('0')).toHaveLength(2);
+    expect(within(card).getByText('Maintenance cost: —')).toBeInTheDocument();
+  });
+
+  it('renders authoritative zero forecast and maintenance values without marking them empty', () => {
+    sectionState.sources.forecast = { zero: true };
+    sectionState.sources.workOrders = { zero: true };
+    renderPage();
+    const forecast = sectionCard('Utilization forecast');
+    expect(within(forecast).queryByText('No data available')).not.toBeInTheDocument();
+    const table = within(forecast).getByRole('table', { hidden: true });
+    const rows = within(table).getAllByRole('row', { hidden: true });
+    expect(rows[1]).toHaveTextContent('0');
+    expect(within(sectionCard('Cost-center allocation')).getByText('Maintenance cost: $0.00')).toBeInTheDocument();
+    expect(screen.getByTestId('fleet-operations-summary').querySelector('[data-operational-metric="forecast"]'))
+      .toHaveAttribute('data-value-state', 'value');
+  });
 
   it('exposes initial vehicle failure and retries only that source without removing fleet panels', () => {
     fleetPageState.vehiclesUnavailable = true;

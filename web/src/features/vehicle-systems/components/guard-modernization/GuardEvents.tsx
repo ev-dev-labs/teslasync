@@ -14,6 +14,8 @@ import type { GuardPageModel } from './useGuardPageModel';
 export function GuardEvents({ model: m }: { model: GuardPageModel }) {
   const { t } = useTranslation();
   const placement = useCardPlacement();
+  const initialDeferred = !m.noVehicle && !m.eventsState.hasData &&
+    !m.eventsState.fatalError && !m.eventsQuery.isLoading;
   const refreshAction = !m.noVehicle && m.eventsState.retry
     ? { label: t('common.refresh', 'Refresh'), onClick: m.eventsState.retry }
     : undefined;
@@ -30,6 +32,13 @@ export function GuardEvents({ model: m }: { model: GuardPageModel }) {
         ) : undefined}>
       <HelperText>{t('guard.modernization.eventsCoverage', 'Counts cover the returned security event history, not a theft detection assessment.')}</HelperText>
       <StaleRefreshWarning state={m.eventsState} label={t('guard.eventTimeline', 'Event timeline')} />
+      {initialDeferred && (
+        <HelperText role="status" data-initial-deferred={m.eventsState.isRefreshBlocked ? 'paused' : 'pending'}>
+          {m.eventsState.isRefreshBlocked
+            ? t('dataSources.status.paused', 'Refresh paused')
+            : t('dataSources.status.pending', 'Pending')}
+        </HelperText>
+      )}
       {m.ackEvent.error && <QueryError error={m.ackEvent.error} compact />}
       {m.eventsState.fatalError ? (
         <QueryError error={m.eventsState.fatalError} onRetry={m.eventsState.retry ?? undefined} />

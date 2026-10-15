@@ -241,6 +241,39 @@ describe('detectChargingAnomalies', () => {
     expect(anomalies[0].kind).toBe('cost_zero');
   });
 
+  it.each(['Supercharger', 'DC Fast', 'Mystery brand'])(
+    'distinguishes missing cost from recorded free cost on %s',
+    (charger_type) => {
+      for (const cost_decimal of [null, undefined]) {
+        const session = s({ charger_type, cost_decimal });
+        expect(detectChargingAnomalies([session])).toEqual([{
+          session,
+          kind: 'cost_zero',
+          message: 'Energy added but no cost recorded',
+          actionLabel: 'Add cost',
+        }]);
+      }
+      expect(detectChargingAnomalies([s({ charger_type, cost_decimal: 0 })])).toEqual([]);
+      expect(detectChargingAnomalies([s({ charger_type, cost_decimal: 5 })])).toEqual([]);
+    },
+  );
+
+  it.each([
+    ['DC Fast', 'bad_power'],
+    ['Supercharger', 'trickle'],
+  ] as const)('preserves missing-cost priority over %s power anomalies', (charger_type, kind) => {
+    const session = s({
+      charger_type,
+      started_at: '2026-04-15T00:00:00Z',
+      ended_at: '2026-04-15T07:00:00Z',
+      total_energy_added_wh: 2_000,
+      cost_decimal: null,
+    });
+    expect(detectChargingAnomalies([session]).map((anomaly) => anomaly.kind)).toEqual(['cost_zero']);
+    expect(detectChargingAnomalies([{ ...session, cost_decimal: 0 }])
+      .map((anomaly) => anomaly.kind)).toEqual([kind]);
+  });
+
   it('does NOT flag cost_zero on home chargers (free is normal)', () => {
     const anomalies = detectChargingAnomalies([
       s({ id: 1, total_energy_added_wh: 30_000, cost_decimal: null, charger_type: 'Home AC' }),

@@ -160,7 +160,7 @@ export function OriginConcentrationPlot({
   return (
     <EmbeddedChart
       chartKey="origin-concentration"
-      title={t('originConcentration.title', 'Origin Concentration')}
+      title={t('originConcentration.title', 'Origin concentration')}
       ariaLabel={effectiveAriaLabel}
       data={rows}
       dataColumns={dataColumns}

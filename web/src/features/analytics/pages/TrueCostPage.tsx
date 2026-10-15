@@ -106,8 +106,9 @@ export default function TrueCostPage() {
       content: evidenceSlot('fixed-ledger', 0.045,
         <TrueCostFixedLedger
           vehicleId={vehicleId ?? undefined}
-          totalKm={query.data?.total_km ?? 0}
-          totalChargingCost={query.data?.total_charging_cost ?? 0}
+          aggregateState={state}
+          totalKm={query.data?.total_km}
+          totalChargingCost={query.data?.total_charging_cost}
         />
       ),
     },

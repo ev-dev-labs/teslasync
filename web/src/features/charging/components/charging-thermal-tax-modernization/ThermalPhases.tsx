@@ -8,7 +8,7 @@ import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import type { DataState } from '@/api/dataState';
 import type { ChargingThermalTaxSummary, ThermalEnergySource, ThermalPhase, ThermalTaxSample } from '../../lib/chargingThermalTax';
-import { phaseHasMissingHeater } from './thermalPresentation';
+import { heaterEvidence, phaseHasMissingHeater } from './thermalPresentation';
 
 const SOURCE_DEFAULTS: Record<ThermalEnergySource, string> = {
   cumulative: 'Metered running total',
@@ -28,6 +28,7 @@ export function ThermalPhases({ selected, loading, state, summary, samples }: Th
   const { t } = useTranslation();
   const { formatDateTime } = useDateFormat();
   const { formatPower } = useUnits();
+  const unsupportedHeaterPower = summary.sampleCount > 0 && !heaterEvidence(samples).hasPeak;
   const rows = summary.phases.map((phase, index) => ({ ...phase, key: `${phase.startMs}-${index}` }));
   type PhaseRow = typeof rows[number];
   const algorithmPhaseLabel = (phase: ThermalPhase) => phase.state === 'heater_on'
@@ -94,7 +95,9 @@ export function ThermalPhases({ selected, loading, state, summary, samples }: Th
     ) : summary.phases.length === 0 ? (
       <EmptyState
         icon={<Flame className="h-8 w-8" aria-hidden="true" />}
-        message={t('chargingThermalTax.noPhases', 'No usable telemetry to segment into phases.')}
+        message={unsupportedHeaterPower
+          ? t('chargingThermalTax.unsupportedHeaterPower', 'Heater-power analysis is unsupported for these samples: no measured heater power is available. Recorded charging telemetry is preserved; heater state is not a power measurement.')
+          : t('chargingThermalTax.noPhases', 'No usable telemetry to segment into phases.')}
         action={state.retry ? { label: t('common.retry', 'Retry'), onClick: state.retry } : undefined}
       />
     ) : (

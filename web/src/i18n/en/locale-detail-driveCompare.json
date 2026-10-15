@@ -13,6 +13,7 @@
     "needTwo": "At least two drives are needed for a comparison.",
     "samePick": "Pick two different drives with the A and B selectors above to continue.",
     "detailsUnavailable": "Drive details are not available for this comparison.",
+    "selectionUnavailable": "The requested drive is unavailable in this vehicle's loaded history window. Choose a drive to replace it.",
     "browseDrives": "Browse drives",
     "noMetrics": "No comparison metrics are available.",
     "gridAria": "Drive A and drive B metric comparison",

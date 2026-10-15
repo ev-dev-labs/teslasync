@@ -57,14 +57,11 @@ func (h *EnergyFlowHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if v, ok := signal.Float64(snap["DCChargingPower"]); ok {
-		// Preserve this endpoint's established kW response contract while
-		// live signal state remains canonical W.
-		kw := v / 1000.0
-		dcPower = &kw
+		// The normalize pipeline has already converted the producer's kW to W.
+		dcPower = &v
 	}
 	if v, ok := signal.Float64(snap["ACChargingPower"]); ok {
-		kw := v / 1000.0
-		acPower = &kw
+		acPower = &v
 	}
 	if v, ok := signal.Float64(snap["EnergyRemaining"]); ok {
 		energyRemaining = &v
@@ -83,12 +80,12 @@ func (h *EnergyFlowHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"dc_charging_power": dcPower,
-		"ac_charging_power": acPower,
-		"energy_remaining":  energyRemaining,
-		"pack_voltage":      packVoltage,
-		"pack_current":      packCurrent,
-		"soc":               soc,
-		"charge_state":      chargeState,
+		"dc_charging_power_w": dcPower,
+		"ac_charging_power_w": acPower,
+		"energy_remaining":    energyRemaining,
+		"pack_voltage":        packVoltage,
+		"pack_current":        packCurrent,
+		"soc":                 soc,
+		"charge_state":        chargeState,
 	})
 }

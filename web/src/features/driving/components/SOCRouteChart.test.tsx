@@ -43,11 +43,12 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import { isValidElement, type ReactNode } from 'react';
 
 import { SOCRouteChart } from './SOCRouteChart';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { chartTokens } from '@/lib/tokens';
+import { ChartTooltip } from '@/components/charts';
 import { fmtNumber } from '@/lib/numberFormat';
 import type { TripSOCPoint, TripChargeStop, TripLocation } from '@/types/driving';
 
@@ -58,6 +59,8 @@ type RefLine = {
   label?: unknown;
   stroke?: unknown;
   strokeDasharray?: unknown;
+  strokeWidth?: unknown;
+  labelFill?: unknown;
 };
 
 const H = vi.hoisted(() => ({
@@ -139,6 +142,7 @@ interface StubContainerProps {
 }
 
 vi.mock('@/components/charts', () => ({
+  ChartTooltip: () => null,
   chartGrid: {},
   axisTick: {},
   AREA_DEFAULTS: { type: 'monotone', strokeWidth: 2 },
@@ -198,13 +202,15 @@ vi.mock('@/components/charts', () => ({
     return <g data-testid="tooltip" />;
   },
   ReferenceLine: (props: Record<string, unknown>) => {
-    const label = props.label as { value?: unknown } | undefined;
+    const label = props.label as { value?: unknown; fill?: unknown } | undefined;
     H.refLines.push({
       x: props.x,
       y: props.y,
       label: label?.value,
       stroke: props.stroke,
       strokeDasharray: props.strokeDasharray,
+      strokeWidth: props.strokeWidth,
+      labelFill: label?.fill,
     });
     return (
       <g
@@ -301,6 +307,38 @@ function reset() {
   H.refLines = [];
 }
 beforeEach(reset);
+
+describe('SOCRouteChart — canonical chart presentation', () => {
+  it('reuses the shared tooltip and neutral annotation text without losing populated data', () => {
+    render(<SOCRouteChart socCurve={CURVE} chargeStops={[stop(60)]} minArrivalSOC={20} />);
+
+    const content = H.tooltip?.content;
+    expect(isValidElement(content)).toBe(true);
+    if (!isValidElement(content)) throw new Error('Expected shared tooltip content');
+    expect(content.type).toBe(ChartTooltip);
+    expect(H.tooltip?.contentStyle).toBeUndefined();
+    expect(H.tooltip?.cursor).toEqual(chartTokens.cursor);
+    expect(H.area).toMatchObject({
+      dataKey: 'soc',
+      stroke: chartTokens.series[1],
+      fill: chartTokens.series[1],
+      fillOpacity: 0.08,
+      strokeWidth: 2,
+    });
+    expect(minLine()).toMatchObject({
+      y: 20, label: 'Min 20%', stroke: chartTokens.series[3],
+      strokeWidth: 1, strokeDasharray: '6 4', labelFill: chartTokens.tooltipMutedText,
+    });
+    expect(stopLines()).toEqual([
+      expect.objectContaining({
+        x: 50, label: '\u26A1 Stop 1', stroke: chartTokens.series[0],
+        strokeWidth: 1, strokeDasharray: '4 4', labelFill: chartTokens.tooltipMutedText,
+      }),
+    ]);
+    expect(H.container?.data).toBe(H.areaData);
+    expect(screen.getAllByTestId('fallback-row')).toHaveLength(CURVE.length);
+  });
+});
 
 /* ── EMPTY / NULL-SAFETY ───────────────────────────────────────────────────── */
 describe('SOCRouteChart — empty + null-safety', () => {

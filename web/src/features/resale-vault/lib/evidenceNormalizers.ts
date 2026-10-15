@@ -11,8 +11,10 @@
  *     them (watt-hours, seconds, meters — see field-level doc comments in
  *     `types.ts`), deferring km/mi/kWh-vs-Wh *display* formatting entirely
  *     to `useUnits()` in the UI layer.
- *   - Applies the selected date precision via `applyDatePrecision()` so no
- *     evidence timestamp bypasses the redaction selection.
+ *   - Applies the selected date precision to documented evidence instants.
+ *     Opaque warranty business dates are excluded rather than inferred from
+ *     string contents. Report generation/signature instants are artifact
+ *     metadata, outside these normalizers, and intentionally remain exact.
  *   - Projects structured facts instead of forwarding opaque payloads.
  *     Free-text service notes are excluded unless explicitly consented to
  *     and reviewed; human review is not automated content sanitization.
@@ -167,14 +169,20 @@ export function normalizeMaintenance(
   };
 }
 
-/** Software update history (vehicle-scoped — `/software-updates?vehicle_id=`). */
-export function normalizeSoftwareUpdates(updates: SoftwareUpdate[] | undefined): SoftwareUpdateEvidence | null {
+/** Software installation instants (vehicle-scoped). Omitted precision uses the privacy-preserving day default. */
+export function normalizeSoftwareUpdates(
+  updates: SoftwareUpdate[] | undefined,
+  precision: DatePrecision = 'day',
+): SoftwareUpdateEvidence | null {
   if (!updates || updates.length === 0) return null;
   const installed = updates.filter((u) => u.status === 'installed' && u.installedAt);
   const sortedByInstall = [...installed].sort((a, b) => (b.installedAt ?? '').localeCompare(a.installedAt ?? ''));
   return {
     update_count: updates.length,
-    installed_versions: installed.map((u) => ({ version: u.version, installed_at: u.installedAt })),
+    installed_versions: installed.map((u) => ({
+      version: u.version,
+      installed_at: applyDatePrecision(u.installedAt, precision),
+    })),
     latest_version: sortedByInstall[0]?.version ?? null,
   };
 }
@@ -182,7 +190,10 @@ export function normalizeSoftwareUpdates(updates: SoftwareUpdate[] | undefined):
 /**
  * Opaque warranty input -> an explicit bounded-value disclosure contract.
  * Unknown fields, nested values and free text are excluded, not declared
- * content-safe by key-name scrubbing. Extend only with verified safe contracts.
+ * content-safe by key-name scrubbing. Opaque coverage/business date fields
+ * have no documented temporal contract and remain excluded at any precision;
+ * only the envelope's fetch instant is coarsened. Extend only with verified
+ * safe contracts, not date-looking strings or date-like key names.
  */
 export function normalizeWarranty(
   envelope: { data: Record<string, unknown> | null; fetched_at: string | null } | null | undefined,

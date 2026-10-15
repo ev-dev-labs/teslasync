@@ -99,7 +99,7 @@ export function ComfortConsistencyDataAvailability({
             metrics={items.map(item => ({
               metricId: item.key === 'score' ? 'number' as const : 'count' as const,
               occurrenceId: item.key, label: item.label, rawValue: item.support,
-              display: { formatter: (raw: number) => ({ value: item.key === 'score' ? String(raw) : fmtInt(raw), unit: '' }) },
+              display: { formatter: (raw: number) => ({ value: fmtInt(raw), unit: '' }) },
               context: <Badge variant={item.available ? 'success' : 'neutral'}>
                 {item.available ? t('comfortConsistency.availability.available', 'Available')
                   : t('comfortConsistency.availability.withheld', 'Withheld')}

@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router-dom';
 
 import { useDrives } from '@/api/hooks/useDriving';
 
 import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
+import { CopyButton } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -36,9 +38,10 @@ export default function ShareCardPage() {
   const { t } = useTranslation();
   usePageTitle(t('shareCard.title', 'Share card studio'));
   const { vehicleId } = useSelectedVehicle();
+  const location = useLocation();
   const timezone = useTimezone('vehicle');
   const display = useShareCardDisplay();
-  const { start, end, startInstant, endInstantExclusive } = useRangeState({
+  const { start, end, startInstant, endInstantExclusive, presetId } = useRangeState({
     persistKey: 'share-card.range',
     timezone,
   });
@@ -72,6 +75,12 @@ export default function ShareCardPage() {
     start,
     end,
   );
+  const copyUrl = new URL(location.pathname, window.location.origin);
+  copyUrl.searchParams.set('from', start);
+  copyUrl.searchParams.set('to', end);
+  copyUrl.searchParams.set('time_scope', presetId ?? 'custom');
+  const canCopyScope = vehicleId != null && Number.isSafeInteger(vehicleId) && vehicleId > 0;
+  if (canCopyScope) copyUrl.searchParams.set('vehicle_id', String(vehicleId));
 
   return (
     <PageLayout
@@ -81,7 +90,15 @@ export default function ShareCardPage() {
         'Compose a local, evidence-backed SVG without overstating selected-window coverage',
       )}
       query={vehicleId != null ? drivesQuery : undefined}
-      copyLink
+      overflowActions={(
+        <CopyButton
+          text={copyUrl.toString()}
+          label={t('common.copyLink.action', 'Copy link')}
+          ariaLabel={t('common.copyLink.label', 'Copy link to this view')}
+          disabled={!canCopyScope}
+          withToast
+        />
+      )}
     >
       <FadeIn><ShareCardEvidenceLedger {...sectionProps} /></FadeIn>
       <FadeIn delay={0.02}><ShareCardSourceScopeLedger {...sectionProps} /></FadeIn>

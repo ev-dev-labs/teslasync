@@ -374,8 +374,17 @@ describe('VehicleTwin', () => {
       }
     });
     motionPreference.reduce = true;
+    rerender(<VehicleTwin {...baseTwinState} turnSignal="both" />);
+    await waitFor(() => {
+      for (const lamp of lamps()) expect(lamp).toHaveAttribute('opacity', '1');
+    });
+    rerender(<VehicleTwin {...baseTwinState} turnSignal={null} hazards={null} />);
+    for (const lamp of lamps()) expect(lamp).toBeNull();
+  });
+
+  it.each(['photo', 'svg'] as const)('retains static low-bandwidth turn identity in %s mode without OS reduced motion', async variant => {
     vi.stubGlobal('matchMedia', (query: string) => ({
-      matches: query === '(prefers-reduced-motion: reduce)',
+      matches: false,
       media: query,
       onchange: null,
       addListener: vi.fn(),
@@ -384,12 +393,46 @@ describe('VehicleTwin', () => {
       removeEventListener: vi.fn(),
       dispatchEvent: vi.fn(),
     }));
-    rerender(<VehicleTwin {...baseTwinState} turnSignal="both" />);
+    motionPreference.reduce = true;
+    const { container, rerender } = render(<VehicleTwin {...baseTwinState} hazards />);
+    const photo = container.querySelector<HTMLImageElement>('img[aria-hidden="true"]')!;
+    if (variant === 'photo') fireEvent.load(photo);
+    else fireEvent.error(photo);
+    const lamps = () => [
+      container.querySelector('ellipse[cx="90"][cy="180"]'),
+      container.querySelector('path[fill="none"][stroke-width="2"][stroke="var(--semantic-warning)"]'),
+    ];
+    for (const turnSignal of ['left', 'right', 'both'] as const) {
+      rerender(<VehicleTwin {...baseTwinState} turnSignal={turnSignal} />);
+      await waitFor(() => {
+        const [front, rear] = lamps();
+        if (turnSignal === 'right') expect(front).toBeNull();
+        else expect(front).toHaveAttribute('opacity', '1');
+        if (turnSignal === 'left') expect(rear).toBeNull();
+        else expect(rear).toHaveAttribute('opacity', '1');
+      });
+    }
+    motionPreference.reduce = false;
+    rerender(<VehicleTwin {...baseTwinState} hazards />);
+    await waitFor(() => {
+      for (const lamp of lamps()) {
+        expect(Number(lamp?.getAttribute('opacity'))).toBeGreaterThan(0.15);
+        expect(Number(lamp?.getAttribute('opacity'))).toBeLessThan(1);
+      }
+    });
+    motionPreference.reduce = true;
+    rerender(<VehicleTwin {...baseTwinState} hazards />);
     await waitFor(() => {
       for (const lamp of lamps()) expect(lamp).toHaveAttribute('opacity', '1');
     });
-    rerender(<VehicleTwin {...baseTwinState} turnSignal={null} hazards={null} />);
-    for (const lamp of lamps()) expect(lamp).toBeNull();
+    await act(async () => {
+      await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    });
+    for (const lamp of lamps()) expect(lamp).toHaveAttribute('opacity', '1');
+    for (const turnSignal of ['off', null] as const) {
+      rerender(<VehicleTwin {...baseTwinState} hazards={null} turnSignal={turnSignal} />);
+      for (const lamp of lamps()) expect(lamp).toBeNull();
+    }
   });
 
   it.each([false, true])('keeps passenger warning paths static with reduced motion=%s', async reduce => {

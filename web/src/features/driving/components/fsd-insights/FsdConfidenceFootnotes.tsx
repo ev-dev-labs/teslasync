@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Text } from '@/components/ui';
+import { neonColorMap, typography } from '@/lib/tokens';
 import type { FsdInsightsQuality } from '@/types/fsd';
 
 interface FsdConfidenceFootnotesProps {
@@ -25,7 +26,7 @@ export function FsdConfidenceFootnotes({ quality }: FsdConfidenceFootnotesProps)
     notes.push({
       key: 'noFsdData',
       tone: 'warning',
-      icon: <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />,
+      icon: <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />,
       text: t(
         'fsd.confidence.noFsdData',
         'Every supervised self-driving distance on this page is shown as “not reported”, because the counter produced no derivable reading in this window. That is not the same as the vehicle driving itself zero metres.',
@@ -37,7 +38,7 @@ export function FsdConfidenceFootnotes({ quality }: FsdConfidenceFootnotesProps)
     notes.push({
       key: 'clamped',
       tone: 'warning',
-      icon: <RotateCcw className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />,
+      icon: <RotateCcw className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />,
       text: t(
         'fsd.confidence.clamped',
         'A raw share exceeded 100% because the two counters were reset independently, so it was capped at 100%.',
@@ -54,7 +55,7 @@ export function FsdConfidenceFootnotes({ quality }: FsdConfidenceFootnotesProps)
     notes.push({
       key: 'shareBasis',
       tone: 'warning',
-      icon: <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />,
+      icon: <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />,
       text: t(
         'fsd.confidence.shareBasisWarning',
         'Usage share is unavailable because the two counters begin from different provable points. Standalone distances are not affected.',
@@ -69,7 +70,7 @@ export function FsdConfidenceFootnotes({ quality }: FsdConfidenceFootnotesProps)
     notes.push({
       key: 'historicalGuard',
       tone: 'warning',
-      icon: <Database className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />,
+      icon: <Database className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />,
       text: t(
         'fsd.confidence.historicalGuardWarning',
         '{{count}} legacy distance-counter observations were excluded because their unit-normalization provenance cannot be proven.',
@@ -82,7 +83,7 @@ export function FsdConfidenceFootnotes({ quality }: FsdConfidenceFootnotesProps)
     {
       key: 'scope',
       tone: 'info',
-      icon: <Info className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />,
+      icon: <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />,
       text: t(
         'fsd.confidence.scopeNote',
         'This telemetry cannot describe interventions, disengagements, safety performance, or exact FSD-active segments. Per-drive values are interval attribution with explicit confidence.',
@@ -91,7 +92,7 @@ export function FsdConfidenceFootnotes({ quality }: FsdConfidenceFootnotesProps)
     {
       key: 'timezone',
       tone: 'info',
-      icon: <CalendarRange className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />,
+      icon: <CalendarRange className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />,
       text: t(
         'fsd.confidence.timezoneNote',
         'Days are your browser’s local calendar days; each observed change is attributed to the day of the later reading.',
@@ -100,7 +101,7 @@ export function FsdConfidenceFootnotes({ quality }: FsdConfidenceFootnotesProps)
     {
       key: 'unit',
       tone: 'info',
-      icon: <Ruler className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />,
+      icon: <Ruler className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />,
       text: t(
         'fsd.confidence.unitNote',
         'The API stores and returns canonical SI meters; values are converted to your display unit only when rendered.',
@@ -112,7 +113,9 @@ export function FsdConfidenceFootnotes({ quality }: FsdConfidenceFootnotesProps)
     <div className="mt-4 space-y-2" data-testid="fsd-confidence-footnotes">
       {notes.map((note) => (
         <Text key={note.key} as="p" variant="caption" className="flex items-start gap-2">
-          {note.icon}
+          <span className={note.tone === 'warning' ? neonColorMap.amber.text : typography.color.muted}>
+            {note.icon}
+          </span>
           {note.text}
         </Text>
       ))}

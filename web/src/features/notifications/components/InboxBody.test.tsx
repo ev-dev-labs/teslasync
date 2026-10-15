@@ -127,6 +127,8 @@ import type { NotificationLog, NotificationLogGroup, AlertRule, Vehicle, AlertDe
 import { InboxBody } from './InboxBody';
 import { notificationKeys } from '@/api/hooks/useNotifications';
 import { NotificationReportPanel } from './NotificationReportPanel';
+import { NotificationInboxDetails } from './NotificationInboxDetails';
+import { typography } from '@/lib/tokens';
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>;
 const mockedExportAsCSV = vi.mocked(exportAsCSV);
@@ -280,6 +282,31 @@ afterEach(() => { onlineManager.setOnline(true); });
 /* ── 1. Flat view ─────────────────────────────────────── */
 
 describe('InboxBody — flat view', () => {
+  it('presents the warning URL alias while preserving raw scope and archived lifecycle on unrelated edits', async () => {
+    const logs = [
+      makeLog({ id: 71, title: 'Warning evidence', severity: 'warning', archived_at: NOW_ISO }),
+      makeLog({ id: 72, title: 'Unknown evidence', severity: 'custom', archived_at: NOW_ISO }),
+    ];
+    const original = structuredClone(logs);
+    installRequest({ logs: () => Promise.resolve(logs) });
+    renderInbox({ archived: true, route: '/notifications/archived?severity=warning,custom&read=unread' });
+    await screen.findByText('Warning evidence');
+    fireEvent.click(screen.getByRole('button', { name: 'Severity filter' }));
+    expect(screen.getByRole('button', { name: /^warn$/i })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.keyDown(document, { key: 'Escape' });
+    fireEvent.click(screen.getByRole('button', { name: 'Read state filter' }));
+    fireEvent.change(screen.getByLabelText('Filter by read state'), { target: { value: 'read' } });
+    await waitFor(() => expect(flatCalls().some(([path]) => new URL(String(path), 'http://teslasync.local').searchParams.get('read') === 'true')).toBe(true));
+    fireEvent.keyDown(document, { key: 'Escape' });
+    fireEvent.click(screen.getByRole('button', { name: 'Severity filter' }));
+    fireEvent.click(screen.getByRole('button', { name: /^critical$/i }));
+    await waitFor(() => expect(flatCalls().some(([path]) => new URL(String(path), 'http://teslasync.local').searchParams.get('severity') === 'critical')).toBe(true));
+    expect(screen.getByRole('button', { name: /^warn$/i })).toHaveAttribute('aria-pressed', 'true');
+    expect(logs).toEqual(original);
+    expect(markReadPosts()).toHaveLength(0);
+    expect(callsFor((_path, method) => Boolean(method))).toHaveLength(0);
+  });
+
   it('pages through older notifications instead of stopping at the first 50', async () => {
     installRequest({
       total: 100,
@@ -701,6 +728,83 @@ describe('InboxBody — view toggle', () => {
 /* ── 5. Archived mode ─────────────────────────────────── */
 
 describe('InboxBody — archived mode', () => {
+  it('retains semantic detail fields, full values, units and density-aware reachable actions', () => {
+    const restore = vi.fn();
+    const message = `Full message\n${'unbroken-message-'.repeat(30)}`;
+    const error = `Delivery explanation\n${'unbroken-error-'.repeat(30)}`;
+    const { container } = render(
+      <NotificationInboxDetails
+        log={makeLog({
+          message, error, archived_at: NOW_ISO, read_at: NOW_ISO,
+          scheduled_at: NOW_ISO, latency_ms: 1250, event_type: 'battery.low',
+        })}
+        rule={makeRule({ name: 'Original rule' })}
+        vehicle={makeVehicle(1)}
+        actions={[
+          { id: 'restore', label: 'Restore notification with its complete long action label', onClick: restore },
+          { id: 'delete', label: 'Delete', destructive: true, disabled: true, onClick: vi.fn() },
+        ]}
+      />,
+    );
+    const list = container.querySelector('dl');
+    expect(list).toHaveClass('sm:grid-cols-2', 'lg:grid-cols-3');
+    const fields = Array.from(list?.querySelectorAll('dt') ?? []);
+    expect(fields.map(field => field.textContent)).toEqual([
+      'Received', 'Sent', 'Scheduled', 'Read', 'Archived', 'Delivery latency',
+      'Type', 'Rule', 'Vehicle', 'Channel ID', 'Severity', 'Status',
+    ]);
+    for (const field of fields) {
+      expect(field.className).toBe(`${typography.role.caption} break-words`);
+      expect(field.nextElementSibling?.tagName).toBe('DD');
+      expect(field.nextElementSibling?.className).toBe(`${typography.role.bodySm} mt-1 break-words`);
+    }
+    expect(fields[5].nextElementSibling).toHaveTextContent(/1[,\s]?250 ms/);
+    expect(fields[6].nextElementSibling).toHaveTextContent('battery.low');
+    expect(fields[7].nextElementSibling).toHaveTextContent('Original rule');
+    expect(fields[8].nextElementSibling).toHaveTextContent('Model 1');
+    expect(fields[9].nextElementSibling).toHaveTextContent('1');
+    expect(fields[10].nextElementSibling).toHaveTextContent('warn');
+    expect(fields[11].nextElementSibling).toHaveTextContent('Sent');
+    for (const value of [message, error]) {
+      expect(screen.getByText(value, { exact: true, normalizer: text => text }))
+        .toHaveClass('whitespace-pre-wrap', 'break-words');
+    }
+    const action = screen.getByRole('button', { name: /Restore notification/ });
+    expect(action).toHaveClass('min-h-11', 'min-w-11', 'sm:min-h-d-row', 'py-d-pad-y', 'text-d-base');
+    expect(action.firstElementChild).toHaveClass('break-words');
+    action.focus();
+    expect(action).toHaveFocus();
+    fireEvent.click(action);
+    expect(restore).toHaveBeenCalledOnce();
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeDisabled();
+  });
+
+  it('keeps archived activation targets mobile-sized with compact desktop bounds and intact names/wrapping', async () => {
+    const title = 'Archived notification with a long title that wraps without losing its accessible name';
+    const message = 'The complete archived message remains available through both activation and expanded details.';
+    installRequest({ logs: () => Promise.resolve([makeLog({
+      id: 73, title, message, archived_at: NOW_ISO, alert_id: null,
+    })]) });
+    renderInbox({ archived: true, route: '/notifications/archived' });
+
+    const open = await screen.findByRole('button', { name: `Open notification: ${title}` });
+    const readMessage = screen.getByRole('button', { name: `Read full message: ${title}` });
+    for (const target of [open, readMessage]) {
+      expect(target).toHaveClass('!h-auto', '!min-h-11', 'md:!min-h-9', 'text-left');
+      expect(target.firstElementChild).toHaveClass('line-clamp-2', 'break-words');
+    }
+    expect(screen.getByRole('button', { name: `Inspect notification: ${title}` }))
+      .toHaveClass('max-md:!h-auto', 'max-md:!min-h-11');
+
+    fireEvent.click(readMessage);
+    const dialog = await screen.findByRole('dialog', { name: title });
+    expect(dialog).toHaveTextContent(message);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Expand row' }));
+    expect(screen.getByRole('region', { name: 'Notification details' })).toHaveTextContent(message);
+  });
+
   it('hides the view toggle and swaps the bulk action set to Restore', async () => {
     installRequest({ logs: () => Promise.resolve([makeLog({ id: 1, title: 'Archived row' })]) });
     renderInbox({ archived: true, route: '/notifications/archived' });
@@ -890,6 +994,46 @@ describe('InboxBody — mark all read', () => {
 /* ── 9. URL-backed filters ────────────────────────────── */
 
 describe('InboxBody — URL filters', () => {
+  it.each([
+    { archived: true, view: 'flat' },
+    { archived: false, view: 'flat' },
+    { archived: false, view: 'grouped' },
+  ])('retains only positive safe decimal ID strings ($archived, $view)', async ({ archived, view }) => {
+    installRequest({
+      logs: () => Promise.resolve([makeLog({ title: 'Valid scoped notification' })]),
+      groups: () => Promise.resolve([makeGroup({ latest: makeLog({ title: 'Valid scoped notification' }) })]),
+    });
+    const invalidIds = '0,-1,1.5,1e2,0x10,Infinity,NaN,9007199254740992,9007199254740993,,%20,%2B2';
+    renderInbox({
+      archived,
+      route: `/notifications/${archived ? 'archived' : 'inbox'}?view=${view}&vehicle_id=1,002,9007199254740991,${invalidIds}&rule_id=10,020,9007199254740991,${invalidIds}`,
+    });
+
+    expect(await screen.findByText('Valid scoped notification')).toBeInTheDocument();
+    const requests = callsFor((path, method) => !method && path.startsWith('/notifications/logs?'));
+    expect(requests.some(([path]) => String(path).includes('count_only=true'))).toBe(true);
+    for (const [path] of requests) {
+      const params = new URL(String(path), 'http://teslasync.local').searchParams;
+      expect(params.get('vehicle_id')).toBe('1,2,9007199254740991');
+      expect(params.get('rule_id')).toBe('10,20,9007199254740991');
+      expect(params.get('archived')).toBe(String(archived));
+    }
+  });
+
+  it('omits invalid-only ID filters rather than inventing a replacement ID', async () => {
+    renderInbox({
+      archived: true,
+      route: '/notifications/archived?vehicle_id=1.5,9007199254740993&rule_id=0x10,1e2',
+    });
+    await waitFor(() => expect(flatCalls().length).toBeGreaterThan(0));
+    for (const [path] of callsFor((path, method) => !method && path.startsWith('/notifications/logs?'))) {
+      const params = new URL(String(path), 'http://teslasync.local').searchParams;
+      expect(params.has('vehicle_id')).toBe(false);
+      expect(params.has('rule_id')).toBe(false);
+      expect(params.get('archived')).toBe('true');
+    }
+  });
+
   it('honors the shared seven-day workspace range instead of querying all-time history', async () => {
     localStorage.setItem(SHARED_RANGE_STORAGE_KEY, JSON.stringify({
       version: 2, start: '2026-09-01', end: '2026-09-07', presetId: '7d',

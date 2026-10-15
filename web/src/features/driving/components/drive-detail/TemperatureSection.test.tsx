@@ -40,6 +40,16 @@ import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { AppSettings } from '@/api/types';
 import type { ChartDataPoint, DriveStats } from './types';
+import type { ReactNode } from 'react';
+import { chartTokens } from '@/lib/tokens';
+
+vi.mock('@/components/charts', async () => ({
+  ...await vi.importActual<typeof import('@/components/charts')>('@/components/charts'),
+  ResponsiveContainer: ({ children }: { children: ReactNode }) => <>{children}</>,
+  LineChart: ({ children }: { children: ReactNode }) => <>{children}</>,
+  Line: ({ dataKey, stroke }: { dataKey: string; stroke: string }) =>
+    <span data-testid={`temperature-${dataKey}`} data-stroke={stroke} />,
+}));
 
 // jsdom lacks matchMedia; FadeIn → useMotionPreference → framer-motion's
 // useReducedMotion reaches for it. Install a benign stub before any shared
@@ -224,6 +234,22 @@ beforeEach(() => {
 });
 
 describe('TemperatureSection — chart chrome + a11y', () => {
+  it('keeps all temperature identities distinct with shared paint and signed readings', () => {
+    renderSection({
+      chartData: [
+        makePoint({ outsideTemp: -5.25, insideTemp: 20, driverTemp: 21, passengerTemp: 22 }),
+        makePoint({ outsideTemp: -4.75, insideTemp: 21, driverTemp: 22, passengerTemp: 23 }),
+      ],
+      stats: {
+        avgOutsideTemp: -5, outsideTemps: [-5.25, -4.75], insideTemps: [20, 21],
+        driverTemps: [21, 22], passengerTemps: [22, 23],
+      },
+    });
+    for (const [key, index] of Object.entries({ outsideTemp: 0, insideTemp: 2, driverTemp: 6, passengerTemp: 4 })) {
+      expect(screen.getByTestId(`temperature-${key}`)).toHaveAttribute('data-stroke', chartTokens.series[index]);
+    }
+    expect(cellValue('Outside temperature')).toBe('-5.00°C');
+  });
   it('renders as a figure named by its title heading, with a role="img" chart body', () => {
     renderSection();
 

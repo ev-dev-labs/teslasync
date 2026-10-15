@@ -69,6 +69,7 @@ const {
   useFormattingMock,
   navigateMock,
   captured,
+  heroIntegration,
 } = vi.hoisted(() => ({
   analyticsMock: vi.fn(),
   vehiclesMock: vi.fn(),
@@ -78,6 +79,7 @@ const {
   useFormattingMock: vi.fn(),
   navigateMock: vi.fn(),
   captured: {} as Record<string, Record<string, unknown>>,
+  heroIntegration: { enabled: false },
 }));
 
 // i18n → return the developer fallback string, interpolating `{{vars}}`.
@@ -142,9 +144,13 @@ vi.mock('@/hooks/useFormatting', () => ({ useFormatting: () => useFormattingMock
 // Stub the two heavy children; capture the exact props the page computed.
 vi.mock('@/components/vehicles', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
+  const { VehicleHeroCard } = await vi.importActual<typeof import('@/components/vehicles/VehicleHeroCard')>(
+    '@/components/vehicles/VehicleHeroCard',
+  );
   return {
-    VehicleHeroCard: (props: Record<string, unknown>) => {
-      captured.hero = props;
+    VehicleHeroCard: (props: import('@/components/vehicles/VehicleHeroCard').VehicleHeroCardProps) => {
+      captured.hero = { ...props };
+      if (heroIntegration.enabled) return React.createElement(VehicleHeroCard, props);
       return React.createElement('div', { 'data-testid': 'vehicle-hero' });
     },
   };
@@ -208,6 +214,9 @@ interface FakeQuery {
   isFetching: boolean;
   isStale: boolean;
   isError: boolean;
+  isPending: boolean;
+  isSuccess: boolean;
+  fetchStatus: 'fetching' | 'paused' | 'idle';
   dataUpdatedAt: number;
   refetch: ReturnType<typeof vi.fn>;
 }
@@ -220,6 +229,9 @@ function makeQuery(overrides: Partial<FakeQuery> = {}): FakeQuery {
     isFetching: false,
     isStale: false,
     isError: false,
+    isPending: false,
+    isSuccess: true,
+    fetchStatus: 'idle',
     dataUpdatedAt: Date.now(),
     refetch: vi.fn().mockResolvedValue(undefined),
     ...overrides,
@@ -228,16 +240,16 @@ function makeQuery(overrides: Partial<FakeQuery> = {}): FakeQuery {
 
 function setUnits(distance: 'km' | 'mi') {
   useUnitsMock.mockReturnValue({
-    unitPrefs: { distance },
+    unitPrefs: { distance, temperature: '°C', power: 'kW' },
     formatEnergy: (wh: number) => `${(wh ?? 0) / 1000} kWh`,
   });
 }
 
-function renderPage() {
+function renderPage(path = '/quick-stats') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[path]}>
         <main id="main-content">
           <QuickStatsPage />
         </main>
@@ -247,6 +259,7 @@ function renderPage() {
 }
 
 beforeEach(() => {
+  heroIntegration.enabled = false;
   analyticsMock.mockReset();
   vehiclesMock.mockReset();
   vehicleStateMock.mockReset();
@@ -423,6 +436,146 @@ describe('QuickStatsPage', () => {
     expect(vehicle.display_name).toBe('Tesla');
   });
 
+  it.each([
+    { label: 'active loading', fetchStatus: 'fetching' as const, isLoading: true, paused: false },
+    { label: 'paused without data', fetchStatus: 'paused' as const, isLoading: false, paused: true },
+  ])('passes unresolved trust for $label without inventing an observation', ({ fetchStatus, isLoading, paused }) => {
+    heroIntegration.enabled = true;
+    vehicleStateMock.mockReturnValue(makeQuery({
+      isPending: true, isSuccess: false, isLoading,
+      isFetching: !paused, fetchStatus, dataUpdatedAt: Date.now(),
+    }));
+    renderPage();
+
+    expect(captured.hero.vehicleState).toBeNull();
+    expect(captured.hero.dataState).toMatchObject({
+      status: 'initial', provenance: 'unknown', hasData: false, isRefreshBlocked: paused,
+    });
+    expect(captured.hero.observation).toEqual({ observedAt: null, freshness: 'unknown' });
+    expect(screen.getByRole('status', { name: 'Loading Telemetry stream' })).toBeInTheDocument();
+    expect(screen.getByText('No verified observation time for this vehicle')).toBeInTheDocument();
+    expect(screen.queryByText('Live telemetry unavailable')).not.toBeInTheDocument();
+    expect(screen.queryByText('Live vehicle state')).not.toBeInTheDocument();
+    if (paused) expect(screen.getByText('Paused')).toBeInTheDocument();
+  });
+
+  it('renders a successful empty state without treating the fetch time as observation', () => {
+    heroIntegration.enabled = true;
+    vehicleStateMock.mockReturnValue(makeQuery({
+      data: { state: undefined, live: false, observedAt: null, freshness: 'unknown' },
+    }));
+    renderPage();
+
+    expect(captured.hero.dataState).toMatchObject({ status: 'unavailable', hasData: true });
+    expect(captured.hero.observation).toEqual({ observedAt: null, freshness: 'unknown' });
+    expect(screen.getByText('Live telemetry unavailable')).toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading Telemetry stream' })).not.toBeInTheDocument();
+  });
+
+  it('preserves zero, false, null and signed readings with the actual Hero', () => {
+    heroIntegration.enabled = true;
+    const readings = {
+      state: 'parked', battery_level: 0, rated_range: 0, odometer: 0,
+      inside_temp: null, outside_temp: -5, power: -2000,
+      is_locked: false, sentry_mode: false, is_charging: false,
+    };
+    const observedAt = Date.now() - 30_000;
+    vehicleStateMock.mockReturnValue(makeQuery({
+      data: { state: readings, live: true, observedAt, freshness: 'fresh' },
+      dataUpdatedAt: observedAt + 20_000,
+    }));
+    renderPage();
+
+    expect(captured.hero.vehicleState).toBe(readings);
+    expect(captured.hero.dataState).toMatchObject({ status: 'ok', provenance: 'live' });
+    expect(captured.hero.observation).toEqual({ observedAt, freshness: 'fresh' });
+    expect(screen.getByText('Unlocked')).toBeInTheDocument();
+    expect(screen.getByText('Off')).toBeInTheDocument();
+    expect(screen.getByText('-2.00')).toBeInTheDocument();
+    expect(screen.getAllByText('-5').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('0').length).toBeGreaterThan(0);
+    expect(screen.getByText('Telemetry stream observation does not verify individual reading timestamps or completeness.')).toBeInTheDocument();
+  });
+
+  it('retains observations through refresh failure and paused refresh, then recovers without duplicate notices', () => {
+    heroIntegration.enabled = true;
+    const observedAt = Date.now() - 60_000;
+    const data = { state: STATE, live: true, observedAt, freshness: 'fresh' };
+    const q = makeQuery({ data, error: new Error('state refresh failed'), isError: true });
+    vehicleStateMock.mockReturnValue(q);
+    const page = renderPage();
+    const rerender = () => page.rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter initialEntries={['/quick-stats']}>
+          <main id="main-content"><QuickStatsPage /></main>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(captured.hero.vehicleState).toBe(STATE);
+    expect(captured.hero.dataState).toMatchObject({ status: 'stale', provenance: 'cached', fatalError: null });
+    expect(captured.hero.observation).toEqual({ observedAt, freshness: 'fresh' });
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1);
+    expect(screen.queryByText('Live vehicle state')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(q.refetch).toHaveBeenCalledTimes(1);
+
+    vehicleStateMock.mockReturnValue(makeQuery({ data, fetchStatus: 'paused' }));
+    rerender();
+    expect(captured.hero.dataState).toMatchObject({ status: 'stale', isRefreshBlocked: true, refreshError: null });
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1);
+    expect(captured.hero.observation).toEqual({ observedAt, freshness: 'fresh' });
+
+    vehicleStateMock.mockReturnValue(makeQuery({ data, dataUpdatedAt: Date.now() }));
+    rerender();
+    expect(captured.hero.dataState).toMatchObject({ status: 'ok', provenance: 'live', refreshError: null });
+    expect(captured.hero.observation).toEqual({ observedAt, freshness: 'fresh' });
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+  });
+
+  it('forwards fatal state failure and retries without replacing the fleet content', () => {
+    heroIntegration.enabled = true;
+    const q = makeQuery({ error: new Error('state failed'), isError: true, isSuccess: false });
+    vehicleStateMock.mockReturnValue(q);
+    renderPage();
+    expect(captured.hero.dataState).toMatchObject({ status: 'initialFailure', hasData: false });
+    expect(screen.getByText('The live-state request failed. This is a fact about our pipeline, not about the vehicle.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(q.refetch).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('12,345.00 km')).toBeInTheDocument();
+    expect(screen.queryByText('Live vehicle state')).not.toBeInTheDocument();
+  });
+
+  it('uses historical provenance for the same as_of policy even if the retained payload says live', () => {
+    const observedAt = Date.parse('2026-10-01T12:00:00Z');
+    vehicleStateMock.mockReturnValue(makeQuery({
+      data: { state: STATE, live: true, observedAt, freshness: 'stale' },
+    }));
+    renderPage('/quick-stats?as_of=2026-10-01T12%3A00%3A00Z');
+    expect(captured.hero.dataState).toMatchObject({ provenance: 'historical' });
+    expect(captured.hero.observation).toEqual({ observedAt, freshness: 'stale' });
+    expect(vehicleStateMock).toHaveBeenCalledWith(1);
+    expect(analyticsMock).toHaveBeenCalledWith(30);
+  });
+
+  it('switches readings and observation metadata together with workspace selection', () => {
+    const firstObservation = Date.now() - 60_000;
+    vehicleStateMock.mockImplementation((id: number) => makeQuery({
+      data: id === 1
+        ? { state: STATE, live: true, observedAt: firstObservation, freshness: 'fresh' }
+        : { state: { battery_level: 0 }, live: false, observedAt: null, freshness: 'unknown' },
+    }));
+    const page = renderPage();
+    expect(captured.hero.observation).toEqual({ observedAt: firstObservation, freshness: 'fresh' });
+    page.unmount();
+    selectedVehicleMock.mockReturnValue({ vehicleId: 2, vehicle: makeVehicle({ id: 2 }) });
+    renderPage();
+    expect(captured.hero.vehicle).toMatchObject({ id: 2 });
+    expect(captured.hero.vehicleState).toEqual({ battery_level: 0 });
+    expect(captured.hero.observation).toEqual({ observedAt: null, freshness: 'unknown' });
+    expect(captured.hero.dataState).toMatchObject({ provenance: 'unknown' });
+  });
+
   it('shows a spotlight skeleton (not the hero/empty) while vehicles load', () => {
     vehiclesMock.mockReturnValue(makeQuery({ isLoading: true, dataUpdatedAt: 0 }));
     selectedVehicleMock.mockReturnValue({
@@ -513,7 +666,8 @@ describe('QuickStatsPage', () => {
     expect(screen.getByTestId('vehicle-hero')).toBeInTheDocument();
     expect(captured.fleet.entries).toBe(ANALYTICS.vehicleComparison);
     expect(captured.fleet.error).toBeNull();
-    expect(screen.getAllByTestId('stale-refresh-warning').length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Cached · refresh failed')).toHaveLength(2);
     expect(container.querySelector('[data-layout-reference]')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Fleet metrics' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Open dashboard' })).toBeInTheDocument();

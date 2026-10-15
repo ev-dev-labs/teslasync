@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, BellRing, Clock3, Flame, ShieldCheck } from 'lucide-react';
 
@@ -8,10 +8,11 @@ import {
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from '@/components/charts';
 import { OperationalBrief, DataProvenanceBadge, type StatMetric } from '@/components/data-display';
-import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { DataSourceNotice, resolveDataSourceStatus, EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { Badge, GlassPanel, PanelTitle, SectionTitle, Text } from '@/components/ui';
-import { formatTime } from '@/lib/dateFormat';
+import { Badge, Caption, GlassPanel, PanelTitle, SectionTitle, Text } from '@/components/ui';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { asFiniteNumber } from '@/lib/typeGuards';
 
 import { chartTokens } from '@/lib/tokens';
 
@@ -31,13 +32,16 @@ const STATUS_FALLBACK: Record<BurnBreachStatus, string> = {
 };
 
 export function NotificationBurnRatePanel() {
+  const { formatTime, formatDateTime, tz } = useDateFormat();
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const logsQuery = useNotificationDeliveryLogs();
-  const source = useDataState(logsQuery);
+  const source = useDataState(logsQuery, { provenance: 'historical' });
+  const [frozenNowMs] = useState(() => Date.now());
+  const analysisAsOfMs = source.updatedAt ?? frozenNowMs;
   const summary = useMemo(
-    () => analyzeNotificationBurnRate(logsQuery.data ?? []),
-    [logsQuery.data],
+    () => analyzeNotificationBurnRate(logsQuery.data ?? [], { nowMs: analysisAsOfMs }),
+    [analysisAsOfMs, logsQuery.data],
   );
   const timelineData = useMemo(
     () => summary.timeline.map((bucket) => ({
@@ -51,9 +55,12 @@ export function NotificationBurnRatePanel() {
         : Math.round(bucket.deliveryRate * 1_000) / 10,
       burnRate: bucket.burnRate == null ? null : Math.round(bucket.burnRate * 100) / 100,
     })),
-    [summary.timeline],
+    [summary.timeline, formatTime],
   );
-  const isLoading = !source.hasData && !source.fatalError;
+  const sourceDescriptor = { id: 'notification-burn-rate', label: t('notificationBurnRate.title', 'Notification burn rate'), query: logsQuery };
+  const isLoading = resolveDataSourceStatus(sourceDescriptor) === 'loading';
+  const isBlocked = !source.hasData && source.isRefreshBlocked;
+  const blockedFeedback = <DataSourceNotice sources={[sourceDescriptor]} />;
   const isError = Boolean(source.fatalError);
   const statusLabel = t(
     `notificationBurnRate.status.${summary.breachStatus}`,
@@ -65,26 +72,26 @@ export function NotificationBurnRatePanel() {
       rawValue: summary.longWindow.deliveryRate == null ? null : summary.longWindow.deliveryRate * 100,
       label: t('notificationBurnRate.kpis.delivery', '24h delivery SLO'),
       missingReason: t('notificationBurnRate.kpis.noLongOutcomes', 'No delivery outcomes in the last 24 hours'),
-      context: <><ShieldCheck className="h-5 w-5" aria-hidden="true" />{t('notificationBurnRate.kpis.objective', '99% objective')}</>,
+      context: <><ShieldCheck className="h-5 w-5 text-[var(--text-muted)]" aria-hidden="true" />{t('notificationBurnRate.kpis.objective', '99% objective')}</>,
     },
     {
       metricId: 'multiplier', occurrenceId: 'burn-short', rawValue: summary.shortWindow.burnRate,
       display: { precision: 2 },
       label: t('notificationBurnRate.kpis.shortBurn', '1h burn rate'),
       missingReason: t('notificationBurnRate.kpis.noShortOutcomes', 'No delivery outcomes in the last hour'),
-      context: <><Flame className="h-5 w-5" aria-hidden="true" />{t('notificationBurnRate.kpis.shortOutcomes', '{{count}} delivery outcomes', { count: summary.shortWindow.eligible })}</>,
+      context: <><Flame className="h-5 w-5 text-[var(--text-muted)]" aria-hidden="true" />{t('notificationBurnRate.kpis.shortOutcomes', '{{count}} delivery outcomes', { count: summary.shortWindow.eligible })}</>,
     },
     {
       metricId: 'multiplier', occurrenceId: 'burn-long', rawValue: summary.longWindow.burnRate,
       display: { precision: 2 },
       label: t('notificationBurnRate.kpis.longBurn', '24h burn rate'),
       missingReason: t('notificationBurnRate.kpis.noLongOutcomes', 'No delivery outcomes in the last 24 hours'),
-      context: <><Clock3 className="h-5 w-5" aria-hidden="true" />{t('notificationBurnRate.kpis.failures', '{{failed}} failed · {{sent}} sent', { failed: summary.longWindow.failed, sent: summary.longWindow.sent })}</>,
+      context: <><Clock3 className="h-5 w-5 text-[var(--text-muted)]" aria-hidden="true" />{t('notificationBurnRate.kpis.failures', '{{failed}} failed · {{sent}} sent', { failed: summary.longWindow.failed, sent: summary.longWindow.sent })}</>,
     },
     {
       metricId: 'status', occurrenceId: 'burn-budget', rawValue: statusLabel,
       label: t('notificationBurnRate.kpis.status', 'Budget status'),
-      context: <><AlertTriangle className="h-5 w-5" aria-hidden="true" />{t('notificationBurnRate.kpis.deferred', '{{count}} deferred by DND', { count: summary.deferredDnd })}</>,
+      context: <><AlertTriangle className="h-5 w-5 text-[var(--text-muted)]" aria-hidden="true" />{t('notificationBurnRate.kpis.deferred', '{{count}} deferred by DND', { count: summary.deferredDnd })}</>,
     },
   ];
   const operationalMetrics = useOperationalMetrics(metrics);
@@ -96,6 +103,13 @@ export function NotificationBurnRatePanel() {
         <Text as="p" color="secondary">
           {t('notificationBurnRate.subtitle', 'Track all recorded notification delivery attempts against a 99% SLO with short and long error-budget windows')}
         </Text>
+        {source.hasData && (
+          <Caption data-testid="notification-burn-rate-as-of">
+            {t('operationalMode.asOf.label', 'As of {{when}}', {
+              when: `${formatDateTime(new Date(analysisAsOfMs))} (${tz})`,
+            })}
+          </Caption>
+        )}
       </div>
       <StaleRefreshWarning state={source} label={t('notificationBurnRate.title', 'Notification burn rate')} />
       <FadeIn>
@@ -107,6 +121,8 @@ export function NotificationBurnRatePanel() {
             <GlassPanel className="col-span-full p-4 sm:p-5">
               <QueryError error={source.fatalError} onRetry={() => logsQuery.refetch()} />
             </GlassPanel>
+          ) : isBlocked ? (
+            <GlassPanel className="p-4 sm:p-5">{blockedFeedback}</GlassPanel>
           ) : isLoading ? (
             Array.from({ length: 4 }).map((_, index) => (
               <Skeleton key={index} height={96} className="rounded-xl" />
@@ -138,13 +154,18 @@ export function NotificationBurnRatePanel() {
           <GlassPanel className="p-4 sm:p-5">
             <QueryError error={source.fatalError} onRetry={() => logsQuery.refetch()} />
           </GlassPanel>
+        ) : isBlocked ? (
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle>{t('notificationBurnRate.timeline.title', 'Delivery outcomes by hour')}</PanelTitle>
+            {blockedFeedback}
+          </GlassPanel>
         ) : (
           <ChartContainer
             title={t('notificationBurnRate.timeline.title', 'Delivery outcomes by hour')}
-            subtitle={t(
+            subtitle={`${t(
               'notificationBurnRate.timeline.subtitle',
               'Deferred quiet-hours notifications remain visible but never consume delivery error budget',
-            )}
+            )} (${tz})`}
             ariaLabel={t(
               'notificationBurnRate.timeline.aria',
               'Stacked bar chart of sent, failed, and do-not-disturb deferred notifications by hour',
@@ -203,16 +224,18 @@ export function NotificationBurnRatePanel() {
       <FadeIn delay={0.2}>
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
-            <BellRing className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <BellRing className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
             {t('notificationBurnRate.severity.title', 'Severity breakdown')}
           </PanelTitle>
           {isError ? (
             <QueryError error={source.fatalError} onRetry={() => { void logsQuery.refetch(); }} />
+          ) : isBlocked ? (
+            blockedFeedback
           ) : isLoading ? (
             <Skeleton height={96} />
           ) : summary.severities.length === 0 ? (
             <EmptyState /* no-action: delivery outcomes populate automatically as notifications are processed. */
-              icon={<BellRing className="h-8 w-8" />}
+              icon={<BellRing className="h-8 w-8 text-[var(--text-muted)]" />}
               message={t(
                 'notificationBurnRate.severity.empty',
                 'No notification outcomes are available in the last 24 hours.',
@@ -220,7 +243,9 @@ export function NotificationBurnRatePanel() {
             />
           ) : (
             <div className="grid min-w-0 gap-3 md:grid-cols-2">
-              {summary.severities.map((severity) => (
+              {summary.severities.map((severity) => {
+                const burnRate = asFiniteNumber(severity.burnRate);
+                return (
                 <div
                   key={severity.severity}
                   className="min-w-0 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3 sm:p-4"
@@ -230,12 +255,12 @@ export function NotificationBurnRatePanel() {
                       {severity.severity}
                     </Text>
                     <Badge
-                      variant={(severity.burnRate ?? 0) > 1 ? 'warning' : 'success'}
+                      variant={burnRate == null ? 'neutral' : burnRate > 1 ? 'warning' : 'success'}
                       size="sm"
                     >
-                      {severity.burnRate != null
+                      {burnRate != null
                         ? t('notificationBurnRate.kpis.multiplier', '{{value}}×', {
-                            value: fmtNumber(severity.burnRate),
+                            value: fmtNumber(burnRate),
                           })
                         : '—'}
                     </Badge>
@@ -253,7 +278,8 @@ export function NotificationBurnRatePanel() {
                     )}
                   </Text>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </GlassPanel>

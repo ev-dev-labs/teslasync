@@ -14,6 +14,8 @@ export function SleepEvidenceOverview({ analysis, state, trust }: SleepEfficienc
   const { t } = useTranslation();
   const { fmtInt, fmtNumber } = useNumberFormatting();
   const hasResponse = state.vehicleSelected && trust.hasData && analysis.source.hasResponse;
+  const hasTransitionCounts = hasResponse && analysis.stateAccounting.collectionPresent
+    && (analysis.stateAccounting.returnedRows === 0 || analysis.stateAccounting.includedRows > 0);
   const loading = state.vehicleSelected && state.isLoading && !trust.hasData && !trust.isRefreshBlocked;
   const retained = trust.hasData && (trust.status !== 'ok' || Boolean(state.refreshError));
   const rangeValue = analysis.range.status === 'valid'
@@ -39,7 +41,7 @@ export function SleepEvidenceOverview({ analysis, state, trust }: SleepEfficienc
     },
     {
       metricId: 'count', occurrenceId: 'sleep-destinations',
-      rawValue: hasResponse ? analysis.transitions.totalCount : null,
+      rawValue: hasTransitionCounts ? analysis.transitions.totalCount : null,
       display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) },
       label: t('sleep.kpi.transitionDestinations', 'Valid transition destinations'),
       description: t('sleep.kpi.transitionSubtitle', 'Destination counts from the vehicle FSM'),

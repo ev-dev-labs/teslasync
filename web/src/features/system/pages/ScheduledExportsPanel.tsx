@@ -19,7 +19,7 @@
 // validates everything in NormalizeScheduledExportInput and returns
 // 400 with a useful message that we surface via toast. Doubling the
 // validators would only invite drift.
-import { useCallback, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -38,6 +38,7 @@ import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/compone
 import { useDataState } from '@/hooks/useDataState';
 import { TimeStamp } from '@/components/data-display';
 import { Icons } from '@/lib/icons';
+import { getErrorMessage } from '@/lib/errorMessage';
 import {
   useScheduledExports,
   useCreateScheduledExport,
@@ -93,7 +94,7 @@ function inputFromRow(row: ScheduledExport): ScheduledExportInput {
 export function ScheduledExportsPanel() {
   const { t } = useTranslation();
   const query = useScheduledExports();
-  const { data, isLoading, refetch } = query;
+  const { refetch } = query;
   const state = useDataState(query);
   const error = state.fatalError;
   const isError = !!error;
@@ -106,8 +107,21 @@ export function ScheduledExportsPanel() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<ScheduledExportInput>(emptyInput);
   const [pendingDelete, setPendingDelete] = useState<ScheduledExport | null>(null);
+  const [saving, setSaving] = useState(false);
+  const saveRequest = useRef<object | null>(null);
+  const deleteRequest = useRef<object | null>(null);
+  const formInstance = useRef<object>({});
+  const currentForm = useRef(form);
+  currentForm.current = form;
+  const savePending = saving || create.isPending || update.isPending;
 
-  const rows = data ?? [];
+  useEffect(() => () => {
+    formInstance.current = {};
+    saveRequest.current = null;
+    deleteRequest.current = null;
+  }, []);
+
+  const rows = state.data ?? [];
 
   // Stable identity so QueryError's offline auto-retry effect doesn't
   // re-subscribe on every render.
@@ -116,18 +130,24 @@ export function ScheduledExportsPanel() {
   }, [refetch]);
 
   function startCreate() {
+    if (saveRequest.current) return;
+    formInstance.current = {};
     setForm(emptyInput());
     setEditingId(null);
     setShowForm(true);
   }
 
   function startEdit(row: ScheduledExport) {
+    if (saveRequest.current) return;
+    formInstance.current = {};
     setForm(inputFromRow(row));
     setEditingId(row.id);
     setShowForm(true);
   }
 
   function closeForm() {
+    if (saveRequest.current) return;
+    formInstance.current = {};
     setShowForm(false);
     setEditingId(null);
     setForm(emptyInput());
@@ -135,6 +155,12 @@ export function ScheduledExportsPanel() {
 
   async function submit(ev: FormEvent) {
     ev.preventDefault();
+    if (!showForm || saveRequest.current || create.isPending || update.isPending) return;
+    const request = {};
+    const instance = formInstance.current;
+    const draft = form;
+    saveRequest.current = request;
+    setSaving(true);
     const payload: ScheduledExportInput = {
       ...form,
       // Drop the optional target field for download deliveries so we
@@ -150,13 +176,24 @@ export function ScheduledExportsPanel() {
       } else {
         await update.mutateAsync({ id: editingId, payload });
       }
-      closeForm();
+      if (saveRequest.current === request && formInstance.current === instance &&
+          currentForm.current === draft) {
+        saveRequest.current = null;
+        setSaving(false);
+        closeForm();
+      }
     } catch {
       /* toast surfaced by mutation hook */
+    } finally {
+      if (saveRequest.current === request) {
+        saveRequest.current = null;
+        setSaving(false);
+      }
     }
   }
 
   async function toggleEnabled(row: ScheduledExport) {
+    if (saveRequest.current || update.isPending) return;
     try {
       await update.mutateAsync({
         id: row.id,
@@ -167,11 +204,32 @@ export function ScheduledExportsPanel() {
     }
   }
 
+  async function confirmDelete() {
+    if (!pendingDelete || deleteRequest.current || remove.isPending) return;
+    const request = {};
+    const selected = pendingDelete;
+    deleteRequest.current = request;
+    try {
+      await remove.mutateAsync(selected.id);
+      if (deleteRequest.current === request) {
+        setPendingDelete(current => current === selected ? null : current);
+      }
+    } catch {
+      /* toast surfaced by mutation hook; retain confirmation for retry */
+    } finally {
+      if (deleteRequest.current === request) deleteRequest.current = null;
+    }
+  }
+
   return (
-    <GlassPanel className="min-w-0 p-6" data-testid="scheduled-exports-panel">
-      <StaleRefreshWarning state={state} label={t('dataExport.scheduled.title', 'Scheduled exports')} />
-      <div className="flex items-start justify-between gap-4">
-        <div>
+    <GlassPanel className="min-w-0 p-4 md:p-6" data-testid="scheduled-exports-panel">
+      <StaleRefreshWarning
+        state={state}
+        label={t('dataExport.scheduled.title', 'Scheduled exports')}
+        message={getErrorMessage(state.refreshError, '') || undefined}
+      />
+      <div className="flex min-w-0 flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
           <Heading level="section">
             {t('dataExport.scheduled.title', 'Scheduled exports')}
           </Heading>
@@ -185,7 +243,10 @@ export function ScheduledExportsPanel() {
         <Button
           variant="primary"
           size="sm"
+          wrapLabel
+          className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
           onClick={startCreate}
+          disabled={saving}
           icon={<Icons.add className="h-4 w-4" />}
           data-testid="scheduled-exports-new-button"
         >
@@ -198,13 +259,15 @@ export function ScheduledExportsPanel() {
           onSubmit={submit}
           className="mt-6 space-y-4 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4"
           data-testid="scheduled-exports-form"
+          aria-busy={savePending}
         >
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <fieldset disabled={savePending} className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2">
             <label className="block">
               <Text as="span" size="xs" color="secondary" className="tracking-wide">
                 {t('dataExport.scheduled.form.name', 'Name')}
               </Text>
               <Input
+                className="min-h-11 md:min-h-10"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder={t(
@@ -219,6 +282,7 @@ export function ScheduledExportsPanel() {
                 {t('dataExport.scheduled.form.scheduleCron', 'Cron expression')}
               </Text>
               <Input
+                className="min-h-11 md:min-h-10"
                 value={form.schedule_cron}
                 onChange={(e) => setForm({ ...form, schedule_cron: e.target.value })}
                 placeholder="0 9 * * 0"
@@ -266,6 +330,7 @@ export function ScheduledExportsPanel() {
                 {t('dataExport.scheduled.form.rangeWindow', 'Range window')}
               </Text>
               <Input
+                className="min-h-11 md:min-h-10"
                 value={form.range_window ?? ''}
                 onChange={(e) => setForm({ ...form, range_window: e.target.value })}
                 placeholder="7d"
@@ -301,6 +366,7 @@ export function ScheduledExportsPanel() {
                   {t('dataExport.scheduled.form.deliveryTarget', 'Delivery target')}
                 </Text>
                 <Input
+                  className="min-h-11 md:min-h-10"
                   value={form.delivery.target ?? ''}
                   onChange={(e) =>
                     setForm({
@@ -323,13 +389,16 @@ export function ScheduledExportsPanel() {
                 </Text>
               </label>
             ) : null}
-          </div>
-          <div className="flex justify-end gap-2">
+          </fieldset>
+          <div className="flex flex-wrap justify-end gap-2">
             <Button
               type="button"
               variant="ghost"
               size="sm"
               onClick={closeForm}
+              disabled={savePending}
+              wrapLabel
+              className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
             >
               {t('dataExport.scheduled.form.cancel', 'Cancel')}
             </Button>
@@ -337,8 +406,10 @@ export function ScheduledExportsPanel() {
               type="submit"
               variant="primary"
               size="sm"
-              loading={create.isPending || update.isPending}
+              loading={savePending}
               data-testid="scheduled-exports-form-submit"
+              wrapLabel
+              className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
             >
               {t('dataExport.scheduled.form.submit', 'Save schedule')}
             </Button>
@@ -347,7 +418,9 @@ export function ScheduledExportsPanel() {
       ) : null}
 
       <div className="mt-6">
-        {isLoading && !state.hasData ? (
+        {state.status === 'initial' && state.isRefreshBlocked ? (
+          <Text color="secondary" role="status">{t('dataSources.status.paused', 'Refresh paused')}</Text>
+        ) : state.status === 'initial' ? (
           <div className="space-y-2">
             <Skeleton className="h-12 w-full" />
             <Skeleton className="h-12 w-full" />
@@ -358,6 +431,7 @@ export function ScheduledExportsPanel() {
           // an actionable error with retry instead of the empty placeholder.
           <QueryError
             error={error}
+            message={getErrorMessage(error, '') || undefined}
             onRetry={handleRetry}
             resourceName={t('dataExport.scheduled.resourceName', 'Scheduled exports')}
           />
@@ -425,13 +499,15 @@ export function ScheduledExportsPanel() {
                       )}
                     </td>
                     <td>
-                      <div className="flex justify-end gap-1">
+                      <div className="flex flex-wrap justify-end gap-2 md:gap-1">
                         <Button
                           size="sm"
                           variant="ghost"
                           onClick={() => runNow.mutate(row.id)}
                           loading={runNow.isPending && runNow.variables === row.id}
                           data-testid={`scheduled-exports-run-${row.id}`}
+                          wrapLabel
+                          className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
                         >
                           {t('dataExport.scheduled.actions.runNow', 'Run now')}
                         </Button>
@@ -439,6 +515,9 @@ export function ScheduledExportsPanel() {
                           size="sm"
                           variant="ghost"
                           onClick={() => toggleEnabled(row)}
+                          disabled={savePending}
+                          wrapLabel
+                          className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
                         >
                           {row.enabled
                             ? t('dataExport.scheduled.actions.disable', 'Disable')
@@ -448,14 +527,22 @@ export function ScheduledExportsPanel() {
                           size="sm"
                           variant="ghost"
                           onClick={() => startEdit(row)}
+                          disabled={saving}
+                          wrapLabel
+                          className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
                         >
                           {t('dataExport.scheduled.actions.edit', 'Edit')}
                         </Button>
                         <Button
                           size="sm"
                           variant="danger"
-                          onClick={() => setPendingDelete(row)}
+                          disabled={remove.isPending}
+                          onClick={() => {
+                            if (!deleteRequest.current) setPendingDelete(row);
+                          }}
                           data-testid={`scheduled-exports-delete-${row.id}`}
+                          wrapLabel
+                          className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
                         >
                           {t('dataExport.scheduled.actions.delete', 'Delete')}
                         </Button>
@@ -478,14 +565,12 @@ export function ScheduledExportsPanel() {
           { name: pendingDelete?.name ?? '' },
         )}
         variant="danger"
+        loading={remove.isPending}
         confirmLabel={t('dataExport.scheduled.actions.delete', 'Delete')}
-        onConfirm={() => {
-          if (pendingDelete) {
-            remove.mutate(pendingDelete.id);
-          }
-          setPendingDelete(null);
+        onConfirm={confirmDelete}
+        onCancel={() => {
+          if (!deleteRequest.current && !remove.isPending) setPendingDelete(null);
         }}
-        onCancel={() => setPendingDelete(null)}
       />
     </GlassPanel>
   );

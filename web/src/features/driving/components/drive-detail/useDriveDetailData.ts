@@ -5,11 +5,13 @@ import { useUnits } from '@/hooks/useUnits';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useSettings } from '@/hooks/useSettings';
 import { resolveTimezone } from '@/lib/timezone';
+import { chartTokens } from '@/lib/tokens';
 import {
   convertDistanceFromSI,
   convertSpeedFromSI,
   convertTempFromSI,
   convertPressureFromSI,
+  convertPowerFromSI,
 } from '@/lib/unitConversion';
 
 import type { LatLngExpression } from '@/components/maps';
@@ -80,7 +82,7 @@ export function useDriveDetailData(id: string) {
         .map((tp) => ({
           lat: tp.latitude!,
           lng: tp.longitude!,
-          speed: tp.speed ?? 0,
+          speed: asFiniteNumber(tp.speed),
           timestamp: tp.createdAt ?? tp.created_at ?? tp.timestamp ?? null,
         }));
       if (points.length > 0) return points;
@@ -90,7 +92,7 @@ export function useDriveDetailData(id: string) {
       .map((p) => ({
         lat: p.latitude,
         lng: p.longitude,
-        speed: p.speed ?? 0,
+        speed: asFiniteNumber(p.speed),
         timestamp: p.createdAt ?? p.created_at ?? p.timestamp ?? null,
       }));
   }, [drive]);
@@ -116,10 +118,13 @@ export function useDriveDetailData(id: string) {
     for (let i = 1; i < routeSource.length; i++) {
       const prev = routeSource[i - 1];
       const curr = routeSource[i];
-      let color = '#10b981';
-      if (curr.speed >= SPEED_SEGMENT_HIGH_MPS) color = '#ef4444';
-      else if (curr.speed >= SPEED_SEGMENT_MED_MPS) color = '#f59e0b';
-      else if (curr.speed >= SPEED_SEGMENT_LOW_MPS) color = '#00f0ff';
+      let color: string = chartTokens.tooltipMutedText;
+      if (curr.speed != null) {
+        color = curr.speed >= SPEED_SEGMENT_HIGH_MPS ? chartTokens.series[3]
+          : curr.speed >= SPEED_SEGMENT_MED_MPS ? chartTokens.series[2]
+          : curr.speed >= SPEED_SEGMENT_LOW_MPS ? chartTokens.series[0]
+          : chartTokens.series[1];
+      }
       segs.push({ positions: [[prev.lat, prev.lng], [curr.lat, curr.lng]], color });
     }
     return segs;
@@ -135,7 +140,7 @@ export function useDriveDetailData(id: string) {
         speed: displaySpeed(tp.speed, unitPrefs.speed),
         battery: tp.batteryLevel ?? null,
         elevation: asFiniteNumber(tp.elevation),
-        power: asFiniteNumber(tp.power),
+        power: asFiniteNumber(tp.power) == null ? null : convertPowerFromSI(tp.power!, 'kW'),
         outsideTemp: tp.outsideTemp != null ? convertTempFromSI(tp.outsideTemp, unitPrefs.temperature) : null,
         insideTemp: tp.insideTemp != null ? convertTempFromSI(tp.insideTemp, unitPrefs.temperature) : null,
         driverTemp: tp.driverTemp != null ? convertTempFromSI(tp.driverTemp, unitPrefs.temperature) : null,
@@ -173,7 +178,7 @@ export function useDriveDetailData(id: string) {
       speed: displaySpeed(p.speed, unitPrefs.speed),
       battery: p.batteryLevel ?? p.battery_level ?? null,
       elevation: asFiniteNumber(p.elevation),
-      power: asFiniteNumber(p.power),
+      power: asFiniteNumber(p.power) == null ? null : convertPowerFromSI(p.power!, 'kW'),
       outsideTemp: (p.outsideTemp ?? p.outside_temp) != null ? convertTempFromSI((p.outsideTemp ?? p.outside_temp)!, unitPrefs.temperature) : null,
       insideTemp: (p.insideTemp ?? p.inside_temp) != null ? convertTempFromSI((p.insideTemp ?? p.inside_temp)!, unitPrefs.temperature) : null,
       driverTemp: null as number | null,
@@ -299,16 +304,18 @@ export function useDriveDetailData(id: string) {
     // convertSpeedFromSI above), so the bucket edges are plain display-unit
     // values — not SI. The labels render in whatever unit the user picked.
     const defs = [
+      { min: -Infinity, max: 0 },
       { min: 0, max: 20 },
       { min: 20, max: 40 },
       { min: 40, max: 60 },
       { min: 60, max: 80 },
       { min: 80, max: 100 },
       { min: 100, max: 120 },
-      { min: 120, max: 9999 },
+      { min: 120, max: Infinity },
     ];
     const buckets = defs.map((d) => ({
-      range: d.max >= 9999 ? `${fmtNumber(d.min)}+` : `${fmtNumber(d.min)}–${fmtNumber(d.max)}`,
+      range: d.min === -Infinity ? `<${fmtNumber(d.max)}`
+        : d.max === Infinity ? `${fmtNumber(d.min)}+` : `${fmtNumber(d.min)}–${fmtNumber(d.max)}`,
       count: 0,
     }));
     const observedSpeeds = chartData.filter((d) => d.speed != null && Number.isFinite(d.speed));

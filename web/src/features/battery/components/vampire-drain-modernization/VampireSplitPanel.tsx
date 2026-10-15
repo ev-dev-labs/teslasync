@@ -6,13 +6,16 @@ import { EmptyState, Skeleton } from '@/components/feedback';
 import { useVampireSplit } from '@/api/hooks/useTeslaPhysics';
 import { useDataState } from '@/hooks/useDataState';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { formatDateTime } from '@/lib/dateFormat';
+import { formatDateTime, type FormatOptions } from '@/lib/dateFormat';
 import type { VampireWindow } from '@/types/teslaPhysics';
 import type { StatPeriod } from '@/lib/metric-reference';
 import { SourceRecovery } from './SourceRecovery';
 
 /** The original split source, ordering, identity and three table columns are retained. */
-export function VampireSplitPanel({ vehicleId }: { vehicleId: string | undefined }) {
+export function VampireSplitPanel({ vehicleId, dateOptions }: {
+  vehicleId: string | undefined;
+  dateOptions?: FormatOptions;
+}) {
   const { t } = useTranslation();
   const { fmtNumber } = useNumberFormatting();
   const query = useVampireSplit(vehicleId);
@@ -32,7 +35,7 @@ export function VampireSplitPanel({ vehicleId }: { vehicleId: string | undefined
       key: 'kind', header: t('vampireDrain.split.kind', 'Kind'),
       render: row => <Badge variant={row.kind === 'complete_plugged' ? 'success' : 'neutral'} size="sm">{kindLabel(row)}</Badge>,
     },
-    { key: 'started_at', header: t('vampireDrain.split.started', 'Started'), render: row => formatDateTime(row.started_at) },
+    { key: 'started_at', header: t('vampireDrain.split.started', 'Started'), render: row => formatDateTime(row.started_at, dateOptions) },
     { key: 'drain_pct', header: t('vampireDrain.split.drain', 'Drain'), render: row => row.drain_pct != null ? `${fmtNumber(row.drain_pct)}%` : '—' },
   ];
   return (
@@ -63,10 +66,10 @@ export function VampireSplitPanel({ vehicleId }: { vehicleId: string | undefined
               mobilePresentation={{
                 roles: { kind: 'meta', started_at: 'title', drain_pct: 'primary' },
                 displayValue: (row, key) => key === 'kind' ? kindLabel(row)
-                  : key === 'started_at' ? formatDateTime(row.started_at)
+                  : key === 'started_at' ? formatDateTime(row.started_at, dateOptions)
                   : row.drain_pct != null ? `${fmtNumber(row.drain_pct)}%` : '—',
                 allDetails: row => [
-                  { key: 'ended_at', label: t('vampireDrain.modernization.ended', 'Ended'), value: formatDateTime(row.ended_at) },
+                  { key: 'ended_at', label: t('vampireDrain.modernization.ended', 'Ended'), value: formatDateTime(row.ended_at, dateOptions) },
                   { key: 'duration_s', label: t('vampireDrain.columns.duration', 'Duration'), value: row.duration_s != null ? `${fmtNumber(row.duration_s / 3600)}h` : '—' },
                   { key: 'start_soc_pct', label: t('vampireDrain.columns.startPct', 'Start %'), value: row.start_soc_pct != null ? `${fmtNumber(row.start_soc_pct)}%` : '—' },
                   { key: 'end_soc_pct', label: t('vampireDrain.columns.endPct', 'End %'), value: row.end_soc_pct != null ? `${fmtNumber(row.end_soc_pct)}%` : '—' },

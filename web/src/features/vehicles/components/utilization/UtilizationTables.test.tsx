@@ -1,13 +1,15 @@
 import type { ComponentProps, ReactElement } from 'react';
-import { render as renderWithProviders, screen, within, type RenderOptions } from '@testing-library/react';
+import { act, render as renderWithProviders, renderHook, screen, within, type RenderOptions } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { objectsToCSV } from '@/lib/csvExport';
+import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { summarizeUtilization, type UtilizationSummary } from '../../lib/utilization';
 import { BusiestDays } from './BusiestDays';
 import { UtilizationMethodology } from './UtilizationMethodology';
 import { WeekdayProfile } from './WeekdayProfile';
 import { TimeCostOverview } from './TimeCostOverview';
+import { UtilizationTrend } from './UtilizationTrend';
 
 vi.mock('@/hooks/useFormatting', () => ({
   useFormatting: () => ({
@@ -38,11 +40,26 @@ vi.mock('@/components/charts', async (importOriginal) => {
 
 const display = vi.hoisted(() => ({
   formatDay: (day: string) => day,
+  formatDayShort: (day: string) => day,
   formatDistance: vi.fn((meters: number) => `${meters / 1000} km`),
   formatDuration: vi.fn((seconds: number) => `${seconds / 60} min`),
   formatEnergy: vi.fn((wh: number) => `${wh / 1000} kWh`),
   distanceUnit: 'km',
   toDisplayDistance: vi.fn((meters: number) => meters / 1000),
+}));
+
+const datePreferences = vi.hoisted(() => ({ locale: 'de-DE', tz: 'America/Los_Angeles' }));
+
+vi.mock('@/hooks/useDateFormat', () => ({
+  useDateFormat: () => datePreferences,
+}));
+
+vi.mock('@/hooks/useUnits', () => ({
+  useUnits: () => ({
+    unitPrefs: { distance: 'km', locale: 'en-US' },
+    formatDistance: display.formatDistance,
+    formatEnergy: display.formatEnergy,
+  }),
 }));
 
 vi.mock('./useUtilizationDisplay', () => ({
@@ -84,6 +101,102 @@ function summary(): UtilizationSummary {
 }
 
 describe('Shared utilization tables', () => {
+  it('refreshes both calendar labels when the effective saved locale changes', async () => {
+    const { useUtilizationDisplay } = await vi.importActual<typeof import('./useUtilizationDisplay')>('./useUtilizationDisplay');
+    datePreferences.locale = 'de-DE';
+    const { result, rerender } = renderHook(useUtilizationDisplay);
+    const previous = result.current;
+    expect(previous.formatDay('2026-01-01')).toBe('1. Jan. 2026');
+    expect(previous.formatDayShort('2026-01-01')).toBe('1. Jan.');
+    datePreferences.locale = 'fr-FR';
+    rerender();
+    expect(result.current.formatDay).not.toBe(previous.formatDay);
+    expect(result.current.formatDayShort).not.toBe(previous.formatDayShort);
+    expect(result.current.formatDay('2026-01-01')).toBe('1 janv. 2026');
+    expect(result.current.formatDayShort('2026-01-01')).toBe('1 janv.');
+  });
+
+  it.each(['America/Los_Angeles', 'Pacific/Kiritimati'])(
+    'preserves calendar day identity at year, leap-day and DST boundaries in %s',
+    async (tz) => {
+      const { useUtilizationDisplay } = await vi.importActual<typeof import('./useUtilizationDisplay')>('./useUtilizationDisplay');
+      datePreferences.locale = 'de-DE';
+      datePreferences.tz = tz;
+      const { result, rerender } = renderHook(useUtilizationDisplay);
+      for (const [day, long, short] of [
+        ['2026-01-01', '1. Jan. 2026', '1. Jan.'],
+        ['2024-02-29', '29. Feb. 2024', '29. Feb.'],
+        ['2026-03-08', '8. März 2026', '8. März'],
+        ['2026-11-01', '1. Nov. 2026', '1. Nov.'],
+        ['2026-12-31', '31. Dez. 2026', '31. Dez.'],
+      ]) {
+        expect(result.current.formatDay(day)).toBe(long);
+        expect(result.current.formatDayShort(day)).toBe(short);
+      }
+      const previous = result.current;
+      datePreferences.tz = 'UTC';
+      rerender();
+      expect(result.current.formatDay).toBe(previous.formatDay);
+      expect(result.current.formatDayShort).toBe(previous.formatDayShort);
+    },
+  );
+
+  it.each([null, undefined, '', 'invalid', '2026-02-29', '2026-13-01', '2026-01-01T00:00:00Z'])(
+    'uses the shared placeholder for invalid or missing calendar keys: %s',
+    async (day) => {
+      const { useUtilizationDisplay } = await vi.importActual<typeof import('./useUtilizationDisplay')>('./useUtilizationDisplay');
+      datePreferences.locale = 'de-DE';
+      const { result } = renderHook(useUtilizationDisplay);
+      expect(result.current.formatDay(day)).toBe('—');
+      expect(result.current.formatDayShort(day)).toBe('—');
+    },
+  );
+
+  it.each([
+    ['en-US', 3, '12.346', '2.346', '1.234'],
+    ['de-DE', 2, '12,35', '2,35', '1,23'],
+  ])('preserves monthly operands until formatting with %s precision %s', (locale, precision, distance, observedDays, drivingHours) => {
+    const preferences = getFormatterPreferences();
+    const data = summary();
+    data.months = [{
+      month: '2026-09', monthStartMs: Date.parse('2026-09-01'),
+      distanceM: 12_345.678, observedDays: 2.345678, drivingS: 4444.444,
+      activeDays: 2, driveCount: 3, drivingShare: 0.1, energyWh: 1000,
+    }];
+    try {
+      act(() => {
+        setGlobalLocale(locale);
+        setGlobalPrecision(precision);
+      });
+      render(<UtilizationTrend summary={data} state={state} />);
+      const props = chartBoundary.mock.calls.at(-1)![0];
+      const row = props.data[0];
+      expect(row).toEqual({
+        month: '2026-09-01', monthKey: '2026-09',
+        distance: 12.345678, observedDays: 2.345678,
+        drivingHours: 4444.444 / 3600, activeDays: 2, drives: 3,
+      });
+      expect(props.exportData).toBe(props.data);
+      expect(objectsToCSV(props.exportData).split('\r\n')[1]).toBe(
+        `2026-09-01,2026-09,12.345678,2,2.345678,3,${4444.444 / 3600}`,
+      );
+      expect(props.dataColumns[1].format(row.distance)).toBe(distance);
+      expect(props.dataColumns[2].format(row.activeDays)).toBe('2');
+      expect(props.dataColumns[3].format(row.observedDays)).toBe(observedDays);
+      expect(props.dataColumns[4].format(row.drives)).toBe('3');
+      expect(props.dataColumns[5].format(row.drivingHours)).toBe(drivingHours);
+      const table = screen.getByRole('table');
+      for (const value of [distance, observedDays, drivingHours]) {
+        expect(within(table).getByRole('cell', { name: value })).toBeInTheDocument();
+      }
+    } finally {
+      act(() => {
+        setGlobalLocale(preferences.locale);
+        setGlobalPrecision(preferences.precision);
+      });
+    }
+  });
+
   it.each([null, undefined, Number.NaN, Infinity, -Infinity])(
     'guards every time/cost display operand: %s', (value) => {
       const data = summary();
@@ -281,6 +394,37 @@ describe('Shared utilization tables', () => {
     expect(within(coverage).getAllByRole('rowheader')).toHaveLength(3);
     expect(coverage).toHaveTextContent('2 usable · 0 excluded');
     expect(screen.getByRole('list', { name: 'Methodology notes' })).toHaveTextContent('display units are applied only while rendering');
+  });
+
+  it.each([false, true])('uses neutral methodology chrome while preserving cap warnings: capped=%s', (historyCapReached) => {
+    const data = summary();
+    data.accounting.historyCapReached = historyCapReached;
+    render(<UtilizationMethodology summary={data} historyLimit={1000} state={state} />);
+    const panel = screen.getByTestId('utilization-method');
+    const titleIcon = panel.querySelector('svg.lucide-database');
+    expect(titleIcon).toHaveClass('text-[var(--text-secondary)]');
+    expect(titleIcon).toHaveAttribute('aria-hidden', 'true');
+    const notes = screen.getByRole('list', { name: 'Methodology notes' });
+    expect(within(notes).getAllByRole('listitem')).toHaveLength(6);
+    for (const icon of notes.querySelectorAll('svg')) {
+      expect(icon.parentElement).toHaveClass('text-[var(--text-secondary)]');
+      expect(icon).toHaveAttribute('aria-hidden', 'true');
+    }
+    const badge = screen.getByText(historyCapReached ? '1,000-drive cap reached' : 'Ranged response below API cap');
+    const callout = screen.getByText(historyCapReached
+      ? 'The request returned 1,000 rows. Results describe that capped ranged response; additional matching drives may exist.'
+      : 'The ranged response returned 3 rows below the 1,000-drive API limit.').parentElement;
+    if (historyCapReached) {
+      expect(badge).toHaveClass('text-[var(--semantic-warning)]');
+      expect(callout).toHaveClass('border-[var(--semantic-warning-border)]', 'bg-[var(--semantic-warning-bg)]');
+      expect(panel).toHaveTextContent('Partial source coverage');
+    } else {
+      expect(badge).toHaveClass('text-[var(--text-secondary)]');
+      expect(callout).toHaveClass('border-[var(--border-default)]', 'bg-[var(--surface-2)]');
+      expect(callout).not.toHaveClass('bg-[var(--semantic-warning-bg)]');
+    }
+    expect(screen.getByRole('table', { name: 'Timestamp eligibility' })).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Metric field coverage' })).toHaveTextContent('2 usable · 0 excluded');
   });
 
   it('keeps the ranked section shell while loading', () => {

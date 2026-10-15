@@ -7,6 +7,8 @@
  */
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { formatDayKey } from '@/lib/dateFormat';
 import { Badge, Button, HelperText } from '@/components/ui';
 import { LayoutCard } from '@/components/layout';
 import { InlineCallout } from '@/components/feedback';
@@ -20,6 +22,9 @@ export interface SignatureKeyPanelProps {
 
 export function SignatureKeyPanel({ vault }: SignatureKeyPanelProps) {
   const { t } = useTranslation();
+  const { formatDateTime, opts } = useDateFormat();
+  const displayDate = (value: string | null | undefined) => value && /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? formatDayKey(value, opts) : formatDateTime(value);
   const [revokeTarget, setRevokeTarget] = useState<string | null>(null);
 
   const { capability, keys, activeKey, isLoading, isMutating, error, generateKey, rotateKey, revokeKey } = vault;
@@ -84,12 +89,12 @@ export function SignatureKeyPanel({ vault }: SignatureKeyPanelProps) {
                 </Badge>
               </div>
               <div className="mt-1 text-[var(--text-muted)]">
-                {t('resaleVault.keys.created', 'Created')}: {key.created_at}
+                {t('resaleVault.keys.created', 'Created')}: {displayDate(key.created_at)}
                 {key.rotated_from && ` · ${t('resaleVault.keys.rotatedFrom', 'Rotated from')} ${key.rotated_from}`}
               </div>
               {key.revoked_at && (
                 <div className="mt-1 text-[var(--text-muted)]">
-                  {t('resaleVault.keys.revokedAt', 'Revoked at')} {key.revoked_at}
+                  {t('resaleVault.keys.revokedAt', 'Revoked at')} {displayDate(key.revoked_at)}
                   {key.revoked_reason && ` (${key.revoked_reason})`}
                 </div>
               )}

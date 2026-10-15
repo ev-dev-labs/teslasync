@@ -51,7 +51,7 @@ type WatchSummary struct {
 	VehicleName  string  `json:"vehicle_name"`
 	State        string  `json:"state"`
 	BatteryLevel int     `json:"battery_level"`
-	RangeKm      float64 `json:"range_km"`
+	RangeM       float64 `json:"range_m"`
 	IsCharging   bool    `json:"is_charging"`
 	ChargeRate   float64 `json:"charge_rate"`
 	TimeToFull   float64 `json:"time_to_full"`
@@ -169,7 +169,7 @@ func (h *Handler) Complication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rangeStr := strconv.Itoa(int(summary.RangeKm)) + "km"
+	rangeStr := strconv.Itoa(int(summary.RangeM/1000)) + "km"
 	httpx.WriteJSON(w, http.StatusOK, WatchComplication{
 		Battery:  strconv.Itoa(summary.BatteryLevel) + "%",
 		Range:    rangeStr,
@@ -285,9 +285,8 @@ func (h *Handler) queryWatchSummary(ctx context.Context, vehicleID int64) (*Watc
 
 	batteryLevel, _ := signalInt(signals, "BatteryLevel")
 
-	// Watch clients currently expect kilometers while RatedRange is legacy miles.
+	// RatedRange is normalized to meters before entering the signal cache.
 	ratedRange, _ := signalFloat(signals, "RatedRange")
-	rangeKm := ratedRange * 1.60934
 
 	insideTemp, _ := signalFloat(signals, "InsideTemp")
 	outsideTemp, _ := signalFloat(signals, "OutsideTemp")
@@ -340,7 +339,7 @@ func (h *Handler) queryWatchSummary(ctx context.Context, vehicleID int64) (*Watc
 
 	return &WatchSummary{
 		BatteryLevel: batteryLevel,
-		RangeKm:      rangeKm,
+		RangeM:       ratedRange,
 		IsCharging:   isCharging,
 		ChargeRate:   chargeRate,
 		TimeToFull:   ttfMinutes,

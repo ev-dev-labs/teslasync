@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useRunTCOOptimizer } from '@/api/hooks/useAdvancedIntelligence';
 import { AlertBanner, EmptyState } from '@/components/feedback';
 import { KVList } from '@/components/data-display';
-import { deriveDataState } from '@/api/dataState';
+import { deriveDataState, type DataStateSource } from '@/api/dataState';
 
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
@@ -85,19 +85,16 @@ export default function TCOOptimizerPage() {
       Object.entries(completed.request).some(([submittedKey, submittedValue]) =>
         key === submittedKey && value !== submittedValue))
   );
-  const dataState = deriveDataState({
+  const source: DataStateSource<TCOOptimizerResponse> = {
     data: result,
     error: mutation.error,
     isPending: mutation.isPending,
+    isLoading: !result && mutation.isPending && !mutation.isPaused,
     isFetching: mutation.isPending && !mutation.isPaused,
     fetchStatus: mutation.isPaused ? 'paused' : mutation.isPending ? 'fetching' : 'idle',
     dataUpdatedAt: result ? Date.parse(result.generated_at) : undefined,
-  }, { provenance: 'inferred' });
-  const alternativesState = result
-    ? dataState.status === 'stale' || mutation.isPending || retainedScope ? 'retained'
-      : 'ready'
-    : dataState.fatalError ? 'error'
-      : mutation.isPending && !mutation.isPaused ? 'loading' : 'empty';
+  };
+  const dataState = deriveDataState(source, { provenance: 'inferred' });
   const money = (minor: number | null) => {
     if (minor == null || !result?.currency) return '—';
     return formatCurrencyMinor(minor, result.currency, units.unitPrefs.locale);
@@ -247,17 +244,13 @@ export default function TCOOptimizerPage() {
       <FadeIn delay={0.05}>
         <InsightPanel
           title={t('advancedIntelligence.tco.alternatives.title', 'Pareto-like alternatives')}
-          sourceState={alternativesState}
-          error={dataState.fatalError}
-          emptyMessage={mutation.isPaused
-            ? t('advancedIntelligence.panel.paused', 'The initial evidence query is paused; no empty result is inferred.')
-            : result
-              ? t('advancedIntelligence.panel.empty', 'No supported data is available.')
-              : t('advancedIntelligence.tco.alternatives.empty', 'Submit constraints to generate supported alternatives.')}
+          query={result || mutation.isPending || mutation.isPaused || mutation.error ? source : undefined}
+          sourceState="empty"
+          emptyMessage={t('advancedIntelligence.tco.alternatives.empty', 'Submit constraints to generate supported alternatives.')}
         >
-          {mutation.isPaused && result && (
+          {result && dataState.status !== 'stale' && (retainedScope || mutation.isPending) && (
             <Text as="p" variant="bodySm" role="status">
-              {t('tco.query.refreshPaused', 'Cached evidence remains visible while its refresh is paused.')}
+              {t('dataSources.staleMessage', 'Previously loaded data remains visible while affected sources recover.')}
             </Text>
           )}
           {completed && (
@@ -345,6 +338,7 @@ export default function TCOOptimizerPage() {
 
       <FadeIn delay={0.1}>
         <EvidencePanel
+          query={source}
           quality={result?.data_quality}
           evidence={result?.evidence}
           limitations={result?.limitations}

@@ -25,8 +25,11 @@ import {
   PanelTitle,
 } from '@/components/ui';
 import { Timeline, TimeStamp } from '@/components/data-display';
-import { EmptyState, ListSkeleton, TableSkeleton } from '@/components/feedback';
+import { EmptyState, ListSkeleton, StaleRefreshWarning, TableSkeleton } from '@/components/feedback';
 import { useDriveWhyEnded } from '@/api/hooks/useDriving';
+import { useDataState } from '@/hooks/useDataState';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { formatDateTime, type FormatOptions } from '@/lib/dateFormat';
 import type {
   DriveDiagnosticSignal,
   DriveDiagnosticTransition,
@@ -47,20 +50,15 @@ type KeyedSignal = DriveDiagnosticSignal & { __idx: number };
 /**
  * Formats an FSM-transition timestamp for the timeline's time slot.
  *
- * The diagnostic feed is append-only server-side, but a partially-written
- * or clock-skewed row can still surface an empty / unparseable `ts`. Guard
- * it so the slot renders the universal "—" placeholder instead of the
- * literal "Invalid Date" that `new Date(x).toLocaleString()` would print.
+ * The shared formatter guards missing and unparseable diagnostic timestamps.
  */
-export function formatTransitionTime(ts: string | null | undefined): string {
-  if (!ts) return '—';
-  const date = new Date(ts);
-  if (Number.isNaN(date.getTime())) return '—';
-  return date.toLocaleString();
+export function formatTransitionTime(ts: string | null | undefined, opts?: FormatOptions): string {
+  return formatDateTime(ts, opts);
 }
 
 export function WhyEndedPanel({ driveId }: WhyEndedPanelProps) {
   const { t } = useTranslation();
+  const { opts } = useDateFormat();
   const [expanded, setExpanded] = useState(true);
   const [windowSel, setWindowSel] = useState<DriveDiagnosticWindow>('60s');
   // Ties the disclosure toggle to the region it expands so assistive tech
@@ -68,6 +66,7 @@ export function WhyEndedPanel({ driveId }: WhyEndedPanelProps) {
   const regionId = useId();
 
   const why = useDriveWhyEnded(driveId, windowSel, expanded);
+  const state = useDataState(why, { provenance: 'historical' });
 
   const toggle = useCallback(() => setExpanded((p) => !p), []);
   const handleWindowChange = useCallback(
@@ -92,7 +91,7 @@ export function WhyEndedPanel({ driveId }: WhyEndedPanelProps) {
         filterValue: (row) => row.ts,
         header: t('driveDetail.whyEnded.signal.cols.ts', 'Timestamp'),
         visibleOnMobile: true,
-        render: (row) => <TimeStamp value={row.ts} format="absolute" />,
+        render: (row) => <time dateTime={row.ts} title={row.ts}><TimeStamp value={row.ts} format="absolute" /></time>,
       },
       {
         key: 'field',
@@ -127,7 +126,7 @@ export function WhyEndedPanel({ driveId }: WhyEndedPanelProps) {
     () =>
       transitions.map((tx) => ({
         title: (
-          <span className="font-mono text-sm">
+          <span className="font-mono text-sm" title={tx.ts}>
             {tx.fsm_name}: {tx.from_state} → {tx.to_state}
           </span>
         ),
@@ -138,18 +137,19 @@ export function WhyEndedPanel({ driveId }: WhyEndedPanelProps) {
             })}
           </span>
         ),
-        time: formatTransitionTime(tx.ts),
+        time: formatTransitionTime(tx.ts, opts),
         color: 'var(--theme-primary)',
       })),
-    [transitions, t],
+    [transitions, t, opts],
   );
 
   return (
-    <GlassPanel className="p-6">
+    <GlassPanel className="min-w-0 p-4 sm:p-6 max-md:[&_button]:min-h-11 max-md:[&_button]:min-w-11 max-md:[&_a]:min-h-11 max-md:[&_a]:min-w-11 max-md:[&_input]:min-h-11 max-md:[&_select]:min-h-11">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Button
           variant="ghost"
           size="sm"
+          wrapLabel
           icon={
             expanded ? (
               <ChevronDown className="h-4 w-4" aria-hidden="true" />
@@ -167,7 +167,7 @@ export function WhyEndedPanel({ driveId }: WhyEndedPanelProps) {
         </Button>
 
         {expanded && (
-          <div className="w-40">
+          <div className="w-full md:w-40">
             <Select
               value={windowSel}
               onChange={handleWindowChange}
@@ -183,7 +183,11 @@ export function WhyEndedPanel({ driveId }: WhyEndedPanelProps) {
 
       {expanded && (
         <div id={regionId} className="mt-4 space-y-6">
-          {why.isLoading ? (
+          <StaleRefreshWarning
+            state={state}
+            label={t('driveDetail.whyEnded.title', 'Why did this drive end?')}
+          />
+          {state.status === 'initial' && why.fetchStatus === 'fetching' ? (
             <div className="grid gap-6 lg:grid-cols-2">
               <ListSkeleton
                 rows={3}
@@ -192,7 +196,7 @@ export function WhyEndedPanel({ driveId }: WhyEndedPanelProps) {
               />
               <TableSkeleton rows={4} cols={3} />
             </div>
-          ) : why.error ? (
+          ) : state.fatalError ? (
             <EmptyState
               title={t(
                 'driveDetail.whyEnded.error.title',
@@ -206,6 +210,15 @@ export function WhyEndedPanel({ driveId }: WhyEndedPanelProps) {
                       'Try a different window or reload the page.',
                     )
               }
+              action={{
+                label: t('common.retry', 'Retry'),
+                onClick: () => why.refetch(),
+              }}
+            />
+          ) : !state.hasData ? (
+            <EmptyState
+              title={state.isRefreshBlocked ? t('dataSources.status.paused', 'Refresh paused') : undefined}
+              message={t('driving.brief.pending', 'Drive evidence is not available yet.')}
               action={{
                 label: t('common.retry', 'Retry'),
                 onClick: () => why.refetch(),

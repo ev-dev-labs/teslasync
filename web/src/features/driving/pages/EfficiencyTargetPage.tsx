@@ -4,9 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { useDriveHistory } from '@/api/hooks/useDriving';
 
 import { Grid, PageLayout } from '@/components/layout';
-import { SectionErrorBoundary, StaleRefreshWarning } from '@/components/feedback';
+import { AlertBanner, SectionErrorBoundary, StaleRefreshWarning } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
-import { Caption, Input } from '@/components/ui';
+import { Button, Caption, Input, Text } from '@/components/ui';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -113,6 +113,9 @@ export default function EfficiencyTargetPage() {
       void historyQuery.refetch();
     },
   };
+  const pausedTitle = sourceState.isRefreshBlocked && sourceState.refreshError == null
+    ? t('dataSources.status.paused', 'Refresh paused')
+    : undefined;
 
   return (
     <PageLayout
@@ -141,7 +144,27 @@ export default function EfficiencyTargetPage() {
         </div>
       }
     >
-      <StaleRefreshWarning state={sourceState} label={t('effTarget.title', 'Efficiency Target')} />
+      {!sourceState.hasData && sourceState.isRefreshBlocked && sourceState.fatalError == null && (
+        <AlertBanner
+          variant="info"
+          title={pausedTitle}
+          role="status"
+          aria-live="polite"
+          data-testid="efficiency-target-paused"
+        >
+          <Text as="p" variant="bodySm" color="secondary">
+            {t('driving.brief.pending', 'Drive evidence is not available yet.')}
+          </Text>
+          <Button type="button" variant="ghost" size="sm" onClick={sectionState.onRetry}>
+            {t('common.retry', 'Retry')}
+          </Button>
+        </AlertBanner>
+      )}
+      <StaleRefreshWarning
+        state={sourceState}
+        label={t('effTarget.title', 'Efficiency Target')}
+        title={pausedTitle}
+      />
       <SectionErrorBoundary name="EfficiencyTargetBrief">
         <EfficiencyTargetBrief
           summary={summary}

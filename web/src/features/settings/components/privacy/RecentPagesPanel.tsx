@@ -66,6 +66,8 @@ export function RecentPagesPanel({ count, onClear }: RecentPagesPanelProps) {
         </div>
         <Button
           variant="secondary"
+          wrapLabel
+          className="min-h-11 md:min-h-10"
           onClick={onClear}
           disabled={isEmpty}
           icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}

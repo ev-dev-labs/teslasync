@@ -1,12 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BarChart3 } from 'lucide-react';
-import { DataTable, Text, type Column } from '@/components/ui';
+import { DataTable, Text, type Column, type MobileDataTablePresentation } from '@/components/ui';
 import { Currency } from '@/components/data-display';
 
 import { CostSection } from './CostSection';
 import type { MonthlyBucket } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useFormatting } from '@/hooks/useFormatting';
 
 interface MonthlyCostTableProps {
   data: MonthlyBucket[];
@@ -16,7 +17,8 @@ interface MonthlyCostTableProps {
 }
 
 export function MonthlyCostTable({ data, isLoading, error, onRetry }: MonthlyCostTableProps) {
-  const { fmtInt, fmtWithUnit, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
+  const { fmtInt, fmtNumber, fmtWithUnit, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
+  const { currencySymbol } = useFormatting();
   const { t } = useTranslation();
   const [tableSortKey, setTableSortKey] = useState('month');
   const [tableSortDir, setTableSortDir] = useState<'asc' | 'desc'>('desc');
@@ -51,7 +53,7 @@ export function MonthlyCostTable({ data, isLoading, error, onRetry }: MonthlyCos
         header: t('costAnalysis.table.cost', 'Cost'),
         sortable: true,
         render: (row) => (
-          <Currency value={row.cost} className="text-cyan-300" />
+          <Currency value={row.cost} />
         ),
       },
       {
@@ -67,7 +69,7 @@ export function MonthlyCostTable({ data, isLoading, error, onRetry }: MonthlyCos
         header: t('costAnalysis.table.gasEquiv', 'Gas equiv'),
         sortable: true,
         render: (row) => (
-          <Currency value={row.gasEquiv} className="text-rose-300" />
+          <Currency value={row.gasEquiv} />
         ),
       },
       {
@@ -78,7 +80,7 @@ export function MonthlyCostTable({ data, isLoading, error, onRetry }: MonthlyCos
         render: (row) => (
           <Text
             weight="medium"
-            className={row.savings >= 0 ? 'text-emerald-300' : 'text-rose-300'}
+            color="primary"
           >
             {row.savings >= 0 ? '+' : ''}<Currency value={row.savings} />
           </Text>
@@ -86,6 +88,25 @@ export function MonthlyCostTable({ data, isLoading, error, onRetry }: MonthlyCos
       },
     ],
     [t, fmtInt, fmtWithUnit, displayPrecision, displayLocale],
+  );
+
+  const mobilePresentation = useMemo<MobileDataTablePresentation<MonthlyBucket>>(
+    () => ({
+      roles: { month: 'title', cost: 'primary', savings: 'meta', sessions: 'meta', energy: 'meta' },
+      displayValue: (row, key) => {
+        switch (key) {
+          case 'month': return row.month;
+          case 'sessions': return fmtInt(row.sessions);
+          case 'energy': return fmtWithUnit(row.energy, 'kWh');
+          case 'cost': return `${currencySymbol}${fmtNumber(row.cost)}`;
+          case 'avgCostPerKwh': return `${currencySymbol}${fmtNumber(row.avgCostPerKwh)}`;
+          case 'gasEquiv': return `${currencySymbol}${fmtNumber(row.gasEquiv)}`;
+          case 'savings': return `${row.savings >= 0 ? '+' : ''}${currencySymbol}${fmtNumber(row.savings)}`;
+          default: return undefined;
+        }
+      },
+    }),
+    [currencySymbol, fmtInt, fmtNumber, fmtWithUnit],
   );
 
   const sortedData = useMemo(() => {
@@ -114,7 +135,7 @@ export function MonthlyCostTable({ data, isLoading, error, onRetry }: MonthlyCos
   return (
     <CostSection
       title={t('costAnalysis.table.title', 'Monthly cost breakdown')}
-      icon={<BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+      icon={<BarChart3 className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />}
       isLoading={isLoading}
       error={error}
       onRetry={onRetry}
@@ -125,7 +146,9 @@ export function MonthlyCostTable({ data, isLoading, error, onRetry }: MonthlyCos
       <DataTable<MonthlyBucket>
         tableId="charging:cost-monthly"
         columns={columns}
-        mobileColumns={['month', 'cost', 'savings']}
+        mobilePresentation={mobilePresentation}
+        name={t('costAnalysis.table.title', 'Monthly cost breakdown')}
+        rowLabel={(row) => row.month}
         data={sortedData}
         keyExtractor={(row) => row.month}
         sortKey={tableSortKey}

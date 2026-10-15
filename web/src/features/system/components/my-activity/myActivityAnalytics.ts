@@ -31,11 +31,13 @@ export interface ActivityKpis {
 }
 
 export interface TrendPoint {
-  /** `YYYY-MM-DD` day key. */
+  /** `YYYY-MM-DD` bucket start key. */
   day: string;
-  /** Short human label, e.g. "Apr 4". */
+  /** Inclusive bucket end; omitted for single-day buckets. */
+  endDay?: string;
+  /** Short human label, including both bounds for multi-day buckets. */
   label: string;
-  /** Entries recorded on this day. */
+  /** Loaded entries recorded within this bucket. */
   count: number;
 }
 
@@ -89,17 +91,21 @@ function utcMillisToYmd(ms: number): string {
 }
 
 /**
- * Inclusive list of `YYYY-MM-DD` keys between two day keys. Returns an empty
- * list when the range is inverted or unparseable, and is capped so a huge
- * hand-edited range can't blow up the chart.
+ * Inclusive calendar buckets covering the entire range. Oversized windows
+ * aggregate adjacent days rather than truncating loaded observations.
  */
-function enumerateDays(startKey: string, endKey: string): string[] {
+function enumerateDays(startKey: string, endKey: string): { day: string; endDay: string }[] {
   const start = ymdToUtcMillis(startKey);
   const end = ymdToUtcMillis(endKey);
   if (start == null || end == null || end < start) return [];
-  const days: string[] = [];
-  for (let cur = start; cur <= end && days.length < MAX_TREND_DAYS; cur += 86_400_000) {
-    days.push(utcMillisToYmd(cur));
+  const totalDays = (end - start) / 86_400_000 + 1;
+  const bucketCount = Math.min(totalDays, MAX_TREND_DAYS);
+  const days: { day: string; endDay: string }[] = [];
+  for (let i = 0; i < bucketCount; i += 1) {
+    days.push({
+      day: utcMillisToYmd(start + Math.floor(i * totalDays / bucketCount) * 86_400_000),
+      endDay: utcMillisToYmd(start + (Math.floor((i + 1) * totalDays / bucketCount) - 1) * 86_400_000),
+    });
   }
   return days;
 }
@@ -114,7 +120,8 @@ function humaniseCategory(raw: string): string {
 /**
  * Derive every metric the My Activity page renders from the raw entries plus
  * the active date range (used to draw a gap-filled daily trend so the chart
- * spans the whole selected window even on quiet days). Pass useDateFormat().opts
+ * spans the whole selected window even on quiet days, grouping adjacent days
+ * when the window exceeds the chart budget). Pass useDateFormat().opts
  * to align day/hour buckets and labels with the KPI and feed display timezone.
  */
 export function deriveMyActivityAnalytics(
@@ -185,11 +192,20 @@ export function deriveMyActivityAnalytics(
     lastActivityTs,
   };
 
-  const dailyTrend: TrendPoint[] = enumerateDays(range?.start ?? '', range?.end ?? '').map((day) => ({
-    day,
-    label: formatDayKey(day, { ...opts, style: 'short' }),
-    count: dayCounts.get(day) ?? 0,
-  }));
+  const observedDays = [...dayCounts.entries()];
+  const labelOpts = { ...opts, style: 'short' as const };
+  const dailyTrend: TrendPoint[] = enumerateDays(range?.start ?? '', range?.end ?? '').map(({ day, endDay }) => {
+    const label = formatDayKey(day, labelOpts);
+    return {
+      day,
+      ...(endDay !== day ? { endDay } : {}),
+      label: endDay === day ? label : `${label} – ${formatDayKey(endDay, labelOpts)}`,
+      count: observedDays.reduce(
+        (sum, [observedDay, count]) => sum + (observedDay >= day && observedDay <= endDay ? count : 0),
+        0,
+      ),
+    };
+  });
 
   const pct = (count: number): number => (total > 0 ? (count / total) * 100 : 0);
 

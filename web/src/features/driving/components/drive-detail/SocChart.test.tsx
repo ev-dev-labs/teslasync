@@ -267,7 +267,7 @@ describe('SocChart — ready state', () => {
 
     const area = screen.getByTestId('area');
     expect(area).toHaveAttribute('data-key', 'battery');
-    expect(area).toHaveAttribute('data-stroke', '#10b981');
+    expect(area).toHaveAttribute('data-stroke', chartTokens.series[1]);
     expect(area).toHaveAttribute('data-fill', 'url(#socGrad)');
     expect(area).toHaveAttribute('data-name', 'SOC %');
   });
@@ -282,7 +282,7 @@ describe('SocChart — ready state', () => {
 
     const gradient = screen.getByTestId('area-gradient');
     expect(gradient).toHaveAttribute('data-id', 'socGrad');
-    expect(gradient).toHaveAttribute('data-color', '#10b981');
+    expect(gradient).toHaveAttribute('data-color', chartTokens.series[1]);
 
     expect(screen.getByTestId('tooltip')).toBeInTheDocument();
     expect(screen.getByTestId('cartesian-grid')).toBeInTheDocument();

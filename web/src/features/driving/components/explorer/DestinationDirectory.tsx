@@ -1,5 +1,5 @@
 import { AlertTriangle, Compass, MapPin } from 'lucide-react';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState, InlineCallout } from '@/components/feedback';
@@ -11,8 +11,10 @@ import {
   Text,
   type Column,
 } from '@/components/ui';
-import { formatDate } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { cn } from '@/lib/cn';
+import { isFiniteNumber } from '@/lib/numberFormat';
 
 import type { Destination, ExplorerSummary } from '../../lib/explorer';
 import { ExplorerSectionBody } from './ExplorerSectionBody';
@@ -34,6 +36,12 @@ export function DestinationDirectory({
   className,
 }: DestinationDirectoryProps) {
   const { t } = useTranslation();
+  const { formatDate } = useDateFormat();
+  const { fmtInt } = useNumberFormatting();
+  const formatCount = useCallback(
+    (value: unknown) => isFiniteNumber(value) ? fmtInt(value) : '—',
+    [fmtInt],
+  );
   const emptyMessage =
     summary.eligibility.eligible === 0
       ? t(
@@ -63,7 +71,7 @@ export function DestinationDirectory({
           return (
             <Text
               variant="bodySm"
-              className="block max-w-[16rem] truncate"
+              className="block break-words"
               title={label}
             >
               {label}
@@ -80,7 +88,7 @@ export function DestinationDirectory({
         visibleOnMobile: true,
         render: (destination) => (
           <Text variant="body" mono>
-            {destination.visits}
+            {formatCount(destination.visits)}
           </Text>
         ),
       },
@@ -95,7 +103,7 @@ export function DestinationDirectory({
         sortable: true,
         render: (destination) => (
           <Text variant="body" mono>
-            {destination.repeatVisits}
+            {formatCount(destination.repeatVisits)}
           </Text>
         ),
       },
@@ -131,7 +139,7 @@ export function DestinationDirectory({
         ),
       },
     ],
-    [formatDistance, summary.evidence.baseSufficient, t],
+    [formatCount, formatDate, formatDistance, summary.evidence.baseSufficient, t],
   );
 
   return (
@@ -145,7 +153,7 @@ export function DestinationDirectory({
     >
       <GlassPanel className={cn('min-w-0 h-full p-4 sm:p-5')}>
         <PanelTitle className="mb-3 flex items-center gap-2">
-          <MapPin className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <MapPin className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
           {t('explorer.destinations', 'Destinations')}
           <HelpTooltip
             size="sm"
@@ -184,11 +192,33 @@ export function DestinationDirectory({
               <DataTable
                 enableValueFilters
                 tableId="driving:explorer-destinations"
+                name={t('explorer.section.directory', 'Observed destination directory')}
                 columns={columns}
                 data={summary.destinations}
                 keyExtractor={(destination) => destination.id}
                 emptyMessage={emptyMessage}
                 mobileColumns={['label', 'visits']}
+                mobilePresentation={{
+                  roles: {
+                    label: 'title',
+                    visits: 'meta',
+                    repeatVisits: 'hidden',
+                    distanceFromBaseM: 'hidden',
+                    firstVisitedAt: 'hidden',
+                  },
+                  displayValue: (destination, key) => {
+                    switch (key) {
+                      case 'label':
+                        return destination.label ?? t('explorer.destination.unnamed', 'Unnamed destination {{number}}', { number: destination.ordinal });
+                      case 'visits': return formatCount(destination.visits);
+                      case 'repeatVisits': return formatCount(destination.repeatVisits);
+                      case 'distanceFromBaseM':
+                        return summary.evidence.baseSufficient ? formatDistance(destination.distanceFromBaseM) : '—';
+                      case 'firstVisitedAt': return formatDate(destination.firstVisitedAt);
+                      default: return undefined;
+                    }
+                  },
+                }}
                 pagination
               />
             </div>

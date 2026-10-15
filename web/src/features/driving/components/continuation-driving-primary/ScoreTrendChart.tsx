@@ -6,9 +6,11 @@ import {
 } from '@/components/charts';
 import { chartTokens } from '@/lib/tokens';
 import { COLOR } from '@/lib/colors';
+import { formatDateShort, formatDateTime } from '@/lib/dateFormat';
 
 interface ScoreTrendPoint {
   date: string;
+  driveId: number;
   score: number;
   efficiency: number;
   smoothness: number;
@@ -24,12 +26,16 @@ interface ScoreTrendChartProps {
 
 export function ScoreTrendChart({ data, vehicleId, scoreColor, colors }: ScoreTrendChartProps) {
   const { t } = useTranslation();
+  const chartData = data.map((point) => ({
+    ...point,
+    timestamp: Date.parse(point.date),
+  }));
   return (
     <ChartCard
       title={t('driveScore.scoreTrend', 'Score Trend')}
       ariaLabel={t('driveScore.scoreTrendAria', 'Drive score trend line chart with category breakdowns')}
-      data={data.map(({ date, score, efficiency, smoothness, speed }) => ({
-        date, score, efficiency, smoothness, speed,
+      data={data.map(({ date, driveId, score, efficiency, smoothness, speed }) => ({
+        date, driveId, score, efficiency, smoothness, speed,
       }))}
       dataColumns={[
         { key: 'date', label: t('driveScore.col.date', 'Date') },
@@ -47,15 +53,18 @@ export function ScoreTrendChart({ data, vehicleId, scoreColor, colors }: ScoreTr
     >
       {({ annotations, hiddenSeries }) => (
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data}>
+          <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} />
-            <XAxis dataKey="date" stroke={chartTokens.axisStroke} fontSize={12} />
+            <XAxis dataKey="timestamp" type="number" scale="time" domain={['dataMin', 'dataMax']}
+              tickFormatter={(timestamp: number) => formatDateShort(new Date(timestamp))}
+              stroke={chartTokens.axisStroke} fontSize={12} />
             <YAxis domain={[0, 100]} stroke={chartTokens.axisStroke} fontSize={12} />
-            <Tooltip content={<ChartTooltip />} />
+            <Tooltip content={<ChartTooltip labelFormatter={(timestamp) =>
+              formatDateTime(timestamp == null ? null : new Date(timestamp))} />} />
             <ChartLegend state={hiddenSeries ?? undefined} />
             <ReferenceLine y={80} stroke={COLOR.GOOD} strokeDasharray="4 4"
               label={{ value: t('driveScore.gradeALine', 'A'), fill: COLOR.GOOD, fontSize: 11 }} />
-            {renderAnnotationLines(annotations, (ts) => ts)}
+            {renderAnnotationLines(annotations, Date.parse)}
             <Line {...AREA_DEFAULTS} dataKey="score" name={t('driveScore.totalScore', 'Total Score')}
               stroke={scoreColor} dot={{ r: 3, fill: scoreColor }} activeDot={{ r: 5 }}
               hide={hiddenSeries?.isHidden('score')} />

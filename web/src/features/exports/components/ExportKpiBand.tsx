@@ -6,7 +6,7 @@ import type { DataState } from '@/api/dataState';
 import type { ExportStats } from './exportStats';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 interface ExportKpiBandProps {
   stats: ExportStats;
@@ -18,6 +18,7 @@ interface ExportKpiBandProps {
 
 export function ExportKpiBand({ stats, isLoading, hasData = true, retained = false, sourceState }: ExportKpiBandProps) {
   const { formatBytes } = useNumberFormatting();
+  const { formatDateTime } = useDateFormat();
   const { t } = useTranslation();
   const scope = t('exportsList.brief.scope', 'Loaded jobs before table filters and pagination; no date window is applied.');
   const description = t('exportsList.brief.description', 'Queue counts and known artifact sizes from the loaded export-job list. Table filters and selection do not change these totals.');

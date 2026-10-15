@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Bar, ChartLegend, ChartTooltip, CHART_COLORS, ComposedChart, EmbeddedChart,
+  Bar, ChartLegend, ChartTooltip, ComposedChart, EmbeddedChart,
   type ChartDataColumn, Line, ResponsiveContainer, Tooltip, XAxis, YAxis, axisTick, chartGrid,
 } from '@/components/charts';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import type { MonthlyRecoveryChartRow, RegenSectionState } from '../regen-efficiency';
 import { isKnownNumber } from './presentation';
 
@@ -24,6 +25,7 @@ export function MonthlyRecoveryChart({
 }: MonthlyRecoveryChartProps) {
   const { t } = useTranslation();
   const { fmtNumber, fmtPercent } = useNumberFormatting();
+  const palette = useChartPalette();
   const dataColumns = useMemo<ChartDataColumn[]>(() => [
     { key: 'month', label: t('regen.monthly.colMonth', 'Month') },
     {
@@ -70,12 +72,12 @@ export function MonthlyRecoveryChart({
             <ChartLegend verticalAlign="top" align="right" />
             <Bar
               yAxisId="energy" dataKey="recoveredEnergy" name={energySeries}
-              fill={CHART_COLORS[1]} radius={[4, 4, 0, 0]} maxBarSize={38}
+              fill={palette[1]} radius={[4, 4, 0, 0]} maxBarSize={38}
               hide={(hiddenSeries?.isHidden('recoveredEnergy') ?? false) || isEnergyHidden}
             />
             <Line
               yAxisId="ratio" type="monotone" dataKey="recoveryRatio" name={ratioSeries}
-              stroke={CHART_COLORS[5]} strokeWidth={2.5} connectNulls={false} dot={{ r: 2.5 }}
+              stroke={palette[5]} strokeWidth={2.5} connectNulls={false} dot={{ r: 2.5 }}
               hide={(hiddenSeries?.isHidden('recoveryRatio') ?? false) || isRatioHidden}
             />
           </ComposedChart>

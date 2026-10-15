@@ -6,6 +6,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FsdObservatoryPanel } from './FsdObservatoryPanel';
 import { fsdInsights } from './__tests__/fixtures';
 import type { FsdSectionState } from './types';
+import { deriveDataState } from '@/api/dataState';
+import type { FsdInsights } from '@/types/fsd';
+import { neonColorMap, typography } from '@/lib/tokens';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -49,11 +52,22 @@ beforeEach(() => {
 
 describe('FsdObservatoryPanel', () => {
   it('renders journal dates with the preference-aware formatter', () => {
-    const insights = fsdInsights();
+    const insights = structuredClone(fsdInsights());
     insights.drive_analytics.observatory.timeline[0].at = '2026-08-26T15:15:00Z';
+    insights.drive_analytics.observatory.truncated = true;
     renderPanel(<FsdObservatoryPanel insights={insights} state={readyState} />);
-    expect(screen.getByRole('link', { name: 'preferred:2026-08-26T15:15:00Z' }))
-      .toHaveAttribute('href', '/drives/280');
+    const link = screen.getByRole('link', { name: 'preferred:2026-08-26T15:15:00Z' });
+    expect(link).toHaveAttribute('href', '/drives/280');
+    expect(link).toHaveClass(
+      'text-[var(--text-primary)]', 'hover:bg-[var(--control-bg-hover)]',
+      'focus-visible:outline-2', 'min-h-11', 'min-w-11', 'md:min-h-0', 'md:min-w-0',
+    );
+    link.focus();
+    expect(link).toHaveFocus();
+    expect(screen.getByText('Oldest drives were omitted so every counter reset still appears.'))
+      .toHaveClass(neonColorMap.amber.text);
+    expect(screen.getByTestId('fsd-observatory').querySelector('h3 svg'))
+      .toHaveClass(typography.color.muted);
   });
 
   it('renders the stitched journal without claiming engagement segments', () => {
@@ -82,7 +96,7 @@ describe('FsdObservatoryPanel', () => {
   });
 
   it('keeps missing stitched FSD as an em dash instead of zero', () => {
-    const insights = fsdInsights();
+    const insights = structuredClone(fsdInsights());
     insights.drive_analytics.observatory.totals.stitched_fsd_distance_m = null;
     insights.drive_analytics.observatory.totals.ambiguous_fsd_distance_m = null;
     insights.drive_analytics.observatory.timeline = [{
@@ -187,5 +201,111 @@ describe('FsdObservatoryPanel', () => {
     expect(screen.getByTestId('fsd-observatory')).toBeInTheDocument();
     expect(screen.getByText('FSD observatory')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('forwards active initial loading without displaying empty results or metrics', () => {
+    const dataState = deriveDataState<FsdInsights>({ isPending: true, isFetching: true, fetchStatus: 'fetching' });
+    renderPanel(<FsdObservatoryPanel insights={undefined} state={readyState} dataState={dataState} />);
+
+    expect(screen.getByRole('status', { name: 'Loading supervised self-driving telemetry' })).toBeInTheDocument();
+    expect(screen.queryByText('No completed drives in this period to journal.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Reset-safe counter quantities' })).not.toBeInTheDocument();
+  });
+
+  it('distinguishes paused initial loading from active loading and successful empty results', () => {
+    const dataState = deriveDataState<FsdInsights>({ isPending: true, fetchStatus: 'paused' });
+    renderPanel(<FsdObservatoryPanel insights={undefined} state={{ ...readyState, isLoading: true }} dataState={dataState} />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('Refresh paused');
+    expect(screen.queryByRole('status', { name: 'Loading supervised self-driving telemetry' })).not.toBeInTheDocument();
+    expect(screen.queryByText('No completed drives in this period to journal.')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.0 km')).not.toBeInTheDocument();
+  });
+
+  it('renders successful empty journals and measured zero totals as returned evidence', () => {
+    const insights = structuredClone(fsdInsights());
+    insights.drive_analytics.observatory.timeline = [];
+    insights.drive_analytics.observatory.commute_stories = [];
+    insights.drive_analytics.observatory.totals = {
+      ...insights.drive_analytics.observatory.totals,
+      stitched_fsd_distance_m: 0,
+      ambiguous_fsd_distance_m: 0,
+      unknown_drive_distance_m: 0,
+      unknown_drive_count: 0,
+      reset_break_count: 0,
+    };
+    const dataState = deriveDataState({ data: insights, isSuccess: true }, { provenance: 'historical' });
+    renderPanel(<FsdObservatoryPanel insights={undefined} state={readyState} dataState={dataState} />);
+
+    expect(screen.getAllByText('0.0 km')).toHaveLength(3);
+    expect(screen.getByText('No completed drives in this period to journal.')).toBeInTheDocument();
+    expect(screen.getByText('Not enough repeated routes yet for a commute story.')).toBeInTheDocument();
+    expect(screen.getByText('Returned evidence')).toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+  });
+
+  it('retains every metric and table through refresh failure, retry and recovery', () => {
+    const insights = fsdInsights();
+    const retry = vi.fn();
+    const failed = deriveDataState({
+      data: insights, error: new Error('Refresh failed'), isError: true,
+      dataUpdatedAt: 1_777_000_000_000, refetch: retry,
+    }, { provenance: 'historical' });
+    const { rerender } = renderPanel(
+      <FsdObservatoryPanel insights={insights} state={{ ...readyState, error: failed.refreshError }} dataState={failed} />,
+    );
+
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByText('Retained source')).toBeInTheDocument();
+    expect(screen.getByLabelText('Historical')).toHaveAttribute('data-data-status', 'stale');
+    const brief = screen.getByRole('region', { name: 'Reset-safe counter quantities' });
+    for (const value of ['14.0 km', '1.0 km', '5.0 km', '1']) {
+      expect(within(brief).getByText(value)).toBeInTheDocument();
+    }
+    expect(screen.getByRole('table', { name: 'Stitched journal' })).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Commute stories' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(retry).toHaveBeenCalledOnce();
+
+    const refreshing = deriveDataState({ data: insights, isFetching: true, refetch: retry }, { provenance: 'historical' });
+    rerender(<MemoryRouter><FsdObservatoryPanel insights={insights} state={{ ...readyState, isLoading: true }} dataState={refreshing} /></MemoryRouter>);
+    expect(screen.getByText('Retained source')).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Stitched journal' })).toBeInTheDocument();
+
+    const recovered = deriveDataState({ data: insights, isSuccess: true, refetch: retry }, { provenance: 'historical' });
+    rerender(<MemoryRouter><FsdObservatoryPanel insights={insights} state={readyState} dataState={recovered} /></MemoryRouter>);
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.queryByText('Retained source')).not.toBeInTheDocument();
+    expect(screen.getByText('Returned evidence')).toBeInTheDocument();
+    expect(screen.getByLabelText('Historical')).toHaveAttribute('data-data-status', 'ok');
+    expect(screen.getByRole('table', { name: 'Commute stories' })).toBeInTheDocument();
+  });
+
+  it('keeps legacy retained data visible when a refresh error is passed', () => {
+    renderPanel(<FsdObservatoryPanel insights={fsdInsights()} state={{ ...readyState, error: new Error('Refresh failed') }} />);
+    expect(screen.getByText('Retained source')).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Stitched journal' })).toBeInTheDocument();
+  });
+
+  it('retains paused evidence without inventing a refresh failure', () => {
+    const dataState = deriveDataState({
+      data: fsdInsights(), fetchStatus: 'paused', refetch: vi.fn(),
+    }, { provenance: 'historical' });
+    renderPanel(<FsdObservatoryPanel insights={undefined} state={readyState} dataState={dataState} />);
+    expect(dataState.refreshError).toBeNull();
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(screen.getByText('Retained source')).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Stitched journal' })).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Commute stories' })).toBeInTheDocument();
+  });
+
+  it('forwards fatal errors without replacing the panel shell', () => {
+    const retry = vi.fn();
+    const dataState = deriveDataState<FsdInsights>({ error: new Error('Initial failure'), refetch: retry });
+    renderPanel(<FsdObservatoryPanel insights={undefined} state={readyState} dataState={dataState} />);
+    expect(screen.getByText('FSD observatory')).toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: 'Stitched journal' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+    expect(retry).toHaveBeenCalledOnce();
   });
 });

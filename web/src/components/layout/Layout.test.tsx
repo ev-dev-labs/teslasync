@@ -68,6 +68,7 @@ const H = vi.hoisted(() => {
       warning: vi.fn(),
     },
     realtime: vi.fn(),
+    notificationListener: vi.fn(),
   }
 })
 
@@ -218,7 +219,9 @@ vi.mock('@/hooks/usePresentationMode', () => ({
 vi.mock('../../hooks/useRealtimeEvents', () => ({
   useRealtimeEvents: (opts: unknown) => H.realtime(opts),
 }))
-vi.mock('../../hooks/useNotificationListener', () => ({ useNotificationListener: vi.fn() }))
+vi.mock('../../hooks/useNotificationListener', () => ({
+  useNotificationListener: () => H.notificationListener(),
+}))
 vi.mock('../../hooks/useTitleBadge', () => ({ useTitleBadge: vi.fn() }))
 vi.mock('../../hooks/useFaviconBadge', () => ({ useFaviconBadge: vi.fn() }))
 vi.mock('../../hooks/useDynamicAppIcon', () => ({ useDynamicAppIcon: vi.fn() }))
@@ -474,6 +477,7 @@ beforeEach(() => {
   H.request.mockReset()
   H.request.mockImplementation(H.defaultReq)
   H.realtime.mockReset()
+  H.notificationListener.mockReset()
   Object.values(H.toast).forEach((fn) => fn.mockReset())
 
   // jsdom gaps used by Layout's active-link scroll effect.
@@ -779,6 +783,11 @@ describe('Layout — grouped sidebar sections', () => {
 })
 
 describe('Layout — global page chrome', () => {
+  it('owns one browser-notification delivery hook on the settings route', () => {
+    renderLayout('/notifications/browser')
+    expect(H.notificationListener).toHaveBeenCalledTimes(1)
+  })
+
   it('keeps rate-limit notices inside the report column instead of consuming horizontal page space', () => {
     const { container } = renderLayout('/')
     const main = container.querySelector('[data-role="main-content"]')

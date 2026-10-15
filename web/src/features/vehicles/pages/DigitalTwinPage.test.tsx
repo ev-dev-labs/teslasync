@@ -62,6 +62,7 @@ const h = vi.hoisted(() => ({
   vehicles: [] as Veh[],
   vehiclesLoading: false,
   fleet: undefined as QueryStub<Veh[]> | undefined,
+  statusLabels: {} as Record<string, string>,
    
   security: undefined as any,
    
@@ -85,6 +86,7 @@ vi.mock('react-i18next', async () => {
           options = arg2 as Record<string, unknown>;
           if (typeof options.defaultValue === 'string') template = options.defaultValue;
         }
+        template = h.statusLabels[key] ?? template;
         if (options) {
           template = template.replace(/\{\{\s*(\w+)\s*\}\}/g, (_m, name: string) =>
             options && options[name] != null ? String(options[name]) : '',
@@ -302,6 +304,7 @@ function expectKpi(subtitle: string, value: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  h.statusLabels = {};
   h.vehicle = { id: 7, display_name: 'Model 3', vin: 'VIN7', exterior_color: 'PearlWhite' };
   h.vehicles = [h.vehicle];
   h.vehiclesLoading = false;
@@ -316,6 +319,109 @@ afterEach(() => {
 });
 
 describe('DigitalTwinPage', () => {
+  it.each([
+    ['security', 'Security & status'],
+    ['state', 'Live status'],
+    ['charging', 'Charging'],
+  ] as const)('recovers failed, paused and missing %s independently of its neighbors', (source, label) => {
+    const ready = h[source];
+    const refetch = vi.fn();
+    h[source] = makeQuery({ isError: true, error: new Error('source failed'), dataUpdatedAt: 0, refetch });
+    const view = renderPage();
+    const rerender = () => view.rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter><DigitalTwinPage /></MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const expectNeighbors = () => {
+      expect(screen.getByRole('heading', { name: 'Component state' })).toBeInTheDocument();
+      expectKv('Charging', 'Yes');
+      if (source !== 'security') {
+        expectKv('Driver front', 'Open');
+        expectKpi('of 6 openings', '2');
+      }
+    };
+    const retryOnlySource = (calls: number) => {
+      fireEvent.click(screen.getByRole('button', { name: `Retry unavailable sources: ${label}` }));
+      expect(refetch).toHaveBeenCalledTimes(calls);
+      for (const neighbor of ['security', 'state', 'charging'] as const) {
+        if (neighbor !== source) expect(h[neighbor].refetch).not.toHaveBeenCalled();
+      }
+    };
+
+    expectNeighbors();
+    expect(screen.getByTestId('twin-source-observations')).toHaveTextContent(`${label}: Source request failed`);
+    retryOnlySource(1);
+
+    h[source] = makeQuery({ isLoading: true, fetchStatus: 'paused', dataUpdatedAt: 0, refetch });
+    rerender();
+    expectNeighbors();
+    expect(screen.getByTestId('twin-source-observations')).toHaveTextContent(`${label}: Refresh paused`);
+    retryOnlySource(2);
+    expect(screen.queryByRole('status', { name: 'Loading Security & status' })).not.toBeInTheDocument();
+
+    h[source] = makeQuery({ dataUpdatedAt: 0, refetch });
+    rerender();
+    expectNeighbors();
+    expect(screen.getByTestId('twin-source-observations')).toHaveTextContent(`${label}: No source snapshots`);
+    retryOnlySource(3);
+
+    h[source] = makeQuery({ isLoading: true, isFetching: true, fetchStatus: 'fetching', dataUpdatedAt: 0, refetch });
+    rerender();
+    expectNeighbors();
+    expect(screen.getByTestId('twin-source-observations')).toHaveTextContent(`${label}: Loading source snapshots`);
+    expect(screen.queryByRole('button', { name: `Retry unavailable sources: ${label}` })).not.toBeInTheDocument();
+    expect(screen.getByTestId('digital-twin-summary')).not.toHaveAttribute('aria-busy', 'true');
+
+    h[source] = ready;
+    rerender();
+    expectKv('Driver front', 'Open');
+    expectKpi('of 6 openings', '2');
+    expect(screen.queryByRole('button', { name: `Retry unavailable sources: ${label}` })).not.toBeInTheDocument();
+    expect(screen.getByTestId('twin-source-observations')).not.toHaveTextContent('Source request failed');
+  });
+
+  it.each([
+    ['security', 'Security & status'],
+    ['state', 'Live status'],
+    ['charging', 'Charging'],
+  ] as const)('retains %s readings on refresh failure and clears recovery controls on success', (source, label) => {
+    const ready = h[source];
+    h[source] = { ...ready, isError: true, error: new Error('refresh failed') };
+    const view = renderPage();
+    expectKv('Driver front', 'Open');
+    expectKv('Charging', 'Yes');
+    expectKpi('of 6 openings', '2');
+    fireEvent.click(screen.getByRole('button', { name: `Retry unavailable sources: ${label}` }));
+    expect(ready.refetch).toHaveBeenCalledTimes(1);
+    for (const neighbor of ['security', 'state', 'charging'] as const) {
+      if (neighbor !== source) expect(h[neighbor].refetch).not.toHaveBeenCalled();
+    }
+    h[source] = ready;
+    view.rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter><DigitalTwinPage /></MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: `Retry unavailable sources: ${label}` })).not.toBeInTheDocument();
+    expectKv('Driver front', 'Open');
+    expectKv('Charging', 'Yes');
+  });
+
+  it('treats successful empty sources as empty, not paused, pending or failed', () => {
+    h.security = makeQuery({ data: null, isSuccess: true });
+    h.state = makeQuery({ data: null, isSuccess: true });
+    h.charging = makeQuery({ data: null, isSuccess: true });
+    renderPage();
+    expect(screen.getByText('No door data available')).toBeInTheDocument();
+    expect(screen.getByText('No live status available')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Retry unavailable sources/ })).not.toBeInTheDocument();
+    expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
+    expect(screen.queryByText('Source request failed')).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading Security & status' })).not.toBeInTheDocument();
+  });
+
   it('qualifies historical vehicle state separately from populated latest-only security and charging', () => {
     h.state = makeQuery({ data: { ...makeState(), live: false } });
     renderPage('/digital-twin?as_of=2024-06-02T12%3A00%3A00Z');
@@ -381,11 +487,27 @@ describe('DigitalTwinPage', () => {
     renderPage(entry);
 
     expect(screen.getByText('Live overview')).toBeInTheDocument();
-    expect(screen.getAllByText('charging')).toHaveLength(2);
+    expect(screen.getAllByText('Charging', { selector: 'span' })).toHaveLength(2);
     expect(screen.getByTestId('twin-source-observations')).not.toHaveTextContent('Viewing data as of');
     expectKpi('of 6 openings', '2');
     expectKv('Driver front', 'Open');
     expect(screen.queryByRole('slider')).not.toBeInTheDocument();
+  });
+
+  it('localizes both status badges without changing their canonical FSM styling', () => {
+    h.statusLabels = { 'digitalTwin.statusLabel.charging': 'Aufladen' };
+
+    renderPage();
+
+    const labels = screen.getAllByText('Aufladen', { selector: 'span' });
+    expect(labels).toHaveLength(2);
+    for (const label of labels) {
+      expect(label.parentElement?.querySelector('[aria-hidden="true"]')).toHaveClass('bg-yellow-400');
+    }
+    expect(screen.queryByText('charging')).not.toBeInTheDocument();
+    expectKv('Driver front', 'Open');
+    expectKv('Charging', 'Yes');
+    expectKpi('of 6 openings', '2');
   });
 
   it('renders the full dashboard, KPIs, badge/chips and every component panel when live data is ready', () => {
@@ -414,8 +536,8 @@ describe('DigitalTwinPage', () => {
     expectKpi('of 4 windows', '1'); // FD open
 
     // Live status — two StatusBadges (Live Status panel + Security footer) show
-    // the single-source "charging" status; the sentry chip is on.
-    expect(screen.getAllByText('charging').length).toBeGreaterThanOrEqual(2);
+    // the localized "Charging" status; the sentry chip is on.
+    expect(screen.getAllByText('Charging').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText('Sentry on')).toBeInTheDocument();
 
     // Doors panel KV rows (from the JSON door_state).
@@ -643,7 +765,7 @@ describe('DigitalTwinPage', () => {
 
     renderPage();
 
-    expect(screen.getAllByText('driving').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Driving').length).toBeGreaterThanOrEqual(1);
     expectKpi('of 6 openings', '—'); // no security data → openings unknown
   });
 
@@ -738,7 +860,7 @@ describe('DigitalTwinPage', () => {
       h.state = makeQuery({ data: { ...makeState(), state: { state } } });
       h.charging = makeQuery({ data: null });
       renderPage();
-      expect(screen.getAllByText(state).length).toBeGreaterThanOrEqual(2);
+      expect(screen.getAllByText(capitalize(state)).length).toBeGreaterThanOrEqual(2);
     },
   );
 
@@ -881,7 +1003,7 @@ describe('DigitalTwinPage', () => {
   it('preserves verified zero and false activity without promoting conflicting charging snapshots', () => {
     h.state = makeQuery({ data: makeState({ state: 'parked', speed: 0, is_charging: false, charger_power: 0 }) });
     renderPage();
-    expect(screen.getAllByText('parked')).toHaveLength(2);
+    expect(screen.getAllByText('Parked', { selector: 'span' })).toHaveLength(2);
     expect(screen.queryByText('charging')).not.toBeInTheDocument();
     expectKv('Driving', 'No');
     expectKpi('of 6 openings', '2');
@@ -915,7 +1037,7 @@ describe('DigitalTwinPage', () => {
     expect(screen.getByTestId('twin-source-observations')).toHaveTextContent('Refresh paused');
     h.state = makeQuery({ data });
     view.rerender(<QueryClientProvider client={new QueryClient()}><MemoryRouter><DigitalTwinPage /></MemoryRouter></QueryClientProvider>);
-    expect(screen.getAllByText('charging')).toHaveLength(2);
+    expect(screen.getAllByText('Charging', { selector: 'span' })).toHaveLength(2);
     expect(screen.queryByText('Live status may be out of date')).not.toBeInTheDocument();
     expectKv('Driver front', 'Open');
   });

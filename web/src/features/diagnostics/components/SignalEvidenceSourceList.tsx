@@ -48,6 +48,11 @@ export function SignalEvidenceSourceList({ sources, label }: SignalEvidenceSourc
                 <Skeleton className="h-6 w-full" />
               </div>
             )}
+            {state.status === 'initial' && state.isRefreshBlocked && (
+              <Text as="p" variant="bodySm" color="secondary" role="status">
+                {t('chargingPlaces.workspace.initialPaused', '{{source}} loading is paused. No data has been loaded yet.', { source: signal })}
+              </Text>
+            )}
             {state.fatalError && <Text as="p" variant="bodySm" role="alert" className="break-words">{state.fatalError.message}</Text>}
             {state.status === 'unavailable' || emptyHistory ? (
               <Text as="p" variant="caption">{t('common.noDataForPeriod', 'No data available for this period')}</Text>
@@ -72,7 +77,10 @@ export function SignalEvidenceSourceList({ sources, label }: SignalEvidenceSourc
               </Caption>
             )}
             {(state.status === 'stale' || state.status === 'partial') && (
-              <StaleRefreshWarning state={state} label={signal} hideRetry />
+              <StaleRefreshWarning state={state} label={signal} hideRetry
+                message={state.isRefreshBlocked && !state.refreshError
+                  ? t('chargingPlaces.workspace.pausedRetained', '{{source}} refresh is paused. Previously loaded data remains visible.', { source: signal })
+                  : undefined} />
             )}
             {state.retry && (state.fatalError || state.refreshError || state.isRefreshBlocked || state.status === 'unavailable') && (
               <Button type="button" variant="secondary" size="sm" onClick={state.retry}

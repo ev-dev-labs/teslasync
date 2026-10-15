@@ -24,6 +24,7 @@ vi.mock('@/hooks/useSelectedVehicle', () => ({ useSelectedVehicle: () => ({ vehi
 
 import ServiceIntelligencePage from './ServiceIntelligencePage';
 import { RecallFindingCard } from '../components/RecallFindingCard';
+import { serviceReport } from './ServiceIntelligencePage.closure.fixtures';
 
 const response: ServiceIntelligenceResponse = {
   vehicle_id: 7,
@@ -69,6 +70,39 @@ beforeEach(() => {
 });
 
 describe('ServiceIntelligencePage independent source preservation', () => {
+  it('keeps missing communications source availability unknown and retries the service query locally', async () => {
+    const serviceQuery = query(response);
+    hooks.service.mockReturnValue(serviceQuery);
+    renderPage();
+    expect(screen.getByText('Unknown source')).toBeInTheDocument();
+    expect(screen.queryByText('No communications found')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(serviceQuery.refetch).toHaveBeenCalledOnce();
+    expect(hooks.catalog.mock.results[0].value.refetch).not.toHaveBeenCalled();
+    expect(screen.getByText('Retained signal evidence')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /Import official NHTSA artifact for/ })).toHaveLength(5);
+  });
+
+  it('preserves returned communications through missing metadata and refresh failure, then recovers to confirmed empty', () => {
+    hooks.service.mockReturnValue(query({ ...response, communications: serviceReport.communications }, new Error('refresh failed')));
+    const view = renderPage();
+    expect(screen.getByText('Unknown source')).toBeInTheDocument();
+    expect(screen.getByText('Returned bulletin summary.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open official NHTSA document' }))
+      .toHaveAttribute('href', serviceReport.communications[0].source_document_url);
+    expect(screen.queryByText('No communications found')).not.toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    hooks.service.mockReturnValue(query({
+      ...response,
+      sources: [{ ...serviceReport.sources[0], status: 'available' }],
+    }));
+    view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}><ServiceIntelligencePage /></QueryClientProvider></MemoryRouter>);
+    expect(screen.queryByText('Unknown source')).not.toBeInTheDocument();
+    expect(screen.queryByText('Returned bulletin summary.')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getByText('No communications found')).toBeInTheDocument();
+  });
+
   it('exposes full recall match details in source order through keyboard and pointer tooltips', async () => {
     const user = userEvent.setup();
     const finding: ServiceIntelligenceFinding = {

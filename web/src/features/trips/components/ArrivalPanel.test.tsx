@@ -10,6 +10,17 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+import { formatTime } from '@/lib/dateFormat';
+
+const datePreferences = vi.hoisted(() => ({ locale: 'en-US', tz: 'UTC' }));
+vi.mock('@/hooks/useSettings', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useSettings')>();
+  return { ...actual, useSettings: () => ({ ...actual.useSettings(), locale: datePreferences.locale }) };
+});
+vi.mock('@/lib/timezone', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/timezone')>();
+  return { ...actual, useTimezone: () => datePreferences.tz };
+});
 
 // ── i18n stub ──
 vi.mock('react-i18next', () => {
@@ -98,11 +109,18 @@ function renderPanel() {
 }
 
 beforeEach(() => {
+  Object.assign(datePreferences, { locale: 'en-US', tz: 'UTC' });
   vi.clearAllMocks();
   mockArrival.mockReturnValue(idle({ data: arrival }));
 });
 
 describe('ArrivalPanel', () => {
+  it('formats ETA in the selected locale and timezone', () => {
+    Object.assign(datePreferences, { locale: 'de-DE', tz: 'America/Los_Angeles' });
+    renderPanel();
+    expect(screen.getByText(formatTime(arrival.eta_at, datePreferences))).toBeInTheDocument();
+  });
+
   it('renders ETA, pace, distance, advice, and evidence', () => {
     renderPanel();
     expect(screen.getByText('ETA')).toBeInTheDocument();

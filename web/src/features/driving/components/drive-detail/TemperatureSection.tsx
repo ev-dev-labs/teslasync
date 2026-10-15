@@ -89,22 +89,22 @@ export function TemperatureSection({ chartData, stats }: TemperatureSectionProps
                 syncMethod={syncProps.syncMethod}
                 onMouseMove={syncProps.onMouseMove}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} interval="preserveStartEnd" />
-                <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
+                <XAxis dataKey="time" tick={{ fill: chartTokens.axisStroke, fontSize: 10 }} interval="preserveStartEnd" />
+                <YAxis tick={{ fill: chartTokens.axisStroke, fontSize: 10 }} />
                 <Tooltip content={<ChartTooltip />} />
                 <ChartLegend state={hidden} wrapperStyle={LEGEND_STYLE} />
                 {outsideTemps.length > 0 ? (
-                  <Line {...AREA_DEFAULTS} dataKey="outsideTemp" stroke="#3b82f6" name={`${t('driveDetail.outside', 'Outside')} ${tempUnit}`} hide={hidden.isHidden('outsideTemp')} />
+                  <Line {...AREA_DEFAULTS} dataKey="outsideTemp" stroke={chartTokens.series[0]} name={`${t('driveDetail.outside', 'Outside')} ${tempUnit}`} hide={hidden.isHidden('outsideTemp')} />
                 ) : null}
                 {insideTemps.length > 0 ? (
-                  <Line {...AREA_DEFAULTS} dataKey="insideTemp" stroke="#f97316" name={`${t('driveDetail.inside', 'Inside')} ${tempUnit}`} hide={hidden.isHidden('insideTemp')} />
+                  <Line {...AREA_DEFAULTS} dataKey="insideTemp" stroke={chartTokens.series[2]} name={`${t('driveDetail.inside', 'Inside')} ${tempUnit}`} hide={hidden.isHidden('insideTemp')} />
                 ) : null}
                 {driverTemps.length > 0 ? (
-                  <Line {...AREA_DEFAULTS} dataKey="driverTemp" stroke="#fb7185" name={`${t('driveDetail.driver', 'Driver')} ${tempUnit}`} hide={hidden.isHidden('driverTemp')} />
+                  <Line {...AREA_DEFAULTS} dataKey="driverTemp" stroke={chartTokens.series[6]} name={`${t('driveDetail.driver', 'Driver')} ${tempUnit}`} hide={hidden.isHidden('driverTemp')} />
                 ) : null}
                 {passengerTemps.length > 0 ? (
-                  <Line {...AREA_DEFAULTS} dataKey="passengerTemp" stroke="#a855f7" name={`${t('driveDetail.passenger', 'Passenger')} ${tempUnit}`} hide={hidden.isHidden('passengerTemp')} />
+                  <Line {...AREA_DEFAULTS} dataKey="passengerTemp" stroke={chartTokens.series[4]} name={`${t('driveDetail.passenger', 'Passenger')} ${tempUnit}`} hide={hidden.isHidden('passengerTemp')} />
                 ) : null}
                 {syncedX != null && (
                   <ReferenceLine

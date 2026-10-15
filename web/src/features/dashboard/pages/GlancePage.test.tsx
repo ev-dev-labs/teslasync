@@ -34,6 +34,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Button } from '@/components/ui';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { getWorkspaceRouteScope } from '@/lib/workspaceScope';
@@ -107,6 +108,7 @@ vi.mock('@/api/hooks/useVehicles', async importOriginal => ({
 }));
 vi.mock('@/api/hooks/useVehicleCommand', () => ({ useVehicleCommand: vi.fn() }));
 vi.mock('@/hooks/useUnits', () => ({ useUnits: vi.fn() }));
+vi.mock('@/hooks/useRefreshPolicy', () => ({ useRefreshInterval: vi.fn() }));
 
 import {
   useVehicles,
@@ -115,6 +117,7 @@ import {
 } from '@/api/hooks/useVehicles';
 import { useVehicleCommand } from '@/api/hooks/useVehicleCommand';
 import { useUnits } from '@/hooks/useUnits';
+import { useRefreshInterval } from '@/hooks/useRefreshPolicy';
 import GlancePage, { getLocationLabel, batteryNeon } from './GlancePage';
 
 const mockVehicles = useVehicles as unknown as ReturnType<typeof vi.fn>;
@@ -275,6 +278,7 @@ beforeEach(() => {
   mockState.mockReturnValue(stateQuery);
   mockLocation.mockReturnValue({ data: LOCATION });
   mockCommand.mockReturnValue(sendCommand);
+  vi.mocked(useRefreshInterval).mockImplementation(baseMs => baseMs);
 });
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -320,6 +324,76 @@ describe('batteryNeon', () => {
 
 // ─────────────────────────────────────────────────────────────────────────
 describe('GlancePage — vehicle guard', () => {
+  it.each(['loading', 'failed'] as const)(
+    'retains selected live evidence while the registry is %s without inventing identity',
+    async registryStatus => {
+      const registryQuery = makeQuery({
+        isLoading: registryStatus === 'loading',
+        isError: registryStatus === 'failed',
+        error: registryStatus === 'failed' ? new ApiError('registry unavailable', 500) : null,
+      });
+      mockVehicles.mockReturnValue(registryQuery);
+      renderPage('/glance?vehicle_id=1');
+
+      expect(cardValue(kpiRegion(), 'Battery')).toBe('72.00%');
+      expect(within(liveRegion()).getByRole('heading', { name: '—' })).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Tesla' })).toBeNull();
+      expect(screen.queryByText('No vehicle available')).toBeNull();
+      expect(screen.getByText('Office')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Refresh', exact: true })).toBeEnabled();
+      fireEvent.click(within(controlsRegion()).getByRole('button', { name: 'Horn' }));
+      expect(sendCommand.mutate).toHaveBeenCalledWith({ vehicleId: 1, command: 'honk_horn' });
+      expect(mockState).toHaveBeenCalledWith(1, { refetchInterval: 10_000 });
+      if (registryStatus === 'failed') {
+        expect(screen.getAllByText('Server error')).toHaveLength(1);
+        fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+        await waitFor(() => expect(registryQuery.refetch).toHaveBeenCalledTimes(1));
+      }
+    },
+  );
+
+  it('retains independent location when registry and state initial loads fail', () => {
+    mockVehicles.mockReturnValue(makeQuery({ error: new ApiError('registry unavailable', 500), isError: true }));
+    mockState.mockReturnValue(makeQuery({ error: new ApiError('state unavailable', 500), isError: true }));
+    renderPage('/glance?vehicle_id=1');
+
+    expect(screen.getByText('Office')).toBeInTheDocument();
+    expect(rowValue(liveRegion(), 'Place')).toBe('Home');
+    expect(cardValue(kpiRegion(), 'Battery')).toBe('—');
+    expect(screen.getAllByRole('button', { name: 'Retry' })).toHaveLength(4);
+    expect(within(controlsRegion()).getByRole('button', { name: 'Horn' })).toBeDisabled();
+    expect(screen.queryByText('No vehicle available')).toBeNull();
+  });
+
+  it('does not infer a selection from independent payloads when the registry fails', () => {
+    mockVehicles.mockReturnValue(makeQuery({ error: new ApiError('registry unavailable', 500), isError: true }));
+    renderPage();
+
+    expect(screen.getByText('Server error')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Vehicle overview' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Horn' })).toBeNull();
+    expect(mockState).toHaveBeenCalledWith(0, { refetchInterval: 10_000 });
+  });
+
+  it('does not bypass registry failure with a selected ID but no usable independent data', () => {
+    mockVehicles.mockReturnValue(makeQuery({ error: new ApiError('registry unavailable', 500), isError: true }));
+    mockState.mockReturnValue(makeQuery({ data: { state: null } }));
+    mockLocation.mockReturnValue(makeQuery({ data: null }));
+    renderPage('/glance?vehicle_id=1');
+
+    expect(screen.getByText('Server error')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Vehicle overview' })).toBeNull();
+  });
+
+  it('preserves the empty-fleet CTA even with a requested ID and independent payloads', () => {
+    mockVehicles.mockReturnValue(makeQuery({ data: [] }));
+    renderPage('/glance?vehicle_id=1');
+
+    expect(screen.getByText('No vehicle available')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Manage vehicles' })).toHaveAttribute('href', '/vehicles');
+    expect(screen.queryByRole('region', { name: 'Vehicle overview' })).toBeNull();
+  });
+
   it('renders the no-vehicle empty state without header actions', () => {
     mockVehicles.mockReturnValue({ data: [], isLoading: false, error: null });
     renderPage();
@@ -538,7 +612,7 @@ describe('GlancePage — command band', () => {
     expect(within(controls).getByRole('button', { name: 'Horn' })).toBeDisabled();
   });
 
-  it('refreshes live state from the header action', () => {
+  it('keeps the header refresh target mobile-sized without changing desktop sizing', () => {
     renderPage();
 
     // The freshness chip also exposes a "Refresh" role=button; target the real
@@ -547,9 +621,28 @@ describe('GlancePage — command band', () => {
       .getAllByRole('button', { name: 'Refresh' })
       .find((el) => el.tagName === 'BUTTON');
     expect(refresh).toBeDefined();
+    expect(refresh).toHaveClass('max-md:min-h-11', 'max-md:min-w-11', 'h-10');
+    expect(refresh).not.toHaveClass('min-h-11', 'min-w-11');
 
     fireEvent.click(refresh!);
     expect(stateQuery.refetch).toHaveBeenCalled();
+  });
+
+  it('refreshes live state from the header with Enter and Space', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    const refresh = screen
+      .getAllByRole('button', { name: 'Refresh' })
+      .find(el => el.tagName === 'BUTTON');
+    expect(refresh).toBeDefined();
+    refresh!.focus();
+    expect(refresh).toHaveFocus();
+
+    await user.keyboard('{Enter}');
+    expect(stateQuery.refetch).toHaveBeenCalledTimes(1);
+    await user.keyboard(' ');
+    expect(stateQuery.refetch).toHaveBeenCalledTimes(2);
+    expect(refresh).toHaveFocus();
   });
 });
 
@@ -583,7 +676,7 @@ describe('GlancePage — vehicle selection (URL state)', () => {
 
 // ─────────────────────────────────────────────────────────────────────────
 describe('GlancePage — null safety + idle branches', () => {
-  it.each([null, undefined, NaN, Infinity, -Infinity, -1])(
+  it.each([null, undefined, NaN, Infinity, -Infinity])(
     'keeps missing or invalid duration %s distinct from measured zero',
     value => {
       mockState.mockReturnValue(makeQuery({
@@ -594,11 +687,23 @@ describe('GlancePage — null safety + idle branches', () => {
       }));
       renderPage();
       expect(rowValue(liveRegion(), 'Time to full')).toBe('—');
-      expect(within(liveRegion()).queryByText('ETA')).toBeNull();
+      expect(rowValue(liveRegion(), 'ETA')).toBe('—');
       expect(within(liveRegion()).queryByText('0.00 h')).toBeNull();
       expect(within(liveRegion()).queryByText('0.00 min')).toBeNull();
     },
   );
+
+  it('keeps a negative charging duration invalid without discarding a signed ETA', () => {
+    mockState.mockReturnValue(makeQuery({
+      data: { ...stateEnvelope(), state: { ...STATE, time_to_full_charge: -1 } },
+    }));
+    mockLocation.mockReturnValue(makeQuery({
+      data: { ...LOCATION, minutes_to_arrival: -1 },
+    }));
+    renderPage();
+    expect(rowValue(liveRegion(), 'Time to full')).toBe('—');
+    expect(rowValue(liveRegion(), 'ETA')).toBe('-1.00 min');
+  });
 
   it.each([
     [0, '0.00'],
@@ -613,6 +718,19 @@ describe('GlancePage — null safety + idle branches', () => {
     }));
     renderPage();
     expect(rowValue(liveRegion(), 'Time to full')).toBe(`${display} h`);
+    expect(rowValue(liveRegion(), 'ETA')).toBe(`${display} min`);
+  });
+
+  it.each([
+    [-0.25, '-0.25'],
+    [-1.5, '-1.50'],
+    [60, '60.00'],
+    [90.5, '90.50'],
+  ])('preserves signed or fractional ETA %s in backend minutes', (value, display) => {
+    mockLocation.mockReturnValue(makeQuery({
+      data: { ...LOCATION, minutes_to_arrival: value },
+    }));
+    renderPage();
     expect(rowValue(liveRegion(), 'ETA')).toBe(`${display} min`);
   });
 
@@ -718,7 +836,8 @@ describe('GlancePage — null safety + idle branches', () => {
     const live = liveRegion();
 
     expect(rowValue(live, 'Place')).toBe('—');
-    // No destination → no destination/ETA rows.
+    expect(rowValue(live, 'ETA')).toBe('—');
+    // No destination must not fabricate a destination or arrival time.
     expect(within(live).queryByText('Office')).toBeNull();
     expect(within(live).queryByText('15.00 min')).toBeNull();
   });
@@ -755,6 +874,23 @@ describe('GlancePage — null safety + idle branches', () => {
   });
 
   describe('GlancePage — source observation and restrained presentation', () => {
+    it.each([30_000, 120_000, false] as const)(
+      'passes the policy location interval %s through without losing populated data',
+      interval => {
+        vi.mocked(useRefreshInterval).mockImplementation(baseMs =>
+          baseMs === 30_000 ? interval : baseMs,
+        );
+        renderPage();
+
+        expect(useRefreshInterval).toHaveBeenCalledWith(30_000);
+        expect(mockLocation).toHaveBeenCalledWith(1, interval);
+        expect(mockState).toHaveBeenCalledWith(1, { refetchInterval: 10_000 });
+        expect(cardValue(kpiRegion(), 'Battery')).toBe('72.00%');
+        expect(rowValue(liveRegion(), 'Place')).toBe('Home');
+        expect(rowValue(liveRegion(), 'Destination')).toBe('Office');
+      },
+    );
+
     it('never treats a successful poll as a verified telemetry observation', () => {
       mockState.mockReturnValue(makeQuery({
         data: { state: STATE, live: true, observedAt: null, freshness: 'unknown' },

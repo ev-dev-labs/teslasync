@@ -1,24 +1,11 @@
-// Animated AI thinking indicator.
-//
-// Replaces the plain-text "Generating…" placeholder shown while
-// AiOutputPanel waits for the first SSE delta.
-//
-// AIThinkingIndicator renders three shimmering skeleton lines
-// (decreasing widths to mimic prose) underneath an animated
-// "Helix is thinking" label with bouncing dots. Both halves use
-// existing tailwind animation tokens (`shimmer`, `pulse`,
-// `pulse-slow`) so no new keyframes are introduced. Neutral text and
-// skeleton roles follow the current theme without fixed accent paints.
-//
-// The component is reduced-motion-aware: when the user has
-// `prefers-reduced-motion`, the dots stop bouncing and the lines
-// drop the shimmer (the static skeleton is still visible). This is
-// implemented purely via tailwind's `motion-safe:` variant —
-// nothing JS-side checks the media query.
+// Static busy feedback while AiOutputPanel waits for the first SSE delta.
+// Labels and skeletons remain visible in every motion/bandwidth mode.
 
 import { useTranslation } from 'react-i18next'
 
 import { HelixMark } from '@/components/branding/HelixMark'
+import { useMotionPreference } from '@/hooks/useMotionPreference'
+import { cn } from '@/lib/cn'
 
 export interface AIThinkingIndicatorProps {
   /**
@@ -43,38 +30,39 @@ export function AIThinkingIndicator({
   label,
 }: AIThinkingIndicatorProps): JSX.Element {
   const { t } = useTranslation()
+  const { reduce } = useMotionPreference()
   // Fall back to the default when no override is given OR the override is
   // empty/whitespace — a role="status" live region must never announce a
   // blank string, and an empty label would render a caption-less indicator.
   const text = label?.trim() ? label : t('helix.thinkingStatusLabel', 'Helix is thinking')
   return (
     <div
-      className="flex flex-col gap-3"
+      className={cn('flex flex-col gap-3', reduce && 'animate-none')}
       data-testid="ai-thinking-indicator"
       role="status"
       aria-live="polite"
     >
       <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
         <HelixMark
-          className="h-4 w-4 motion-safe:animate-pulse"
+          className="h-4 w-4"
           aria-hidden="true"
         />
         <span className="font-medium">{text}</span>
         <span className="inline-flex items-end gap-1" aria-hidden="true">
-          <span className="motion-safe:animate-bounce motion-safe:[animation-delay:-0.3s] inline-block h-1 w-1 rounded-full bg-current" />
-          <span className="motion-safe:animate-bounce motion-safe:[animation-delay:-0.15s] inline-block h-1 w-1 rounded-full bg-current" />
-          <span className="motion-safe:animate-bounce inline-block h-1 w-1 rounded-full bg-current" />
+          <span className="inline-block h-1 w-1 rounded-full bg-current" />
+          <span className="inline-block h-1 w-1 rounded-full bg-current" />
+          <span className="inline-block h-1 w-1 rounded-full bg-current" />
         </span>
       </div>
       <div className="flex flex-col gap-2" aria-hidden="true">
         <div
-          className="h-3 w-full rounded-md motion-safe:animate-shimmer bg-[linear-gradient(90deg,var(--skeleton-bg)_0%,var(--border-strong)_50%,var(--skeleton-bg)_100%)] bg-[length:200%_100%]"
+          className="h-3 w-full rounded-md bg-[var(--skeleton-bg)]"
         />
         <div
-          className="h-3 w-11/12 rounded-md motion-safe:animate-shimmer bg-[linear-gradient(90deg,var(--skeleton-bg)_0%,var(--border-strong)_50%,var(--skeleton-bg)_100%)] bg-[length:200%_100%] [animation-delay:0.3s]"
+          className="h-3 w-11/12 rounded-md bg-[var(--skeleton-bg)]"
         />
         <div
-          className="h-3 w-9/12 rounded-md motion-safe:animate-shimmer bg-[linear-gradient(90deg,var(--skeleton-bg)_0%,var(--border-strong)_50%,var(--skeleton-bg)_100%)] bg-[length:200%_100%] [animation-delay:0.6s]"
+          className="h-3 w-9/12 rounded-md bg-[var(--skeleton-bg)]"
         />
       </div>
     </div>
@@ -84,19 +72,20 @@ AIThinkingIndicator.displayName = 'AIThinkingIndicator'
 
 /**
  * AIThinkingDots is the compact in-button thinking indicator —
- * three small bouncing dots after a label, suitable for use as
+ * three small static dots after a label, suitable for use as
  * the streaming-state label on an action button. The full
  * skeleton-line indicator [AIThinkingIndicator] is too tall for
  * a button row.
  */
 export function AIThinkingDots({ label }: { label: string }): JSX.Element {
+  const { reduce } = useMotionPreference()
   return (
-    <span className="inline-flex min-w-0 max-w-full items-center gap-1.5">
+    <span className={cn('inline-flex min-w-0 max-w-full items-center gap-1.5', reduce && 'animate-none')}>
       <span className="min-w-0 break-words">{label}</span>
       <span className="inline-flex shrink-0 items-end gap-0.5" aria-hidden="true">
-        <span className="motion-safe:animate-bounce motion-safe:[animation-delay:-0.3s] inline-block h-1 w-1 rounded-full bg-current" />
-        <span className="motion-safe:animate-bounce motion-safe:[animation-delay:-0.15s] inline-block h-1 w-1 rounded-full bg-current" />
-        <span className="motion-safe:animate-bounce inline-block h-1 w-1 rounded-full bg-current" />
+        <span className="inline-block h-1 w-1 rounded-full bg-current" />
+        <span className="inline-block h-1 w-1 rounded-full bg-current" />
+        <span className="inline-block h-1 w-1 rounded-full bg-current" />
       </span>
     </span>
   )

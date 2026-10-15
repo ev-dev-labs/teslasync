@@ -2,8 +2,10 @@ import { useTranslation } from 'react-i18next';
 import { ChartContainer, ChartTooltip, CHART_COLORS, AREA_DEFAULTS, axisTickSm,
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ChartLegend,
 } from '@/components/charts';
-import { useCardPlacement } from '@/components/layout/layout-reference';
+import { useCardPlacement } from '@/components/layout';
 import { cn } from '@/lib/cn';
+import { Button, Text } from '@/components/ui';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import type { DataState } from '@/api/dataState';
 import type { TirePosition, TirePressureReading } from '../../pages/TirePressurePage';
 import type { PressureChartDatum } from './pressureData';
@@ -26,6 +28,9 @@ export interface PressureHistoryCardProps {
  */
 export function PressureHistoryCard({ source, loading, rows, label, format, unit }: PressureHistoryCardProps) {
   const { t } = useTranslation();
+  const { vehicleId } = useSelectedVehicle();
+  const enabled = vehicleId !== null;
+  const unresolved = !source.hasData && !source.fatalError;
   const placement = useCardPlacement();
   const formatValue = (value: unknown) => typeof value === 'number' ? `${format(value)} ${unit}` : '—';
   return (
@@ -35,10 +40,12 @@ export function PressureHistoryCard({ source, loading, rows, label, format, unit
         title={t('tirePressure.pressureHistory', 'Pressure history')}
         ariaLabel={t('tirePressure.pressureHistoryAria', 'Tire pressure over time for all four positions')}
         chartKey="tire-pressure-history"
-        loading={loading && !source.hasData}
+        loading={enabled && loading && !source.hasData && !source.isRefreshBlocked}
         error={source.fatalError}
         onRetry={source.retry ?? undefined}
-        empty={rows.length === 0}
+        empty={!unresolved && rows.length === 0}
+        toolbar={unresolved ? false : undefined}
+        exportable={!unresolved}
         emptyMessage={t('tirePressure.noHistory', 'No history data')}
         data={rows}
         dataColumns={[
@@ -49,7 +56,20 @@ export function PressureHistoryCard({ source, loading, rows, label, format, unit
         metadata={{ unitLabel: unit }}
         size="standard"
       >
-        {({ hiddenSeries }) => (
+        {({ hiddenSeries }) => unresolved ? (
+          <div className="space-y-3">
+            <Text as="p" variant="bodySm" role="status">
+              {!enabled ? t('common.noVehicleSelected.title', 'No vehicle selected')
+                : source.isRefreshBlocked ? t('dataSources.status.paused', 'Refresh paused')
+                  : t('developerReference.layout.source.loading', 'Loading {{label}}', {
+                    label: t('dataSources.labels.tirePressureHistory', 'Tire pressure history'),
+                  })}
+            </Text>
+            {enabled && source.retry && <Button variant="secondary" size="sm" onClick={source.retry}>
+              {t('error.retry', 'Retry')}
+            </Button>}
+          </div>
+        ) : (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={rows}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />

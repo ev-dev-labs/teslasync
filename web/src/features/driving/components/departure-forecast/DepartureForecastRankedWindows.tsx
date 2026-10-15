@@ -80,17 +80,17 @@ export function DepartureForecastRankedWindows({
                       </Text>
                       <Text as="p" variant="caption">
                         {t(
-                          'departure.ranked.evidence',
-                          '{{relative}} · {{departures}} departures across {{occurrences}} observed cell occurrences',
+                          'departure.ranked.calendarEvidence',
+                          '{{relative}} · {{departures}} recorded departures / {{occurrences}} model-assumed calendar opportunities',
                           {
                             relative: relativeDepartureLabel(
                               t,
                               slot.minutesFromNow,
                             ),
                             departures: fmtInt(
-                              slot.historicalDepartures,
+                              slot.historicalDepartures, locale,
                             ),
-                            occurrences: fmtInt(slot.cellOccurrences),
+                            occurrences: fmtInt(slot.cellOccurrences, locale),
                           },
                         )}
                       </Text>
@@ -107,6 +107,12 @@ export function DepartureForecastRankedWindows({
                   </li>
                 ))}
               </ol>
+              <Text as="p" variant="caption" className="mt-3">
+                {t(
+                  'departure.ranked.opportunityQualifier',
+                  'Opportunities count elapsed matching local-hour boundaries from the earliest included drive start to the fixed model anchor, not verified telemetry coverage.',
+                )}
+              </Text>
               {forecast.accounting.historyCapReached ? (
                 <AlertBanner className="mt-3" variant="warning">
                   <Text as="p" variant="caption">

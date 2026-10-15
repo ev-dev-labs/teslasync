@@ -39,7 +39,9 @@ export function PrivacyOperationalBrief({ recentCount, consent, requireConsent, 
       label: t('account.privacy.kpi.policy', 'Consent policy'),
       missingReason: requireConsent !== null ? undefined : policyLoading
         ? t('account.privacy.stats.policyLoading', 'Loading deployment consent policy')
-        : t('account.privacy.kpi.loadError', 'Failed to load privacy policy'),
+        : policyError
+          ? t('account.privacy.kpi.loadError', 'Failed to load privacy policy')
+          : t('account.privacy.brief.unavailable', 'Deployment policy unavailable'),
       context: requireConsent === null ? undefined : requireConsent
         ? t('account.privacy.kpi.policyRequiredSub', 'Consent gate enabled')
         : t('account.privacy.kpi.policyOptionalSub', 'No consent gate') },

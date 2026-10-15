@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
-import { GlassPanel } from '@/components/ui';
-import { EmptyState, QueryError } from '@/components/feedback';
+import { StaleRefreshWarning } from '@/components/feedback';
+import { deriveDataState } from '@/api/dataState';
 import {
   ChartContainer,
   ChartLegend,
@@ -19,14 +19,9 @@ import { useChartPalette } from '@/hooks/useChartPalette';
 
 import type { TimelineRow } from '../lib/rootCauseIntelligence';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 const CHART_KEY = 'diagnostics-root-cause-timeline';
-
-function formatTick(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
 
 export interface RootCauseSignalTimelineChartProps {
   timeline: TimelineRow[];
@@ -60,6 +55,7 @@ export function RootCauseSignalTimelineChart({
   className,
 }: RootCauseSignalTimelineChartProps) {
   const { fmtNumber } = useNumberFormatting();
+  const { formatDateTime } = useDateFormat();
   const { t } = useTranslation();
   const palette = useChartPalette();
   const hidden = useHiddenSeries(CHART_KEY);
@@ -68,7 +64,7 @@ export function RootCauseSignalTimelineChart({
     {
       key: 'time',
       label: t('rootCauseIntelligence.timeline.col.time', 'Time'),
-      format: (value: unknown) => (typeof value === 'string' ? formatTick(value) : '—'),
+      format: (value: unknown) => (typeof value === 'string' ? formatDateTime(value) : '—'),
     },
     ...seriesNames.map((name) => ({
       key: name,
@@ -77,36 +73,32 @@ export function RootCauseSignalTimelineChart({
     })),
   ];
 
-  if (!isLoading && !isError && timeline.length === 0) {
-    return (
-      <GlassPanel className={className ?? 'p-4 sm:p-5'}>
-        <EmptyState /* no-action: the timeline appears once a focal signal with resolved history is chosen. */
-          icon={<Activity className="h-8 w-8" />}
-          message={
-            hasChosenSignal
-              ? t('rootCauseIntelligence.timeline.notEnough', 'Not enough history yet for this signal and window.')
-              : t('rootCauseIntelligence.timeline.pickOne', 'Choose a signal above to see its normalized timeline.')
-          }
-        />
-      </GlassPanel>
-    );
-  }
-
-  if (isError) {
-    return (
-      <GlassPanel className={className ?? 'p-4 sm:p-5'}>
-        <QueryError error={error} onRetry={onRetry} />
-      </GlassPanel>
-    );
-  }
+  const title = t('rootCauseIntelligence.timeline.title', 'Normalized signal timeline');
+  const hasData = timeline.length > 0;
+  const state = deriveDataState({
+    data: hasData ? timeline : undefined,
+    isError,
+    error: isError ? error ?? new Error(t('rootCauseIntelligence.timeline.loadFailed', 'Signal history could not be loaded.')) : null,
+    isFetching: isLoading,
+    refetch: onRetry,
+  }, { provenance: 'historical' });
 
   return (
+    <>
+    <StaleRefreshWarning state={state} label={title} />
     <ChartContainer
-      title={t('rootCauseIntelligence.timeline.title', 'Normalized signal timeline')}
+      title={title}
       subtitle={t('rootCauseIntelligence.timeline.subtitle', 'Each series independently scaled to 0–1 for visual comparison; ranking uses the raw robust statistics, not this view')}
       ariaLabel={t('rootCauseIntelligence.timeline.ariaLabel', 'Line chart of the focal signal and its related candidates, each independently normalized to a 0 to 1 scale')}
       ariaDescription={t('rootCauseIntelligence.timeline.ariaDescription', '{{count}} series shown; the focal signal is {{focal}}', { count: seriesNames.length, focal: focalSignal })}
-      loading={isLoading}
+      loading={isLoading && !hasData}
+      error={state.fatalError}
+      onRetry={onRetry}
+      empty={!hasData}
+      emptyIcon={<Activity className="h-8 w-8" />}
+      emptyMessage={hasChosenSignal
+        ? t('rootCauseIntelligence.timeline.notEnough', 'Not enough history yet for this signal and window.')
+        : t('rootCauseIntelligence.timeline.pickOne', 'Choose a signal above to see its normalized timeline.')}
       height={340}
       chartKey={CHART_KEY}
       data={timeline}
@@ -116,9 +108,12 @@ export function RootCauseSignalTimelineChart({
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={timeline}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-          <XAxis dataKey="time" tickFormatter={formatTick} tick={{ fill: 'var(--text-muted)', fontSize: 10 }} minTickGap={40} />
+          <XAxis dataKey="time" tickFormatter={(value: string) => formatDateTime(value)} tick={{ fill: 'var(--text-muted)', fontSize: 10 }} minTickGap={40} />
           <YAxis domain={[0, 1]} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-          <Tooltip content={<ChartTooltip />} />
+          <Tooltip content={<ChartTooltip labelFormatter={(label) => (
+            typeof label === 'string' && Number.isFinite(Date.parse(label))
+              ? `${formatDateTime(label)} · ${label}` : '—'
+          )} />} />
           <ChartLegend state={hidden} />
           {seriesNames.map((name, i) => (
             <Line
@@ -136,5 +131,6 @@ export function RootCauseSignalTimelineChart({
         </LineChart>
       </ResponsiveContainer>
     </ChartContainer>
+    </>
   );
 }

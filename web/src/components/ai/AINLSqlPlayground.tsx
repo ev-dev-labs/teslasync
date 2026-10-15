@@ -69,6 +69,7 @@ import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { withAiFeature } from '@/components/ai/withAiFeature'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
+import { Text } from '@/components/ui/Typography'
 import { useAiStream, type AiStreamEvent } from '@/hooks/useAiStream'
 
 /**
@@ -189,7 +190,12 @@ function InnerSection(props: AINLSqlPlaygroundProps) {
       buttonLabel={t('powerSql.aiDrafter.button', 'Draft SQL')}
       badgeLabel={t('powerSql.aiDrafter.badge', 'Helix')}
       canStart={hasPrompt}
-      stream={stream}
+      stream={{
+        ...stream,
+        text: draft && stream.state === 'done' && !stream.text.trim()
+          ? t('powerSql.aiDrafter.noNarration', 'No narration was returned. Review the typed SQL proposal above.')
+          : stream.text,
+      }}
       onAction={handleDraft}
       inputSlot={
         <Textarea
@@ -205,23 +211,49 @@ function InnerSection(props: AINLSqlPlaygroundProps) {
       }
     >
       {draft && (
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <Button
-            variant="primary"
-            size="sm"
-            wrapLabel
-            className="min-h-11 max-w-full md:min-h-9"
-            disabled={!canApply}
-            aria-disabled={!canApply ? 'true' : 'false'}
-            onClick={handleApply}
-            title={t(
-              'powerSql.aiDrafter.applyTooltip',
-              'Copy the proposed SQL into the editor above. You can still edit it before clicking Run.',
-            )}
+        <>
+          <div
+            role="group"
+            aria-label={t('powerSql.aiDrafter.previewLabel', 'Proposed SQL (review before applying)')}
+            data-testid="ai-sql-draft-preview"
+            className="min-w-0 space-y-3 rounded-shape-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3"
           >
-            {t('powerSql.aiDrafter.applyButton', 'Apply to editor')}
-          </Button>
-        </div>
+            <Text as="pre" variant="code" className="whitespace-pre-wrap break-words">
+              {draft.sql}
+            </Text>
+            <Text as="p" variant="bodySm" className="whitespace-pre-wrap break-words">
+              {draft.rationale}
+            </Text>
+            <Text as="p" variant="bodySm" className="break-words">
+              {t('powerGrafana.aiDrafter.previewTables', 'Referenced tables:')}{' '}
+              {draft.referenced_tables.length > 0
+                ? draft.referenced_tables.join(', ')
+                : t('common.notProvided', 'Not provided')}
+            </Text>
+          </div>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Button
+              variant="primary"
+              size="sm"
+              wrapLabel
+              className="min-h-11 max-w-full md:min-h-9"
+              disabled={!canApply}
+              aria-disabled={!canApply ? 'true' : 'false'}
+              onClick={handleApply}
+              title={t(
+                'powerSql.aiDrafter.applyTooltip',
+                'Copy the proposed SQL into the editor above. You can still edit it before clicking Run.',
+              )}
+            >
+              {t('powerSql.aiDrafter.applyButton', 'Apply to editor')}
+            </Button>
+          </div>
+        </>
+      )}
+      {stream.state === 'done' && !draft && (
+        <Text as="p" variant="bodySm" role="status" className="break-words">
+          {t('powerSql.aiDrafter.noTypedDraft', 'No applicable typed SQL proposal was returned. The manual editor remains available.')}
+        </Text>
       )}
     </AIFeatureCard>
   )

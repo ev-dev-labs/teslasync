@@ -17,12 +17,26 @@
  */
 
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { SnapshotInspector } from './SnapshotInspector';
 import type { FSMTransition } from '@/types/fsm';
 import type { SignalSnapshotResponse } from '@/api/hooks/useTelemetry';
 import { deriveDataState } from '@/api/dataState';
 import { MemoryRouter } from 'react-router-dom';
+import { formatDurationMs, formatRelative } from '@/lib/dateFormat';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({ settings: { tz_display_default: 'user' }, locale: 'de-DE' }),
+}));
+vi.mock('@/lib/timezone', async importOriginal => ({
+  ...await importOriginal<typeof import('@/lib/timezone')>(),
+  useTimezone: () => 'Asia/Tokyo',
+}));
+afterEach(() => {
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
+});
 
 // Deterministic i18n: two-arg form returns the default; an options bag
 // interpolates `{{name}}` placeholders. Mirrors the mock used across this tree.
@@ -70,6 +84,28 @@ function makeSnapshot(signals: Signals, at = '2025-01-15T12:00:00Z'): SignalSnap
 
 // ─────────────────────────────────────────────────────────────────────────────
 describe('SnapshotInspector — no transition selected', () => {
+  it.each(['invalid', '', '2026-01-01T23:30:00Z'])('uses saved freshness preferences for %s', ts => {
+    render(<SnapshotInspector fsmType="vehicle" transition={null}
+      lastTransition={makeTransition({ ts })} inWindowCount={0} onJumpToLast={vi.fn()} />);
+    expect(screen.getByTestId('snapshot-inspector-outside-window')).toHaveTextContent(
+      `Last transition ${formatRelative(ts, { locale: 'de-DE', tz: 'Asia/Tokyo' })}.`,
+    );
+  });
+
+  it.each([null, 0, 1234.567, NaN])('formats duration %s without changing raw snapshot precision or nulls', duration => {
+    setGlobalLocale('de-DE');
+    setGlobalPrecision(3);
+    const transition = makeTransition({ details: { duration_in_state_ms: duration } });
+    const snapshot = makeSnapshot({
+      raw: { value: 12.3456789, source: 'l1', age_ms: 0 },
+      missing: { value: null, source: 'l1', age_ms: 0 },
+    });
+    render(<SnapshotInspector fsmType="vehicle" transition={transition} snapshot={snapshot} />);
+    expect(screen.getByText('Duration').closest('div')).toHaveTextContent(formatDurationMs(duration));
+    expect(screen.getByText('12.3456789')).toBeInTheDocument();
+    expect(snapshot.signals.missing.value).toBeNull();
+    expect(transition.details?.duration_in_state_ms).toBe(duration);
+  });
   it('shows the "select a transition" empty state when nothing is selectable', () => {
     render(
       <SnapshotInspector
@@ -167,7 +203,7 @@ describe('SnapshotInspector — transition metadata', () => {
     expect(screen.getByText('manual_select')).toBeInTheDocument();
     // fmtInt applies locale separators; the unit is appended after the value.
     const duration = screen.getByText('Duration').closest('div');
-    expect(duration?.textContent).toContain('1,500 ms');
+    expect(duration?.textContent).toContain(formatDurationMs(1500));
   });
 
   it('renders an em-dash for a missing trigger and a missing duration', () => {
@@ -178,7 +214,7 @@ describe('SnapshotInspector — transition metadata', () => {
     const trigger = screen.getByText('Trigger').closest('div');
     expect(trigger?.textContent).toContain('—');
     const duration = screen.getByText('Duration').closest('div');
-    expect(duration?.textContent).toContain('— ms');
+    expect(duration?.textContent).toContain('—');
   });
 });
 

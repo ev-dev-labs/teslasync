@@ -68,6 +68,38 @@ type comparison struct {
 	Emoji string `json:"emoji"`
 }
 
+type weeklyRatePeriod struct {
+	Basis               string   `json:"basis"`
+	DenominatorWeeks    *float64 `json:"denominator_weeks"`
+	MinimumWeeks        float64  `json:"minimum_weeks"`
+	ObservationCoverage string   `json:"observation_coverage"`
+	Label               string   `json:"label"`
+}
+
+// Calendar time is a rate denominator, not evidence of telemetry coverage.
+// Retain the report's 52-week full-year baseline and one-week elapsed minimum.
+func weeklyPeriodYR(year int, now time.Time) weeklyRatePeriod {
+	start := time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)
+	end := time.Date(year+1, 1, 1, 0, 0, 0, 0, time.UTC)
+	period := weeklyRatePeriod{
+		Basis: "not_started", MinimumWeeks: 1, ObservationCoverage: "unknown",
+		Label: "Drives per week (year not started)",
+	}
+	if !now.After(start) {
+		return period
+	}
+	weeks := 52.0
+	period.Basis = "full_year"
+	period.Label = "Drives per week (full-year 52-week baseline)"
+	if now.Before(end) {
+		weeks = math.Max(1, now.Sub(start).Hours()/(24*7))
+		period.Basis = "elapsed_year"
+		period.Label = "Drives per week (elapsed year, minimum one week)"
+	}
+	period.DenominatorWeeks = &weeks
+	return period
+}
+
 func roundYR(v float64, decimals int) float64 {
 	p := math.Pow(10, float64(decimals))
 	return safeFloat(math.Round(v*p) / p)
@@ -92,7 +124,8 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	year := time.Now().Year()
+	now := time.Now().UTC()
+	year := now.Year()
 	if y := r.URL.Query().Get("year"); y != "" {
 		parsed, err := strconv.Atoi(y)
 		if err != nil || parsed < 2010 || parsed > 2100 {
@@ -172,11 +205,14 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 	// SI canonical charging_sessions (migration 000184): total_energy_added_wh,
 	// cost_decimal NUMERIC, started_at / ended_at.
 	var totalChargeSessions int
-	var totalEnergyKwh, totalChargingCost float64
+	var totalEnergyKwh float64
+	var totalChargingCost *float64
 	err = h.q.QueryRow(ctx, `
 		SELECT COUNT(*),
 		       COALESCE(SUM(total_energy_added_wh) / 1000.0, 0),
-		       COALESCE(SUM(cost_decimal::float8), 0)
+		       CASE WHEN COUNT(*) = 0 THEN 0
+		            WHEN COUNT(cost_decimal) = COUNT(*) THEN SUM(cost_decimal::float8)
+		       END
 		FROM charging_sessions
 		WHERE vehicle_id = $1
 		  AND ended_at IS NOT NULL
@@ -203,10 +239,11 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 
 	var gasSavings *float64
 	if gasPrice != nil && gasEffMPG != nil && finiteYR(*gasPrice) && finiteYR(*gasEffMPG) &&
-		*gasPrice >= 0 && *gasEffMPG > 0 && finiteYR(totalDistKm) && finiteYR(totalChargingCost) {
+		*gasPrice >= 0 && *gasEffMPG > 0 && finiteYR(totalDistKm) &&
+		totalChargingCost != nil && finiteYR(*totalChargingCost) {
 		totalMiles := totalDistKm / 1.60934
 		gasEquivCost := (totalMiles / *gasEffMPG) * *gasPrice
-		savings := gasEquivCost - totalChargingCost
+		savings := gasEquivCost - *totalChargingCost
 		gasSavings = roundNullableYR(&savings, 2)
 	}
 
@@ -232,7 +269,9 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 			}
 			return nil
 		}
-		dh.Date = startDate.Format("2006-01-02")
+		if !startDate.IsZero() {
+			dh.Date = startDate.UTC().Format("2006-01-02")
+		}
 		dh.DistanceKm = distM / 1000.0
 		// This report's existing wire contract uses minutes; storage remains seconds.
 		dh.DurationMinutes = durS / 60.0
@@ -259,7 +298,9 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 	longestDrive := scanHighlight(highlightBase+" ORDER BY distance_m DESC LIMIT 1", vehicleID, yearStart, yearEnd)
 	shortestDrive := scanHighlight(highlightBase+" AND distance_m >= 1609.344 ORDER BY distance_m ASC LIMIT 1", vehicleID, yearStart, yearEnd)
 
-	// Efficiency extremes unavailable (range columns removed from drives)
+	// Efficiency records are unsupported by this producer after the range-column
+	// migration. Publish the reason separately from null records so consumers
+	// can distinguish missing capability from a year with no qualifying drives.
 	var mostEfficient *driveHighlight
 	var leastEfficient *driveHighlight
 
@@ -270,7 +311,7 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 	}
 
 	driveMonthRows, err := h.q.Query(ctx, `
-		SELECT EXTRACT(MONTH FROM started_at)::int AS m, COUNT(*),
+		SELECT EXTRACT(MONTH FROM started_at AT TIME ZONE 'UTC')::int AS m, COUNT(*),
 		       SUM(distance_m) / 1000.0
 		FROM drives
 		WHERE vehicle_id = $1 AND ended_at IS NOT NULL AND distance_m > 0
@@ -318,7 +359,7 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 	}
 
 	chargeMonthRows, err := h.q.Query(ctx, `
-		SELECT EXTRACT(MONTH FROM started_at)::int AS m,
+		SELECT EXTRACT(MONTH FROM started_at AT TIME ZONE 'UTC')::int AS m,
 		       SUM(total_energy_added_wh) / 1000.0,
 		       SUM(cost_decimal::float8)
 		FROM charging_sessions
@@ -370,7 +411,7 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 	var mostActiveDOW *string
 	var dowIdx, dowCnt int
 	if err := h.q.QueryRow(ctx, `
-		SELECT EXTRACT(DOW FROM started_at)::int AS dow, COUNT(*) AS cnt
+		SELECT EXTRACT(DOW FROM started_at AT TIME ZONE 'UTC')::int AS dow, COUNT(*) AS cnt
 		FROM drives
 		WHERE vehicle_id = $1 AND ended_at IS NOT NULL AND distance_m > 0
 		  AND started_at >= $2 AND started_at < $3
@@ -388,7 +429,7 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 	var mostActiveHour *int
 	var hrIdx, hrCnt int
 	if err := h.q.QueryRow(ctx, `
-		SELECT EXTRACT(HOUR FROM started_at)::int AS hr, COUNT(*) AS cnt
+		SELECT EXTRACT(HOUR FROM started_at AT TIME ZONE 'UTC')::int AS hr, COUNT(*) AS cnt
 		FROM drives
 		WHERE vehicle_id = $1 AND ended_at IS NOT NULL AND distance_m > 0
 		  AND started_at >= $2 AND started_at < $3
@@ -402,20 +443,13 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		log.Warn().Err(err).Msg("year-review: active-hour query failed")
 	}
 
-	var avgDrivesPerWeek float64
-	weeksInYear := 52.0
-	now := time.Now().UTC()
-	if yearEnd.After(now) {
-		elapsed := now.Sub(yearStart)
-		if elapsed > 0 {
-			weeksInYear = elapsed.Hours() / (24 * 7)
-			if weeksInYear < 1 {
-				weeksInYear = 1
-			}
-		}
-	}
-	if totalDrives > 0 {
-		avgDrivesPerWeek = float64(totalDrives) / weeksInYear
+	weeklyPeriod := weeklyPeriodYR(year, now)
+	var avgDrivesPerWeek *float64
+	if weeklyPeriod.DenominatorWeeks != nil && totalDrives >= 0 {
+		rate := float64(totalDrives) / *weeklyPeriod.DenominatorWeeks
+		avgDrivesPerWeek = roundNullableYR(&rate, 1)
+	} else if totalDrives < 0 {
+		logger.Warn().Int("count", totalDrives).Msg("year-review: invalid weekly drive count")
 	}
 
 	avgDistPerDrive := 0.0
@@ -517,7 +551,11 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 	}
 	if gasSavings != nil && *gasSavings > 0 {
 		comparisons = append(comparisons,
-			comparison{Label: "Gas money saved", Value: fmt.Sprintf("$%.0f — that's %d cups of coffee!", *gasSavings, int(*gasSavings/5)), Emoji: "☕"},
+			comparison{Label: "Gas money saved", Value: fmt.Sprintf("$%.2f — that's %d cups of coffee!", *gasSavings, int(*gasSavings/5)), Emoji: "☕"},
+		)
+	} else if gasSavings != nil && *gasSavings < 0 {
+		comparisons = append(comparisons,
+			comparison{Label: "Additional spending", Value: fmt.Sprintf("$%.2f", *gasSavings), Emoji: "💸"},
 		)
 	}
 	if totalDrivingMin > 0 {
@@ -539,7 +577,7 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		"total_energy_kwh":      roundYR(totalEnergyKwh, 1),
 		"total_charge_sessions": totalChargeSessions,
 		"total_driving_minutes": roundYR(totalDrivingMin, 1),
-		"total_charging_cost":   roundYR(totalChargingCost, 2),
+		"total_charging_cost":   roundNullableYR(totalChargingCost, 2),
 		"gas_savings":           gasSavings,
 		"co2_offset_kg":         roundYR(co2OffsetKg, 1),
 
@@ -551,11 +589,14 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		"coldest_drive_temp_c":  roundNullableYR(coldestTemp, 1),
 		"hottest_drive_temp_c":  roundNullableYR(hottestTemp, 1),
 
+		"efficiency_records_unavailable_reason": "unsupported",
+
 		"monthly_stats": monthlyStats,
 
 		"most_active_day_of_week":   mostActiveDOW,
 		"most_active_hour":          mostActiveHour,
-		"avg_drives_per_week":       roundYR(avgDrivesPerWeek, 1),
+		"avg_drives_per_week":       avgDrivesPerWeek,
+		"weekly_rate_period":        weeklyPeriod,
 		"avg_distance_per_drive_km": roundYR(avgDistPerDrive, 1),
 		"avg_efficiency_wh_km":      roundNullableYR(avgEffWhKm, 1),
 

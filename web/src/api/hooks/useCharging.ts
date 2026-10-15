@@ -114,13 +114,41 @@ export function useChargingSessionDetail(id: number | null) {
   });
 }
 
-/** Fetches detailed telemetry readings for a charging session. */
+type ChargeTelemetryResponse = Omit<ChargeTelemetryReading,
+  'ts' | 'battery_heater_power_w' | 'ac_charging_power_w' | 'dc_charging_power_w'
+  | 'ac_charging_energy_in_wh' | 'dc_charging_energy_in_wh'
+> & Partial<Pick<ChargeTelemetryReading,
+  'ts' | 'battery_heater_power_w' | 'ac_charging_power_w' | 'dc_charging_power_w'
+  | 'ac_charging_energy_in_wh' | 'dc_charging_energy_in_wh'
+>>;
+
+function thermalTelemetryRows(rows: ChargeTelemetryResponse[] | null): ChargeTelemetryReading[] {
+  return safeArray(rows).map(row => ({
+    ...row,
+    ts: row.ts ?? row.created_at,
+    // The session endpoint merges AC/DC into power_w; do not count it twice.
+    ac_charging_power_w: 'ac_charging_power_w' in row
+      ? row.ac_charging_power_w ?? null
+      : 'dc_charging_power_w' in row ? null : row.power_w ?? null,
+    dc_charging_power_w: row.dc_charging_power_w ?? null,
+    // energy_added is the endpoint's legacy kWh counter, unlike canonical Wh fields.
+    ac_charging_energy_in_wh: 'ac_charging_energy_in_wh' in row
+      ? row.ac_charging_energy_in_wh ?? null
+      : 'dc_charging_energy_in_wh' in row ? null
+      : row.energy_added == null ? null : row.energy_added * 1000,
+    dc_charging_energy_in_wh: row.dc_charging_energy_in_wh ?? null,
+    // Heater state is not a power measurement. Unsupported power stays unknown.
+    battery_heater_power_w: row.battery_heater_power_w ?? null,
+  }));
+}
+
+/** Fetches session telemetry, retaining raw fields and adapting thermal-analysis operands to SI. */
 export function useChargeTelemetry(sessionId: number | null) {
   return useQuery({
     queryKey: chargingKeys.telemetry(sessionId!),
-    queryFn: ({ signal }) => request<ChargeTelemetryReading[]>(`/charging/${sessionId}/telemetry`, { signal }),
+    queryFn: ({ signal }) => request<ChargeTelemetryResponse[]>(`/charging/${sessionId}/telemetry`, { signal }),
     enabled: sessionId != null,
-    select: safeArray,
+    select: thermalTelemetryRows,
   });
 }
 
@@ -240,7 +268,7 @@ export function useTeslaChargingHistory(vin?: string, options?: { enabled?: bool
   });
 }
 
-/** Mutation to refresh Tesla charging historyfrom the Tesla API. */
+/** Manually refreshes Tesla charging history from the Tesla API in live mode. */
 export function useRefreshTeslaChargingHistory() {
   const qc = useQueryClient();
   const { success, error } = useMutationToast();
@@ -253,7 +281,7 @@ export function useRefreshTeslaChargingHistory() {
       const qs = searchParams.toString();
       return request<TeslaChargingHistoryResponse>(
         `/tesla/charging/history/refresh${qs ? `?${qs}` : ''}`,
-        { method: 'POST' }
+        { method: 'POST', requiresLiveMode: true }
       );
     },
     onSuccess: () => {
@@ -455,13 +483,14 @@ export const chargePlannerKeys = {
   ratePlans: ['charge-planner-rate-plans'] as const,
 };
 
-/** Mutation to optimize a charge schedule using TOU rates. */
+/** Optimizes and persists a charge schedule using TOU rates; requires live mode. */
 export function useOptimizeCharge() {
   const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (params: OptimizeChargeRequest) =>
       request<OptimizeChargeResponse>('/charge-planner/optimize', {
         method: 'POST',
+        requiresLiveMode: true,
         body: JSON.stringify(params),
       }),
     onSuccess: () => {
@@ -530,7 +559,7 @@ export function useAutopilotProfile(vehicleId?: number) {
   });
 }
 
-/** Mutation to save the Autopilot profile for a vehicle. */
+/** Saves the Autopilot profile for a vehicle; requires live mode. */
 export function useSaveAutopilotProfile() {
   const qc = useQueryClient();
   const { success, error } = useMutationToast();
@@ -538,6 +567,7 @@ export function useSaveAutopilotProfile() {
     mutationFn: (params: AutopilotProfile) =>
       request<AutopilotProfile>('/charge-autopilot/profile', {
         method: 'PUT',
+        requiresLiveMode: true,
         body: JSON.stringify(params),
       }),
     onSuccess: () => {
@@ -652,6 +682,7 @@ export function useBulkDeleteCharging() {
       ),
     onSuccess: (res) => {
       invalidateAndBroadcast(qc, { queryKey: chargingKeys.all });
+      invalidateAndBroadcast(qc, { queryKey: ['charging'] });
       success('toast.bulk.delete.success', '{{count}} deleted', {
         count: res.deleted ?? 0,
       });

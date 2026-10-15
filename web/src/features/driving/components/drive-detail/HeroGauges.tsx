@@ -47,6 +47,11 @@ export function HeroGauges({ drive, stats, chartData, meaningful = true }: {
   const historyEfficiency = finite(fleet?.avgEfficiencyWhKm);
   const { energyWh } = driveEnergyEvidence(drive, stats);
   const odometer = driveOdometerEvidence(drive, stats, unitPrefs.distance, chartData);
+  const odometerSource = odometer.source === 'aggregate'
+    ? t('driveDetail.report.persisted', 'Persisted drive aggregate')
+    : odometer.source === 'sampled'
+      ? t('driveDetail.report.sampled', 'Recorded telemetry samples')
+      : t('driveDetail.report.odometerMixed', 'Recorded endpoints with telemetry fallback');
   const displayUnitsPerKm = convertDistanceFromSI(1000, unitPrefs.distance);
   const consumption = distance != null && distance > 0
     ? energyWh
@@ -169,7 +174,7 @@ export function HeroGauges({ drive, stats, chartData, meaningful = true }: {
           start: finite(drive.startBatteryPct) != null ? fmtNumber(drive.startBatteryPct!) : '—',
           end: finite(drive.endBatteryPct) != null ? fmtNumber(drive.endBatteryPct!) : '—',
         })
-        : row.key === 'odometer' ? t('driveDetail.brief.odometerSource', 'Odometer endpoints use {{source}} evidence; missing endpoints are not zero.', { source: odometer.source })
+        : row.key === 'odometer' ? t('driveDetail.brief.odometerSource', 'Odometer endpoints use {{source}} evidence; missing endpoints are not zero.', { source: odometerSource })
           : row.key === 'battery-rate' ? t('driveDetail.brief.batteryRateBasis', 'Recorded battery percentage-point change divided by positive measured distance, per 100 {{unit}}.', { unit: unitPrefs.distance })
             : undefined,
       comparison: row.key === 'battery-change' && finite(drive.endBatteryPct) != null

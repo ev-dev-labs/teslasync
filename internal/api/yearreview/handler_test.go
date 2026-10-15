@@ -1028,8 +1028,8 @@ func TestGetYearReview_Success(t *testing.T) {
 	if !strings.Contains(got.Comparisons[3].Value, "384") || !strings.Contains(got.Comparisons[3].Value, "18 trees") {
 		t.Errorf("comparisons[3] (co2) value = %q, want contains 384 & 18 trees", got.Comparisons[3].Value)
 	}
-	if got.Comparisons[4].Label != "Gas money saved" || got.Comparisons[4].Value != "$124 — that's 24 cups of coffee!" {
-		t.Errorf("comparisons[4] = %+v, want gas $124/24 cups", got.Comparisons[4])
+	if got.Comparisons[4].Label != "Gas money saved" || got.Comparisons[4].Value != "$123.98 — that's 24 cups of coffee!" {
+		t.Errorf("comparisons[4] = %+v, want gas $123.98/24 cups", got.Comparisons[4])
 	}
 	if got.Comparisons[5].Label != "Hours on the road" || got.Comparisons[5].Value != "50 hours — 25 movies!" {
 		t.Errorf("comparisons[5] = %+v, want 50 hours/25 movies", got.Comparisons[5])
@@ -1309,14 +1309,76 @@ func TestGetYearReview_NegativeGasSavings(t *testing.T) {
 	}
 	for _, c := range got.Comparisons {
 		if c.Label == "Gas money saved" {
-			t.Errorf("gas comparison card must be absent when savings=0")
+			t.Errorf("gas money saved card must be absent when savings are negative")
 		}
+	}
+	var found bool
+	for _, c := range got.Comparisons {
+		if c.Label == "Additional spending" {
+			found = true
+			if c.Value != "$-4826.02" {
+				t.Errorf("additional spending = %q, want $-4826.02", c.Value)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("negative savings must produce an additional spending comparison")
 	}
 }
 
-// TestGetYearReview_YearWindowBranches exercises the elapsed-year branch: a
-// far-future (but valid) year makes yearEnd.After(now) true while elapsed<=0,
-// so weeksInYear stays 52 and avg_drives_per_week is deterministic.
+func TestGetYearReview_SignedChargingCosts(t *testing.T) {
+	for _, tt := range []struct {
+		name        string
+		cost        any
+		wantCost    string
+		wantSavings string
+		wantLabel   string
+		wantValue   string
+	}{
+		{"missing cost", nil, "null", "null", "", ""},
+		{"invalid cost", math.NaN(), "null", "null", "", ""},
+		{"positive infinity", math.Inf(1), "null", "null", "", ""},
+		{"negative infinity", math.Inf(-1), "null", "null", "", ""},
+		{"measured zero", 0.0, "0", "0", "", ""},
+		{"fractional spending", 0.25, "0.25", "-0.25", "Additional spending", "$-0.25"},
+		{"credit", -50.0, "-50", "50", "Gas money saved", "$50.00 — that's 10 cups of coffee!"},
+		{"fractional credit", -0.25, "-0.25", "0.25", "Gas money saved", "$0.25 — that's 0 cups of coffee!"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fq := okQuerier()
+			fq.settingsRow = fakeRow{vals: []any{0.0, 25.0}}
+			fq.chargingStatsRow = fakeRow{vals: []any{50, 1200.0, tt.cost}}
+			fq.chargeMonthRows = &fakeRows{rows: [][]any{{6, 1200.0, tt.cost}}}
+			raw := rawReview(t, fq)
+			assertWire(t, raw, "total_charging_cost", tt.wantCost)
+			assertWire(t, raw, "gas_savings", tt.wantSavings)
+			var months []map[string]json.RawMessage
+			if err := json.Unmarshal(raw["monthly_stats"], &months); err != nil {
+				t.Fatal(err)
+			}
+			assertWire(t, months[5], "cost", tt.wantCost)
+			var cards []comparisonJSON
+			if err := json.Unmarshal(raw["comparisons"], &cards); err != nil {
+				t.Fatal(err)
+			}
+			found := false
+			for _, card := range cards {
+				if card.Label != "Gas money saved" && card.Label != "Additional spending" {
+					continue
+				}
+				found = true
+				if card.Label != tt.wantLabel || (tt.wantValue != "" && card.Value != tt.wantValue) {
+					t.Errorf("money comparison = %+v, want label %q value %q", card, tt.wantLabel, tt.wantValue)
+				}
+			}
+			if found != (tt.wantLabel != "") {
+				t.Errorf("money comparison present = %v, want %v", found, tt.wantLabel != "")
+			}
+		})
+	}
+}
+
+// A future year has no elapsed denominator, even if a fixture supplies drives.
 func TestGetYearReview_YearWindowBranches(t *testing.T) {
 	rec := serve(okQuerier(), "vehicle_id=42&year=2099")
 	if rec.Code != http.StatusOK {
@@ -1326,8 +1388,128 @@ func TestGetYearReview_YearWindowBranches(t *testing.T) {
 	if got.Year != 2099 {
 		t.Errorf("year = %d, want 2099", got.Year)
 	}
-	if got.AvgDrivesPerWeek != 1.9 {
-		t.Errorf("avg_drives_per_week = %v, want 1.9 (52-week baseline)", got.AvgDrivesPerWeek)
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(rec.Body.Bytes(), &raw); err != nil {
+		t.Fatal(err)
+	}
+	assertWire(t, raw, "avg_drives_per_week", "null")
+	var period weeklyRatePeriod
+	if err := json.Unmarshal(raw["weekly_rate_period"], &period); err != nil {
+		t.Fatal(err)
+	}
+	if period.Basis != "not_started" || period.DenominatorWeeks != nil ||
+		period.Label != "Drives per week (year not started)" || period.ObservationCoverage != "unknown" {
+		t.Fatalf("future period = %+v", period)
+	}
+}
+
+func TestGetYearReview_ElapsedWeeklyRateWireContract(t *testing.T) {
+	before := time.Now().UTC()
+	rec := serve(okQuerier(), fmt.Sprintf("vehicle_id=42&year=%d", before.Year()))
+	after := time.Now().UTC()
+	if before.Year() != after.Year() {
+		t.Skip("request crossed the calendar-year boundary")
+	}
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d; body=%s", rec.Code, rec.Body.String())
+	}
+	var got struct {
+		Rate   *float64         `json:"avg_drives_per_week"`
+		Period weeklyRatePeriod `json:"weekly_rate_period"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	first, last := weeklyPeriodYR(before.Year(), before), weeklyPeriodYR(before.Year(), after)
+	if first.DenominatorWeeks == nil {
+		t.Skip("request began exactly at the start of the year")
+	}
+	if got.Period.Basis != first.Basis || got.Period.Label != first.Label ||
+		got.Period.ObservationCoverage != "unknown" || got.Period.MinimumWeeks != 1 ||
+		got.Period.DenominatorWeeks == nil || *got.Period.DenominatorWeeks < *first.DenominatorWeeks ||
+		*got.Period.DenominatorWeeks > *last.DenominatorWeeks {
+		t.Fatalf("elapsed period = %+v", got.Period)
+	}
+	want := roundYR(100 / *got.Period.DenominatorWeeks, 1)
+	if got.Rate == nil || *got.Rate != want {
+		t.Fatalf("rate = %v, want %v from published denominator", got.Rate, want)
+	}
+}
+
+func TestWeeklyPeriodYR(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		now   time.Time
+		basis string
+		weeks float64
+		label string
+	}{
+		{"before start", mustDate("2019-12-31"), "not_started", 0, "Drives per week (year not started)"},
+		{"at start", mustDate("2020-01-01"), "not_started", 0, "Drives per week (year not started)"},
+		{"minimum week", mustDate("2020-01-02"), "elapsed_year", 1, "Drives per week (elapsed year, minimum one week)"},
+		{"exact week", mustDate("2020-01-08"), "elapsed_year", 1, "Drives per week (elapsed year, minimum one week)"},
+		{"fractional weeks", mustDate("2020-01-11").Add(12 * time.Hour), "elapsed_year", 1.5, "Drives per week (elapsed year, minimum one week)"},
+		{"leap year end", mustDate("2021-01-01"), "full_year", 52, "Drives per week (full-year 52-week baseline)"},
+		{"past year", mustDate("2026-10-14"), "full_year", 52, "Drives per week (full-year 52-week baseline)"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := weeklyPeriodYR(2020, tt.now)
+			if got.Basis != tt.basis || got.Label != tt.label || got.MinimumWeeks != 1 || got.ObservationCoverage != "unknown" {
+				t.Fatalf("period = %+v", got)
+			}
+			if tt.weeks == 0 {
+				if got.DenominatorWeeks != nil {
+					t.Fatalf("denominator = %v, want nil", *got.DenominatorWeeks)
+				}
+			} else if got.DenominatorWeeks == nil || *got.DenominatorWeeks != tt.weeks {
+				t.Fatalf("denominator = %v, want %v", got.DenominatorWeeks, tt.weeks)
+			}
+		})
+	}
+}
+
+func TestGetYearReview_WeeklyRateWireContract(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		count any
+		want  string
+	}{
+		{"measured zero", 0, "0"},
+		{"fractional rate", 13, "0.3"},
+		{"positive count", 104, "2"},
+		{"invalid negative count", -1, "null"},
+		{"missing count", nil, ""},
+		{"invalid fractional count", 1.5, ""},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fq := okQuerier()
+			fq.driveStatsRow = fakeRow{vals: []any{tt.count, 2000.0, 3000.0, 180.0, -5.25, 38.25}}
+			rec := serve(fq, "vehicle_id=42&year=2020")
+			if tt.want == "" {
+				if rec.Code != http.StatusInternalServerError {
+					t.Fatalf("status = %d, want 500", rec.Code)
+				}
+				return
+			}
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status = %d; body=%s", rec.Code, rec.Body.String())
+			}
+			var raw map[string]json.RawMessage
+			if err := json.Unmarshal(rec.Body.Bytes(), &raw); err != nil {
+				t.Fatal(err)
+			}
+			assertWire(t, raw, "avg_drives_per_week", tt.want)
+			assertWire(t, raw, "coldest_drive_temp_c", "-5.3")
+			assertWire(t, raw, "hottest_drive_temp_c", "38.3")
+			var period weeklyRatePeriod
+			if err := json.Unmarshal(raw["weekly_rate_period"], &period); err != nil {
+				t.Fatal(err)
+			}
+			if period.Basis != "full_year" || period.DenominatorWeeks == nil || *period.DenominatorWeeks != 52 ||
+				period.Label != "Drives per week (full-year 52-week baseline)" || period.ObservationCoverage != "unknown" {
+				t.Fatalf("wire period = %+v", period)
+			}
+		})
 	}
 }
 

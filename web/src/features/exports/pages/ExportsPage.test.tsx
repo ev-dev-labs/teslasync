@@ -48,6 +48,7 @@ const datePreferences = vi.hoisted(() => ({
   timezone_user: 'UTC',
   tz_display_default: 'user',
 }));
+const translations = vi.hoisted(() => ({} as Record<string, string>));
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: () => ({
     settings: { decimal_precision: 2, unit_of_length: 'km',
@@ -72,6 +73,7 @@ vi.mock('react-i18next', () => {
     return s;
   };
   const t = (key: string, second?: unknown, third?: unknown): string => {
+    if (translations[key] !== undefined) return translations[key];
     if (typeof second === 'string') {
       return interpolate(
         second,
@@ -93,6 +95,40 @@ vi.mock('react-i18next', () => {
 });
 
 describe('ExportsPage — phase-five contract adoption', () => {
+  it('embeds the jobs grid without losing its toolbar, contained scroll, fields or pagination', () => {
+    mockJobs.mockReturnValue(makeQuery({
+      data: Array.from({ length: 26 }, (_, index) => job({
+        id: `embedded-${index}`,
+        type: `export-${index}`,
+        status: 'ready',
+        file_size: MB,
+      })),
+    }));
+    const { container } = renderPage();
+    const frame = container.querySelector('[data-grid-frame]');
+    expect(frame).toHaveAttribute('data-grid-variant', 'embedded');
+    expect(frame).toHaveClass('min-w-0', 'max-w-full');
+    const viewport = frame?.querySelector('[data-grid-viewport]');
+    expect(viewport).toHaveStyle({ maxHeight: '640px' });
+    expect(viewport).toHaveClass('overflow-auto');
+    expect(frame?.querySelector('[data-grid-footer]')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Export list' })).toBeInTheDocument();
+    const table = screen.getByRole('table', { name: 'Export jobs' });
+    for (const label of ['Type', 'Format', 'Size', 'Created', 'Status', 'Actions']) {
+      expect(within(table).getByRole('columnheader', { name: new RegExp(label) })).toBeInTheDocument();
+    }
+    expect(table.querySelector('thead tr')).toHaveClass('sticky');
+    expect(within(table).getAllByRole('checkbox', { name: /export,/ })).toHaveLength(25);
+    fireEvent.click(screen.getByRole('button', { name: /next page/i }));
+    expect(within(table).getAllByRole('checkbox', { name: /export,/ })).toHaveLength(1);
+    expect(within(table).getByText('export-25')).toBeInTheDocument();
+    expect(within(table).getByRole('link', { name: 'Download export embedded-25' }))
+      .toHaveAttribute('href', '/api/v1/export/jobs/embedded-25/download');
+    fireEvent.click(within(table).getByRole('checkbox', { name: /export,/ }));
+    expect(screen.getByText('1 selected')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
+  });
+
   it('retains native ready downloads with shared semantic focus chrome and mobile action targets', () => {
     renderPage();
     const link = screen.getByRole('link', { name: 'Download export job-ready-1' });
@@ -344,6 +380,7 @@ function kpiValue(label: string): string {
 }
 
 beforeEach(() => {
+  for (const key of Object.keys(translations)) delete translations[key];
   Object.assign(datePreferences, { locale: 'en-US', timezone_user: 'UTC', tz_display_default: 'user' });
   window.localStorage.clear();
   vi.mocked(downloadCSV).mockReset();
@@ -661,6 +698,34 @@ describe('ExportsPage — cell null-safety', () => {
 });
 
 describe('ExportsPage — bulk delete', () => {
+  it.each(['cancel button', 'Escape'] as const)(
+    'localizes the existing cancel label and preserves exact selection after %s',
+    async (dismissal) => {
+      translations['common.cancel'] = 'Abbrechen';
+      renderPage();
+      const checkboxes = within(screen.getByRole('table')).getAllByRole('checkbox', { name: /export,/ });
+      fireEvent.click(checkboxes[0]);
+      fireEvent.click(checkboxes[2]);
+      fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+      const dialog = await screen.findByRole('dialog');
+      const cancel = within(dialog).getByRole('button', { name: 'Abbrechen' });
+      expect(within(dialog).queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
+      if (dismissal === 'cancel button') fireEvent.click(cancel);
+      else fireEvent.keyDown(window, { key: 'Escape' });
+
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      expect(mutateAsyncSpy).not.toHaveBeenCalled();
+      expect(screen.getByText('2 selected')).toBeInTheDocument();
+      checkboxes.forEach((checkbox, index) => {
+        expect(checkbox).toHaveProperty('checked', index === 0 || index === 2);
+      });
+      expect(screen.getByRole('link', { name: 'Download export job-ready-1' })).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+      fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Delete' }));
+      await waitFor(() => expect(mutateAsyncSpy).toHaveBeenCalledWith(['job-ready-1', 'job-proc']));
+    },
+  );
+
   it('selects a job, confirms, and calls the mutation with the stringified id', async () => {
     renderPage();
     const table = screen.getByRole('table');

@@ -74,9 +74,10 @@ export function BatteryPassportTrendDistribution({
                 <MetricBar
                   key={bin.key}
                   label={binLabel(bin, t)}
-                  value={(bin.share ?? 0) * 100}
+                  value={bin.share != null ? bin.share * 100 : null}
                   max={100}
-                  color="#22d3ee"
+                  color="var(--text-secondary)"
+                  fill="solid"
                   sublabel={bin.share != null
                     ? t(
                         'batteryPassport.distribution.binValue',

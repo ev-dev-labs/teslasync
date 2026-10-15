@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import {
   Zap, RefreshCw, MapPin, Receipt, Download, Clock,
 } from 'lucide-react';
@@ -12,7 +13,7 @@ import {
   ChartTooltip, chartGrid, axisTickSm,
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, EmbeddedChart,
 } from '@/components/charts';
-import { DataStateNotice, Skeleton, EmptyState, QueryError, StaleRefreshWarning, SectionErrorBoundary } from '@/components/feedback';
+import { DataStateNotice, Skeleton, EmptyState, QueryError, StaleRefreshWarning, SectionErrorBoundary, OperationalWriteNotice } from '@/components/feedback';
 import { SearchInput, FilterBar, ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms';
 import { useFilteredList } from '@/hooks/useFilteredList';
 import { SitePriceRadar } from '../components/SitePriceRadar';
@@ -24,109 +25,185 @@ import {
   getTeslaChargingInvoiceURL,
   type TeslaChargingHistoryEntry,
 } from '@/api/hooks/useCharging';
-import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useOperationalMode } from '@/hooks/useOperationalMode';
 import {
   ALL_VEHICLES_VIN,
   useVehicleVinFilter,
 } from '@/hooks/useVehicleVinFilter';
 import { useUnits } from '@/hooks/useUnits';
-import { useSettings } from '@/hooks/useSettings';
-import { useFormatting } from '@/hooks/useFormatting';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
-import { formatCurrencyValue, currencyCodeFromSymbol } from '@/lib/currencyFormat';
+import { formatCurrencyValue } from '@/lib/currencyFormat';
 import { chartTokens, neonColorMap, typography } from '@/lib/tokens';
 import { cn } from '@/lib/cn';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState } from '@/hooks/useDataState';
+import { downloadJSON } from '@/lib/csvExport';
+import { fmtNumber as formatNumber } from '@/lib/numberFormat';
+
+// Export schema is independent of displayed/hidden table columns and display units.
+function chargingExportRow(row: TeslaChargingHistoryEntry) {
+  return {
+    date: row.charge_start_datetime,
+    location: row.site_location_name ?? '',
+    duration_minutes: durationMinutes(row.charge_start_datetime, row.charge_stop_datetime),
+    energy_wh: recordedNumber(row.usage_wh),
+    cost: recordedNumber(row.total_due),
+    currency: row.currency_code ?? '',
+    rate_base: recordedNumber(row.rate_base),
+    pricing_type: row.pricing_type ?? '',
+    invoice_id: row.invoice_content_id ?? '',
+  };
+}
 
 /** Compute duration in minutes between two ISO timestamps. */
 export function durationMinutes(start: string, stop: string | null): number | null {
   if (!stop) return null;
   const ms = new Date(stop).getTime() - new Date(start).getTime();
-  return Number.isFinite(ms) && ms > 0 ? Math.round(ms / 60_000) : null;
+  return Number.isFinite(ms) && ms >= 0 ? ms / 60_000 : null;
+}
+
+function recordedNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function sourceCurrency(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+interface RecordedAggregate {
+  total: number | null;
+  recordedTotal: number | null;
+  missingCount: number;
+}
+
+function aggregateRecorded(values: (number | null)[]): RecordedAggregate {
+  const known = values.filter((value): value is number => value !== null);
+  const sum = known.reduce((total, value) => total + value, 0);
+  const recordedTotal = known.length > 0 ? recordedNumber(sum) : null;
+  return {
+    total: known.length === values.length ? recordedTotal : null,
+    recordedTotal,
+    missingCount: values.length - known.length,
+  };
 }
 
 /** Format duration in minutes to "Xh Ym". */
-export function formatDurationMinutes(minutes: number | null): string {
-  if (minutes == null || !Number.isFinite(minutes)) return '—';
+export function formatDurationMinutes(minutes: number | null, t?: TFunction, locale?: string): string {
+  if (minutes == null || !Number.isFinite(minutes) || minutes < 0) return '—';
   const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
+  const m = Number((minutes % 60).toFixed(2));
+  const hours = formatNumber(h, 0, locale);
+  const minuteDigits = String(m).split('.')[1]?.length ?? 0;
+  const mins = formatNumber(m, minuteDigits, locale);
+  if (h > 0) return t
+    ? t('tesla_charging.durationHoursMinutes', '{{hours}}h {{minutes}}m', { hours, minutes: mins })
+    : `${hours}h ${mins}m`;
+  return t
+    ? t('tesla_charging.durationMinutes', '{{minutes}}m', { minutes: mins })
+    : `${mins}m`;
 }
 
-/** Aggregate entries by month for the spending chart. */
-export function buildMonthlySpending(entries: TeslaChargingHistoryEntry[]): { month: string; total: number }[] {
-  const map = new Map<string, number>();
+/** Keep monthly evidence in its source denomination; unknown is never a preferred currency. */
+export function buildMonthlySpending(entries: TeslaChargingHistoryEntry[]): (RecordedAggregate & { month: string; currency: string | null; count: number })[] {
+  const map = new Map<string, { month: string; currency: string | null; values: (number | null)[] }>();
   for (const e of entries) {
     const d = new Date(e.charge_start_datetime);
     // Skip unparseable timestamps so a malformed row can't leak a bogus
     // "NaN-NaN" bucket onto the chart's X-axis.
     if (Number.isNaN(d.getTime())) continue;
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    map.set(key, (map.get(key) ?? 0) + (e.total_due ?? 0));
+    const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const currency = sourceCurrency(e.currency_code);
+    const key = JSON.stringify([month, currency]);
+    const bucket = map.get(key) ?? { month, currency, values: [] };
+    bucket.values.push(recordedNumber(e.total_due));
+    map.set(key, bucket);
   }
   return Array.from(map.entries())
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([month, total]) => ({ month, total }));
+    .map(([, { month, currency, values }]) => ({ month, currency, count: values.length, ...aggregateRecorded(values) }));
 }
 
 export interface LocationRollup {
   name: string;
-  total: number;
-  energyWh: number;
+  currency: string | null;
+  total: number | null;
+  recordedTotal: number | null;
+  missingCount: number;
+  energyWh: number | null;
+  recordedEnergyWh: number | null;
+  missingEnergyCount: number;
   count: number;
 }
 
-/** Roll up entries by charging site, ranked by spend (top 6). */
+/** Rank source-denominated spending within each denomination, never across currencies. */
 export function buildTopLocations(entries: TeslaChargingHistoryEntry[]): LocationRollup[] {
-  const map = new Map<string, LocationRollup>();
+  const map = new Map<string, TeslaChargingHistoryEntry[]>();
   for (const e of entries) {
     const name = e.site_location_name || '—';
-    const cur = map.get(name) ?? { name, total: 0, energyWh: 0, count: 0 };
-    cur.total += e.total_due ?? 0;
-    cur.energyWh += e.usage_wh ?? 0;
-    cur.count += 1;
-    map.set(name, cur);
+    const key = JSON.stringify([name, sourceCurrency(e.currency_code)]);
+    const rows = map.get(key) ?? [];
+    rows.push(e);
+    map.set(key, rows);
   }
-  return Array.from(map.values())
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 6);
+  return Array.from(map, ([, rows]) => {
+    const name = rows[0].site_location_name || '—';
+    const currency = sourceCurrency(rows[0].currency_code);
+    const spending = aggregateRecorded(rows.map(row => recordedNumber(row.total_due)));
+    const energy = aggregateRecorded(rows.map(row => recordedNumber(row.usage_wh)));
+    return { name, currency, ...spending, energyWh: energy.total, recordedEnergyWh: energy.recordedTotal,
+      missingEnergyCount: energy.missingCount, count: rows.length };
+  })
+    .sort((a, b) => (a.currency ?? '').localeCompare(b.currency ?? '')
+      || (a.recordedTotal === null ? (b.recordedTotal === null ? 0 : 1)
+        : b.recordedTotal === null ? -1 : b.recordedTotal - a.recordedTotal));
 }
 
 export default function TeslaChargingHistoryPage() {
+  const { formatDateTime } = useDateFormat();
   const { fmtNumber, fmtInt, precision, locale } = useNumberFormatting();
   const { t } = useTranslation();
+  const formatChargingDuration = useCallback(
+    (minutes: number | null) => formatDurationMinutes(minutes, t, locale),
+    [t, locale],
+  );
+  const { canWrite, writeBlockReason } = useOperationalMode();
   const { formatEnergy } = useUnits();
-  const { settings } = useSettings();
-  const { formatCurrency } = useFormatting();
-  const userCurrency = currencyCodeFromSymbol(settings.currency_symbol);
+  const formatSourceAmount = useCallback((amount: number | null, currency: string | null) => {
+    if (amount === null) return '—';
+    return currency === null
+      ? `${fmtNumber(amount)} · —`
+      : formatCurrencyValue(amount, currency, locale, precision, { useGrouping: true });
+  }, [fmtNumber, locale, precision]);
   usePageTitle(t('tesla_charging.title', 'Tesla charging history'));
 
-  const { isLoading: vehiclesLoading } = useVehicles();
   const {
     queryVin,
+    allVehicles,
+    scopeReady,
+    isResolving: vehiclesLoading,
+    vehiclesState,
     selectedVin,
     setSelectedVin,
     vehicles,
   } = useVehicleVinFilter();
-  const historyQuery = useTeslaChargingHistory(queryVin, { enabled: !vehiclesLoading });
+  const scopeEnabled = scopeReady && (allVehicles || !vehiclesState.isRefreshBlocked);
+  const historyQuery = useTeslaChargingHistory(queryVin, { enabled: scopeEnabled });
   const {
-    data: response,
     isLoading: historyLoading,
     refetch,
   } = historyQuery;
-  const historyState = useDataState(historyQuery, { provenance: 'historical' });
+  const response = scopeReady ? historyQuery.data : undefined;
+  const historyState = useDataState(scopeReady ? historyQuery : {}, { provenance: 'historical' });
   const error = historyState.fatalError;
-  const isLoading = vehiclesLoading || historyLoading;
+  const isLoading = (!scopeReady && vehiclesLoading) || (scopeEnabled && historyLoading);
   const refreshMutation = useRefreshTeslaChargingHistory();
 
   const allEntries = useMemo(() => response?.entries ?? [], [response?.entries]);
   // The read hook still lacks server bounds; retain its lifetime summary
   // while using the workspace's precise window for the loaded-record view.
-  const { startInstant, endInstantExclusive } = useRangeState({
+  const { startInstant, endInstantExclusive, setPreset } = useRangeState({
     persistKey: 'tesla-charging-history.range',
     defaultPresetId: 'all',
   });
@@ -143,8 +220,8 @@ export default function TeslaChargingHistoryPage() {
   const summary = response?.summary ?? { total_sessions: 0, total_wh: null, total_spend: null, avg_cost_per_kwh: null };
 
   // Derived all-time KPIs (match the server summary's all-time scope).
-  const totalDurationMin = useMemo(
-    () => allEntries.reduce((s, e) => s + (durationMinutes(e.charge_start_datetime, e.charge_stop_datetime) ?? 0), 0),
+  const durationAggregate = useMemo(
+    () => aggregateRecorded(allEntries.map(e => durationMinutes(e.charge_start_datetime, e.charge_stop_datetime))),
     [allEntries],
   );
   const sitesVisited = useMemo(
@@ -163,12 +240,14 @@ export default function TeslaChargingHistoryPage() {
     return opts;
   }, [vehicles, t]);
 
-  const monthlyData = useMemo(() => buildMonthlySpending(entries), [entries]);
+  const monthlyData = useMemo(() => buildMonthlySpending(entries).map(bucket => ({
+    ...bucket, label: `${bucket.month} · ${bucket.currency ?? '—'}`,
+  })), [entries]);
+  const spendingEvidence = useMemo(() => buildTopLocations(allEntries), [allEntries]);
   const topLocations = useMemo(() => buildTopLocations(entries), [entries]);
-  const topLocationsMax = topLocations.length > 0 ? topLocations[0].total : 0;
 
   const handleRefresh = () => {
-    if (historyState.isRefreshBlocked || refreshMutation.isPending) return;
+    if (!canWrite || !scopeEnabled || historyState.isRefreshBlocked || refreshMutation.isPending) return;
     refreshMutation.mutate(queryVin ? { vin: queryVin } : undefined);
   };
 
@@ -204,19 +283,19 @@ export default function TeslaChargingHistoryPage() {
       header: t('tesla_charging.col.duration', 'Duration'),
       render: (row) => (
         <Text variant="body">
-          {formatDurationMinutes(durationMinutes(row.charge_start_datetime, row.charge_stop_datetime))}
+          {formatChargingDuration(durationMinutes(row.charge_start_datetime, row.charge_stop_datetime))}
         </Text>
       ),
     },
     {
       key: 'energy',
       align: 'right',
-      filterValue: (row) => row.usage_wh ?? null,
-      filterValueLabel: (_, row) => row.usage_wh != null ? formatEnergy(row.usage_wh) : '—',
+      filterValue: (row) => recordedNumber(row.usage_wh),
+      filterValueLabel: (_, row) => recordedNumber(row.usage_wh) != null ? formatEnergy(row.usage_wh!) : '—',
       header: t('tesla_charging.col.energy', 'Energy'),
       render: (row) => (
         <Text variant="body" className="tabular-nums">
-          {row.usage_wh != null ? formatEnergy(row.usage_wh) : '—'}
+          {recordedNumber(row.usage_wh) != null ? formatEnergy(row.usage_wh!) : '—'}
         </Text>
       ),
       sortable: true,
@@ -225,14 +304,12 @@ export default function TeslaChargingHistoryPage() {
     {
       key: 'cost',
       align: 'right',
-      filterValue: (row) => row.total_due == null ? null : `${row.currency_code ?? userCurrency}:${row.total_due}`,
-      filterValueLabel: (_, row) => row.total_due != null ? formatCurrencyValue(row.total_due, row.currency_code ?? userCurrency, locale, precision, { useGrouping: true }) : '—',
+      filterValue: (row) => recordedNumber(row.total_due) == null ? null : JSON.stringify([sourceCurrency(row.currency_code), row.total_due]),
+      filterValueLabel: (_, row) => formatSourceAmount(recordedNumber(row.total_due), sourceCurrency(row.currency_code)),
       header: t('tesla_charging.col.cost_decimal', 'Cost'),
       render: (row) => (
         <Text variant="body" className="tabular-nums">
-          {row.total_due != null
-            ? formatCurrencyValue(row.total_due, row.currency_code ?? userCurrency, locale, precision, { useGrouping: true })
-            : '—'}
+          {formatSourceAmount(recordedNumber(row.total_due), sourceCurrency(row.currency_code))}
         </Text>
       ),
       sortable: true,
@@ -244,8 +321,8 @@ export default function TeslaChargingHistoryPage() {
       header: t('tesla_charging.col.rate', 'Rate'),
       render: (row) => (
         <Text size="sm" color="secondary">
-          {row.rate_base != null
-            ? `${fmtNumber(row.rate_base)}/${row.pricing_type ?? 'kWh'}`
+          {recordedNumber(row.rate_base) != null
+            ? `${fmtNumber(row.rate_base!)}/${row.pricing_type ?? 'kWh'}`
             : '—'}
         </Text>
       ),
@@ -273,7 +350,7 @@ export default function TeslaChargingHistoryPage() {
         </Text>
       ),
     },
-  ], [formatEnergy, t, userCurrency, locale, precision, fmtNumber]);
+  ], [formatDateTime, formatEnergy, t, formatSourceAmount, fmtNumber, formatChargingDuration]);
 
   const mobilePresentation = useMemo<MobileDataTablePresentation<TeslaChargingHistoryEntry>>(() => ({
     roles: { location: 'title', cost: 'primary', date: 'meta', energy: 'meta', duration: 'meta' },
@@ -281,14 +358,14 @@ export default function TeslaChargingHistoryPage() {
       switch (key) {
         case 'location': return row.site_location_name || '—';
         case 'date': return formatDateTime(row.charge_start_datetime);
-        case 'duration': return formatDurationMinutes(durationMinutes(row.charge_start_datetime, row.charge_stop_datetime));
-        case 'energy': return row.usage_wh == null ? null : formatEnergy(row.usage_wh);
-        case 'cost': return row.total_due == null ? null : formatCurrencyValue(row.total_due, row.currency_code ?? userCurrency, locale, precision, { useGrouping: true });
-        case 'rate': return row.rate_base == null ? null : `${fmtNumber(row.rate_base)}/${row.pricing_type ?? 'kWh'}`;
+        case 'duration': return formatChargingDuration(durationMinutes(row.charge_start_datetime, row.charge_stop_datetime));
+        case 'energy': return recordedNumber(row.usage_wh) == null ? null : formatEnergy(row.usage_wh!);
+        case 'cost': return recordedNumber(row.total_due) == null ? null : formatSourceAmount(recordedNumber(row.total_due), sourceCurrency(row.currency_code));
+        case 'rate': return recordedNumber(row.rate_base) == null ? null : `${fmtNumber(row.rate_base!)}/${row.pricing_type ?? 'kWh'}`;
         default: return null;
       }
     },
-  }), [formatEnergy, userCurrency, locale, precision, fmtNumber]);
+  }), [formatDateTime, formatEnergy, formatSourceAmount, fmtNumber, formatChargingDuration]);
 
   const [sortKey, setSortKey] = useUrlEnum<'date' | 'energy' | 'cost'>(
     'sort',
@@ -308,16 +385,21 @@ export default function TeslaChargingHistoryPage() {
   const sortedEntries = useMemo(() => {
     const sorted = [...filteredEntries];
     sorted.sort((a, b) => {
+      if (sortKey !== 'date') {
+        if (sortKey === 'cost') {
+          const currencyOrder = (sourceCurrency(a.currency_code) ?? '').localeCompare(sourceCurrency(b.currency_code) ?? '');
+          if (currencyOrder !== 0) return currencyOrder;
+        }
+        const left = recordedNumber(sortKey === 'energy' ? a.usage_wh : a.total_due);
+        const right = recordedNumber(sortKey === 'energy' ? b.usage_wh : b.total_due);
+        if (left === null) return right === null ? 0 : 1;
+        if (right === null) return -1;
+        return sortDir === 'desc' ? right - left : left - right;
+      }
       let cmp = 0;
       switch (sortKey) {
         case 'date':
           cmp = a.charge_start_datetime.localeCompare(b.charge_start_datetime);
-          break;
-        case 'energy':
-          cmp = (a.usage_wh ?? 0) - (b.usage_wh ?? 0);
-          break;
-        case 'cost':
-          cmp = (a.total_due ?? 0) - (b.total_due ?? 0);
           break;
         default:
           cmp = a.charge_start_datetime.localeCompare(b.charge_start_datetime);
@@ -337,36 +419,20 @@ export default function TeslaChargingHistoryPage() {
     }
   };
 
-  // CSV export of selected charging sessions. We pick the same fields the
-  // DataTable shows so users get a self-explanatory file.
   const exportSelectedCsv = useCallback(
-    (rows: TeslaChargingHistoryEntry[]) => {
+    (rows: readonly TeslaChargingHistoryEntry[], filename = `tesla-charging-${new Date().toISOString().slice(0, 10)}.csv`) => {
       if (rows.length === 0) return;
-      const header = [
-        'date', 'location', 'duration_minutes', 'energy_wh',
-        'cost', 'currency', 'rate_base', 'pricing_type', 'invoice_id',
-      ];
+      const mappedRows = rows.map(chargingExportRow);
+      const header = Object.keys(mappedRows[0]);
       const csvLines = [header.join(',')];
-      for (const r of rows) {
-        const dur = durationMinutes(r.charge_start_datetime, r.charge_stop_datetime);
-        const fields = [
-          r.charge_start_datetime,
-          (r.site_location_name ?? '').replace(/[",\n]/g, ' '),
-          dur != null ? String(dur) : '',
-          r.usage_wh != null ? String(r.usage_wh) : '',
-          r.total_due != null ? String(r.total_due) : '',
-          r.currency_code ?? '',
-          r.rate_base != null ? String(r.rate_base) : '',
-          r.pricing_type ?? '',
-          r.invoice_content_id ?? '',
-        ];
-        csvLines.push(fields.map(f => `"${String(f).replace(/"/g, '""')}"`).join(','));
+      for (const row of mappedRows) {
+        csvLines.push(Object.values(row).map(value => `"${String(value ?? '').replace(/"/g, '""')}"`).join(','));
       }
       const blob = new Blob([csvLines.join('\n')], { type: 'text/csv;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `tesla-charging-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
     },
@@ -376,22 +442,55 @@ export default function TeslaChargingHistoryPage() {
   const lastSyncedAt = entries[0]?.fetched_at ?? null;
   const firstLoading = isLoading && !historyState.hasData;
   const unavailableMessage = t('tesla_charging.sourceUnavailable', 'Tesla charging history has not loaded. Retry this source or reconnect to continue.');
+  const prerequisiteMessage = vehiclesState.isRefreshBlocked
+    ? t('dataSources.status.paused', 'Refresh paused')
+    : t('tesla_charging.selectVehicle', 'Select vehicle');
+  const lifetimeEmpty = scopeEnabled && historyState.status === 'ok'
+    && Array.isArray(response?.entries)
+    && allEntries.length === 0 && response?.summary?.total_sessions === 0;
+  const rangeEmpty = allEntries.length > 0 && entries.length === 0;
+  const emptyMessage = !scopeEnabled
+    ? prerequisiteMessage
+    : lifetimeEmpty
+    ? t('charging.list.empty', 'No charging sessions yet')
+    : rangeEmpty
+      ? t('charging.curve.modernization.noSessionsTitle', 'No sessions in this range')
+      : unavailableMessage;
+  const scopeRecovery = !scopeEnabled
+    ? vehiclesState.retry && !vehiclesState.isRefreshBlocked
+      ? { label: t('common.retry', 'Retry'), onClick: vehiclesState.retry }
+      : undefined
+    : rangeEmpty
+    ? { label: t('common.allTime', 'All time'), onClick: () => setPreset('all') }
+    : lifetimeEmpty && queryVin
+      ? { label: t('tesla_charging.allVehicles', 'All vehicles'), onClick: () => setSelectedVin(ALL_VEHICLES_VIN) }
+      : !lifetimeEmpty
+        ? { label: t('common.retry', 'Retry'), onClick: () => { void refetch(); } }
+        : undefined;
   const summaryMetrics: StatMetric[] = [
     { metricId: 'count', occurrenceId: 'sessions', label: t('tesla_charging.stats.sessions', 'Total sessions'),
-      rawValue: historyState.hasData ? summary.total_sessions : null,
+      rawValue: response?.summary?.total_sessions ?? null,
       display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
     { metricId: 'energy', occurrenceId: 'energy', label: t('tesla_charging.stats.energy', 'Total energy'),
       rawValue: summary.total_wh,
       display: { formatter: raw => ({ value: formatEnergy(raw), unit: '' }) } },
     { metricId: 'currency', occurrenceId: 'spend', label: t('tesla_charging.stats.spend', 'Total spend'),
       rawValue: summary.total_spend,
-      display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) } },
+      context: spendingEvidence.map(loc => `${loc.name} · ${loc.currency ?? '—'}: ${t('tesla_charging.partialSubtotal',
+        'Recorded subtotal: {{subtotal}} · {{missing}} missing · {{count}}×', {
+          subtotal: formatSourceAmount(loc.recordedTotal, loc.currency), missing: loc.missingCount, count: loc.count,
+        })}`).join('; '),
+      display: { formatter: raw => ({ value: formatSourceAmount(raw, null), unit: '' }) } },
     { metricId: 'currency', occurrenceId: 'average-cost', label: t('tesla_charging.stats.avgCost', 'Avg cost/kWh'),
       rawValue: summary.avg_cost_per_kwh,
-      display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) } },
+      display: { formatter: raw => ({ value: formatSourceAmount(raw, null), unit: '' }) } },
     { metricId: 'duration', occurrenceId: 'duration', label: t('tesla_charging.stats.duration', 'Total duration'),
-      rawValue: totalDurationMin > 0 ? totalDurationMin * 60 : null,
-      display: { formatter: raw => ({ value: formatDurationMinutes(raw / 60), unit: '' }) } },
+      rawValue: durationAggregate.total == null ? null : durationAggregate.total * 60,
+      context: durationAggregate.missingCount > 0 ? t('tesla_charging.recordedDuration',
+        'Recorded subtotal: {{subtotal}} · {{missing}} missing', {
+          subtotal: formatChargingDuration(durationAggregate.recordedTotal), missing: durationAggregate.missingCount,
+        }) : undefined,
+      display: { formatter: raw => ({ value: formatChargingDuration(raw / 60), unit: '' }) } },
     { metricId: 'count', occurrenceId: 'sites', label: t('tesla_charging.stats.sites', 'Sites visited'),
       rawValue: historyState.hasData ? sitesVisited : null,
       display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
@@ -401,7 +500,7 @@ export default function TeslaChargingHistoryPage() {
     <PageLayout
       title={t('tesla_charging.title', 'Tesla charging history')}
       subtitle={t('tesla_charging.subtitle', 'Supercharger & DC fast charging billing records from Tesla')}
-      query={historyQuery}
+      query={scopeReady ? historyQuery : undefined}
       copyLink
       contextActions={
         <Select
@@ -416,7 +515,8 @@ export default function TeslaChargingHistoryPage() {
         <Button
           wrapLabel
           onClick={handleRefresh}
-          disabled={refreshMutation.isPending || historyState.isRefreshBlocked}
+          disabled={!canWrite || !scopeEnabled || refreshMutation.isPending || historyState.isRefreshBlocked}
+          title={writeBlockReason ?? undefined}
           aria-busy={refreshMutation.isPending || undefined}
           className="min-h-11 md:min-h-10"
           variant="primary"
@@ -428,6 +528,19 @@ export default function TeslaChargingHistoryPage() {
         </Button>
       }
     >
+      <OperationalWriteNotice />
+      <StaleRefreshWarning state={vehiclesState} label={t('tesla_charging.selectVehicle', 'Select vehicle')} />
+      {vehiclesState.fatalError ? (
+        <QueryError error={vehiclesState.fatalError} onRetry={vehiclesState.retry ?? undefined} />
+      ) : !scopeReady ? (
+        vehiclesLoading ? (
+          <Text role="status">{t('dataSources.status.loading', 'Loading')}</Text>
+        ) : (
+          <DataStateNotice state="unavailable" title={t('tesla_charging.selectVehicle', 'Select vehicle')} role="status">
+            {prerequisiteMessage}
+          </DataStateNotice>
+        )
+      ) : null}
       <StaleRefreshWarning state={historyState} label={t('tesla_charging.title', 'Tesla charging history')} />
       {!historyState.hasData && historyState.isRefreshBlocked ? (
         <DataStateNotice state="unavailable" title={t('tesla_charging.title', 'Tesla charging history')} role="status">
@@ -474,9 +587,19 @@ export default function TeslaChargingHistoryPage() {
             ) : monthlyData.length === 0 ? (
               <EmptyState
                 icon={<Icon icon={Receipt} size="xl" />}
-                message={historyState.hasData ? t('tesla_charging.noChartData', 'No spending data yet. Click "Refresh from Tesla" to sync.') : unavailableMessage}
+                message={emptyMessage}
               />
             ) : (
+              <>
+              {monthlyData.map(month => (
+                <Caption key={month.label}>
+                  {month.label}: {t('tesla_charging.partialSubtotal', 'Recorded subtotal: {{subtotal}} · {{missing}} missing · {{count}}×', {
+                    subtotal: formatSourceAmount(month.recordedTotal, month.currency),
+                    missing: month.missingCount,
+                    count: month.count,
+                  })}
+                </Caption>
+              ))}
               <EmbeddedChart
                 title={t('tesla_charging.monthlySpending', 'Monthly spending')}
                 ariaLabel={t('tesla_charging.monthlySpendingAria', 'Monthly Tesla charging spending bar chart')}
@@ -486,7 +609,10 @@ export default function TeslaChargingHistoryPage() {
                 fullscreen
                 dataColumns={[
                   { key: 'month', label: t('tesla_charging.month', 'Month') },
+                  { key: 'currency', label: t('charging.detail.currency', 'Currency') },
                   { key: 'total', label: t('tesla_charging.spending', 'Spending') },
+                  { key: 'recordedTotal', label: t('tesla_charging.recordedSubtotal', 'Recorded subtotal') },
+                  { key: 'missingCount', label: t('tesla_charging.missingCount', 'Missing count') },
                 ]}
                 fluid={false}
                 mobileHeight={224}
@@ -495,13 +621,14 @@ export default function TeslaChargingHistoryPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={monthlyData}>
                     {chartGrid}
-                    <XAxis dataKey="month" tick={axisTickSm} />
-                    <YAxis tick={axisTickSm} tickFormatter={(v: number) => formatCurrency(v)} />
+                    <XAxis dataKey="label" tick={axisTickSm} />
+                    <YAxis tick={axisTickSm} tickFormatter={(v: number) => fmtNumber(v)} />
                     <Tooltip content={<ChartTooltip />} />
-                    <Bar dataKey="total" fill={chartTokens.series[0]} radius={[4, 4, 0, 0]} />
+                    <Bar name={t('tesla_charging.recordedSubtotal', 'Recorded subtotal')} dataKey="recordedTotal" fill={chartTokens.series[0]} radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </EmbeddedChart>
+              </>
             )}
           </LayoutCard>
           </SectionErrorBoundary>
@@ -517,20 +644,48 @@ export default function TeslaChargingHistoryPage() {
             ) : topLocations.length === 0 ? (
               <EmptyState
                 icon={<Icon icon={MapPin} size="xl" />}
-                message={historyState.hasData ? t('tesla_charging.noLocationData', 'No charging locations in this range yet.') : unavailableMessage}
+                message={emptyMessage}
               />
             ) : (
               <div className="space-y-3">
                 {topLocations.map((loc) => (
+                  <div key={JSON.stringify([loc.name, loc.currency])}>
+                  {loc.recordedTotal != null && loc.recordedTotal < 0 ? (
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <Text size="sm" color="secondary">{loc.name}</Text>
+                      <Text mono size="sm">
+                        {formatSourceAmount(loc.recordedTotal, loc.currency)} · {fmtInt(loc.count)}×
+                      </Text>
+                    </div>
+                  ) : (
                   <MetricBar
-                    key={loc.name}
                     label={loc.name}
-                    value={loc.total}
-                    max={topLocationsMax || loc.total}
+                    value={loc.recordedTotal}
+                    max={Math.max(0, ...topLocations.filter(other => other.currency === loc.currency).map(other => other.recordedTotal ?? 0))}
                     color={chartTokens.series[0]}
                     fill="solid"
-                    sublabel={`${formatCurrency(loc.total)} · ${fmtInt(loc.count)}×`}
+                    sublabel={loc.missingCount > 0
+                      ? t('tesla_charging.partialSubtotal', 'Recorded subtotal: {{subtotal}} · {{missing}} missing · {{count}}×', {
+                        subtotal: formatSourceAmount(loc.recordedTotal, loc.currency),
+                        missing: loc.missingCount, count: fmtInt(loc.count),
+                      })
+                      : `${formatSourceAmount(loc.total, loc.currency)} · ${fmtInt(loc.count)}×`}
                   />
+                  )}
+                  {loc.recordedTotal != null && loc.recordedTotal < 0 && loc.missingCount > 0 && (
+                    <Caption>{t('tesla_charging.partialSubtotal', 'Recorded subtotal: {{subtotal}} · {{missing}} missing · {{count}}×', {
+                      subtotal: formatSourceAmount(loc.recordedTotal, loc.currency), missing: loc.missingCount, count: fmtInt(loc.count),
+                    })}</Caption>
+                  )}
+                  {loc.missingEnergyCount > 0 && (
+                    <Caption>
+                      {t('tesla_charging.col.energy', 'Energy')}: {t('tesla_charging.partialSubtotal', 'Recorded subtotal: {{subtotal}} · {{missing}} missing · {{count}}×', {
+                        subtotal: loc.recordedEnergyWh == null ? '—' : formatEnergy(loc.recordedEnergyWh),
+                        missing: loc.missingEnergyCount, count: fmtInt(loc.count),
+                      })}
+                    </Caption>
+                  )}
+                  </div>
                 ))}
               </div>
             )}
@@ -540,7 +695,13 @@ export default function TeslaChargingHistoryPage() {
 
         <FadeIn delay={0.12} className="min-w-0 2xl:col-start-3 2xl:row-start-2">
           <SectionErrorBoundary name="tesla-charging-history-price-radar">
-          <SitePriceRadar vin={queryVin || undefined} enabled={!vehiclesLoading} />
+          {scopeReady ? (
+            <SitePriceRadar vin={queryVin} enabled={scopeEnabled} />
+          ) : (
+            <LayoutCard title={t('tesla_charging.priceRadar', 'Price Radar')}>
+              {firstLoading ? <Skeleton height={220} /> : <EmptyState message={prerequisiteMessage} />}
+            </LayoutCard>
+          )}
           </SectionErrorBoundary>
         </FadeIn>
 
@@ -552,11 +713,6 @@ export default function TeslaChargingHistoryPage() {
             <Skeleton height={400} />
           ) : error ? (
             <QueryError error={error} onRetry={() => refetch()} />
-          ) : entries.length === 0 ? (
-            <EmptyState
-              icon={<Icon icon={Zap} size="xl" />}
-              message={historyState.hasData ? t('tesla_charging.noData', 'No Tesla charging history yet. Click "Refresh from Tesla" to import your Supercharger sessions.') : unavailableMessage}
-            />
           ) : (
             <>
               <FilterBar className="mb-3">
@@ -605,17 +761,11 @@ export default function TeslaChargingHistoryPage() {
                   rowHeight={56}
                   exportable
                   exportFilename={`tesla-charging-history-${new Date().toISOString().slice(0, 10)}`}
-                  exportRow={(row) => ({
-                    date: row.charge_start_datetime,
-                    location: row.site_location_name ?? '',
-                    duration: durationMinutes(row.charge_start_datetime, row.charge_stop_datetime) ?? null,
-                    energy: row.usage_wh ?? null,
-                    cost: row.total_due ?? null,
-                    currency: row.currency_code ?? '',
-                    rate: row.rate_base ?? null,
-                    pricing_type: row.pricing_type ?? '',
-                    invoice: row.invoice_content_id ?? '',
-                  })}
+                  onExport={(format, rows) => {
+                    const filename = `tesla-charging-history-${new Date().toISOString().slice(0, 10)}`;
+                    if (format === 'csv') exportSelectedCsv(rows, `${filename}.csv`);
+                    else downloadJSON(filename, rows.map(chargingExportRow));
+                  }}
                   selectable="multi"
                   // A11Y: the first column is a bare date, which many
                   // rows share. Pair it with the site so each checkbox
@@ -646,7 +796,12 @@ export default function TeslaChargingHistoryPage() {
               ) : (
                 <EmptyState
                   icon={<Icon icon={Zap} size="xl" />}
-                  message={t('tesla_charging.noMatches', 'No sessions match your search.')}
+                  message={entries.length > 0
+                    ? t('tesla_charging.noMatches', 'No sessions match your search.')
+                    : emptyMessage}
+                  action={entries.length > 0
+                    ? { label: t('common.clearSearch', 'Clear search'), onClick: () => setSearch('') }
+                    : scopeRecovery}
                 />
               )}
             </>

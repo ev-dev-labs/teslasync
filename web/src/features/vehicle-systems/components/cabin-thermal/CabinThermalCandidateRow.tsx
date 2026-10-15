@@ -1,6 +1,6 @@
 import { Badge, MetricLabel, Text } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import type { TemperatureUnitPref } from '@/lib/unitConversion';
 import { useTranslation } from 'react-i18next';
@@ -40,6 +40,7 @@ export function CabinThermalCandidateRow({
   formatDuration,
 }: CabinThermalCandidateRowProps) {
   const { fmtInt, fmtScientificNumber, fmtPercent } = useNumberFormatting();
+  const { formatDateTime, tz } = useDateFormat();
   const { t } = useTranslation();
   const status = candidate.reason != null
     ? cabinRejectionLabel(t, candidate.reason)
@@ -55,7 +56,10 @@ export function CabinThermalCandidateRow({
             })}
           </Text>
           <Text as="p" variant="caption">
-            {formatDateTime(candidate.startTs, { locale })}
+            {/* Evidence dates stay absolute even when relative display is saved. */}
+            <time dateTime={candidate.startTs} title={`${candidate.startTs} (${tz})`}>
+              {formatDateTime(candidate.startTs)} ({tz})
+            </time>
           </Text>
         </div>
         <Badge variant={candidate.disposition === 'accepted' ? 'success' : 'warning'}>

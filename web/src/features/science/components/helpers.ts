@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
+import { CHART_COLORS } from '@/lib/colors';
 
-export const SCIENCE_ACCENT = '#0891b2';
+export const SCIENCE_ACCENT = CHART_COLORS[0];
 
 export type Translate = (key: string, fallback: string, options?: Record<string, unknown>) => string;
 

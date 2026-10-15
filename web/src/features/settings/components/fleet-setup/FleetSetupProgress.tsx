@@ -1,5 +1,5 @@
 /**
- * Live four-step progress for Fleet Setup. Uses the shared onboarding
+ * Fleet-level four-step progress for Fleet Setup. Uses the shared onboarding
  * Stepper so the current actionable step is obvious.
  */
 import { useMemo } from 'react'
@@ -9,23 +9,42 @@ import { Stepper, type OnboardingStep } from '@/features/onboarding/components/S
 import { ListChecks } from 'lucide-react'
 import type { FleetApiInfo } from '@/api/hooks/useFleetSetup'
 import type { OnboardingStatus } from '@/api/hooks/useOnboarding'
+import { useMotionPreference } from '@/hooks/useMotionPreference'
+import { isInsideModalSurface, isTextEntryElement } from '@/lib/routeFocus'
+import { deriveDataState, type DataState } from '@/api/dataState'
+
+type ProgressSource = Pick<DataState<unknown>,
+  'hasData' | 'fatalError' | 'status' | 'isRefreshBlocked'> & { isLoading?: boolean }
 
 export interface FleetSetupProgressProps {
-  authenticated: boolean
+  authenticated: boolean | undefined
   apiInfo: FleetApiInfo | undefined
   onboarding: OnboardingStatus | undefined
+  sources?: { account: ProgressSource; token: ProgressSource; telemetry: ProgressSource }
 }
 
-function scrollTo(id: string) {
+function scrollTo(id: string, reduce: boolean) {
   if (typeof document === 'undefined') return
-  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  const target = document.getElementById(id)
+  if (!target) return
+  target.scrollIntoView({ behavior: reduce ? 'instant' : 'smooth', block: 'start' })
+  if (
+    !document.hasFocus() ||
+    isInsideModalSurface(document.activeElement) ||
+    isTextEntryElement(document.activeElement)
+  ) return
+  const heading = target.querySelector<HTMLElement>('h1, h2, h3, h4, h5, h6')
+  const focusTarget = heading ?? target
+  if (!focusTarget.hasAttribute('tabindex')) focusTarget.tabIndex = -1
+  focusTarget.focus({ preventScroll: true })
 }
 
 export function buildFleetSetupSteps(args: {
-  authenticated: boolean
-  tokenValid: boolean
-  subscribed: boolean
-  streaming: boolean
+  authenticated: boolean | null
+  tokenValid: boolean | null
+  subscribed: boolean | null
+  streaming: boolean | null
+  reduce?: boolean
   t: (key: string, fallback: string) => string
 }): OnboardingStep[] {
   return [
@@ -39,7 +58,7 @@ export function buildFleetSetupSteps(args: {
       done: args.authenticated,
       cta: {
         label: args.t('fleetSetup.progress.connect.cta', 'Connect now'),
-        onClick: () => scrollTo('fleet-setup-account'),
+        onClick: () => scrollTo('fleet-setup-account', args.reduce ?? false),
       },
     },
     {
@@ -52,34 +71,34 @@ export function buildFleetSetupSteps(args: {
       done: args.tokenValid,
       cta: {
         label: args.t('fleetSetup.progress.token.cta', 'Refresh token'),
-        onClick: () => scrollTo('fleet-setup-account'),
+        onClick: () => scrollTo('fleet-setup-account', args.reduce ?? false),
       },
     },
     {
       key: 'subscribe',
-      title: args.t('fleetSetup.progress.subscribe.title', 'Subscribe telemetry'),
+      title: args.t('fleetSetup.progress.fleetHistory.title', 'Fleet telemetry observed'),
       description: args.t(
-        'fleetSetup.progress.subscribe.body',
-        'Tell Tesla which VIN should stream to this host. Empty host/CA uses FLEET_TELEMETRY_HOST and Let’s Encrypt.',
+        'fleetSetup.progress.fleetHistory.body',
+        'Telemetry has been received from the fleet. This historical check does not confirm the selected VIN has a telemetry configuration.',
       ),
       done: args.subscribed,
       cta: {
         label: args.t('fleetSetup.progress.subscribe.cta', 'Choose a vehicle'),
-        onClick: () => scrollTo('fleet-setup-subscribe'),
-        disabled: !args.tokenValid,
+        onClick: () => scrollTo('fleet-setup-subscribe', args.reduce ?? false),
+        disabled: args.tokenValid !== true,
       },
     },
     {
       key: 'stream',
-      title: args.t('fleetSetup.progress.stream.title', 'Confirm streaming'),
+      title: args.t('fleetSetup.progress.fleetHealth.title', 'Confirm fleet telemetry health'),
       description: args.t(
-        'fleetSetup.progress.stream.body',
-        'The car must be awake. First packets usually arrive on the next drive or charge session.',
+        'fleetSetup.progress.fleetHealth.body',
+        'Healthy means fleet telemetry arrived in the last 24 hours, not that the selected VIN is streaming now.',
       ),
       done: args.streaming,
       cta: {
         label: args.t('fleetSetup.progress.stream.cta', 'Check stream'),
-        onClick: () => scrollTo('fleet-setup-stream'),
+        onClick: () => scrollTo('fleet-setup-stream', args.reduce ?? false),
       },
     },
   ]
@@ -89,29 +108,64 @@ export function FleetSetupProgress({
   authenticated,
   apiInfo,
   onboarding,
+  sources,
 }: FleetSetupProgressProps) {
   const { t } = useTranslation('settings')
-  const tokenValid = apiInfo?.has_valid_token === true
-  const subscribed =
-    Boolean(onboarding?.last_telemetry_at) || onboarding?.data_flowing === true
-  const streaming = onboarding?.telemetry_health === 'healthy'
+  const { t: sourceT } = useTranslation()
+  const { reduce } = useMotionPreference()
+  const accountSource = sources?.account ?? deriveDataState({ data: authenticated })
+  const tokenSource = sources?.token ?? deriveDataState({ data: apiInfo })
+  const telemetrySource = sources?.telemetry ?? deriveDataState({ data: onboarding })
+  const connection = accountSource.hasData ? authenticated ?? null : null
+  const tokenValid = tokenSource.hasData ? apiInfo?.has_valid_token ?? null : null
+  const subscribed = telemetrySource.hasData && onboarding
+    ? Boolean(onboarding.last_telemetry_at) || onboarding.data_flowing
+    : null
+  const streaming = telemetrySource.hasData && onboarding
+    ? onboarding.telemetry_health === 'unknown' ? null : onboarding.telemetry_health === 'healthy'
+    : null
 
-  const steps = useMemo(
+  const baseSteps = useMemo(
     () =>
       buildFleetSetupSteps({
-        authenticated,
+        authenticated: connection,
         tokenValid,
         subscribed,
         streaming,
+        reduce,
         t: (key, fallback) => t(key, fallback),
       }),
-    [authenticated, tokenValid, subscribed, streaming, t],
+    [connection, tokenValid, subscribed, streaming, reduce, t],
   )
+  const stepSources = [accountSource, tokenSource, telemetrySource, telemetrySource]
+  const steps = baseSteps.map((step, index) => {
+    const source = stepSources[index]!
+    const annotation = source.isRefreshBlocked
+      ? sourceT('dataSources.status.paused', 'Refresh paused')
+      : source.fatalError
+        ? sourceT('dataSources.status.failed', 'Failed')
+        : source.status === 'stale'
+          ? sourceT('dataState.stale.title', 'Data may be stale')
+          : source.isLoading
+            ? source.hasData
+              ? sourceT('dataSources.status.refreshing', 'Refreshing')
+              : sourceT('dataSources.status.loading', 'Loading')
+            : !source.hasData ? sourceT('common.unknown', 'Unknown') : null
+    return {
+      ...step,
+      busy: source.isLoading === true && !source.isRefreshBlocked,
+      description: annotation ? `${step.description} ${annotation}` : step.description,
+    }
+  })
 
   const doneCount = steps.filter((s) => s.done).length
+  const hasUnknown = steps.some(step => step.done === null)
 
   return (
-    <GlassPanel className="h-full min-w-0 space-y-4 p-4 sm:p-5">
+    <GlassPanel
+      className="h-full min-w-0 space-y-4 p-4 sm:p-5"
+      aria-busy={stepSources.some(source => source.isLoading && !source.isRefreshBlocked)}
+    >
       <div className="flex min-w-0 items-center gap-3">
         <IconBox color="green">
           <ListChecks className="h-5 w-5" aria-hidden="true" />
@@ -119,7 +173,7 @@ export function FleetSetupProgress({
         <div className="min-w-0 break-words [overflow-wrap:anywhere]">
           <PanelTitle>{t('fleetSetup.progress.title', 'Setup progress')}</PanelTitle>
           <HelperText>
-            {t('fleetSetup.progress.subtitle', '{{done}} / {{total}} complete', {
+            {hasUnknown ? sourceT('common.unknown', 'Unknown') : t('fleetSetup.progress.subtitle', '{{done}} / {{total}} complete', {
               done: doneCount,
               total: steps.length,
             })}

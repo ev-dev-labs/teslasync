@@ -99,7 +99,7 @@ export function FsdTopDays({ insights, state }: FsdTopDaysProps) {
 
   return (
     <GlassPanel
-      className="p-4 sm:p-5"
+      className="min-w-0 p-4 sm:p-5"
       role="region"
       aria-label={t('fsd.topDays.section', 'Most active supervised self-driving days')}
       data-testid="fsd-top-days"
@@ -121,7 +121,38 @@ export function FsdTopDays({ insights, state }: FsdTopDaysProps) {
             columns={columns}
             data={rows}
             keyExtractor={(row) => row.date}
+            rowLabel={(row) => formatDayKey(row.date, { locale: unitPrefs.locale, style: 'long' })}
             mobileColumns={['date', 'fsd_distance_m']}
+            mobilePresentation={{
+              roles: {
+                date: 'title',
+                fsd_distance_m: 'primary',
+                driving_distance_m: 'meta',
+                fsd_share_pct: 'meta',
+                reset_count: 'meta',
+              },
+              displayValue: (row, key) => {
+                switch (key) {
+                  case 'date':
+                    return formatDayKey(row.date, { locale: unitPrefs.locale, style: 'long' });
+                  case 'fsd_distance_m':
+                  case 'driving_distance_m':
+                    return row[key] != null
+                      ? formatDistance(row[key])
+                      : t('fsd.notReported', 'Not reported');
+                  case 'fsd_share_pct':
+                    return row.fsd_share_pct != null
+                      ? `${fmtNumber(row.fsd_share_pct)}%`
+                      : t('fsd.notReported', 'Not reported');
+                  case 'reset_count':
+                    return row.reset_count > 0
+                      ? t('fsd.topDays.resetFlag', 'Counter reset ({{resets}})', { resets: row.reset_count })
+                      : t('fsd.topDays.noFlags', 'None');
+                  default:
+                    return undefined;
+                }
+              },
+            }}
             pagination
           />
         ) : (

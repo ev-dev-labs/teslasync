@@ -70,16 +70,16 @@ export function DepartureForecastWeeklyTrend({
           'Recent weekly departure trend and active-day cadence',
         )}
         subtitle={t(
-          'departure.weeklyTrend.subtitle',
-          'Monday-based local weeks include zero-event weeks inside the observed returned span.',
+          'departure.weeklyTrend.calendarSubtitle',
+          'Monday-based local weeks include zero returned events between the earliest included drive start and the fixed model anchor; elapsed calendar opportunity is model-assumed, not verified coverage.',
         )}
         ariaLabel={t(
-          'departure.weeklyTrend.aria',
-          'Weekly recorded departure events and active local driving days across the observed vehicle-timezone span',
+          'departure.weeklyTrend.calendarAria',
+          'Weekly returned departure events and active local driving days across the elapsed model-timezone span',
         )}
         ariaDescription={t(
-          'departure.weeklyTrend.description',
-          'Bars count drive starts and the line counts distinct local days containing at least one drive start.',
+          'departure.weeklyTrend.returnedDescription',
+          'Bars count returned drive starts and the line counts distinct local days containing at least one returned drive start. Zero-event buckets mean no included returned events, not confirmed inactivity or continuous recording.',
         )}
         height={410}
         chartKey="departure-forecast-weekly-trend"
@@ -177,12 +177,12 @@ export function DepartureForecastWeeklyTrend({
             </div>
             <Text as="p" variant="caption" className="mt-3">
               {t(
-                'departure.weeklyTrend.summary',
-                '{{departures}} departures across {{activeDays}} active days and {{activeWeeks}} active weeks over {{observedWeeks}} observed weeks in {{timeZone}}.',
+                'departure.weeklyTrend.elapsedSummary',
+                '{{departures}} returned departures across {{activeDays}} active days and {{activeWeeks}} active weeks over {{observedWeeks}} elapsed weeks in {{timeZone}}. Calendar opportunity is model-assumed; gaps do not establish recording coverage.',
                 {
-                  departures: fmtInt(forecast.totalDepartures),
-                  activeDays: fmtInt(forecast.activeDays),
-                  activeWeeks: fmtInt(forecast.activeWeeks),
+                  departures: fmtInt(forecast.totalDepartures, locale),
+                  activeDays: fmtInt(forecast.activeDays, locale),
+                  activeWeeks: fmtInt(forecast.activeWeeks, locale),
                   observedWeeks: fmtNumber(
                     forecast.observedWeeks,
                     undefined,

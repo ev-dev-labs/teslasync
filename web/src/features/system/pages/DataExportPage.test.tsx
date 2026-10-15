@@ -298,6 +298,31 @@ afterEach(() => {
 });
 
 describe('DataExportPage — Project Apex elevation', () => {
+  it.each([
+    ['missing', undefined, '—'],
+    ['null', null, '—'],
+    ['NaN', Number.NaN, '—'],
+    ['positive infinity', Number.POSITIVE_INFINITY, '—'],
+    ['negative infinity', Number.NEGATIVE_INFINITY, '—'],
+    ['measured zero', 0, '0 B'],
+    ['positive', 512, '512 B'],
+    ['negative', -512, '-512 B'],
+    ['fractional', 0.5, '0.5 B'],
+    ['negative fractional', -0.5, '-0.5 B'],
+    ['scaled fractional', 1536, '1.50 KB'],
+  ] satisfies [string, number | null | undefined, string][])(
+    'renders %s history bytes distinctly from missing measurements',
+    async (_case, fileSize, expected) => {
+      jobsData = [{ ...jobsData[0], file_size: fileSize }];
+      renderPage();
+      const table = await screen.findByRole('table');
+      const row = within(table).getByRole('row', { name: /Drives CSV Ready/ });
+
+      expect(within(row).getAllByRole('cell')[5]).toHaveTextContent(expected);
+      expect(within(row).getByRole('button', { name: 'Download' })).toBeEnabled();
+    },
+  );
+
   it.each(['paused', 'idle'] as const)('keeps initial %s sources distinct from empty results and recovers independently', async (fetchStatus) => {
     mockedRequest.mockImplementation((url: string, opts?: ReqOpts) =>
       url.startsWith('/exports/columns') ? new Promise(() => {}) : routeRequest(url, opts));

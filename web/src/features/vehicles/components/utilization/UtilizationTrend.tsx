@@ -56,13 +56,11 @@ export function UtilizationTrend({
       summary.months.map((month) => ({
         month: formatDayShort(`${month.month}-01`),
         monthKey: month.month,
-        distance:
-          Math.round(toDisplayDistance(month.distanceM) * 10) / 10,
+        distance: toDisplayDistance(month.distanceM),
         activeDays: month.activeDays,
-        observedDays: Math.round(month.observedDays * 10) / 10,
+        observedDays: month.observedDays,
         drives: month.driveCount,
-        drivingHours:
-          Math.round((month.drivingS / 3_600) * 10) / 10,
+        drivingHours: month.drivingS / 3_600,
       })),
     [formatDayShort, summary.months, toDisplayDistance],
   );

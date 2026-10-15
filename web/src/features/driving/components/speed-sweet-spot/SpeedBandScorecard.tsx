@@ -148,7 +148,7 @@ export function SpeedBandScorecard(
       data-testid="speed-sweet-spot-scorecard"
     >
       <PanelTitle className="flex items-center gap-2">
-        <ListOrdered className="h-4 w-4 text-purple-300" aria-hidden="true" />
+        <ListOrdered className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
         {t('sweetSpot.score.title', 'Detailed band scorecard')}
       </PanelTitle>
       <Text as="p" variant="caption" className="mt-1">
@@ -175,6 +175,23 @@ export function SpeedBandScorecard(
             data={rows}
             keyExtractor={(row) => row.key}
             mobileColumns={['rank', 'band', 'consumption', 'qualification']}
+            rowLabel={(row) => row.band}
+            mobilePresentation={{
+              roles: {
+                band: 'title', consumption: 'primary', rank: 'meta',
+                qualification: 'badge',
+              },
+              displayValue: (row, key) => {
+                const values: Record<string, string | number | null> = {
+                  ...row,
+                  qualified: null,
+                  rank: row.rank == null ? '—' : t(
+                    'sweetSpot.score.rankValue', '#{{rank}}', { rank: row.rank },
+                  ),
+                };
+                return values[key];
+              },
+            }}
             density="compact"
             maxHeight={440}
             emptyMessage={t(

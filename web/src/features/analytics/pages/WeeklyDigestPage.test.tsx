@@ -70,8 +70,11 @@ vi.mock('react-i18next', () => ({
 
 // ── AI narration: reflect the numeric vehicle id the page derived ──
 vi.mock('@/components/ai/AIDigestNarration', () => ({
-  AIDigestNarration: ({ vehicleId }: { vehicleId?: number }) => (
-    <div data-testid="ai-narration" data-vehicle-id={vehicleId ?? 'none'} />
+  AIDigestNarration: ({ vehicleId, weekOffsetWeeks, weekStart, weekLabel }: {
+    vehicleId?: number; weekOffsetWeeks?: number; weekStart?: string; weekLabel?: string;
+  }) => (
+    <div data-testid="ai-narration" data-vehicle-id={vehicleId ?? 'none'}
+      data-week-offset={weekOffsetWeeks} data-week-start={weekStart} data-week-label={weekLabel} />
   ),
 }));
 
@@ -223,13 +226,13 @@ function makeSource(over: Partial<HookReturn['freshnessQueries'][number]> = {}) 
 
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  return render(<WeeklyDigestPage />, { wrapper: ({ children }) => (
     <MemoryRouter>
       <QueryClientProvider client={client}>
-        <WeeklyDigestPage />
+        {children}
       </QueryClientProvider>
-    </MemoryRouter>,
-  );
+    </MemoryRouter>
+  ) });
 }
 
 const panelTitles: Record<string, string> = {
@@ -274,6 +277,33 @@ beforeEach(() => {
 });
 
 describe('WeeklyDigestPage — scaffolding + a11y', () => {
+  it('binds narration to the selected calendar week and vehicle across navigation', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-09T12:00:00Z'));
+    try {
+      const current = new Date(2026, 2, 9);
+      const previous = new Date(2026, 2, 2);
+      mockHook.mockReturnValue(makeHook({ weekStart: current, weekLabel: 'Mar 9 – Mar 15' }));
+      const { rerender } = renderPage();
+      expect(screen.getByTestId('ai-narration')).toHaveAttribute('data-week-offset', '0');
+      mockHook.mockReturnValue(makeHook({
+        weekStart: previous, weekLabel: 'Mar 2 – Mar 8', isCurrentWeek: false, selectedVehicleId: '9',
+      }));
+      rerender(<WeeklyDigestPage />);
+      const narration = screen.getByTestId('ai-narration');
+      expect(narration).toHaveAttribute('data-vehicle-id', '9');
+      expect(narration).toHaveAttribute('data-week-offset', '-1');
+      expect(narration).toHaveAttribute('data-week-start', previous.toISOString());
+      expect(narration).toHaveAttribute('data-week-label', 'Mar 2 – Mar 8');
+      mockHook.mockReturnValue(makeHook({ weekStart: new Date(2025, 11, 8), isCurrentWeek: false }));
+      rerender(<WeeklyDigestPage />);
+      expect(screen.getByTestId('ai-narration')).toHaveAttribute('data-week-offset', '-13');
+      expect(section('driving-section')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('renders the page header and every digest surface without a redundant vehicle picker', () => {
     renderPage();
 

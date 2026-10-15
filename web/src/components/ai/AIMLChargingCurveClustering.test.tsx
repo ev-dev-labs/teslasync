@@ -230,6 +230,20 @@ describe('AIMLChargingCurveClustering — vehicleId validation (mirrors backend 
 });
 
 describe('AIMLChargingCurveClustering — empty-state hint', () => {
+  it.each([undefined, 42])('discloses independent training provenance with vehicleId=%s', (vehicleId) => {
+    enableFeature();
+
+    render(<AIMLChargingCurveClustering vehicleId={vehicleId} />);
+
+    const root = screen.getByTestId(ROOT_TESTID);
+    expect(root).toHaveTextContent('independent 90-day window');
+    expect(root).toHaveTextContent('training and cluster-query tool results');
+    expect(root).toHaveTextContent('rule-label fallbacks when data is insufficient');
+    expect(root).toHaveTextContent('The workspace date range does not filter this request');
+    expect(root).toHaveTextContent('not established as equivalent to the charts below');
+    expect(root).not.toHaveTextContent('baseline used by the Charging Curve page today');
+  });
+
   it('shows the "pick a vehicle" hint while no vehicle is in scope', () => {
     enableFeature();
 
@@ -298,6 +312,7 @@ describe('AIMLChargingCurveClustering — wired SSE POST', () => {
       expect(screen.getByTestId('ai-output-panel')).toHaveTextContent(
         'dominant L2 workplace cluster',
       );
+      expect(screen.getByTestId(ROOT_TESTID)).toHaveTextContent('independent 90-day window');
     });
   });
 

@@ -7,12 +7,13 @@ import {
   Table,
   Text
 } from '@/components/ui';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { asList, unknown, useT } from './helpers';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function EntryDetail({ entry }: { entry: ScienceNotebookEntry }) {
+  const { formatDateTime } = useDateFormat();
   const { fmtScientificNumber, fmtNumber } = useNumberFormatting();
   const t = useT();
   const kv = (label: string, obj?: Record<string, unknown>) => {

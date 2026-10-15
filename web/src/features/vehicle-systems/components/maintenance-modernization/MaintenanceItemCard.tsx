@@ -1,8 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { Clock, Gauge, Tag } from 'lucide-react';
-import { Accordion, Badge, Subhead, Text } from '@/components/ui';
+import { Accordion, Badge, Caption, Subhead, Text } from '@/components/ui';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { formatDate, formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { formatMaintenanceDate } from './serviceColumns';
 import { cn } from '@/lib/cn';
 import {
   computeProgress, progressFillClass, statusFromPct,
@@ -22,6 +23,9 @@ export function MaintenanceItemCard({
 }) {
   const { t } = useTranslation();
   const { fmtNumber, fmtInt } = useNumberFormatting();
+  const { formatDate: formatInstantDate, formatDateTime, locale } = useDateFormat();
+  const formatDate = (value: string | null | undefined) =>
+    formatMaintenanceDate(value, formatInstantDate, locale);
   const pct = computeProgress(item);
   const status = item.status === 'completed' ? 'completed' : statusFromPct(pct);
   const sourceStatus = STATUS_BADGES[item.status];
@@ -82,27 +86,27 @@ export function MaintenanceItemCard({
           <Tag className="mr-1 h-3 w-3" aria-hidden="true" />
           {item.category}
         </Badge>
-        <Text variant="caption">{t('maintenance.details.sourceStatus', 'Source status')}</Text>
+        <Caption>{t('maintenance.details.sourceStatus', 'Source status')}</Caption>
         <MaintenanceStatusBadge status={item.status} />
       </div>
       <Subhead className="break-words text-[var(--text-primary)]">{item.name}</Subhead>
-      <Text as="p" variant="caption" className="break-words">{item.description}</Text>
+      <Caption as="p" className="break-words">{item.description}</Caption>
 
       {status !== 'completed' && (
         <div className="space-y-1">
-          <Text variant="caption">{t('maintenance.itemProgress', '{{name}} service progress', { name: item.name })}</Text>
+          <Caption>{t('maintenance.itemProgress', '{{name}} service progress', { name: item.name })}</Caption>
           {status != null ? <MaintenanceStatusBadge status={status} /> : (
             <Badge variant="neutral" size="sm">{t('common.unavailable', 'Unavailable')}</Badge>
           )}
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--text-muted)]">
-            <span className="tabular-nums">{pct != null ? `${fmtNumber(pct)}%` : t('common.unavailable', 'Unavailable')}</span>
-            <span>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Caption className="tabular-nums">{pct != null ? `${fmtNumber(pct)}%` : t('common.unavailable', 'Unavailable')}</Caption>
+            <Caption className="break-words tabular-nums">
               {item.due_date
                 ? `${t('maintenance.due', 'Due')}: ${formatDate(item.due_date)}`
                 : item.due_mileage
                   ? `${t('maintenance.due', 'Due')}: ${formatDistance(item.due_mileage)}`
                   : null}
-            </span>
+            </Caption>
           </div>
           {pct != null && <div
             role="progressbar"
@@ -120,25 +124,25 @@ export function MaintenanceItemCard({
         </div>
       )}
 
-      <div className="mt-auto flex flex-wrap items-center gap-4 text-xs text-[var(--text-secondary)]">
+      <div className="mt-auto flex flex-wrap items-center gap-4">
         {item.current_mileage > 0 && (
-          <span className="flex items-center gap-1">
+          <Caption className="flex min-w-0 items-center gap-1 break-words tabular-nums">
             <Gauge className="h-3 w-3" aria-hidden="true" />
             {formatDistance(item.current_mileage)}
-          </span>
+          </Caption>
         )}
         {item.last_service_date && (
-          <span className="flex items-center gap-1">
+          <Caption className="flex min-w-0 items-center gap-1 break-words tabular-nums">
             <Clock className="h-3 w-3" aria-hidden="true" />
             {formatDate(item.last_service_date)}
-          </span>
+          </Caption>
         )}
       </div>
       <Accordion title={t('maintenance.details.title', 'Service interval and metadata')}>
         <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {fields.map(field => (
             <div key={field.key} className="min-w-0">
-              <Text as="dt" variant="caption">{field.label}</Text>
+              <Caption as="dt">{field.label}</Caption>
               <Text as="dd" variant="bodySm" className="break-words tabular-nums">{field.value}</Text>
             </div>
           ))}

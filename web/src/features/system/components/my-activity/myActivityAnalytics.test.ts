@@ -148,6 +148,62 @@ describe('deriveMyActivityAnalytics', () => {
     expect(r.dailyTrend[0].day).toBe('2020-01-01');
   });
 
+  it('preserves late loaded observations and labels actual coverage in bounded multi-day buckets', () => {
+    const entries = [
+      entry({ ts: '2020-01-01T12:00:00Z' }),
+      entry({ ts: '2020-01-02T12:00:00Z' }),
+      entry({ ts: '2024-12-31T12:00:00Z' }),
+      entry({ ts: '2025-01-01T12:00:00Z' }),
+    ];
+    const original = entries.map((item) => ({ ...item }));
+    const opts = { tz: 'UTC', locale: 'en-US' };
+    const r = deriveMyActivityAnalytics(entries, { start: '2020-01-01', end: '2025-01-01' }, opts);
+
+    expect(r.dailyTrend).toHaveLength(366);
+    expect(r.dailyTrend[0].count).toBe(2);
+    expect(r.dailyTrend.at(-1)?.endDay).toBe('2025-01-01');
+    expect(r.dailyTrend.at(-1)?.count).toBe(2);
+    expect(r.dailyTrend.reduce((sum, point) => sum + point.count, 0)).toBe(r.kpis.total);
+    for (const [index, point] of r.dailyTrend.entries()) {
+      expect(point.label).toBe(
+        `${formatDayKey(point.day, { ...opts, style: 'short' })} – ${formatDayKey(point.endDay!, { ...opts, style: 'short' })}`,
+      );
+      if (index > 0) {
+        const previousEnd = new Date(`${r.dailyTrend[index - 1].endDay}T00:00:00Z`).getTime();
+        expect(new Date(`${point.day}T00:00:00Z`).getTime() - previousEnd).toBe(86_400_000);
+      }
+    }
+    expect(entries).toEqual(original);
+  });
+
+  it('keeps single-day labels and all loaded counts at the 366-day boundary', () => {
+    const r = deriveMyActivityAnalytics(
+      [entry({ ts: '2020-12-31T12:00:00Z' })],
+      { start: '2020-01-01', end: '2020-12-31' },
+      { tz: 'UTC' },
+    );
+
+    expect(r.dailyTrend).toHaveLength(366);
+    expect(r.dailyTrend.every((point) => point.endDay === undefined)).toBe(true);
+    expect(r.dailyTrend.at(-1)?.count).toBe(1);
+  });
+
+  it('counts each observed day exactly once when the range first exceeds the budget', () => {
+    const entries = Array.from({ length: 367 }, (_, index) =>
+      entry({ ts: new Date(Date.UTC(2020, 0, 1 + index, 12)).toISOString() }),
+    );
+    const r = deriveMyActivityAnalytics(
+      entries,
+      { start: '2020-01-01', end: '2021-01-01' },
+      { tz: 'UTC' },
+    );
+
+    expect(r.dailyTrend).toHaveLength(366);
+    expect(r.dailyTrend.filter((point) => point.endDay !== undefined)).toHaveLength(1);
+    expect(r.dailyTrend.reduce((sum, point) => sum + point.count, 0)).toBe(367);
+    expect(r.dailyTrend.every((point) => point.count === (point.endDay ? 2 : 1))).toBe(true);
+  });
+
   it('ranks the top actions with percent, palette colour, and i18n metadata', () => {
     const entries = [
       ...Array.from({ length: 5 }, () => entry({ action: 'vehicle.command.wake' })),

@@ -24,11 +24,15 @@
 // string is deterministic regardless of the CI host locale.
 
 import { describe, it, expect, beforeAll } from 'vitest';
+import i18n, { createInstance } from 'i18next';
+import english from '@/i18n/en.json';
 import { setGlobalLocale } from '@/lib/numberFormat';
 import type { ChargingSession } from '@/api/types';
 import {
   isDcSession,
   getChargerLabel,
+  getChargerCategoryId,
+  getChargerCategoryLabel,
   getChargerClassification,
   durationMinutes,
   distanceAddedM,
@@ -39,8 +43,13 @@ import {
   crossesSocWindow,
 } from './helpers';
 
-beforeAll(() => {
+beforeAll(async () => {
   setGlobalLocale('en-US');
+  await i18n.init({
+    lng: 'en',
+    fallbackLng: false,
+    resources: { en: { translation: english } },
+  });
 });
 
 function makeSession(overrides: Partial<ChargingSession> = {}): ChargingSession {
@@ -105,6 +114,45 @@ describe('isDcSession', () => {
 });
 
 describe('getChargerLabel', () => {
+  it('localizes display labels without changing grouping or color category IDs', async () => {
+    const translations = createInstance();
+    await translations.init({
+      lng: 'fr',
+      fallbackLng: false,
+      resources: {
+        fr: { translation: { charging: { curve: { chargerLabels: {
+          homeAc: 'Recharge',
+          supercharger: 'Recharge',
+          dcFast: 'Recharge rapide',
+        } } } } },
+      },
+    });
+    const t = translations.getFixedT('fr');
+    const sessions = [
+      makeSession({ id: 1, charger_type: 'Tesla Wall Connector', peak_power_w: 44_000 }),
+      makeSession({ id: 2, charger_type: 'Tesla' }),
+      makeSession({ id: 3, charger_type: 'tesla supercharger v3' }),
+      makeSession({ id: 4, charger_type: 'CCS' }),
+      makeSession({ id: 5, charger_type: null, peak_power_w: 50_000 }),
+    ];
+    expect(sessions.map(s => getChargerLabel(s, t))).toEqual([
+      'Recharge', 'Recharge', 'Recharge', 'Recharge rapide', 'Recharge rapide',
+    ]);
+    expect(sessions.map(getChargerCategoryId)).toEqual([
+      'Home / AC', 'Supercharger', 'Supercharger', 'DC Fast', 'DC Fast',
+    ]);
+    const groups = new Map<string, number[]>();
+    sessions.forEach(session => {
+      const id = getChargerCategoryId(session);
+      groups.set(id, [...(groups.get(id) ?? []), session.id]);
+    });
+    expect([...groups]).toEqual([
+      ['Home / AC', [1]], ['Supercharger', [2, 3]], ['DC Fast', [4, 5]],
+    ]);
+    expect(getChargerCategoryLabel('Supercharger', t)).toBe('Recharge');
+    expect(sessions.map(s => s.id)).toEqual([1, 2, 3, 4, 5]);
+  });
+
   it('labels Tesla hardware as a Supercharger (case-insensitive contains)', () => {
     expect(getChargerLabel(makeSession({ charger_type: 'Tesla' }))).toBe('Supercharger');
     expect(getChargerLabel(makeSession({ charger_type: 'tesla supercharger v3' }))).toBe('Supercharger');

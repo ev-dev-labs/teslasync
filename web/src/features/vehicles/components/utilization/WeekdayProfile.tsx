@@ -65,17 +65,19 @@ export function WeekdayProfile({
       summary.weekdays.map((weekday) => ({
         weekday: weekdayLabels[weekday.weekday] ?? '—',
         activeRate:
-          weekday.activeDayShare != null
-            ? Math.round(weekday.activeDayShare * 1_000) / 10
-            : 0,
+          weekday.observedDays > 0 &&
+          Number.isFinite(weekday.observedDays) &&
+          weekday.activeDayShare != null &&
+          Number.isFinite(weekday.activeDayShare)
+            ? weekday.activeDayShare * 100
+            : null,
         averageDistance:
-          weekday.averageDistancePerActiveDayM != null
-            ? Math.round(
-                toDisplayDistance(
-                  weekday.averageDistancePerActiveDayM,
-                ) * 10,
-              ) / 10
-            : 0,
+          weekday.activeDays > 0 &&
+          Number.isFinite(weekday.activeDays) &&
+          weekday.averageDistancePerActiveDayM != null &&
+          Number.isFinite(weekday.averageDistancePerActiveDayM)
+            ? toDisplayDistance(weekday.averageDistancePerActiveDayM)
+            : null,
         drives: weekday.driveCount,
         observedDays: weekday.observedDays,
       })),
@@ -144,7 +146,7 @@ export function WeekdayProfile({
               'utilization.columns.activeRate',
               'Active-day rate (%)',
             ),
-            format: (value) => `${fmtNumber(value)}%`,
+            format: (value) => value == null ? '—' : `${fmtNumber(value)}%`,
           },
           {
             key: 'averageDistance',
@@ -153,7 +155,7 @@ export function WeekdayProfile({
               'Distance ({{unit}})',
               { unit: distanceUnit },
             ),
-            format: (value) => fmtNumber(value),
+            format: (value) => value == null ? '—' : fmtNumber(value),
           },
           {
             key: 'drives',

@@ -20,12 +20,15 @@
 // hook is mocked so the page never touches the network.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
+import { render, renderHook, screen, within, fireEvent, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { ApiError } from '@/api/client';
+import * as apiClient from '@/api/client';
 import type { Automation } from '@/api/types';
+import { automationStatus, assertAutomationInventory, assertAutomationImportResult, type AutomationListItem } from '@/api/hooks/useAutomations';
+import { AutomationCardStatistics } from '../components/automation-helper-source-closure/AutomationCardStatistics';
 import AutomationsListPage, {
   computeStats,
   buildVehicleLookup,
@@ -48,6 +51,14 @@ const m = vi.hoisted(() => ({
   reEnableMutate: vi.fn(),
   importMutate: vi.fn(),
   navigate: vi.fn(),
+  importSuccess: vi.fn(),
+  importWarning: vi.fn(),
+  importError: vi.fn(),
+  operationalMode: vi.fn(),
+}));
+
+vi.mock('@/api/hooks/_toastHelpers', () => ({
+  useMutationToast: () => ({ success: m.importSuccess, warning: m.importWarning, error: m.importError }),
 }));
 
 // ─── framer-motion: render eagerly as plain divs (no matchMedia/IO). ─────────
@@ -108,8 +119,11 @@ vi.mock('react-router-dom', async (importOriginal) => {
 
 // ─── Data + mutation hooks. ──────────────────────────────────────────────────
 
-vi.mock('@/api/hooks/useAutomations', () => ({
+vi.mock('@/api/hooks/useAutomations', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/api/hooks/useAutomations')>(),
   useAutomations: m.useAutomations,
+  useAutomationList: m.useAutomations,
+  usePinnedAutomations: m.usePinned,
   useAutomationHistory: m.useAutomationHistory,
   useToggleAutomation: () => ({ mutate: m.toggleMutate }),
   useDeleteAutomation: () => ({ mutate: m.deleteMutate }),
@@ -119,8 +133,12 @@ vi.mock('@/api/hooks/useAutomations', () => ({
 }));
 
 vi.mock('@/api/hooks/useVehicles', () => ({ useVehicles: m.useVehicles }));
-vi.mock('@/api/hooks/usePinned', () => ({ usePinned: m.usePinned }));
+vi.mock('@/api/hooks/usePinned', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/api/hooks/usePinned')>(),
+  usePinned: m.usePinned,
+}));
 vi.mock('@/hooks/useAutomationEvents', () => ({ useAutomationEvents: m.useAutomationEvents }));
+vi.mock('@/hooks/useOperationalMode', () => ({ useOperationalMode: m.operationalMode }));
 
 // ComfortPanel (embedded section) stays idle: its own contract tests cover
 // behaviour; here it must only not fire live queries.
@@ -204,7 +222,7 @@ const autoOff = makeAutomation({
 let alertMock: ReturnType<typeof vi.fn>;
 
 function setAutomations(
-  data: Automation[] | undefined,
+  data: AutomationListItem[] | undefined,
   extra: Partial<{
     isLoading: boolean;
     isError: boolean;
@@ -237,6 +255,7 @@ beforeEach(() => {
     events: [], connectionState: 'connected', firingNow: new Set<number>(), clearEvents: vi.fn(),
   });
   m.useImportAutomations.mockReturnValue({ mutate: m.importMutate, isPending: false });
+  m.operationalMode.mockReturnValue({ mode: 'live', canWrite: true, isReadOnly: false, writeBlockReason: null });
   alertMock = vi.fn();
   window.alert = alertMock;
 });
@@ -251,7 +270,7 @@ function renderPage() {
     </QueryClientProvider>
   );
   const result = render(page());
-  return { ...result, rerenderPage: () => result.rerender(page()) };
+  return { ...result, client, rerenderPage: () => result.rerender(page()) };
 }
 
 function kpiRegion(): HTMLElement {
@@ -264,11 +283,230 @@ function metricValue(label: string): string {
   return within(card).getByText(/^\d+$/).textContent ?? '';
 }
 
+describe('AutomationsListPage — validated query responses', () => {
+  const pin = {
+    id: 5, item_type: 'automation', item_id: '2', position: 0,
+    pinned_at: '2026-10-01T00:00:00Z',
+  };
+
+  it.each([
+    ['useAutomationList', null],
+    ['useAutomationList', {}],
+    ['useAutomationList', { items: [] }],
+    ['useAutomationList', [null]],
+    ['useAutomationList', [active, null]],
+    ['useAutomationList', [{ ...active, enabled: 'true' }]],
+    ['useAutomationList', [{ ...active, execution_count: -1 }]],
+    ['usePinnedAutomations', null],
+    ['usePinnedAutomations', {}],
+    ['usePinnedAutomations', { items: [] }],
+    ['usePinnedAutomations', [null]],
+    ['usePinnedAutomations', [pin, null]],
+    ['usePinnedAutomations', [{ ...pin, item_type: 'vehicle' }]],
+    ['usePinnedAutomations', [{ ...pin, item_id: '' }]],
+    ['usePinnedAutomations', [{ ...pin, item_id: '9007199254740992' }]],
+    ['usePinnedAutomations', [{ ...pin, position: '0' }]],
+    ['usePinnedAutomations', [{ ...pin, position: -1 }]],
+    ['usePinnedAutomations', [{ ...pin, pinned_at: 'invalid' }]],
+  ] as const)('%s rejects malformed payload %j as a query failure', async (hookName, payload) => {
+    const hooks = await vi.importActual<typeof import('@/api/hooks/useAutomations')>('@/api/hooks/useAutomations');
+    const request = vi.spyOn(apiClient, 'request').mockResolvedValue(payload);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { result, unmount } = renderHook(() => hooks[hookName](), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      ),
+    });
+    try {
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expect(result.current.data).toBeUndefined();
+      expect(result.current.error?.message).toMatch(/Invalid .* response/);
+      expect(request).toHaveBeenCalledWith(
+        hookName === 'useAutomationList' ? '/automations' : '/pinned?type=automation',
+        { signal: expect.any(AbortSignal) },
+      );
+    } finally {
+      unmount();
+      client.clear();
+      request.mockRestore();
+    }
+  });
+
+  it.each(['useAutomationList', 'usePinnedAutomations'] as const)(
+    '%s accepts an authoritative empty array',
+    async (hookName) => {
+      const hooks = await vi.importActual<typeof import('@/api/hooks/useAutomations')>('@/api/hooks/useAutomations');
+      const request = vi.spyOn(apiClient, 'request').mockResolvedValue([]);
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const { result, unmount } = renderHook(() => hooks[hookName](), {
+        wrapper: ({ children }: { children: ReactNode }) => (
+          <QueryClientProvider client={client}>{children}</QueryClientProvider>
+        ),
+      });
+      try {
+        await waitFor(() => expect(result.current.isSuccess).toBe(true));
+        expect(result.current.data).toEqual([]);
+        expect(result.current.error).toBeNull();
+      } finally {
+        unmount();
+        client.clear();
+        request.mockRestore();
+      }
+    },
+  );
+
+  it.each(['inventory', 'pins'] as const)(
+    'shows a source-specific initial failure for malformed %s rather than a successful empty state',
+    async (source) => {
+      const hooks = await vi.importActual<typeof import('@/api/hooks/useAutomations')>('@/api/hooks/useAutomations');
+      m.useAutomations.mockImplementation(hooks.useAutomationList);
+      m.usePinned.mockImplementation(hooks.usePinnedAutomations);
+      let failed = true;
+      const request = vi.spyOn(apiClient, 'request').mockImplementation(async (path) => {
+        if (path === '/automations') return source === 'inventory' && failed ? null : [active];
+        if (path === '/pinned?type=automation') return source === 'pins' && failed ? null : [];
+        throw new Error(`Unexpected request: ${path}`);
+      });
+      const { client, unmount } = renderPage();
+      try {
+        await waitFor(() => expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument());
+        expect(screen.queryByText(/No automations yet/)).not.toBeInTheDocument();
+        expect(screen.getByTestId('preset-gallery')).toBeInTheDocument();
+        if (source === 'inventory') {
+          expect(screen.queryByTestId('automation-card')).not.toBeInTheDocument();
+          expect(within(kpiRegion()).queryByText(/^\d+$/)).not.toBeInTheDocument();
+        } else {
+          expect(screen.getByText('Active One')).toBeInTheDocument();
+          expect(within(screen.getByRole('region', { name: 'Pinned' })).getByRole('alert')).toBeInTheDocument();
+        }
+        failed = false;
+        request.mockClear();
+        fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+        await waitFor(() => expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument());
+        expect(screen.getByText('Active One')).toBeInTheDocument();
+        expect(metricValue('Total')).toBe('1');
+        expect(request).toHaveBeenCalledTimes(1);
+        expect(request).toHaveBeenCalledWith(
+          source === 'inventory' ? '/automations' : '/pinned?type=automation',
+          { signal: expect.any(AbortSignal) },
+        );
+      } finally {
+        unmount();
+        client.clear();
+        request.mockRestore();
+      }
+    },
+  );
+
+  it.each(['inventory', 'pins'] as const)(
+    'retains valid data on malformed %s refresh and retries only that source through recovery',
+    async (source) => {
+      const hooks = await vi.importActual<typeof import('@/api/hooks/useAutomations')>('@/api/hooks/useAutomations');
+      m.useAutomations.mockImplementation(hooks.useAutomationList);
+      m.usePinned.mockImplementation(hooks.usePinnedAutomations);
+      let inventory: unknown = [active, disabled];
+      let pins: unknown = [pin];
+      const request = vi.spyOn(apiClient, 'request').mockImplementation(async (path) => {
+        if (path === '/automations') return inventory;
+        if (path === '/pinned?type=automation') return pins;
+        throw new Error(`Unexpected request: ${path}`);
+      });
+      const { client, unmount } = renderPage();
+      const key = source === 'inventory' ? ['automations'] : ['pinned', 'automation', null];
+      try {
+        await waitFor(() => expect(screen.getAllByTestId('automation-card')).toHaveLength(2));
+        await waitFor(() => expect(within(screen.getAllByTestId('automation-card')[0]).getByText('Disabled One')).toBeInTheDocument());
+        expect(metricValue('Total')).toBe('2');
+        const validData = client.getQueryData(key);
+        const updatedAt = client.getQueryState(key)?.dataUpdatedAt;
+        if (source === 'inventory') inventory = [active, null];
+        else pins = [null];
+        await act(async () => { await client.invalidateQueries({ queryKey: key, exact: true }); });
+        await waitFor(() => expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument());
+        expect(client.getQueryData(key)).toEqual(validData);
+        expect(client.getQueryState(key)?.dataUpdatedAt).toBe(updatedAt);
+        expect(metricValue('Total')).toBe('2');
+        expect(within(screen.getAllByTestId('automation-card')[0]).getByText('Disabled One')).toBeInTheDocument();
+        expect(screen.getByTestId('preset-gallery')).toBeInTheDocument();
+        expect(screen.queryByText(/No automations yet/)).not.toBeInTheDocument();
+        fireEvent.change(screen.getByLabelText('Search automations...'), { target: { value: 'One' } });
+
+        inventory = source === 'inventory' ? [] : [active, disabled];
+        pins = source === 'pins' ? [] : [pin];
+        request.mockClear();
+        fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+        await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument());
+        expect(request).toHaveBeenCalledTimes(1);
+        expect(request).toHaveBeenCalledWith(
+          source === 'inventory' ? '/automations' : '/pinned?type=automation',
+          { signal: expect.any(AbortSignal) },
+        );
+        expect(screen.getByLabelText('Search automations...')).toHaveValue('One');
+        if (source === 'inventory') {
+          expect(screen.getByText(/No automations yet/)).toBeInTheDocument();
+          expect(metricValue('Total')).toBe('0');
+        } else {
+          expect(within(screen.getAllByTestId('automation-card')[0]).getByText('Active One')).toBeInTheDocument();
+          expect(metricValue('Total')).toBe('2');
+        }
+      } finally {
+        unmount();
+        client.clear();
+        request.mockRestore();
+      }
+    },
+  );
+});
+
 // ═══ Pure helpers ════════════════════════════════════════════════════════════
 
 describe('computeStats', () => {
+  it('keeps unavailable classifications unknown without discarding the base row', () => {
+    const row: AutomationListItem = {
+      id: 10, name: 'Base row', description: null, enabled: true, vehicle_id: null,
+      created_at: '2026-10-01T00:00:00Z', updated_at: '2026-10-01T00:00:00Z',
+      execution_count: null, failure_count: null, auto_disabled: null, last_triggered_at: null,
+    };
+    expect(assertAutomationInventory([row])).toEqual([row]);
+    expect(automationStatus(row)).toBeNull();
+    expect(computeStats([active, row, autoOff])).toEqual({
+      total: 3, active: undefined, disabled: undefined, autoDisabled: undefined,
+    });
+    setAutomations([row]);
+    renderPage();
+    expect(screen.getByText('Base row')).toBeInTheDocument();
+    const activeMetric = within(kpiRegion()).getByText('Active').closest('[data-operational-metric]') as HTMLElement;
+    expect(within(activeMetric).queryByText(/^\d+$/)).not.toBeInTheDocument();
+    fireEvent.change(screen.getByRole('combobox', { name: 'Filter by status' }), { target: { value: 'active' } });
+    expect(screen.queryByTestId('automation-card')).not.toBeInTheDocument();
+  });
   it('returns all-zero stats for an empty list', () => {
     expect(computeStats([])).toEqual({ total: 0, active: 0, disabled: 0, autoDisabled: 0 });
+  });
+
+  describe('automation card history metadata', () => {
+    it('does not invent zero counts or never-run history when metadata is unavailable', () => {
+      const row: AutomationListItem = {
+        id: 10, name: 'Base row', description: null, enabled: true, vehicle_id: null,
+        created_at: '2026-10-01T00:00:00Z', updated_at: '2026-10-01T00:00:00Z',
+        execution_count: null, failure_count: null, last_triggered_at: null, auto_disabled: null,
+      };
+      render(<AutomationCardStatistics automation={row} />);
+      expect(screen.getByText('Runs: Unknown')).toBeInTheDocument();
+      expect(screen.getByText('Fails: Unknown')).toBeInTheDocument();
+      expect(screen.getByText('Last: Unknown')).toBeInTheDocument();
+      expect(screen.queryByText('Never run')).not.toBeInTheDocument();
+    });
+
+    it('preserves confirmed zero and populated counters', () => {
+      const { rerender } = render(<AutomationCardStatistics automation={makeAutomation()} />);
+      expect(screen.getByText('Never run')).toBeInTheDocument();
+      expect(screen.getByText('Runs: 0')).toBeInTheDocument();
+      rerender(<AutomationCardStatistics automation={makeAutomation({ execution_count: 12, failure_count: 2 })} />);
+      expect(screen.getByText('Runs: 12')).toBeInTheDocument();
+      expect(screen.getByText('Fails: 2')).toBeInTheDocument();
+      expect(screen.queryByText('Never run')).not.toBeInTheDocument();
+    });
   });
 
   it('classifies active, disabled and auto-disabled automations', () => {
@@ -639,12 +877,100 @@ function uploadFile(name: string, content: string) {
 }
 
 describe('AutomationsListPage — typed import', () => {
+  it('blocks file import outside live mode even for a dispatched input change', () => {
+    m.operationalMode.mockReturnValue({
+      mode: 'cached', canWrite: false, isReadOnly: true,
+      writeBlockReason: 'Reconnect before making operational changes.',
+    });
+    renderPage();
+    expect(screen.getByRole('button', { name: 'Import' })).toBeDisabled();
+    const input = screen.getByLabelText('Choose automation export file');
+    expect(input).toBeDisabled();
+    uploadFile('export.json', JSON.stringify({ version: 1, automations: [{ name: 'Rule' }] }));
+    expect(m.importMutate).not.toHaveBeenCalled();
+    expect(input).toHaveValue('');
+  });
+
+  it.each([
+    { imported: [{ id: 8, name: 'Imported rule' }], errors: [], outcome: 'success' },
+    { imported: [{ id: 8, name: 'Imported rule' }], errors: [{ index: 1, name: 'Invalid rule', error: 'unsupported trigger' }], outcome: 'partial' },
+    { imported: [], errors: [{ index: 0, name: 'Invalid rule', error: 'unsupported trigger' }], outcome: 'failed' },
+  ])('uses the real hook arrays for a $outcome outcome and keeps the live guard', async ({ imported, errors, outcome }) => {
+    const hooks = await vi.importActual<typeof import('@/api/hooks/useAutomations')>('@/api/hooks/useAutomations');
+    const request = vi.spyOn(apiClient, 'request').mockResolvedValue({ imported, errors });
+    const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+    const invalidate = vi.spyOn(client, 'invalidateQueries');
+    const { result, unmount } = renderHook(() => hooks.useImportAutomations(), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      ),
+    });
+    const envelope = { version: 1, automations: [{ name: 'Rule' }] };
+    try {
+      await act(async () => { await result.current.mutateAsync(envelope); });
+      expect(request).toHaveBeenCalledWith('/automations/import', expect.objectContaining({
+        method: 'POST', requiresLiveMode: true, acceptedStatuses: [422],
+        body: JSON.stringify(envelope),
+      }));
+      expect(result.current.data).toEqual({ imported, errors });
+      expect(invalidate).toHaveBeenCalledWith(expect.objectContaining({ queryKey: ['automations'] }));
+      expect(m.importSuccess).toHaveBeenCalledTimes(outcome === 'success' ? 1 : 0);
+      expect(m.importWarning).toHaveBeenCalledTimes(outcome === 'partial' ? 1 : 0);
+      expect(m.importError).toHaveBeenCalledTimes(outcome === 'failed' ? 1 : 0);
+    } finally {
+      unmount();
+      request.mockRestore();
+      client.clear();
+    }
+  });
+
+  it('validates real per-item import outcomes rather than synthetic counts', () => {
+    const result = {
+      imported: [{ id: 8, name: 'Imported rule' }],
+      errors: [{ index: 1, name: 'Invalid rule', error: 'unsupported trigger' }],
+    };
+    expect(assertAutomationImportResult(result)).toEqual(result);
+    expect(assertAutomationImportResult({ imported: [], errors: [] })).toEqual({ imported: [], errors: [] });
+    expect(() => assertAutomationImportResult({ imported: 1, skipped: 1 })).toThrow('Invalid automation import response');
+    expect(() => assertAutomationImportResult({ imported: [], errors: [{ index: -1 }] })).toThrow();
+  });
+
+  it('exposes partial outcomes and guides retry of only the failed entries', () => {
+    m.useImportAutomations.mockReturnValue({
+      mutate: m.importMutate, isPending: false,
+      data: {
+        imported: [{ id: 8, name: 'Imported rule' }],
+        errors: [{ index: 1, name: 'Invalid rule', error: 'unsupported trigger' }],
+      },
+    });
+    renderPage();
+    const result = screen.getByRole('status', { name: 'Import' });
+    expect(within(result).getByText('1 succeeded, 1 failed')).toBeInTheDocument();
+    expect(within(result).getByText('Entry 2 (Invalid rule): unsupported trigger')).toBeInTheDocument();
+    expect(within(result).getByText(/import only the failed entries/)).toBeInTheDocument();
+    expect(within(result).getByText(/creates duplicates/)).toBeInTheDocument();
+    expect(m.importMutate).not.toHaveBeenCalled();
+  });
+
+  it.each([0, 2])('renders a successful import with %i actual imported rows', (count) => {
+    m.useImportAutomations.mockReturnValue({
+      mutate: m.importMutate, isPending: false,
+      data: { imported: Array.from({ length: count }, (_, i) => ({ id: i + 1, name: 'Rule' })), errors: [] },
+    });
+    renderPage();
+    const result = screen.getByRole('status', { name: 'Import' });
+    expect(within(result).getByText(`${count} succeeded, 0 failed`)).toBeInTheDocument();
+    expect(within(result).queryByText(/import only the failed entries/)).not.toBeInTheDocument();
+  });
+
   it('sends a valid typed envelope to the import mutation', async () => {
     renderPage();
+    // Version 2 tests client forwarding only; the real server accepts version 1.
     const envelope = { version: 2, exported_at: '2024-01-01', automations: [{ name: 'x' }] };
     uploadFile('export.json', JSON.stringify(envelope));
     await waitFor(() => expect(m.importMutate).toHaveBeenCalledWith(envelope));
     expect(alertMock).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Choose automation export file')).toHaveValue('');
   });
 
   it('rejects a legacy (untyped) export and alerts instead of importing', async () => {
@@ -653,6 +979,7 @@ describe('AutomationsListPage — typed import', () => {
     await waitFor(() => expect(alertMock).toHaveBeenCalledTimes(1));
     expect(m.importMutate).not.toHaveBeenCalled();
     expect(String(alertMock.mock.calls[0][0])).toMatch(/Typed automation import failed/);
+    expect(screen.getByLabelText('Choose automation export file')).toHaveValue('');
   });
 
   it('surfaces a parse error for malformed JSON', async () => {

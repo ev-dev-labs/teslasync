@@ -236,8 +236,9 @@ describe('RedisSignalViewerPage — Phase-46 / Prompt 59 (error states)', () => 
       const card = labelEl.closest('div')?.parentElement?.parentElement;
       expect(card?.textContent).toContain('—');
     });
+  });
 
-    it('retains structured raw values through the real Redis query hook', async () => {
+  it('retains structured raw values through the real Redis query hook', async () => {
       const value = { active: false, samples: [0, null, 'fixture'] };
       mockedGetSignals.mockResolvedValue({
         vehicle_id: 1,
@@ -252,7 +253,6 @@ describe('RedisSignalViewerPage — Phase-46 / Prompt 59 (error states)', () => 
       expect(row?.querySelector('code')?.textContent).toBe(JSON.stringify(value, null, 2));
       expect(row).toHaveTextContent('string');
       expect(mockedGetSignals).toHaveBeenCalledWith(1, { signal: expect.any(AbortSignal) });
-    });
   });
 });
 
@@ -347,15 +347,10 @@ describe('RedisSignalViewerPage — Purge cache controls', () => {
     mockedPurge.mockResolvedValue({ vehicle_id: 1, purged: true });
 
     // Mock vehicles hook to return TWO vehicles so we can switch.
-    vi.doMock('@/api/hooks/useVehicles', () => ({
-      useVehicles: () => ({
-        data: [
-          { id: 1, display_name: 'Falcon', vin: 'TESLA0000000001' },
-          { id: 2, display_name: 'Hawk', vin: 'TESLA0000000002' },
-        ],
-        isLoading: false,
-      }),
-    }));
+    vehicleHook.data = [
+      { id: 1, display_name: 'Falcon', vin: 'TESLA0000000001' },
+      { id: 2, display_name: 'Hawk', vin: 'TESLA0000000002' },
+    ];
 
     renderPage();
     const selects = screen.getAllByRole('combobox');

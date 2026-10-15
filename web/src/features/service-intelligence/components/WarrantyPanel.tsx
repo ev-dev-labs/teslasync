@@ -6,6 +6,9 @@ import type { WarrantyOutlook } from '@/api/hooks/useServiceIntelligence';
 
 import { PanelState } from './PanelState';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useUnits } from '@/hooks/useUnits';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { formatDayKey } from '@/lib/dateFormat';
 
 export interface WarrantyPanelProps {
   selected: boolean;
@@ -38,12 +41,14 @@ function statusLabel(status: string, t: (k: string, d: string) => string): strin
 }
 
 export function WarrantyPanel({ selected, loading, error, outlook, onRetry }: WarrantyPanelProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
+  const { fmtInt } = useNumberFormatting();
+  const { formatDistance } = useUnits();
+  const { opts } = useDateFormat();
   const { t } = useTranslation();
 
   return (
     <LayoutCard title={t('serviceIntelligence.warranty.title', 'Warranty countdown')}
-      actions={<ShieldCheck className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+      actions={<ShieldCheck className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />}>
       <PanelState
         selected={selected}
         loading={loading}
@@ -69,14 +74,14 @@ export function WarrantyPanel({ selected, loading, error, outlook, onRetry }: Wa
                 <Text variant="bodySm" className="font-medium">{c.name}</Text>
                 <Caption className="block tabular-nums">
                   {t('serviceIntelligence.warranty.detail', 'ends {{date}} · {{days}} days left', {
-                    date: c.expires_at,
+                    date: formatDayKey(c.expires_at ?? '', opts),
                     days: fmtInt(Math.max(c.days_remaining, 0)),
                   })}
                   {c.km_remaining != null && (
                     <>
                       {' · '}
-                      {t('serviceIntelligence.warranty.kmLeft', '{{km}} km left', {
-                        km: fmtNumber(Math.max(c.km_remaining, 0)),
+                      {t('ownership.warranty.card.distanceHint', '{{remaining}} remaining', {
+                        remaining: formatDistance(Math.max(c.km_remaining, 0) * 1000),
                       })}
                     </>
                   )}

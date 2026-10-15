@@ -41,6 +41,26 @@ const VEHICLE_STATE_NAMES = [
 ] as const;
 
 describe('FSMStateDiagram', () => {
+  it('uses static semantic state cues and a visible current label without dimming unobserved states', () => {
+    const { container, rerender } = render(
+      <FSMStateDiagram fsmType="vehicle" transitions={[mk({ to_state: 'driving' })]} />,
+    );
+    const current = screen.getByTestId('fsm-node-driving');
+    expect(current).toHaveAttribute('aria-current', 'true');
+    expect(current).toHaveClass('border-[var(--text-secondary)]', 'bg-[var(--surface-2)]');
+    expect(within(current).getByText('current state')).not.toHaveClass('sr-only');
+    expect(within(current).getByText('driving')).toHaveClass('text-[var(--semantic-success)]');
+    expect(current.querySelector('[aria-hidden="true"]')).toHaveClass('bg-[var(--semantic-success)]');
+    expect(screen.getByTestId('fsm-node-asleep')).not.toHaveClass('opacity-50');
+    expect(container.querySelector('[class*="animate-"]')).toBeNull();
+    expect(container.querySelector('[class*="ring-white"]')).toBeNull();
+
+    rerender(<FSMStateDiagram fsmType="vehicle" transitions={[]} />);
+    expect(screen.queryByText('current state')).toBeNull();
+    expect(current).not.toHaveAttribute('aria-current');
+    expect(screen.queryByTestId('fsm-edge-summary')).not.toBeInTheDocument();
+  });
+
   it('renders the select-a-type placeholder for the aggregate "all" view', () => {
     render(<FSMStateDiagram fsmType="all" transitions={[]} />);
 

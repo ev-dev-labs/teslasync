@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { AlertBanner, EmptyState } from '@/components/feedback';
@@ -7,9 +7,13 @@ import {
   type Column,
 } from '@/components/ui';
 import { LayoutCard } from '@/components/layout';
+import { applyColumnLayout, getColumnLayout, readLegacyVisibleLayout } from '@/lib/columnOrderStore';
+import { defaultExportFilename, downloadCSV, downloadJSON, toCSV } from '@/lib/csvExport';
 import type { ShareCardRepresentativeDrive } from '../../lib/shareCard';
 import { ShareCardSectionBody } from './ShareCardSectionBody';
 import type { ShareCardSectionProps } from './types';
+
+const TABLE_ID = 'share-card:representative-drives';
 
 export function ShareCardRepresentativeDirectory({
   analysis,
@@ -69,6 +73,29 @@ export function ShareCardRepresentativeDirectory({
     ],
     [display, t],
   );
+  const onExport = useCallback((format: 'csv' | 'json', rows: readonly ShareCardRepresentativeDrive[]) => {
+    const filename = defaultExportFilename(TABLE_ID);
+    if (format === 'json') {
+      // Export only privacy-safe evidence, never display units or route details.
+      downloadJSON(filename, rows.map((drive) => ({
+        rank: drive.rank,
+        local_day: drive.localDay,
+        distance_m: drive.distanceM ?? null,
+        duration_s: drive.durationS ?? null,
+        energy_wh: drive.energyWh ?? null,
+        efficiency_wh_per_km: drive.efficiencyWhPerKm ?? null,
+        has_route_labels: drive.hasRouteLabels,
+      })));
+    } else {
+      const layout = getColumnLayout(TABLE_ID)
+        ?? readLegacyVisibleLayout(TABLE_ID, columns.map((column) => column.key));
+      downloadCSV(filename, toCSV(rows, applyColumnLayout(columns, layout).map((column) => ({
+        key: column.key,
+        header: column.header,
+        accessor: (drive) => String(column.render(drive) ?? ''),
+      }))));
+    }
+  }, [columns]);
 
   return (
     <section
@@ -85,13 +112,36 @@ export function ShareCardRepresentativeDirectory({
           </AlertBanner>
           {analysis.representatives.length > 0 ? (
             <DataTable
-              tableId="share-card:representative-drives"
+              tableId={TABLE_ID}
               data={[...analysis.representatives]}
               columns={columns}
               keyExtractor={(drive) => drive.id}
               density="compact"
               pagination={false}
+              onExport={onExport}
               mobileColumns={['rank', 'day', 'distance']}
+              mobilePresentation={{
+                variant: 'cards',
+                roles: {
+                  rank: 'meta', day: 'title', distance: 'primary',
+                  duration: 'hidden', energy: 'hidden',
+                  efficiency: 'hidden', route: 'hidden',
+                },
+                displayValue: (drive, key) => {
+                  switch (key) {
+                    case 'rank': return t('shareCard.directory.rankValue', '#{{rank}}', { rank: drive.rank });
+                    case 'day': return drive.localDay;
+                    case 'distance': return display.formatDistance(drive.distanceM);
+                    case 'duration': return display.formatDuration(drive.durationS);
+                    case 'energy': return display.formatEnergy(drive.energyWh);
+                    case 'efficiency': return display.formatEfficiency(drive.efficiencyWhPerKm);
+                    case 'route': return drive.hasRouteLabels
+                      ? t('shareCard.directory.withheld', 'Present · withheld')
+                      : t('shareCard.directory.notRecorded', 'Not recorded');
+                    default: return null;
+                  }
+                },
+              }}
             />
           ) : (
             <EmptyState /* no-action: the shared report is read-only and reflects its fixed evidence scope */

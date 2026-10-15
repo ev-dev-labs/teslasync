@@ -64,9 +64,9 @@ export default function PrivacyPage() {
   const [consent, setConsentLocal] = useState<ConsentState>(() => getConsent())
 
   const versionQuery = useVersionInfo()
-  const policyState = deriveDataState(versionQuery)
-  const { refetch: refetchVersion } = versionQuery
   const policyKnown = typeof versionQuery.data?.require_cookie_consent === 'boolean'
+  const policyState = deriveDataState(versionQuery, { partial: !policyKnown })
+  const { refetch: refetchVersion } = versionQuery
   const requireConsent = Boolean(versionQuery.data?.require_cookie_consent)
 
   // Single stable retry shared by the KPI band and the consent panel — both
@@ -92,23 +92,39 @@ export default function PrivacyPage() {
   }, [])
 
   const handleClearConfirm = () => {
-    clearRecentPages()
+    const persisted = clearRecentPages()
     setConfirmOpen(false)
+    if (!persisted) {
+      toast.error(tt('editableText.error.saveFailed', 'Save failed'))
+      return
+    }
     toast.success(tt('recentPages.cleared', 'Recent pages cleared'))
   }
 
   const handleAcceptConsent = () => {
-    setConsent('accepted')
+    if (!setConsent('accepted')) {
+      setConsentLocal(getConsent())
+      toast.error(tt('editableText.error.saveFailed', 'Save failed'))
+      return
+    }
     setConsentLocal('accepted')
     toast.success(tt('consent.toast.accepted', 'Consent granted'))
   }
   const handleDeclineConsent = () => {
-    setConsent('declined')
+    if (!setConsent('declined')) {
+      setConsentLocal(getConsent())
+      toast.error(tt('editableText.error.saveFailed', 'Save failed'))
+      return
+    }
     setConsentLocal('declined')
     toast.success(tt('consent.toast.declined', 'Consent withdrawn'))
   }
   const handleResetConsent = () => {
-    clearConsent()
+    if (!clearConsent()) {
+      setConsentLocal(getConsent())
+      toast.error(tt('editableText.error.saveFailed', 'Save failed'))
+      return
+    }
     setConsentLocal('unknown')
     toast.success(tt('consent.toast.reset', 'Consent reset — banner will reappear'))
   }
@@ -159,7 +175,7 @@ export default function PrivacyPage() {
             requireConsent={policyKnown ? requireConsent : null}
             policyLoading={policyState.status === 'initial'}
             policyError={policyState.fatalError}
-            retained={policyState.status === 'stale'}
+            retained={policyKnown && policyState.status === 'stale'}
             onRetry={handleRetry}
           />
         </FadeIn>

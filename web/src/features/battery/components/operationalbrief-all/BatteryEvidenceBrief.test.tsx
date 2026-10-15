@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { StatMetric } from '@/components/data-display';
 import { BatteryEvidenceBrief } from './BatteryEvidenceBrief';
 import { BatteryCellsStats } from '../battery-cells-modernization/BatteryCellsStats';
+import { formatDateTime } from '@/lib/dateFormat';
 
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({
@@ -26,6 +27,61 @@ function Provider({ children }: { children: ReactNode }) {
 }
 
 describe('battery source evidence through the real OperationalBrief and bridge', () => {
+  it.each([
+    { locale: 'de-DE', tz: 'America/Los_Angeles' },
+    { locale: 'ja-JP', tz: 'Asia/Tokyo' },
+    undefined,
+  ])('formats freshness with explicit context or unchanged shared defaults: %j', timestampContext => {
+    const observedAt = '2026-08-08T00:30:00Z';
+    render(<BatteryEvidenceBrief title="Timestamp evidence" timestampContext={timestampContext}
+      metrics={[{ metricId: 'count', label: 'Sessions', rawValue: 0 }]}
+      period={{ kind: 'snapshot', label: 'Source snapshot', observedAt, provenance: 'Original evidence' }} />,
+    { wrapper: Provider });
+    expect(screen.getByText(formatDateTime(observedAt, timestampContext))).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText(formatDateTime(observedAt, timestampContext))).toBeVisible();
+    expect(within(screen.getByRole('dialog')).getByText('Original evidence')).toBeVisible();
+  });
+
+  it.each(['not-a-date', null, undefined])('handles unavailable freshness without inventing evidence: %s', observedAt => {
+    const view = render(<BatteryEvidenceBrief title="Timestamp evidence"
+      timestampContext={{ locale: 'de-DE', tz: 'Asia/Tokyo' }}
+      metrics={[{ metricId: 'count', label: 'Sessions', rawValue: 0 }]}
+      period={{ kind: 'snapshot', label: 'Source snapshot', observedAt: observedAt ?? null, provenance: 'Original evidence' }} />,
+    { wrapper: Provider });
+    expect(screen.queryByText(/Invalid Date/)).not.toBeInTheDocument();
+    expect(view.container.querySelector('[data-operational-value]')).toHaveTextContent('0');
+    if (observedAt) expect(screen.getByText('—')).toBeVisible();
+  });
+
+  it('keeps descriptive scope visible without treating it as a source reading', () => {
+    const view = render(<BatteryEvidenceBrief title="Selected scope"
+      metrics={[{ metricId: 'text', label: 'Window', rawValue: 'Selected UTC dates' }]}
+      period={{ kind: 'unknown', label: 'Selected window', reason: 'Requested scope, not response coverage' }} />,
+    { wrapper: Provider });
+    expect(screen.getByText('Source readings unavailable')).toBeVisible();
+    expect(screen.queryByText('Available source readings')).not.toBeInTheDocument();
+    expect(view.container.querySelector('[data-operational-value]')).toHaveTextContent('Selected UTC dates');
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getAllByText('Requested scope, not response coverage').length).toBeGreaterThan(0);
+  });
+
+  it('uses feature evidence support instead of response summaries and supports recovery', () => {
+    const props = {
+      title: 'Source support',
+      metrics: [{ metricId: 'score', label: 'Breadth', rawValue: 0 }] satisfies StatMetric[],
+      period: { kind: 'unknown', label: 'Requested window', reason: 'Scope only' } as const,
+    };
+    const view = render(<BatteryEvidenceBrief {...props} hasEvidence={false} retained />, { wrapper: Provider });
+    expect(screen.getByText('Source readings unavailable')).toBeVisible();
+    expect(screen.queryByText('Retained source evidence')).not.toBeInTheDocument();
+    view.rerender(<BatteryEvidenceBrief {...props} hasEvidence retained />);
+    expect(screen.getByText('Retained source evidence')).toBeVisible();
+    view.rerender(<BatteryEvidenceBrief {...props} hasEvidence />);
+    expect(screen.getByText('Available source readings')).toBeVisible();
+    expect(screen.queryByText('Retained source evidence')).not.toBeInTheDocument();
+  });
+
   it('keeps zero, missing and invalid distinct and retains signed specialist readings and drawer context', () => {
     const metrics: readonly StatMetric[] = Object.freeze([
       { metricId: 'power', occurrenceId: 'grid', label: 'Grid power', rawValue: -2500,

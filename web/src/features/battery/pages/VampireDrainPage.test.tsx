@@ -42,7 +42,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
@@ -113,6 +114,7 @@ import { ToastProvider } from '@/components/feedback/Toast'
 import { SelectedVehicleProvider } from '@/store/selectedVehicle'
 import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat'
 import * as settingsHooks from '@/hooks/useSettings'
+import { formatDateTime } from '@/lib/dateFormat'
 import VampireDrainPage, { buildDailyDrainRollup } from './VampireDrainPage'
 import type { Vehicle } from '@/types/vehicle'
 import type { ParkTruth, VampireSplit } from '@/types/teslaPhysics'
@@ -221,6 +223,20 @@ const emptyStats: VampireDrainStats = {
   sample_window_days: 30,
 }
 
+const emptySplit: VampireSplit = {
+  vehicle_id: 7, complete_plugged: [], unplugged: [],
+  complete_plugged_drain_pct: 0, unplugged_drain_pct: 0,
+  honesty: 'Synthetic successful empty split.',
+}
+const confirmedPark: ParkTruth = {
+  confirmed_park: true, park_confirmed_at: '2025-06-04T02:00:00Z',
+  neutral_rolling: false, gear: 'P',
+  sentry_reported: false, sentry_counted: false,
+  cabin_overheat_reported: false, cabin_overheat_counted: false,
+  preconditioning_reported: false, preconditioning_counted: false,
+  rejected: [], honesty: 'Synthetic confirmed Park.',
+}
+
 interface InstallOpts {
   vehicles?: Vehicle[]
   stats?: VampireDrainStats
@@ -231,6 +247,9 @@ interface InstallOpts {
   eventsError?: boolean
   park?: ParkTruth
   split?: VampireSplit
+  physicsPending?: boolean
+  parkError?: boolean
+  splitError?: boolean
 }
 
 function install(opts: InstallOpts = {}) {
@@ -244,6 +263,9 @@ function install(opts: InstallOpts = {}) {
     eventsError = false,
     park,
     split,
+    physicsPending = false,
+    parkError = false,
+    splitError = false,
   } = opts
 
   mockedRequest.mockImplementation((path: string) => {
@@ -258,8 +280,16 @@ function install(opts: InstallOpts = {}) {
       if (eventsError) return Promise.reject(new Error('events boom'))
       return Promise.resolve({ vehicle_id: 7, events })
     }
-    if (path.startsWith('/physics/park-truth') && park) return Promise.resolve(park)
-    if (path.startsWith('/physics/vampire') && split) return Promise.resolve(split)
+    if (path.startsWith('/physics/park-truth')) {
+      if (physicsPending) return never()
+      if (parkError) return Promise.reject(new Error('park boom'))
+      return Promise.resolve(park ?? {})
+    }
+    if (path.startsWith('/physics/vampire')) {
+      if (physicsPending) return never()
+      if (splitError) return Promise.reject(new Error('split boom'))
+      return Promise.resolve(split ?? {})
+    }
     return Promise.resolve({})
   })
 }
@@ -272,10 +302,9 @@ const eventsCallCount = () =>
     return p.startsWith('/vampire-drain') && !p.startsWith('/vampire-drain/stats')
   }).length
 
-function renderPage(initialEntries: string[] = ['/vampire-drain']) {
-  const client = new QueryClient({
+function renderPage(initialEntries: string[] = ['/vampire-drain'], client = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
-  })
+  })) {
   return render(
     <MemoryRouter initialEntries={initialEntries}>
       <QueryClientProvider client={client}>
@@ -328,9 +357,93 @@ beforeEach(() => {
 afterEach(() => {
   onlineManager.setOnline(true)
   vi.restoreAllMocks()
+  vi.unstubAllGlobals()
 })
 
 describe('VampireDrainPage', () => {
+  it('uses the typed history hooks without changing the populated cache envelopes', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    renderPage(['/vampire-drain'], client)
+    await screen.findByRole('table', { name: 'Drain sessions' })
+    expect(client.getQueryData(['vampire-drain-stats', '7'])).toEqual(defaultStats)
+    expect(client.getQueryData(['vampire-drain-events', '7'])).toEqual({
+      vehicle_id: 7, events: defaultEvents,
+    })
+    const historyCalls = mockedRequest.mock.calls.filter(([path]) => String(path).startsWith('/vampire-drain'))
+    expect(historyCalls.map(([path]) => path)).toEqual([
+      '/vampire-drain/stats?vehicle_id=7',
+      '/vampire-drain?vehicle_id=7&limit=200',
+    ])
+    for (const [, options] of historyCalls) {
+      expect(options?.signal).toBeInstanceOf(AbortSignal)
+    }
+    expect(within(sessionsTable()).getByText('90.00%')).toBeInTheDocument()
+  })
+
+  it('refreshes each existing physics identity once and retains independent failure and recovery', async () => {
+    install({ park: confirmedPark, split: emptySplit })
+    renderPage()
+    await screen.findAllByText(emptySplit.honesty)
+    const calls = (prefix: string) => mockedRequest.mock.calls.filter(([path]) => String(path).startsWith(prefix)).length
+    expect(calls('/physics/park-truth')).toBe(1)
+    expect(calls('/physics/vampire')).toBe(1)
+    expect(metricValues('After unplug')).toContain('0.00%')
+    expect(within(screen.getByTestId('vampire-split')).getByText(NO_EVENTS)).toBeInTheDocument()
+
+    install({ parkError: true, splitError: true })
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh vampire drain' }))
+    await screen.findByText('Confirmed Park evidence may be out of date')
+    await screen.findAllByText('Plugged and unplugged drain may be out of date')
+    expect(calls('/physics/park-truth')).toBe(2)
+    expect(calls('/physics/vampire')).toBe(2)
+    expect(metricValues('After unplug')).toContain('0.00%')
+    expect(within(sessionsTable()).getByText('90.00%')).toBeInTheDocument()
+    const statsBeforeRetry = statsCallCount()
+    const eventsBeforeRetry = eventsCallCount()
+
+    install({ park: confirmedPark, split: emptySplit })
+    fireEvent.click(screen.getByRole('button', { name: 'Retry Confirmed Park evidence', exact: true }))
+    await waitFor(() => expect(screen.queryByText('Confirmed Park evidence may be out of date')).not.toBeInTheDocument())
+    expect(calls('/physics/vampire')).toBe(2)
+    fireEvent.click(screen.getAllByRole('button', { name: 'Retry Plugged and unplugged drain', exact: true })[0])
+    await waitFor(() => expect(screen.queryByText('Plugged and unplugged drain may be out of date')).not.toBeInTheDocument())
+    expect(calls('/physics/park-truth')).toBe(3)
+    expect(calls('/physics/vampire')).toBe(3)
+    expect(statsCallCount()).toBe(statsBeforeRetry)
+    expect(eventsCallCount()).toBe(eventsBeforeRetry)
+  })
+
+  it('does not duplicate active physics requests when refresh is pressed during initial loading', async () => {
+    install({ physicsPending: true })
+    const { container } = renderPage()
+    await screen.findByRole('table', { name: 'Drain sessions' })
+    const split = screen.getByTestId('vampire-split')
+    expect(split.querySelector('[class*="--skeleton-bg"]')).not.toBeNull()
+    expect(container.querySelector('[data-testid="vampire-culprits"] [class*="--skeleton-bg"]')).not.toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh vampire drain' }))
+    await waitFor(() => expect(statsCallCount()).toBe(2))
+    expect(mockedRequest.mock.calls.filter(([path]) => String(path).startsWith('/physics/vampire'))).toHaveLength(1)
+    expect(mockedRequest.mock.calls.filter(([path]) => String(path).startsWith('/physics/park-truth'))).toHaveLength(1)
+  })
+
+  it('keeps paused physics without data unknown and recovers on reconnect', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    client.setQueryData(['vehicles'], [makeVehicle()])
+    install({ park: confirmedPark, split: emptySplit })
+    onlineManager.setOnline(false)
+    renderPage(['/vampire-drain'], client)
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Refresh vampire drain' })).toBeEnabled())
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh vampire drain' }))
+    expect(mockedRequest.mock.calls.filter(([path]) => String(path).startsWith('/physics/'))).toHaveLength(0)
+    expect(metricValues('After unplug')).not.toContain('0.00%')
+    expect(screen.queryByText(emptySplit.honesty)).not.toBeInTheDocument()
+    expect(within(screen.getByTestId('vampire-split')).getByText('Source paused')).toBeInTheDocument()
+    act(() => onlineManager.setOnline(true))
+    await screen.findAllByText(emptySplit.honesty)
+    expect(metricValues('After unplug')).toContain('0.00%')
+    expect(mockedRequest.mock.calls.filter(([path]) => String(path).startsWith('/physics/vampire'))).toHaveLength(1)
+  })
+
   it('renders the full dashboard once stats + events load', async () => {
     renderPage()
 
@@ -476,6 +589,77 @@ describe('VampireDrainPage', () => {
     expect(screen.queryByText('Daily drain while parked')).not.toBeInTheDocument()
   })
 
+  it.each(['en-US', 'de-DE'])('keeps %s hour-cycle and zone consistent across desktop, mobile and split details', async (locale) => {
+    const settingsResult = settingsHooks.useSettings()
+    vi.mocked(settingsHooks.useSettings).mockReturnValue({
+      ...settingsResult,
+      locale,
+      settings: {
+        ...settingsResult.settings, locale,
+        tz_display_default: 'user', timezone_user: 'America/New_York',
+      },
+    })
+    const event = {
+      ...eventA, started_at: '2026-01-15T00:30:00Z', ended_at: '2026-01-15T06:30:00Z',
+    }
+    install({
+      vehicles: [makeVehicle({ timezone: 'Pacific/Auckland' })],
+      events: [event],
+      split: {
+        vehicle_id: 7, complete_plugged: [],
+        unplugged: [{
+          kind: 'unplugged', started_at: event.started_at, ended_at: event.ended_at,
+          duration_s: 21600, start_soc_pct: 90, end_soc_pct: 84,
+          drain_pct: 6, park_confirmed: true,
+        }],
+        complete_plugged_drain_pct: null, unplugged_drain_pct: 6,
+        honesty: 'Synthetic parked-window fixture.',
+      },
+    })
+    const observers: Array<{ callback: ResizeObserverCallback; target: Element }> = []
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(private callback: ResizeObserverCallback) {}
+      observe(target: Element) { observers.push({ callback: this.callback, target }) }
+      unobserve() {}
+      disconnect() {}
+    })
+    renderPage()
+    const options = { locale, tz: 'America/New_York' }
+    const started = formatDateTime(event.started_at, options)
+    const ended = formatDateTime(event.ended_at, options)
+    expect(await screen.findByText('America/New_York', { exact: true })).toBeInTheDocument()
+    const sessions = await screen.findByRole('table', { name: 'Drain sessions' })
+    const split = await screen.findByTestId('vampire-split')
+    await waitFor(() => expect(within(split).getByText(started)).toBeInTheDocument())
+    expect(within(sessions).getByText(started)).toBeInTheDocument()
+    expect(started).toContain(locale === 'en-US' ? '07:30 PM' : '19:30')
+
+    act(() => {
+      for (const observer of observers) {
+        observer.callback([{
+          target: observer.target, contentRect: { width: 375, height: 500 },
+        } as ResizeObserverEntry], {} as ResizeObserver)
+      }
+    })
+    const user = userEvent.setup()
+    for (const [caption, labels] of [
+      ['Drain sessions', ['Started', 'Duration', 'Start %', 'End %', 'Loss %', 'Rate %/day', 'Ambient', 'Ended']],
+      ['Complete-plugged vs unplugged drain', ['Kind', 'Started', 'Drain', 'Ended', 'Duration', 'Start %', 'End %', 'Park confirmed']],
+    ] as const) {
+      const region = screen.getByRole('group', { name: caption, exact: true })
+      const trigger = within(region).getByRole('button', { name: 'Quick view' })
+      trigger.focus()
+      await user.keyboard('{Enter}')
+      const dialog = await screen.findByRole('dialog', { name: caption })
+      for (const label of labels) expect(within(dialog).getByText(label, { exact: true })).toBeInTheDocument()
+      expect(within(dialog).getByText(started)).toBeInTheDocument()
+      expect(within(dialog).getByText(ended)).toBeInTheDocument()
+      await user.keyboard('{Escape}')
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+      expect(trigger).toHaveFocus()
+    }
+  })
+
   it('keeps every panel on its select-a-vehicle empty state and never queries drain for a null id', async () => {
     install({ vehicles: [] })
     renderPage()
@@ -490,8 +674,33 @@ describe('VampireDrainPage', () => {
     )
     expect(statsCallCount()).toBe(0)
     expect(eventsCallCount()).toBe(0)
+    const refresh = screen.getByRole('button', { name: 'Refresh vampire drain' })
+    expect(refresh).toBeDisabled()
+    expect(refresh).toHaveClass('min-h-11', 'min-w-11')
+    fireEvent.click(refresh)
+    expect(statsCallCount()).toBe(0)
+    expect(eventsCallCount()).toBe(0)
+    expect(mockedRequest.mock.calls.some(([path]) => String(path).startsWith('/physics/'))).toBe(false)
     // No misleading numbers leak while there is no vehicle in scope.
     expect(screen.queryByText('2.34%')).toBeNull()
+  })
+
+  it('enables the named 44px refresh target for a selected vehicle and supports keyboard activation', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await screen.findByRole('table', { name: 'Drain sessions' })
+    const refresh = screen.getByRole('button', { name: 'Refresh vampire drain' })
+    expect(refresh).toBeEnabled()
+    expect(refresh).toHaveClass('min-h-11', 'min-w-11')
+    const statsBefore = statsCallCount()
+    const eventsBefore = eventsCallCount()
+    refresh.focus()
+    expect(refresh).toHaveFocus()
+    await user.keyboard('{Enter}')
+    await waitFor(() => {
+      expect(statsCallCount()).toBe(statsBefore + 1)
+      expect(eventsCallCount()).toBe(eventsBefore + 1)
+    })
   })
 
   it('shows per-panel skeletons while both queries are in flight', async () => {

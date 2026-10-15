@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { Button, GlassPanel, PanelTitle, Text } from '@/components/ui';
@@ -7,6 +8,12 @@ import { installResizeHarness } from './resizeHarness';
 afterEach(() => vi.unstubAllGlobals());
 
 describe('live driving placement adapter', () => {
+  it('uses the public layout barrel without depending on layout implementation modules', () => {
+    const source = readFileSync('src/features/driving/components/layout-modernization/PreservedPanelGrid.tsx', 'utf8');
+    expect(source).toMatch(/import \{ CardGrid, useCardPlacement, type CardGridItem \} from '@\/components\/layout';/);
+    expect(source).not.toMatch(/from ['"]@\/components\/layout\//);
+  });
+
   it('keeps every panel, full fact and action mounted in source order across container bands', () => {
     const harness = installResizeHarness();
     const onExport = vi.fn();

@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ComponentProps, ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DataStateSource } from '@/api/dataState';
@@ -18,6 +19,11 @@ const state = vi.hoisted(() => ({
   catalog: {} as Query<string[]>,
   history: {} as Query<SignalHistoryResponse>,
   historyHook: vi.fn(),
+  request: vi.fn(),
+  range: {
+    startInstant: '2026-10-10T00:00:00.123Z',
+    endInstantExclusive: '2026-10-13T00:00:00.123Z',
+  },
   chart: null as ChartContainerProps | null,
   metrics: [] as readonly StatMetric[],
   markers: [] as number[],
@@ -38,6 +44,8 @@ vi.mock('react-i18next', () => ({
 }));
 vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: vi.fn() }));
 vi.mock('@/hooks/useSelectedVehicle', () => ({ useSelectedVehicle: () => ({ vehicleId: state.vehicleId }) }));
+vi.mock('@/hooks/useRangeState', () => ({ useRangeState: () => state.range }));
+vi.mock('@/api/client', () => ({ request: state.request }));
 vi.mock('@/hooks/useDateFormat', () => ({ useDateFormat: () => ({ formatDateTime: state.dateFormat }) }));
 vi.mock('@/hooks/useNumberFormatting', () => ({
   useNumberFormatting: () => ({
@@ -146,6 +154,11 @@ function choose() {
 
 beforeEach(() => {
   state.vehicleId = 4;
+  state.range = {
+    startInstant: '2026-10-10T00:00:00.123Z',
+    endInstantExclusive: '2026-10-13T00:00:00.123Z',
+  };
+  state.request.mockReset();
   state.catalog = query(['Speed', 'Gear', 'A/raw signal']);
   state.history = query<SignalHistoryResponse>();
   state.chart = null;
@@ -170,15 +183,32 @@ describe('SignalChangePointsPage evidence preservation', () => {
     expect(screen.queryByText('noise scale scientific:0')).not.toBeInTheDocument();
   });
 
-  it('preserves literal catalog options, vehicle scope, the 72 hour request and clearing selection', () => {
+  it('preserves literal catalog options, vehicle scope, the shared range and clearing selection', () => {
     render(<SignalChangePointsPage />);
     expect(screen.getAllByRole('option').map((option) => option.getAttribute('value')))
       .toEqual(['', 'Speed', 'Gear', 'A/raw signal']);
     choose();
-    expect(state.historyHook).toHaveBeenLastCalledWith(4, 'Speed', 72);
+    expect(state.historyHook).toHaveBeenLastCalledWith(4, 'Speed', 72, 10_000, state.range);
     expect(screen.getByRole('combobox')).toHaveClass('min-h-11', 'md:min-h-10');
     fireEvent.change(screen.getByRole('combobox'), { target: { value: '' } });
-    expect(state.historyHook).toHaveBeenLastCalledWith(4, '', 72);
+    expect(state.historyHook).toHaveBeenLastCalledWith(4, '', 72, 10_000, state.range);
+  });
+
+  it('updates both precise bounds without adding a second range picker or losing populated analysis', () => {
+    state.history = query(history([0, 0, 0, 0, 0]));
+    const { rerender } = render(<SignalChangePointsPage />);
+    choose();
+    state.range = {
+      startInstant: '2026-10-12T13:55:58.824Z',
+      endInstantExclusive: '2026-10-13T13:55:58.824Z',
+    };
+    rerender(<SignalChangePointsPage />);
+    expect(state.historyHook).toHaveBeenLastCalledWith(4, 'Speed', 24, 10_000, state.range);
+    expect(screen.getAllByRole('combobox')).toHaveLength(1);
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(state.chart?.data).toHaveLength(5);
+    expect(screen.getByText('No alarm detected')).toBeInTheDocument();
+    expect(screen.getByText(/raw sample sequence over number:24h/)).toBeInTheDocument();
   });
 
   it.each([{ name: 'one sample', values: [0] }, { name: 'below minimum', values: [1, 1, 1, 1] }])(
@@ -344,6 +374,87 @@ describe('SignalChangePointsPage evidence preservation', () => {
     state.vehicleId = null;
     render(<SignalChangePointsPage />);
     expect(screen.getByText('No vehicle selected')).toBeInTheDocument();
-    expect(state.historyHook).toHaveBeenCalledWith(0, '', 72);
+    expect(state.historyHook).toHaveBeenCalledWith(0, '', 72, 10_000, state.range);
+  });
+});
+
+describe('change-point history transport', () => {
+  it('keys both bounds, preserves cancellation and polling, and caps the request at 10000 rows', async () => {
+    const { useSignalAnalysisHistory, telemetryKeys } = await vi.importActual<typeof import('@/api/hooks/useTelemetry')>(
+      '@/api/hooks/useTelemetry',
+    );
+    state.request.mockResolvedValue(history([1, 1, 1, 1, 1]));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+    const { result, rerender, unmount } = renderHook(
+      ({ window }) => useSignalAnalysisHistory(4, 'A/raw signal', 72, 20_000, window),
+      { wrapper, initialProps: { window: state.range } },
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const [url, options] = state.request.mock.calls[0]!;
+    expect(url).toBe(`/signals/4/A%2Fraw%20signal/history?from=${encodeURIComponent(state.range.startInstant)}&to=${encodeURIComponent(state.range.endInstantExclusive)}&limit=10000`);
+    expect(options.signal).toBeInstanceOf(AbortSignal);
+    const firstKey = telemetryKeys.signalAnalysisHistory(4, 'A/raw signal', 72, 10_000,
+      state.range.startInstant, state.range.endInstantExclusive);
+    const firstQuery = client.getQueryCache().find({ queryKey: firstKey });
+    expect(firstQuery?.options).toMatchObject({ refetchInterval: 30_000, refetchIntervalInBackground: false });
+    const nextWindow = { ...state.range, endInstantExclusive: '2026-10-14T00:00:00.456Z' };
+    rerender({ window: nextWindow });
+    await waitFor(() => expect(state.request).toHaveBeenCalledTimes(2));
+    expect(state.request.mock.calls[1]?.[0]).toContain(`to=${encodeURIComponent(nextWindow.endInstantExclusive)}`);
+    rerender({ window: { ...nextWindow, startInstant: '2026-10-11T01:02:03.789Z' } });
+    await waitFor(() => expect(state.request).toHaveBeenCalledTimes(3));
+    expect(client.getQueryCache().getAll()).toHaveLength(3);
+    expect(telemetryKeys.signalAnalysisHistory(4, 'Speed', 72, 10_000))
+      .toEqual(['signal-analysis-history', 4, 'Speed', 72, 10_000]);
+    unmount();
+    client.clear();
+  });
+
+  it('preserves relative hours for existing callers without an explicit range', async () => {
+    const { useSignalAnalysisHistory } = await vi.importActual<typeof import('@/api/hooks/useTelemetry')>(
+      '@/api/hooks/useTelemetry',
+    );
+    state.request.mockResolvedValue(history([]));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+    const { result, unmount } = renderHook(() => useSignalAnalysisHistory(4, 'Speed', 72), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(state.request.mock.calls[0]?.[0]).toBe('/signals/4/Speed/history?hours=72&limit=10000');
+    unmount();
+    client.clear();
+  });
+
+  it('aborts an obsolete window and keeps unselected or missing-vehicle queries disabled', async () => {
+    const { useSignalAnalysisHistory } = await vi.importActual<typeof import('@/api/hooks/useTelemetry')>(
+      '@/api/hooks/useTelemetry',
+    );
+    state.request.mockImplementation(() => new Promise<SignalHistoryResponse>(() => {}));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+    const { rerender, unmount } = renderHook(
+      ({ vehicleId, name, window }) => useSignalAnalysisHistory(vehicleId, name, 72, 10_000, window),
+      { wrapper, initialProps: { vehicleId: 4, name: 'Speed', window: state.range } },
+    );
+    await waitFor(() => expect(state.request).toHaveBeenCalledTimes(1));
+    const firstSignal: AbortSignal = state.request.mock.calls[0]?.[1].signal;
+    expect(firstSignal.aborted).toBe(false);
+    const nextWindow = { ...state.range, endInstantExclusive: '2026-10-14T00:00:00.456Z' };
+    rerender({ vehicleId: 4, name: 'Speed', window: nextWindow });
+    await waitFor(() => expect(state.request).toHaveBeenCalledTimes(2));
+    expect(firstSignal.aborted).toBe(true);
+    const nextSignal: AbortSignal = state.request.mock.calls[1]?.[1].signal;
+    rerender({ vehicleId: 4, name: '', window: nextWindow });
+    expect(nextSignal.aborted).toBe(true);
+    rerender({ vehicleId: 0, name: 'Speed', window: nextWindow });
+    expect(state.request).toHaveBeenCalledTimes(2);
+    unmount();
+    client.clear();
   });
 });

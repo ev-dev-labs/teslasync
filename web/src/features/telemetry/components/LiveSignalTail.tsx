@@ -16,15 +16,9 @@ import { GlassPanel, Badge, Button, Input, DataTable, PanelTitle, Text, Code, ty
 import { FreshnessIndicator, type StatMetric } from '@/components/data-display';
 import { TelemetrySummaryBrief } from './operationalbrief-all/TelemetrySummaryBrief';
 import { FadeIn } from '@/components/motion';
-import { formatTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { cn } from '@/lib/cn';
 import type { SignalEntry } from '@/types/telemetry';
-
-const TYPE_VALUE_COLOR: Record<string, string> = {
-  number: 'text-cyan-300',
-  string: 'text-emerald-300',
-  boolean: 'text-amber-300',
-};
 
 const MOBILE_SIGNAL_ROLES = {
   signal: 'title',
@@ -67,6 +61,7 @@ export function LiveSignalTail({
   className,
 }: LiveSignalTailProps) {
   const { t } = useTranslation();
+  const { formatTime } = useDateFormat();
   const [autoScroll, setAutoScroll] = useState(true);
   const [filter, setFilter] = useState('');
   const tableRef = useRef<HTMLDivElement>(null);
@@ -108,7 +103,7 @@ export function LiveSignalTail({
       key: 'value',
       header: t('liveMonitor.value', 'Value'),
       render: (entry) => (
-        <Text mono size="xs" className={cn('whitespace-pre-wrap break-words', TYPE_VALUE_COLOR[entry.type])}>{entry.value}</Text>
+        <Text mono size="xs" className="whitespace-pre-wrap break-words">{entry.value}</Text>
       ),
     },
     {
@@ -123,9 +118,10 @@ export function LiveSignalTail({
     {
       key: 'freshness',
       header: t('liveMonitor.freshness', 'Freshness'),
-      render: (entry) => <FreshnessIndicator timestamp={entry.timestamp} size="sm" />,
+      // Tail timestamps describe frames/receipt, not verified field observations.
+      render: () => <FreshnessIndicator timestamp={null} size="sm" />,
     },
-  ], [t]);
+  ], [t, formatTime]);
 
   const uniqueSignals = useMemo(() => new Set(items.map((e) => e.name)).size, [items]);
   const metrics: readonly StatMetric[] = [
@@ -161,7 +157,7 @@ export function LiveSignalTail({
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             aria-label={t('liveMonitor.filterLabel', 'Filter signals')}
-            className="w-full sm:w-64"
+            className="min-h-11 w-full sm:w-64"
           />
           <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2 sm:ms-auto">
             {headerExtra}

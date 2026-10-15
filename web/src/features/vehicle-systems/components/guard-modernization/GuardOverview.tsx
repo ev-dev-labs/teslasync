@@ -11,9 +11,12 @@ export function GuardOverview({ model: m }: { model: GuardPageModel }) {
   const policyContext = t('guard.modernization.policyOnly', 'Saved policy only; not confirmation of active monitoring or successful arming.');
   const notSaved = t('guard.modernization.notSaved', 'No saved guard policy yet');
   const loading = t('guard.updating', 'Updating…');
-  const configMissing = m.configQuery.isLoading ? loading : m.guardConfig === null ? notSaved : unavailable;
-  const eventsMissing = m.eventsQuery.isLoading ? loading : unavailable;
-  const vehicleMissing = m.vehicleStateQuery.isLoading ? loading : undefined;
+  const configLoading = !m.noVehicle && !m.configState.hasData && m.configQuery.isLoading;
+  const eventsLoading = !m.noVehicle && !m.eventsState.hasData && m.eventsQuery.isLoading;
+  const vehicleLoading = !m.noVehicle && !m.vehicleState.hasData && m.vehicleStateQuery.isLoading;
+  const configMissing = configLoading ? loading : m.guardConfig === null ? notSaved : unavailable;
+  const eventsMissing = eventsLoading ? loading : unavailable;
+  const vehicleMissing = vehicleLoading ? loading : undefined;
   const metrics: StatMetric[] = [
     {
       metricId: 'status', occurrenceId: 'guard-state',
@@ -63,6 +66,8 @@ export function GuardOverview({ model: m }: { model: GuardPageModel }) {
       missingReason: eventsMissing,
     },
   ];
+  const hasKnownMetrics = metrics.some(metric => metric.rawValue != null);
+  const initialLoading = (configLoading || eventsLoading || vehicleLoading) && !hasKnownMetrics;
   const period: StatPeriod = {
     kind: 'snapshot',
     label: t('guard.overview', 'Guard status overview'),
@@ -75,7 +80,8 @@ export function GuardOverview({ model: m }: { model: GuardPageModel }) {
     <div className="min-w-0">
       <VehicleOperationalBrief id="guard-overview" metrics={metrics} period={period}
         title={t('guard.overview', 'Guard status overview')}
-        available={!m.noVehicle && m.eventsKnown && m.guardConfig != null && m.vehicleState.hasData}
+        loading={initialLoading}
+        available={!m.noVehicle && hasKnownMetrics}
         retained={m.configState.refreshError != null || m.eventsState.refreshError != null || m.vehicleState.refreshError != null
           || (m.configState.hasData && m.configState.isRefreshBlocked)
           || (m.eventsState.hasData && m.eventsState.isRefreshBlocked)

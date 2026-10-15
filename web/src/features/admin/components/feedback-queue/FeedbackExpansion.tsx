@@ -12,13 +12,18 @@ interface FeedbackExpansionProps {
   bridgeEnabled: boolean
   onUpdate: ReturnType<typeof useUpdateFeedback>['mutate']
   updating: boolean
+  /** Current-scope action eligibility. False while the scope is loading, paused
+   *  without data, or its refresh failed: write controls and the AI advisor are
+   *  withheld, but the retained report evidence stays visible. Defaults to true. */
+  canStart?: boolean
 }
 
 /** Row-drawer body for one feedback entry: report content, redacted metadata,
  *  captured errors, the deterministic triage controls, and the propose-only AI
  *  advisor. The manual controls remain the sole write path. */
-export function FeedbackExpansion({ row, bridgeEnabled, onUpdate, updating }: FeedbackExpansionProps) {
+export function FeedbackExpansion({ row, bridgeEnabled, onUpdate, updating, canStart = true }: FeedbackExpansionProps) {
   const { t } = useTranslation()
+  const actionsLocked = updating || !canStart
   const persistedUrl = row.github_issue_url ?? ''
   const [issueUrl, setIssueUrl] = useState(persistedUrl)
 
@@ -106,7 +111,7 @@ export function FeedbackExpansion({ row, bridgeEnabled, onUpdate, updating }: Fe
             value={row.status}
             onChange={(e) => onUpdate({ id: row.id, update: { status: e.target.value as FeedbackStatus } })}
             options={statusOptions}
-            disabled={updating}
+            disabled={actionsLocked}
           />
         </div>
         <div className="min-w-[260px] flex-1">
@@ -115,7 +120,7 @@ export function FeedbackExpansion({ row, bridgeEnabled, onUpdate, updating }: Fe
             value={issueUrl}
             onChange={(e) => setIssueUrl(e.target.value)}
             placeholder="https://github.com/owner/repo/issues/123"
-            disabled={updating}
+            disabled={actionsLocked}
           />
         </div>
         <Button
@@ -123,7 +128,7 @@ export function FeedbackExpansion({ row, bridgeEnabled, onUpdate, updating }: Fe
           variant="ghost"
           size="sm"
           onClick={() => onUpdate({ id: row.id, update: { github_issue_url: issueUrl } })}
-          disabled={updating || issueUrl === persistedUrl}
+          disabled={actionsLocked || issueUrl === persistedUrl}
         >
           {t('feedback.queue.action.saveUrl', 'Save URL')}
         </Button>
@@ -132,7 +137,7 @@ export function FeedbackExpansion({ row, bridgeEnabled, onUpdate, updating }: Fe
             type="button"
             size="sm"
             onClick={() => onUpdate({ id: row.id, update: { forward_to_github: true } })}
-            disabled={updating}
+            disabled={actionsLocked}
           >
             <Icons.bug className="mr-1 h-4 w-4" aria-hidden="true" />
             {t('feedback.queue.action.forward', 'Forward to GitHub')}
@@ -144,7 +149,7 @@ export function FeedbackExpansion({ row, bridgeEnabled, onUpdate, updating }: Fe
           Renders only when ai_mode is on AND the feedback-queue-triage
           toggle is enabled. Propose-only: never persists; the manual
           controls above remain the sole write path (ADR-015 §I3 + §I8). */}
-      <AIFeedbackQueueTriage feedbackId={row.id} />
+      {canStart ? <AIFeedbackQueueTriage feedbackId={row.id} /> : null}
     </div>
   )
 }

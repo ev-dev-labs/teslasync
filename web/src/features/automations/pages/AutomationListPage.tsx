@@ -7,7 +7,7 @@ import { Button, GlassPanel, Icon, Input, Select, Text, type SelectOption } from
 import { BulkActionToolbar } from '@/components/data-display';
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { AlertBanner, OperationalWriteNotice, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { AlertBanner, DataSourceNotice, OperationalWriteNotice, QueryError, StaleRefreshWarning } from '@/components/feedback';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
@@ -30,7 +30,7 @@ export default function AutomationListPage() {
   const automationsQuery = useAutomationList();
   const { data: rowsRaw, refetch } = automationsQuery;
   const automationsState = useDataState(automationsQuery);
-  const isLoading = !automationsState.hasData && automationsQuery.isLoading;
+  const isLoading = !automationsState.hasData && !automationsState.fatalError && !automationsState.isRefreshBlocked && (automationsQuery.isLoading || automationsQuery.isFetching);
   const error = automationsState.fatalError;
   const automations: AutomationListItem[] = useMemo(() => rowsRaw ?? [], [rowsRaw]);
 
@@ -104,11 +104,15 @@ export default function AutomationListPage() {
 
   const [selectedKeys, setSelectedKeys] = useState<RowKey[]>([]);
   const [bulkFailures, setBulkFailures] = useState<AutomationBulkResult['failed']>([]);
-  const visibleIdSet = useMemo(() => new Set(filtered.map((a) => a.id)), [filtered]);
+  const loadedIdSet = useMemo(() => new Set(automations.map((a) => a.id)), [automations]);
   const effectiveSelected = useMemo(
-    () => selectedKeys.filter((k) => visibleIdSet.has(Number(k))),
-    [selectedKeys, visibleIdSet],
+    () => selectedKeys.filter((k) => loadedIdSet.has(Number(k))),
+    [selectedKeys, loadedIdSet],
   );
+  const selectedReview = effectiveSelected.map((key) => {
+    const row = automations.find((a) => a.id === Number(key));
+    return `#${key}: ${row?.name ?? t('automationList.unnamed', 'Untitled automation')}`;
+  }).join('\n');
   const clearSelection = useCallback(() => setSelectedKeys([]), []);
   const runBulk = useCallback(
     async (ids: RowKey[], op: 'enable' | 'disable' | 'delete') => {
@@ -178,6 +182,11 @@ export default function AutomationListPage() {
       />
       <StaleRefreshWarning state={automationsState} label={t('automationList.title', 'Automation rules')} />
       <StaleRefreshWarning state={vehiclesState} label={t('nav.groups.vehicles', 'Vehicles')} />
+      {vehiclesState.isRefreshing && (
+        <Text role="status" aria-busy="true" color="secondary">
+          {t('nav.groups.vehicles', 'Vehicles')}: {t('freshness.updating', 'Updating…')}
+        </Text>
+      )}
       {vehiclesState.fatalError && (
         <QueryError
           error={vehiclesState.fatalError}
@@ -185,8 +194,11 @@ export default function AutomationListPage() {
           onRetry={() => vehiclesQuery.refetch()}
         />
       )}
-      {!vehiclesState.hasData && vehiclesQuery.isLoading && (
+      {!vehiclesState.hasData && !vehiclesState.fatalError && !vehiclesState.isRefreshBlocked && (vehiclesQuery.isLoading || vehiclesQuery.isFetching) && (
         <Text role="status" color="secondary">{t('common.loading', 'Loading...')}</Text>
+      )}
+      {!vehiclesState.hasData && vehiclesState.isRefreshBlocked && !vehiclesState.fatalError && (
+        <DataSourceNotice sources={[{ id: 'automation-vehicles', label: t('nav.groups.vehicles', 'Vehicles'), query: vehiclesQuery }]} />
       )}
       {bulkFailures.length > 0 && (
         <AlertBanner variant="warning" role="status" aria-live="polite"
@@ -220,13 +232,15 @@ export default function AutomationListPage() {
 
       <BulkActionToolbar
         selectedIds={effectiveSelected}
-        total={filtered.length}
-        selectionScope="filtered"
-        selectionSummary={t(
-          'automationList.bulk.selectionSummary',
-          '{{count}} selected · {{filtered}} matching loaded rules · {{loaded}} loaded',
-          { count: effectiveSelected.length, filtered: filtered.length, loaded: automations.length },
-        )}
+        total={automations.length}
+        selectionScope="loaded"
+        selectionSummary={
+          <span className="whitespace-pre-line">
+            {t('bulk.selected', { count: effectiveSelected.length, defaultValue: '{{count}} selected' })}
+            {' · '}{t('automations.brief.scope', 'All loaded rules · unfiltered')}
+            {'\n'}{selectedReview}
+          </span>
+        }
         onClear={clearSelection}
         itemNoun={{
           one: t('automationList.noun.one', 'automation'),
@@ -239,6 +253,11 @@ export default function AutomationListPage() {
             icon: <Icon icon={Play} />,
             disabled: !operationalMode.canWrite,
             disabledReason: operationalMode.writeBlockReason ?? undefined,
+            confirm: {
+              title: t('automationList.bulk.enable', 'Enable'),
+              description: selectedReview,
+              confirmLabel: t('automationList.bulk.enable', 'Enable'),
+            },
             onClick: (ids) => runBulk(ids, 'enable'),
           },
           {
@@ -247,6 +266,11 @@ export default function AutomationListPage() {
             icon: <Icon icon={Pause} />,
             disabled: !operationalMode.canWrite,
             disabledReason: operationalMode.writeBlockReason ?? undefined,
+            confirm: {
+              title: t('automationList.bulk.disable', 'Disable'),
+              description: selectedReview,
+              confirmLabel: t('automationList.bulk.disable', 'Disable'),
+            },
             onClick: (ids) => runBulk(ids, 'disable'),
           },
           {
@@ -258,10 +282,10 @@ export default function AutomationListPage() {
             disabledReason: operationalMode.writeBlockReason ?? undefined,
             confirm: {
               title: t('automationList.bulk.deleteConfirm.title', 'Delete automations?'),
-              description: t(
+              description: `${t(
                 'automationList.bulk.deleteConfirm.body',
                 'Selected automations will stop running and be removed permanently. This cannot be undone.',
-              ),
+              )}\n\n${selectedReview}`,
               confirmLabel: t('common.delete', 'Delete'),
             },
             onClick: (ids) => runBulk(ids, 'delete'),
@@ -282,6 +306,7 @@ export default function AutomationListPage() {
               onRetry={refetch}
               totalCount={automations.length}
               hasData={automationsState.hasData}
+              dataState={automationsState}
             />
           </div>
           <AutomationStatusPanel
@@ -289,6 +314,7 @@ export default function AutomationListPage() {
             isLoading={isLoading}
             error={error}
             onRetry={refetch}
+            dataState={automationsState}
           />
         </section>
       </FadeIn>

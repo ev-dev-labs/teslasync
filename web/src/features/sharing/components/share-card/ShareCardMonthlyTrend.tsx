@@ -16,12 +16,9 @@ import {
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { ChartCard } from '@/components/layout';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { ShareCardSectionBody } from './ShareCardSectionBody';
 import type { ShareCardSectionProps } from './types';
-
-const DISTANCE_COLOR = '#22d3ee';
-const ENERGY_COLOR = '#f59e0b';
-const COUNT_COLOR = '#a78bfa';
 
 export function ShareCardMonthlyTrend({
   analysis,
@@ -29,6 +26,7 @@ export function ShareCardMonthlyTrend({
   display,
 }: ShareCardSectionProps) {
   const { t } = useTranslation();
+  const palette = useChartPalette();
   const distanceSeries = t('shareCard.monthly.distanceSeries', 'Distance');
   const energySeries = t('shareCard.monthly.energySeries', 'Energy');
   const countSeries = t('shareCard.monthly.countSeries', 'Drive count');
@@ -162,7 +160,7 @@ export function ShareCardMonthlyTrend({
                     yAxisId="distance"
                     dataKey="distance"
                     name={distanceSeries}
-                    fill={DISTANCE_COLOR}
+                    fill={palette[0]}
                     radius={[5, 5, 0, 0]}
                     hide={hiddenSeries?.isHidden('distance')}
                   />
@@ -170,7 +168,7 @@ export function ShareCardMonthlyTrend({
                     yAxisId="energy"
                     dataKey="energy"
                     name={energySeries}
-                    stroke={ENERGY_COLOR}
+                    stroke={palette[1]}
                     strokeWidth={2}
                     dot={{ r: 3 }}
                     connectNulls={false}
@@ -180,7 +178,7 @@ export function ShareCardMonthlyTrend({
                     yAxisId="count"
                     dataKey="driveCount"
                     name={countSeries}
-                    stroke={COUNT_COLOR}
+                    stroke={palette[2]}
                     strokeWidth={2}
                     dot={{ r: 3 }}
                     hide={hiddenSeries?.isHidden('driveCount')}

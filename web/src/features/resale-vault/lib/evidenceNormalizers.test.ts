@@ -186,6 +186,39 @@ describe('normalizeSoftwareUpdates', () => {
     expect(evidence.update_count).toBe(3);
     expect(evidence.installed_versions).toHaveLength(2);
   });
+
+  it.each(['day', 'exact'] as const)('applies %s precision to installation instants without changing populated facts', (precision) => {
+    const evidence = normalizeSoftwareUpdates(updates, precision)!;
+    expect(evidence).toEqual({
+      update_count: 3,
+      latest_version: '2024.5.3',
+      installed_versions: [
+        { version: '2024.2.1', installed_at: precision === 'day' ? '2024-02-01' : '2024-02-01T00:00:00Z' },
+        { version: '2024.5.3', installed_at: precision === 'day' ? '2024-05-10' : '2024-05-10T00:00:00Z' },
+      ],
+    });
+    expect(updates[0]?.installedAt).toBe('2024-02-01T00:00:00Z');
+  });
+
+  it('defaults to day precision when existing callers omit the selection', () => {
+    expect(normalizeSoftwareUpdates(updates)?.installed_versions[0]?.installed_at).toBe('2024-02-01');
+  });
+
+  it('selects the latest version before coarsening installation instants on the same day', () => {
+    const sameDay = [
+      { ...updates[0]!, installedAt: '2024-05-10T08:00:00Z' },
+      { ...updates[1]!, installedAt: '2024-05-10T19:00:00Z' },
+      { ...updates[2]!, status: 'installed' as const, installedAt: null },
+    ];
+    expect(normalizeSoftwareUpdates(sameDay, 'day')).toEqual({
+      update_count: 3,
+      latest_version: '2024.5.3',
+      installed_versions: [
+        { version: '2024.2.1', installed_at: '2024-05-10' },
+        { version: '2024.5.3', installed_at: '2024-05-10' },
+      ],
+    });
+  });
 });
 
 describe('normalizeWarranty', () => {
@@ -215,6 +248,23 @@ describe('normalizeWarranty', () => {
     };
     expect(normalizeWarranty({ data, fetched_at: null }, 'day')?.data).toEqual({ plan: 'Basic' });
     expect(data.description).toBe('Owner Jane, 123 Main St');
+  });
+
+  it.each(['day', 'exact'] as const)('excludes opaque business dates at %s precision rather than guessing string semantics', (precision) => {
+    const data = {
+      plan: 'Battery',
+      coverage_start_date: '2024-01-01',
+      coverage_end_date: '2032-01-01T12:34:56Z',
+      expires: 'Eight years from delivery',
+      coverage: { date: '2032-01-01' },
+    };
+    expect(normalizeWarranty({
+      data, fetched_at: '2024-06-15T10:30:45.123Z',
+    }, precision)).toEqual({
+      data: { plan: 'Battery' },
+      fetched_at: precision === 'day' ? '2024-06-15' : '2024-06-15T10:30:45.123Z',
+    });
+    expect(data.coverage_end_date).toBe('2032-01-01T12:34:56Z');
   });
 
   it.each(['Basic at 123 Main St', { notes: 'owner identity' }, ['Basic'], null, 1])(

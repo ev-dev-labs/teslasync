@@ -135,6 +135,32 @@ function renderPage() {
 }
 
 describe('FleetSetupPage', () => {
+  it('keeps fleet observations explicitly scoped when the selected VIN has no configuration', async () => {
+    const original = mockedRequest.getMockImplementation()!
+    mockedRequest.mockImplementation((...args: unknown[]) => {
+      if (pathOf(args).startsWith('/dev-tools/fleet-telemetry-config')) {
+        return Promise.resolve({ response: { config: null } })
+      }
+      return original(...args)
+    })
+    renderPage()
+    await screen.findByText('Auto-refresh on')
+    fireEvent.change(await screen.findByRole('combobox', { name: 'Vehicle' }), {
+      target: { value: '5YJ3E1EA7KF000001' },
+    })
+    expect(await screen.findByText('No fleet_telemetry_config on this VIN yet.')).toBeInTheDocument()
+    expect(screen.getByText(
+      'Progress and streaming status are fleet-wide observations. Check the selected VIN configuration below; fleet history does not confirm that VIN is streaming.',
+    )).toBeInTheDocument()
+    expect(screen.getByText('Fleet telemetry observed')).toBeInTheDocument()
+    expect(screen.getByText('Confirm fleet telemetry health')).toBeInTheDocument()
+    expect(screen.getByText('fmt:2026-04-01T12:00:00Z')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Subscribe Model Y' })).toBeEnabled()
+    expect(mockedRequest.mock.calls.every(call =>
+      ((call[1] as RequestInit | undefined)?.method ?? 'GET') === 'GET',
+    )).toBe(true)
+  })
+
   it('renders KPI, Tesla connect, subscribe, stream, and domain panels', async () => {
     renderPage()
     expect(await screen.findByRole('heading', { name: 'Fleet setup' })).toBeInTheDocument()
@@ -283,10 +309,49 @@ describe('FleetSetupPage', () => {
     ).toBeInTheDocument()
     expect(screen.getByText('How fleet setup works')).toBeInTheDocument()
     expect(screen.getByText('Domain & certificates')).toBeInTheDocument()
+    const steps = screen.getByRole('list', { name: 'Onboarding steps' })
+    expect(within(steps).getAllByRole('listitem')).toHaveLength(4)
+    expect(within(steps).getAllByText('Not started')).toHaveLength(2)
+    expect(within(steps).getByText('Unknown')).toBeInTheDocument()
+    expect(within(steps).queryByText('Completed')).toBeNull()
   })
 })
 
 describe('FleetSetupPage source recovery', () => {
+  it('threads active loading into unknown progress without removing any setup step', async () => {
+    const original = mockedRequest.getMockImplementation()!
+    mockedRequest.mockImplementation((...args: unknown[]) => {
+      const path = pathOf(args)
+      if (path.startsWith('/auth/status') || path.startsWith('/dev-tools/fleet-api-info') ||
+          path.startsWith('/onboarding/status')) return new Promise(() => {})
+      return original(...args)
+    })
+    renderPage()
+    const steps = screen.getByRole('list', { name: 'Onboarding steps' })
+    expect(within(steps).getAllByRole('listitem')).toHaveLength(4)
+    expect(within(steps).getAllByText('Unknown')).toHaveLength(4)
+    expect(within(steps).queryByText('Not started')).toBeNull()
+    expect(within(steps).getByRole('button', { name: 'Connect now' })).toBeEnabled()
+    expect(within(steps).getByText(/Authorize TeslaSync/)).toHaveTextContent('Loading')
+  })
+
+  it('threads paused-without-data status into progress and recovers when reads resume', async () => {
+    try {
+      onlineManager.setOnline(false)
+      renderPage()
+      const steps = screen.getByRole('list', { name: 'Onboarding steps' })
+      await waitFor(() => expect(within(steps).getByText(/Authorize TeslaSync/)).toHaveTextContent('Refresh paused'))
+      expect(within(steps).getAllByText('Unknown')).toHaveLength(4)
+      expect(within(steps).queryByText('Not started')).toBeNull()
+      expect(within(steps).getByRole('button', { name: 'Connect now' })).toBeEnabled()
+      await act(async () => { onlineManager.setOnline(true) })
+      await waitFor(() => expect(within(steps).getAllByText('Completed')).toHaveLength(4))
+      expect(within(steps).queryByText(/Refresh paused/)).toBeNull()
+    } finally {
+      onlineManager.setOnline(true)
+    }
+  })
+
   it('includes an independently failed account read in header freshness without hiding setup sections', async () => {
     const original = mockedRequest.getMockImplementation()!
     mockedRequest.mockImplementation((...args: unknown[]) => {
@@ -296,6 +361,9 @@ describe('FleetSetupPage source recovery', () => {
     renderPage()
     expect(await screen.findByRole('button', { name: 'Refresh data · Error' })).toBeInTheDocument()
     expect(await screen.findByText('Auto-refresh on')).toBeInTheDocument()
+    const steps = screen.getByRole('list', { name: 'Onboarding steps' })
+    expect(within(steps).getByText('Unknown')).toBeInTheDocument()
+    expect(within(steps).getByText(/Authorize TeslaSync/)).toHaveTextContent('Failed')
     expect(screen.getByText('How fleet setup works')).toBeInTheDocument()
     expect(screen.getByText('Domain & certificates')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Configure signals/i })).toBeEnabled()
@@ -317,6 +385,9 @@ describe('FleetSetupPage source recovery', () => {
     expect(within(warning).getByText('Access token may be out of date')).toBeInTheDocument()
     expect(within(warning).getByText('Previously loaded data remains visible while affected sources recover.')).toBeInTheDocument()
     expect(screen.getByText('Auto-refresh on')).toBeInTheDocument()
+    const steps = screen.getByRole('list', { name: 'Onboarding steps' })
+    expect(within(steps).getAllByText('Completed')).toHaveLength(4)
+    expect(within(steps).getByText(/A valid access token/)).toHaveTextContent('Data may be stale')
     expect(screen.queryByText('Fleet access-token status unavailable.')).toBeNull()
     mockedRequest.mockImplementation(original)
     mockedRequest.mockClear()
@@ -324,6 +395,7 @@ describe('FleetSetupPage source recovery', () => {
     await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).toBeNull())
     expect(mockedRequest.mock.calls.map(call => pathOf(call))).toEqual(['/dev-tools/fleet-api-info'])
     expect(screen.getByText('Auto-refresh on')).toBeInTheDocument()
+    expect(within(steps).getByText(/A valid access token/)).not.toHaveTextContent('Data may be stale')
   })
 
   it('distinguishes paused token refresh from a failed read without claiming the device is offline', async () => {

@@ -18,6 +18,7 @@ import { MemoryRouter } from 'react-router-dom';
 import '../../../i18n';
 
 import { AutomationStatusPanel, type AutomationStatusStats } from './AutomationStatusPanel';
+import { deriveDataState } from '@/api/dataState';
 
 vi.mock('framer-motion', () => ({
   motion: new Proxy(
@@ -55,6 +56,27 @@ function setup(overrides: Partial<PanelProps> = {}) {
 }
 
 describe('AutomationStatusPanel', () => {
+  it('explains paused initial data and does not present derived zero as a successful empty summary', () => {
+    const retry = vi.fn();
+    setup({ isLoading: true, dataState: deriveDataState({ fetchStatus: 'paused', refetch: retry }) });
+    expect(screen.getByRole('heading', { name: 'Status breakdown' })).toBeInTheDocument();
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.queryByText('No automations to summarize yet')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Status breakdown' }));
+    expect(retry).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves real zero counters in a retained summary despite refresh failure', () => {
+    setup({
+      stats: { total: 1, active: 1, disabled: 0, autoDisabled: 0 },
+      isLoading: true, error: new Error('Refresh failed'),
+      dataState: deriveDataState({ data: [{}], error: new Error('Refresh failed'), isFetching: true }),
+    });
+    expect(screen.getByText('1 · 100%')).toBeInTheDocument();
+    expect(screen.getAllByText('0 · 0%')).toHaveLength(2);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   it('keeps a paused initial inventory unknown rather than reporting successful zero', () => {
     setup({ stats: { total: undefined }, isLoading: false });
     expect(screen.getByText('Active: —')).toBeInTheDocument();

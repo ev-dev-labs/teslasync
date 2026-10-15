@@ -289,12 +289,53 @@ describe('PageHeader', () => {
     await user.tab()
     expect(info).toHaveFocus()
     expect(info).toHaveClass(
-      'h-11', 'w-11', 'sm:h-9', 'sm:w-9',
+      'h-11', 'w-11', 'md:h-9', 'md:w-9',
       'focus-visible:outline-[var(--focus-ring)]',
     )
+    expect(info).not.toHaveClass('sm:h-9', 'sm:w-9')
     expect(screen.getByRole('tooltip')).toHaveTextContent('Last 30 days')
     await user.keyboard('{Escape}')
     expect(info).toHaveFocus()
     expect(screen.getByRole('tooltip')).toHaveClass('!opacity-0')
+  })
+
+  it('allocates distinct stable tooltip IDs and restores help after keyboard dismissal', async () => {
+    const user = userEvent.setup()
+    const { rerender } = renderHeader(
+      <>
+        <PageHeader title="Drives" subtitle="Driving history" />
+        <PageHeader title="Charging" subtitle="Charging history" />
+      </>,
+    )
+    const drives = screen.getByRole('button', { name: 'More info: Drives' })
+    const charging = screen.getByRole('button', { name: 'More info: Charging' })
+    const [drivesTooltip, chargingTooltip] = screen.getAllByRole('tooltip')
+    expect(drivesTooltip.id).not.toBe('')
+    expect(chargingTooltip.id).not.toBe(drivesTooltip.id)
+    expect(drives).toHaveAttribute('aria-describedby', drivesTooltip.id)
+    expect(charging).toHaveAttribute('aria-describedby', chargingTooltip.id)
+
+    await user.tab()
+    expect(drives).toHaveFocus()
+    await user.keyboard('{Escape}')
+    expect(drives).toHaveFocus()
+    expect(drivesTooltip).toHaveClass('!opacity-0')
+    expect(chargingTooltip).not.toHaveClass('!opacity-0')
+    await user.tab()
+    expect(charging).toHaveFocus()
+    await user.tab({ shift: true })
+    expect(drives).toHaveFocus()
+    expect(drivesTooltip).not.toHaveClass('!opacity-0')
+
+    rerender(
+      <ToastProvider>
+        <PageHeader title="Drives" subtitle="Updated driving history" />
+        <PageHeader title="Charging" subtitle="Charging history" />
+      </ToastProvider>,
+    )
+    expect(screen.getByRole('button', { name: 'More info: Drives' }))
+      .toHaveAttribute('aria-describedby', drivesTooltip.id)
+    expect(document.getElementById(drivesTooltip.id))
+      .toHaveTextContent('Updated driving history')
   })
 })

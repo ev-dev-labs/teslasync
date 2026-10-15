@@ -282,6 +282,78 @@ describe('StormGuardPanel', () => {
     expect(screen.getByText(/acted/)).toBeInTheDocument();
   });
 
+  it.each([
+    { field: 'Home latitude', value: '', message: 'Enter a finite latitude between -90 and 90.' },
+    { field: 'Home latitude', value: '   ', message: 'Enter a finite latitude between -90 and 90.' },
+    { field: 'Home latitude', value: 'invalid', message: 'Enter a finite latitude between -90 and 90.' },
+    { field: 'Home latitude', value: 'NaN', message: 'Enter a finite latitude between -90 and 90.' },
+    { field: 'Home latitude', value: 'Infinity', message: 'Enter a finite latitude between -90 and 90.' },
+    { field: 'Home latitude', value: '-Infinity', message: 'Enter a finite latitude between -90 and 90.' },
+    { field: 'Home latitude', value: '1e309', message: 'Enter a finite latitude between -90 and 90.' },
+    { field: 'Home latitude', value: '90.001', message: 'Enter a finite latitude between -90 and 90.' },
+    { field: 'Home latitude', value: '-90.001', message: 'Enter a finite latitude between -90 and 90.' },
+    { field: 'Home longitude', value: '', message: 'Enter a finite longitude between -180 and 180.' },
+    { field: 'Home longitude', value: '   ', message: 'Enter a finite longitude between -180 and 180.' },
+    { field: 'Home longitude', value: 'invalid', message: 'Enter a finite longitude between -180 and 180.' },
+    { field: 'Home longitude', value: 'NaN', message: 'Enter a finite longitude between -180 and 180.' },
+    { field: 'Home longitude', value: 'Infinity', message: 'Enter a finite longitude between -180 and 180.' },
+    { field: 'Home longitude', value: '-Infinity', message: 'Enter a finite longitude between -180 and 180.' },
+    { field: 'Home longitude', value: '1e309', message: 'Enter a finite longitude between -180 and 180.' },
+    { field: 'Home longitude', value: '180.001', message: 'Enter a finite longitude between -180 and 180.' },
+    { field: 'Home longitude', value: '-180.001', message: 'Enter a finite longitude between -180 and 180.' },
+  ])('rejects $field = "$value" with associated field feedback and permits correction', ({ field, value, message }) => {
+    const mutate = vi.fn();
+    mockSave.mockReturnValue({ mutate, reset, isPending: false, isError: false });
+    render(<StormGuardPanel vehicleId={7} />);
+    const input = screen.getByLabelText(field);
+    fireEvent.change(input, { target: { value } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save guard' }));
+    expect(mutate).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent(message);
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(input).toHaveAccessibleDescription(message);
+    expect(input).toHaveValue(value);
+    fireEvent.change(input, { target: { value: '0' } });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Save guard' }));
+    expect(mutate).toHaveBeenCalledTimes(1);
+    expect(mutate.mock.calls[0][0]).toMatchObject(field === 'Home latitude' ? { lat: 0 } : { lng: 0 });
+  });
+
+  it.each([
+    { lat: '0', lng: '0' },
+    { lat: '-90', lng: '180' },
+    { lat: '90', lng: '-180' },
+    { lat: '-33.8688', lng: '+151.2093' },
+    { lat: '+0.125', lng: '-0.25' },
+  ])('saves explicit zero, signed and fractional coordinates: $lat, $lng', ({ lat, lng }) => {
+    const mutate = vi.fn();
+    mockSave.mockReturnValue({ mutate, reset, isPending: false, isError: false });
+    render(<StormGuardPanel vehicleId={7} />);
+    fireEvent.change(screen.getByLabelText('Home latitude'), { target: { value: lat } });
+    fireEvent.change(screen.getByLabelText('Home longitude'), { target: { value: lng } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save guard' }));
+    expect(mutate).toHaveBeenCalledExactlyOnceWith({
+      vehicle_id: 7, enabled: true, lat: Number(lat), lng: Number(lng), target_soc: 95,
+    });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('reports both missing fields without submitting and clears feedback on vehicle deselection', () => {
+    const mutate = vi.fn();
+    mockSave.mockReturnValue({ mutate, reset, isPending: false, isError: false });
+    const { rerender } = render(<StormGuardPanel vehicleId={7} />);
+    fireEvent.change(screen.getByLabelText('Home latitude'), { target: { value: '' } });
+    fireEvent.change(screen.getByLabelText('Home longitude'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save guard' }));
+    expect(screen.getAllByRole('alert')).toHaveLength(2);
+    expect(mutate).not.toHaveBeenCalled();
+    rerender(<StormGuardPanel vehicleId={null} />);
+    expect(screen.queryByRole('button', { name: 'Save guard' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(mutate).not.toHaveBeenCalled();
+  });
+
   it('prompts for a vehicle and surfaces save errors', () => {
     const { rerender } = render(<StormGuardPanel vehicleId={undefined} />);
     expect(screen.getByText('Select a vehicle to configure storm protection.')).toBeInTheDocument();

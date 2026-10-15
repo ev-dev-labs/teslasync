@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { LayoutCard } from '@/components/layout/layout-reference';
+import { LayoutCard } from '@/components/layout';
 import type { RegenEfficiencyModel } from '../../lib/regenEfficiency';
 import { DetailScopeNotice, RegenSectionBody, type RegenSectionState } from '../regen-efficiency';
 import { RankedDriveTable } from './RankedDriveTable';

@@ -150,7 +150,7 @@ export function DriveDnaEncodingLegend({
     >
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="flex items-center gap-2">
-          <Route className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Route className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
           {t('driveDna.encoding.title', 'Encoding legend & evidence')}
         </PanelTitle>
         <Text as="p" variant="caption" className="mt-1">
@@ -171,10 +171,10 @@ export function DriveDnaEncodingLegend({
               return (
                 <div
                   key={row.title}
-                  className="rounded-xl border border-white/[0.05] bg-white/[0.025] p-3"
+                  className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <div className="text-cyan-300">{row.icon}</div>
+                    <div className="text-[var(--text-secondary)]">{row.icon}</div>
                     <Badge variant={status.variant}>{status.label}</Badge>
                   </div>
                   <MetricValue className="mt-3 text-base">{row.title}</MetricValue>

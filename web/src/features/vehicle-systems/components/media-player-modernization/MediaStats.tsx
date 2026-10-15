@@ -35,13 +35,13 @@ export function MediaStats({
     data: latest ?? undefined, isLoading: mediaLoading, error: mediaError,
   });
   const historyState = {
-    loading: historyLoading && !trustedHistory.hasData,
+    loading: historyLoading && !trustedHistory.hasData && !trustedHistory.isRefreshBlocked && !trustedHistory.fatalError,
     fatal: trustedHistory.fatalError != null,
     available: trustedHistory.hasData,
     retained: trustedHistory.refreshError != null || (trustedHistory.hasData && trustedHistory.isRefreshBlocked),
   };
   const mediaState = {
-    loading: mediaLoading && !trustedMedia.hasData,
+    loading: mediaLoading && !trustedMedia.hasData && !trustedMedia.isRefreshBlocked && !trustedMedia.fatalError,
     fatal: trustedMedia.fatalError != null,
     available: trustedMedia.hasData,
     retained: trustedMedia.refreshError != null || (trustedMedia.hasData && trustedMedia.isRefreshBlocked),
@@ -55,6 +55,23 @@ export function MediaStats({
   const mediaReason = !hasVehicle ? selection : mediaState.loading ? loading
     : mediaState.fatal ? unavailable : !mediaState.available ? unknown : undefined;
   const historyAvailable = hasVehicle && historyState.available;
+  const mediaAvailable = hasVehicle && mediaState.available;
+  const available = historyAvailable || mediaAvailable;
+  const historyPeriod = t('media.modernization.returnedHistory', 'Returned history: {{start}} – {{end}}', { start, end });
+  const partialEvidence = t('dashboard.summary.status.partial', 'Partial evidence');
+  const retainedEvidence = t('vehicleSystems.brief.retained', 'Retained evidence');
+  const historyContext = <>
+    {historyPeriod}
+    <br />
+    {historyReason ?? partialEvidence}
+    {historyAvailable && historyState.retained && <><br />{retainedEvidence}</>}
+  </>;
+  const mediaContext = <>
+    {t('media.modernization.latestSnapshot', 'Latest media snapshot')}
+    {mediaReason && <><br />{mediaReason}</>}
+    {mediaAvailable && trustedMedia.status === 'partial' && <><br />{partialEvidence}</>}
+    {mediaAvailable && mediaState.retained && <><br />{retainedEvidence}</>}
+  </>;
   // Audio levels are source scalars, not percentages or physical unit guesses.
   const metrics: StatMetric[] = [
     {
@@ -63,6 +80,7 @@ export function MediaStats({
       rawValue: historyAvailable ? stats.uniqueTracks : null,
       missingReason: historyReason,
       description: t('media.modernization.uniqueTracksHelp', 'Distinct non-empty track titles in the returned history inside the selected dates.'),
+      context: historyContext,
     },
     {
       metricId: 'text', occurrenceId: 'media-top-source',
@@ -70,6 +88,7 @@ export function MediaStats({
       rawValue: historyAvailable ? stats.topSource : null,
       missingReason: historyReason ?? unknown,
       description: t('media.modernization.topSourceHelp', 'Most frequent reported playback source in the returned history; missing source names are excluded.'),
+      context: historyContext,
     },
     {
       metricId: 'number', occurrenceId: 'media-average-volume',
@@ -78,15 +97,16 @@ export function MediaStats({
       display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) },
       missingReason: historyReason ?? unknown,
       description: t('media.modernization.averageVolumeHelp', 'Arithmetic mean of finite audio volume readings in the returned history, rounded as before. Missing readings are excluded.'),
+      context: historyContext,
     },
     {
       metricId: 'number', occurrenceId: 'media-volume-step',
       label: t('media.volumeStepFull', 'Volume step'),
-      rawValue: hasVehicle && latest && finiteReading(latest.audio_volume_increment) ? latest.audio_volume_increment : null,
+      rawValue: mediaAvailable && latest && finiteReading(latest.audio_volume_increment) ? latest.audio_volume_increment : null,
       display: { formatter: raw => ({ value: fmtNumber(raw), unit: '' }) },
       missingReason: mediaReason ?? unknown,
       description: t('media.modernization.volumeStepHelp', 'Audio volume increment from the latest media snapshot, not a historical average.'),
-      context: t('media.modernization.latestSnapshot', 'Latest media snapshot'),
+      context: mediaContext,
     },
   ];
   return (
@@ -94,10 +114,12 @@ export function MediaStats({
       id="media-listening-stats"
       title={t('media.statsSection', 'Listening stats')}
       metrics={metrics}
-      available={historyAvailable && hasVehicle && mediaState.available}
+      available={available}
+      loading={hasVehicle && !available && (historyState.loading || mediaState.loading)}
+      error={hasVehicle && !available && (historyState.fatal || mediaState.fatal) ? unavailable : null}
       period={{
         kind: 'unknown',
-        label: t('media.modernization.returnedHistory', 'Returned history: {{start}} – {{end}}', { start, end }),
+        label: historyPeriod,
         reason: t('media.modernization.historyCoverage', 'Listening totals describe returned snapshots within the selected dates, not complete listening time. Volume step uses the latest snapshot.'),
       }}
       retained={historyState.retained || mediaState.retained}

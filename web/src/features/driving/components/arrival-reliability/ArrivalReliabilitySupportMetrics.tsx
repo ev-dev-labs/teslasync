@@ -15,11 +15,13 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 interface ArrivalReliabilitySupportMetricsProps {
   analysis: ArrivalReliabilityResult;
   locale: string;
+  retained?: boolean;
 }
 
 export function ArrivalReliabilitySupportMetrics({
   analysis,
   locale,
+  retained = false,
 }: ArrivalReliabilitySupportMetricsProps) {
   useNumberFormatting();
   const { t } = useTranslation();
@@ -76,6 +78,7 @@ export function ArrivalReliabilitySupportMetrics({
       )}
       metrics={metrics}
       testId="arrival-support-ingredients-brief"
+      retained={retained}
     />
   );
 }

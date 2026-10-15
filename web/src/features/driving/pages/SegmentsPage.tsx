@@ -35,9 +35,11 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useUrlNumber } from '@/hooks/useUrlState';
 import { useUnits } from '@/hooks/useUnits';
-import { formatDurationClock, formatDateShort } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { formatDurationClock } from '@/lib/dateFormat';
 import { fmtInt } from '@/lib/numberFormat';
 import { useChartPalette } from '@/hooks/useChartPalette';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { fmtNumber, isFiniteNumber } from '@/lib/numberFormat';
 import { chartTokens } from '@/lib/tokens';
@@ -64,15 +66,23 @@ function signedDelta(s: unknown): string {
   return `${sign}${fmtNumber(Math.abs(s))}s`;
 }
 
+function recordedSeconds(value: unknown, signed = false): string {
+  if (!isFiniteNumber(value)) return DASH;
+  const sign = signed && value > 0 ? '+' : value < 0 ? '−' : '';
+  return `${sign}${Math.abs(value)}s`;
+}
+
 export default function SegmentsPage() {
   useNumberFormatting();
   const palette = useChartPalette();
+  const { reduce } = useMotionPreference();
   const colorA = palette[0];
   const colorB = palette[1];
   const { t } = useTranslation();
   usePageTitle(t('segments.title', 'Ghost Racing'));
 
   const { formatDistance } = useUnits();
+  const { formatDateShort } = useDateFormat();
   const { vehicleId } = useSelectedVehicle();
   const noVehicle = vehicleId === null;
 
@@ -202,7 +212,7 @@ export default function SegmentsPage() {
     if (driveId == null) return DASH;
     const r = rowByDrive.get(driveId);
     return r ? formatDateShort(r.started_at) : `#${driveId}`;
-  }, [rowByDrive]);
+  }, [rowByDrive, formatDateShort]);
 
   /* ── Ghost race chart data ──
      "Elapsed vs distance": both attempts on one seconds axis (unit-free); the
@@ -230,6 +240,11 @@ export default function SegmentsPage() {
     frac: point.fraction_of_distance,
     b: point.elapsed_s,
   })), [ghost]);
+  // Keep independent samples, including duplicate fractions, out of the rounded chart grid.
+  const raceTableData = useMemo(() => [
+    ...raceSeriesA.map((point) => ({ ...point, b: null })),
+    ...raceSeriesB.map((point) => ({ ...point, a: null })),
+  ], [raceSeriesA, raceSeriesB]);
 
   /* "Time gap": the A-vs-B split at each shared fraction (delta_s < 0 → A ahead),
      already aligned by the backend. */
@@ -443,7 +458,6 @@ export default function SegmentsPage() {
                 {/* Elapsed time vs distance — the lower line is ahead */}
                 <div>
                   <div className="min-w-0">
-                    {/* chart-a11y:no-table dense route telemetry trace — variable-length, not meaningfully tabular */}
                     <ChartCard
                       chartKey="segment-ghost-elapsed"
                       title={t('segments.ghost.elapsed', 'Elapsed time along the route')}
@@ -452,6 +466,12 @@ export default function SegmentsPage() {
                       mobileHeight={256}
                       toolbar={false}
                       exportable={false}
+                      data={raceTableData}
+                      dataColumns={[
+                        { key: 'frac', label: '%', format: (value) => isFiniteNumber(value) ? `${value * 100}%` : DASH },
+                        { key: 'a', label: t('segments.ghost.racerA', 'Attempt A'), format: (value) => recordedSeconds(value) },
+                        { key: 'b', label: t('segments.ghost.racerB', 'Attempt B'), format: (value) => recordedSeconds(value) },
+                      ]}
                     >
                       {({ hiddenSeries }) => ghostLoading && !ghost ? (
                         <Skeleton height={256} className="rounded-xl" />
@@ -497,6 +517,7 @@ export default function SegmentsPage() {
                               stroke={colorA} strokeWidth={2} dot={false}
                               name={t('segments.ghost.racerA', 'Attempt A')}
                               animationDuration={700}
+                              isAnimationActive={!reduce}
                               hide={hiddenSeries?.isHidden('a') ?? false}
                             />
                             <Line
@@ -505,6 +526,7 @@ export default function SegmentsPage() {
                               stroke={colorB} strokeWidth={2} dot={false}
                               name={t('segments.ghost.racerB', 'Attempt B')}
                               animationDuration={700}
+                              isAnimationActive={!reduce}
                               hide={hiddenSeries?.isHidden('b') ?? false}
                             />
                           </LineChart>
@@ -518,7 +540,6 @@ export default function SegmentsPage() {
                 <div>
                   <div>
                     <div className="min-w-0">
-                      {/* chart-a11y:no-table route-fraction time-gap area — dense trace, not tabular */}
                       <ChartCard
                         title={t('segments.ghost.gap', 'Time gap (A vs B)')}
                         ariaLabel={t('segments.ghost.gapAria', 'Area chart of the A-versus-B time gap along the route; below the zero line means A is ahead')}
@@ -526,6 +547,11 @@ export default function SegmentsPage() {
                         mobileHeight={192}
                         toolbar={false}
                         exportable={false}
+                        data={gapData}
+                        dataColumns={[
+                          { key: 'frac', label: '%', format: (value) => isFiniteNumber(value) ? `${value * 100}%` : DASH },
+                          { key: 'delta', label: t('segments.ghost.gap', 'Time gap (A vs B)'), format: (value) => recordedSeconds(value, true) },
+                        ]}
                       >
                         {ghostLoading && !ghost ? (
                           <Skeleton height={192} className="rounded-xl" />
@@ -673,6 +699,7 @@ interface LeaderboardTableProps {
 
 function LeaderboardTable({ rows, board, racerA, racerB, onPickA, onPickB, t }: LeaderboardTableProps) {
   const { precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
+  const { formatDateShort } = useDateFormat();
   const columns = useMemo<Column<LeaderboardRow>[]>(() => [
     {
       key: 'rank',
@@ -746,16 +773,26 @@ function LeaderboardTable({ rows, board, racerA, racerB, onPickA, onPickB, t }: 
             active={racerA === row.drive_id}
             onClick={() => onPickA(row.drive_id)}
             label="A"
+            ariaLabel={t('segments.table.attemptLabel', '{{attempt}} · {{date}} · #{{driveId}}', {
+              attempt: t('segments.ghost.racerA', 'Attempt A'),
+              date: formatDateShort(row.started_at),
+              driveId: row.drive_id,
+            })}
           />
           <RaceButton
             active={racerB === row.drive_id}
             onClick={() => onPickB(row.drive_id)}
             label="B"
+            ariaLabel={t('segments.table.attemptLabel', '{{attempt}} · {{date}} · #{{driveId}}', {
+              attempt: t('segments.ghost.racerB', 'Attempt B'),
+              date: formatDateShort(row.started_at),
+              driveId: row.drive_id,
+            })}
           />
         </div>
       ),
     },
-  ], [board, onPickA, onPickB, racerA, racerB, t, displayPrecision, displayLocale]);
+  ], [board, onPickA, onPickB, racerA, racerB, t, displayPrecision, displayLocale, formatDateShort]);
 
   return (
     <DataTable
@@ -773,9 +810,10 @@ interface RaceButtonProps {
   active: boolean;
   onClick: () => void;
   label: string;
+  ariaLabel: string;
 }
 
-function RaceButton({ active, onClick, label }: RaceButtonProps) {
+function RaceButton({ active, onClick, label, ariaLabel }: RaceButtonProps) {
   return (
     <Button
       type="button"
@@ -783,7 +821,7 @@ function RaceButton({ active, onClick, label }: RaceButtonProps) {
       size="sm"
       onClick={onClick}
       aria-pressed={active}
-      aria-label={`${label}${active ? ' (selected)' : ''}`}
+      aria-label={ariaLabel}
       className="h-11 w-11 min-h-11 min-w-11 shrink-0 p-0 md:h-7 md:w-7 md:min-h-0 md:min-w-0"
     >
       {label}

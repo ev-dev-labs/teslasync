@@ -5,8 +5,8 @@ import {
 import type {
   ScienceTires
 } from '@/api/types';
-import { EmptyState, Skeleton, StaleRefreshWarning } from '@/components/feedback';
-import { LayoutCard, SourceContent } from '@/components/layout';
+import { DataSourceNotice, EmptyState, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { SourceContent } from '@/components/layout';
 import {
   Caption,
   Text
@@ -26,6 +26,7 @@ export function TiresPanel({ window }: { window: ScienceWindow }) {
   const query = useScienceTires(window);
   const state = useDataState(query, { provenance: 'historical' });
   const data: ScienceTires | undefined = state.data;
+  const initialPaused = !state.hasData && state.isRefreshBlocked && !state.fatalError;
   const { formatPressure, formatEnergy, formatDistance } = useUnits();
   const reported = data && !data.unknown ? data : undefined;
   const sensitivity = (
@@ -63,8 +64,7 @@ export function TiresPanel({ window }: { window: ScienceWindow }) {
   ];
 
   return (
-    <section data-testid="science-tires" className="min-w-0">
-      <LayoutCard title={t('science.tires.title', 'Tire / contact mechanics')}>
+    <section data-testid="science-tires" className="min-w-0 space-y-3">
       <StaleRefreshWarning state={state} />
       <ScienceSummaryBrief
         title={t('science.tires.title', 'Tire / contact mechanics')}
@@ -74,14 +74,14 @@ export function TiresPanel({ window }: { window: ScienceWindow }) {
         testId="science-tires-brief"
       />
       <SourceContent
-        state={state.status === 'initial' ? 'loading' : state.fatalError ? 'error' : !data ? 'empty' : 'ready'}
+        state={initialPaused ? 'empty' : state.status === 'initial' ? 'loading' : state.fatalError ? 'error' : !data ? 'empty' : 'ready'}
         label={t('science.tires.title', 'Tire / contact mechanics')}
         emptyMessage={t('science.empty', 'No fit inputs in this window.')}
         errorMessage={t('error.loadFailed', 'Failed to load data')}
         error={state.fatalError}
         errorRecovery={{ onRetry: () => { void query.refetch(); } }}
         loadingContent={<Skeleton className="h-32" />}
-        emptyContent={<EmptyState title={t('science.tires.title', 'Tires')} message={t('science.empty', 'No fit inputs in this window.')} action={{ label: t('common.retry', 'Retry'), onClick: () => { void query.refetch(); } }} />}
+        emptyContent={initialPaused ? <DataSourceNotice title={t('dataSources.status.paused', 'Refresh paused')} sources={[{ id: 'tires', label: t('science.overview.tires', 'Tire evidence'), query }]} /> : <EmptyState title={t('science.tires.title', 'Tires')} message={t('science.empty', 'No fit inputs in this window.')} action={{ label: t('common.retry', 'Retry'), onClick: () => { void query.refetch(); } }} />}
       >
       {data && (
         <>
@@ -99,7 +99,6 @@ export function TiresPanel({ window }: { window: ScienceWindow }) {
         </>
       )}
       </SourceContent>
-      </LayoutCard>
     </section>
   );
 }

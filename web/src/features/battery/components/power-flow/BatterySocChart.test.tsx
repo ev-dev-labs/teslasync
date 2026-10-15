@@ -30,12 +30,14 @@
  * MemoryRouter.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
 import { formatDateShort } from '@/lib/dateFormat';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { ChartCard } from '@/components/layout';
 import type { PowerHistoryPoint } from './PowerHistoryChart';
 
 // jsdom lacks matchMedia; framer-motion's useReducedMotion (reached via the
@@ -118,6 +120,11 @@ vi.mock('@/hooks/useOnlineStatus', () => ({
   useOnlineStatus: () => true,
 }));
 
+vi.mock('@/components/layout', async () => {
+  const actual = await vi.importActual<typeof import('@/components/layout')>('@/components/layout');
+  return { ...actual, ChartCard: vi.fn(actual.ChartCard) };
+});
+
 import { BatterySocChart, formatSocTimeTick, formatSocPercentTick } from './BatterySocChart';
 
 const ARIA_LABEL = 'Battery state of charge percentage over time line chart';
@@ -159,6 +166,8 @@ function renderChart(over: RenderOver = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  setGlobalLocale('en-US');
+  setGlobalPrecision(0);
 });
 
 describe('formatSocTimeTick', () => {
@@ -206,7 +215,16 @@ describe('formatSocPercentTick', () => {
     expect(formatSocPercentTick(undefined)).toBe('—');
     expect(formatSocPercentTick(Number.NaN)).toBe('—');
     expect(formatSocPercentTick(Number.POSITIVE_INFINITY)).toBe('—');
+    expect(formatSocPercentTick(Number.NEGATIVE_INFINITY)).toBe('—');
     expect(formatSocPercentTick(0)).toBe('0%');
+  });
+
+  it('formats signed and fractional raw percentages using the numeric preferences', () => {
+    setGlobalLocale('de-DE');
+    setGlobalPrecision(2);
+    expect(formatSocPercentTick(-12.345)).toBe('-12,35%');
+    expect(formatSocPercentTick(12.345)).toBe('12,35%');
+    expect(formatSocPercentTick(0)).toBe('0,00%');
   });
 });
 
@@ -264,6 +282,28 @@ describe('BatterySocChart — empty branch', () => {
 });
 
 describe('BatterySocChart — populated branch', () => {
+  it('updates SOC display formatting after preference changes without changing raw evidence', () => {
+    const data = [makePoint({ soc: -12.345 }), makePoint({ soc: 0 })];
+    renderChart({ data });
+    const props = () => vi.mocked(ChartCard).mock.calls.at(-1)![0];
+    const formatSoc = (value: unknown) => props().dataColumns?.find(column => column.key === 'soc')?.format?.(value);
+
+    expect(formatSoc(0)).toBe('0%');
+    for (const value of [null, undefined, NaN, Infinity, -Infinity, '', 'invalid']) {
+      expect(formatSoc(value)).toBe('—');
+    }
+    act(() => {
+      setGlobalLocale('de-DE');
+      setGlobalPrecision(2);
+    });
+    expect(formatSoc(-12.345)).toBe('-12,35%');
+    expect(formatSoc(12.345)).toBe('12,35%');
+    expect(formatSoc(0)).toBe('0,00%');
+    expect(props().data).toEqual(data.map(({ time, soc }) => ({ time, soc })));
+    expect(props().exportData).toEqual(data.map(({ time, soc }) => ({ time, soc })));
+    expect(data[0].soc).toBe(-12.345);
+  });
+
   it('mounts the chart (no loading/empty placeholder) with the accessible frame', () => {
     renderChart({ data: [makePoint({ soc: 42 }), makePoint({ time: Date.UTC(2024, 5, 30, 13), soc: 55 })] });
 

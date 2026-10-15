@@ -101,6 +101,59 @@ afterEach(() => {
 });
 
 describe('Battery Passport bounded closure — actual evidence and export', () => {
+  it.each([
+    ['absent trend', undefined],
+    ['null trend', null],
+    ['empty trend', []],
+    ['missing SoH', [{ date: '2026-08-01' }]],
+    ['null SoH', [{ date: '2026-08-01', soh_pct: null }]],
+    ['nonfinite SoH', [{ date: '2026-08-01', soh_pct: NaN }, { date: '2026-08-02', soh_pct: Infinity }]],
+    ['out-of-range SoH', [{ date: '2026-08-01', soh_pct: -1 }, { date: '2026-08-02', soh_pct: 101 }]],
+    ['invalid date', [{ date: 'invalid-date', soh_pct: 0 }]],
+  ])('keeps distribution shares missing for %s instead of reporting measured zero', (_name, degradation_trend) => {
+    h.passport.mockReturnValue(query({ ...certificate, degradation_trend }));
+    mount();
+
+    const distribution = within(screen.getByTestId('battery-passport-trend-distribution'));
+    const bars = distribution.getAllByRole('progressbar');
+    expect(bars).toHaveLength(5);
+    for (const bar of bars) {
+      expect(bar).not.toHaveAttribute('aria-valuenow');
+      expect(bar).toHaveAttribute('aria-valuetext', 'No reading');
+      expect(bar.querySelector('[data-metric-track]')).toBeInTheDocument();
+      expect(bar.querySelector('[data-metric-fill]')).toBeNull();
+      expect(bar).toHaveTextContent('—');
+      expect(bar).not.toHaveTextContent('0.00%');
+    }
+  });
+
+  it.each([
+    ['negative', [80.5, 79.25, 0]],
+    ['positive', [0, 79.25, 80.5]],
+  ])('preserves zero and fractional distribution shares with a valid %s trend change', (_name, values) => {
+    h.passport.mockReturnValue(query({
+      ...certificate,
+      degradation_trend: values.map((soh_pct, index) => ({
+        date: `2026-08-0${index + 1}`, soh_pct,
+      })),
+    }));
+    mount();
+
+    const distribution = within(screen.getByTestId('battery-passport-trend-distribution'));
+    const bars = distribution.getAllByRole('progressbar');
+    expect(bars).toHaveLength(5);
+    bars.forEach((bar, index) => {
+      const hasPoint = [0, 2, 3].includes(index);
+      expect(Number(bar.getAttribute('aria-valuenow'))).toBeCloseTo(hasPoint ? 100 / 3 : 0);
+      expect(bar).not.toHaveAttribute('aria-valuetext');
+      expect(bar.querySelector('[data-metric-fill]')).toBeInTheDocument();
+      expect(bar).toHaveTextContent(hasPoint ? '33.33% · 1 points' : '0.00% · 0 points');
+    });
+    expect(distribution.getByText('80.50%')).toBeInTheDocument();
+    expect(distribution.getByText('0.00%')).toBeInTheDocument();
+    expect(trendRows().map(row => row[1])).toEqual(values.map(value => `${value.toFixed(2)}%`));
+  });
+
   it('keeps genuine zero proxies and zero SoH distinct from missing fields and the explicit unknown sentinel', () => {
     h.passport.mockReturnValue(query({ ...certificate, soh_pct: 0, health_grade: 'F' }));
     const view = mount();
@@ -121,6 +174,8 @@ describe('Battery Passport bounded closure — actual evidence and export', () =
     expect(metric('Average charge-end SoC proxy')).toHaveAttribute('data-value-state', 'value');
     expect(metric('Average charge-end SoC proxy').querySelector('[data-operational-value]')).toHaveTextContent('0.00%');
     expect(trendRows()).toHaveLength(37);
+    expect(within(screen.getByTestId('battery-passport-masthead')).queryByRole('button', { name: 'Retry' }))
+      .not.toBeInTheDocument();
   });
 
   it('exports every canonical raw fact and row after certificate and verification refresh failures without exporting diagnostic filtering', async () => {
@@ -155,6 +210,10 @@ describe('Battery Passport bounded closure — actual evidence and export', () =
     expect(diagnostics.getAllByText(`${'a'.repeat(16)}…`)).toHaveLength(2);
     expect(screen.getByText('Certificate refresh failed. Showing the most recently loaded certificate without changing its facts.'))
       .toBeInTheDocument();
+    const masthead = within(screen.getByTestId('battery-passport-masthead'));
+    fireEvent.click(within(masthead.getByRole('alert')).getByRole('button', { name: 'Retry' }));
+    expect(h.retry).toHaveBeenCalledTimes(1);
+    expect(trendRows()).toEqual(beforeRows);
     h.createUrl.mockReturnValue('blob:certificate-test-only');
     vi.stubGlobal('URL', class extends URL {
       static createObjectURL = h.createUrl;
@@ -180,6 +239,13 @@ describe('Battery Passport bounded closure — actual evidence and export', () =
     expect(raw).toEqual(snapshot);
     expect(h.passport).toHaveBeenLastCalledWith('7');
     expect(h.verify).toHaveBeenLastCalledWith('7', 'a'.repeat(64));
+    h.passport.mockReturnValue(query(raw));
+    view.update();
+    expect(masthead.queryByRole('alert')).not.toBeInTheDocument();
+    expect(masthead.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(trendRows()).toEqual(beforeRows);
+    expect(screen.getByRole('button', { name: 'Export certificate' })).toBeEnabled();
+    expect(diagnostics.getByText('Verification unavailable')).toBeInTheDocument();
   });
 
   it('keeps the previous mismatch hashes and all evidence interactive while verification alone refetches', () => {

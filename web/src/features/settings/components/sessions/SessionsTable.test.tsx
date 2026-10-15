@@ -30,7 +30,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
 vi.mock('react-i18next', async () => {
@@ -134,6 +134,32 @@ describe('SessionsTable — loaded table content + field wiring', () => {
     expect(screen.getAllByRole('columnheader')).toHaveLength(5)
   })
 
+  it('keeps all five columns accessible in the shared contained mobile scroll viewport', () => {
+    renderTable()
+    const table = screen.getByRole('table', { name: 'Active devices' })
+    const viewport = table.closest('[data-grid-viewport]')
+    expect(viewport).toHaveClass('max-w-full', 'overflow-auto', 'overscroll-x-contain')
+    expect(table).toHaveAttribute('tabindex', '0')
+    for (const cell of table.querySelectorAll('th, td')) {
+      expect(cell).not.toHaveClass('hidden', 'md:table-cell')
+    }
+    expect(within(table).getByText(OTHER.ip)).toBeInTheDocument()
+    expect(within(table).getByText(`dt:${OTHER.created_at}`)).toBeInTheDocument()
+    expect(screen.getByTestId(`active-sessions-revoke-${OTHER.id}`))
+      .toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9')
+  })
+
+  it('preserves IP value filtering and clearing in the complete table', () => {
+    renderTable()
+    fireEvent.click(screen.getByRole('button', { name: 'IP address filter' }))
+    const filter = screen.getByRole('dialog', { name: 'IP address filter' })
+    fireEvent.click(within(filter).getByRole('checkbox', { name: CURRENT.ip }))
+    expect(screen.queryByTestId(`active-sessions-current-pill-${CURRENT.id}`)).toBeNull()
+    expect(screen.getByTestId(`active-sessions-revoke-${OTHER.id}`)).toBeInTheDocument()
+    fireEvent.click(within(filter).getByRole('button', { name: 'Clear' }))
+    expect(screen.getByTestId(`active-sessions-current-pill-${CURRENT.id}`)).toBeInTheDocument()
+  })
+
   it('renders one row per session with the correct device label and IP', () => {
     renderTable()
     expect(screen.getByText(describeDevice(WIN_FIREFOX))).toBeInTheDocument()
@@ -195,6 +221,19 @@ describe('SessionsTable — pagination', () => {
     })
     expect(screen.getByText('Showing 1–30 of 30')).toBeInTheDocument()
     expect(screen.getByTestId('active-sessions-revoke-sess-other-28')).toBeInTheDocument()
+  })
+
+  it('supports keyboard paging from the named table without making the current device revocable', () => {
+    localStorage.removeItem('teslasync.table.settings:active-sessions.page-size')
+    renderTable({ sessions })
+    const table = screen.getByRole('table', { name: 'Active devices' })
+    table.focus()
+    expect(table).toHaveFocus()
+    fireEvent.keyDown(table, { key: 'PageDown' })
+    expect(screen.getByText('Showing 26–30 of 30')).toBeInTheDocument()
+    fireEvent.keyDown(table, { key: 'Home' })
+    expect(screen.getByText('Showing 1–25 of 30')).toBeInTheDocument()
+    expect(screen.queryByTestId(`active-sessions-revoke-${CURRENT.id}`)).toBeNull()
   })
 })
 

@@ -3,24 +3,34 @@ import { useTranslation } from 'react-i18next';
 import { MapPin } from 'lucide-react';
 import { useCardPlacement } from '@/components/layout/layout-reference';
 import { LayoutCard } from '@/components/layout';
-import { Text } from '@/components/ui';
-import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { Text, HelperText } from '@/components/ui';
+import { DataSourceNotice, EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import {
   MapContainer, Marker, Circle, Popup, Polyline, vehicleIcon,
   MapTileLayer, MapInvalidator, type MapStyle,
 } from '@/components/maps';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { cn } from '@/lib/cn';
+import { chartTokens } from '@/lib/tokens';
 import type { GuardEvent } from '@/api/hooks/useGuard';
 import type { GuardPageModel } from './useGuardPageModel';
 
 export function GuardLiveMap({ model: m }: { model: GuardPageModel }) {
   const { t } = useTranslation();
   const placement = useCardPlacement();
+  const initialDeferred = !m.noVehicle && !m.vehicleState.hasData &&
+    !m.vehicleState.fatalError && !m.vehicleStateQuery.isLoading;
   return (
     <div data-guard-section="map" className={cn('min-w-0', placement?.className)}>
       <LayoutCard title={t('guard.liveMap', 'Live vehicle location')}>
-      <StaleRefreshWarning state={m.vehicleState} label={t('guard.liveMap', 'Live vehicle location')} />
+      <DataSourceNotice sources={m.mapSources} />
+      {initialDeferred && (
+        <HelperText role="status" data-initial-deferred={m.vehicleState.isRefreshBlocked ? 'paused' : 'pending'}>
+          {m.vehicleState.isRefreshBlocked
+            ? t('dataSources.status.paused', 'Refresh paused')
+            : t('dataSources.status.pending', 'Pending')}
+        </HelperText>
+      )}
       <div className="mt-3 h-80 min-w-0 sm:h-96">
         {m.vehicleState.fatalError ? (
           <div className="flex h-full items-center justify-center p-4">
@@ -70,9 +80,9 @@ function LiveMap({
       {homeGeofence && (
         <Circle center={[homeGeofence.latitude, homeGeofence.longitude]} radius={homeGeofence.radius}
           pathOptions={{
-            color: 'rgba(59, 130, 246, 0.6)',
-            fillColor: 'rgba(59, 130, 246, 0.1)',
-            fillOpacity: 0.2,
+            color: chartTokens.series[0],
+            fillColor: chartTokens.series[0],
+            fillOpacity: 0.08,
             weight: 2,
           }} />
       )}
@@ -93,5 +103,5 @@ function MapPopup({ vehicleName, lat, lng }: { vehicleName: string; lat: number;
 }
 
 function EventTrail({ positions }: { positions: [number, number][] }) {
-  return <Polyline positions={positions} pathOptions={{ color: '#ef4444', weight: 3, dashArray: '8 4' }} />;
+  return <Polyline positions={positions} pathOptions={{ color: chartTokens.series[3], weight: 3, dashArray: '8 4' }} />;
 }

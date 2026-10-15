@@ -1,16 +1,19 @@
 import { BatteryCharging, Pencil, Plus, Trash2 } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { Button, DataTable, Text, StatusPill, type Column } from '@/components/ui';
 import { LayoutCard } from '@/components/layout';
 import { useUnits } from '@/hooks/useUnits';
 import type { FleetChargingPolicy } from '@/api/hooks/useFleetOps';
+import type { DataState } from '@/api/dataState';
 
 interface ChargingPolicyMatrixProps {
   items: FleetChargingPolicy[];
   enableValueFilters?: boolean;
   loading: boolean;
+  source?: DataState<unknown>;
+  pendingContent?: ReactNode;
   error: unknown;
   onRetry: () => void;
   onAdd: () => void;
@@ -26,6 +29,8 @@ export function ChargingPolicyMatrix({
   items,
   enableValueFilters = false,
   loading,
+  source,
+  pendingContent,
   error,
   onRetry,
   onAdd,
@@ -94,7 +99,7 @@ export function ChargingPolicyMatrix({
       filterValueLabel: (_value, item) => item.enabled == null ? '—' : item.enabled
         ? t('fleetOps.policies.enabled', 'Enabled') : t('fleetOps.policies.disabled', 'Disabled'),
       render: (item) => (
-        <StatusPill color={item.enabled ? 'bg-emerald-500' : 'bg-slate-500'}>
+        <StatusPill color={item.enabled ? 'bg-[var(--semantic-success)]' : 'bg-[var(--text-secondary)]'}>
           {item.enabled ? t('fleetOps.policies.enabled', 'Enabled') : t('fleetOps.policies.disabled', 'Disabled')}
         </StatusPill>
       ),
@@ -108,7 +113,7 @@ export function ChargingPolicyMatrix({
           <Button type="button" variant="ghost" size="sm" className="min-h-11 min-w-11 px-0" aria-label={t('fleetOps.policies.edit', 'Edit {{name}}', { name: item.name })} onClick={() => onEdit(item)} disabled={actionsDisabled} title={actionsDisabledReason}>
             <Pencil className="h-4 w-4" />
           </Button>
-          <Button type="button" variant="ghost" size="sm" className="min-h-11 min-w-11 px-0 text-rose-300" aria-label={t('fleetOps.policies.delete', 'Delete {{name}}', { name: item.name })} onClick={() => onDelete(item)} disabled={actionsDisabled} title={actionsDisabledReason}>
+          <Button type="button" variant="ghost" size="sm" className="min-h-11 min-w-11 px-0 text-[var(--semantic-danger)]" aria-label={t('fleetOps.policies.delete', 'Delete {{name}}', { name: item.name })} onClick={() => onDelete(item)} disabled={actionsDisabled} title={actionsDisabledReason}>
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
@@ -118,13 +123,15 @@ export function ChargingPolicyMatrix({
 
   return (
     <LayoutCard title={t('fleetOps.policies.title', 'Charging policy matrix')} actions={
-        <Button type="button" size="sm" icon={<Plus className="h-4 w-4" />} onClick={onAdd} disabled={actionsDisabled} title={actionsDisabledReason}>
+        <Button type="button" size="sm" className="min-h-11" icon={<Plus className="h-4 w-4" />} onClick={onAdd} disabled={actionsDisabled} title={actionsDisabledReason}>
           {t('fleetOps.policies.add', 'Add policy')}
         </Button>
       }>
-      {loading ? <Skeleton lines={6} /> : error ? (
+      {source?.hasData !== true && error ? (
         <QueryError error={error} onRetry={onRetry} resourceName={t('fleetOps.policies.resource', 'Charging policies')} />
-      ) : items.length === 0 ? (
+      ) : source && !source.hasData ? (
+        pendingContent
+      ) : !source && loading ? <Skeleton lines={6} /> : items.length === 0 ? (
         <EmptyState
           icon={<BatteryCharging className="h-8 w-8" />}
           message={t('fleetOps.policies.empty', 'No charging policies are configured.')}
@@ -136,11 +143,28 @@ export function ChargingPolicyMatrix({
         <div className="mt-4">
           <DataTable
             tableId="fleet-ops:charging-policies"
+            caption={t('fleetOps.policies.title', 'Charging policy matrix')}
             columns={columns}
             data={items}
             enableValueFilters={enableValueFilters}
             keyExtractor={(item) => item.id}
             mobileColumns={['vehicle', 'policy', 'actions']}
+            mobilePresentation={{
+              roles: { policy: 'title', vehicle: 'primary', target: 'meta', power: 'meta', enabled: 'badge' },
+              displayValue: (item, key) => {
+                switch (key) {
+                  case 'vehicle': return item.vehicle_display_name;
+                  case 'policy': return `${item.name} · ${t('fleetOps.policies.priority', 'Priority')} ${item.priority}`;
+                  case 'target': return `${item.target_soc_pct}%`;
+                  case 'power': return formatPower(item.max_power_w);
+                  case 'windows': return windowLabel(item) || '—';
+                  case 'enabled': return item.enabled ? t('fleetOps.policies.enabled', 'Enabled')
+                    : t('fleetOps.policies.disabled', 'Disabled');
+                  default: return null;
+                }
+              },
+              inlineActions: (item) => columns.find((column) => column.key === 'actions')?.render(item),
+            }}
             pagination
           />
         </div>

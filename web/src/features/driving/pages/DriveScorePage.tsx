@@ -29,9 +29,15 @@ export type { PeriodStats } from '../components/score-orchestrator/scorePeriodSt
 export default function DriveScorePage() {
   const model = useDriveScorePage();
   const {
-    t, hasData, hasDrives, drivesLoading, vehicleIdStr,
+    t, hasData, hasDrives, drivesLoading, scoreLoading, drivesPaused, scorePaused, vehicleIdStr,
     apiScoreState, drivesError, scoreQuery, refetch, drivesQuery,
   } = model;
+  const historyPausedMessage = t('driveScore.historyPaused', 'Drive history loading is deferred.');
+  const serverPausedMessage = t('driveScore.serverPaused', 'Server drive score loading is deferred.');
+  const pausedRecovery = t(
+    'driveScore.pausedRecovery',
+    'Retry this source now, or wait for the request to resume. No result has been received yet.',
+  );
 
   /* ---- per-section state fallback (loading / error / empty) ---- */
   const buildState =
@@ -39,10 +45,10 @@ export default function DriveScorePage() {
     (height: number, emptyMsg: string, emptyIcon?: ReactNode): ReactNode | null => {
       // Server score and locally scored history are independent evidence.
       if (combinedScore && hasData) return null;
-      const loading = drivesLoading || (vehicleIdStr != null && combinedScore
-        && apiScoreState.status === 'initial');
+      const paused = drivesPaused || (combinedScore && scorePaused);
+      const loading = !paused && (drivesLoading || (combinedScore && scoreLoading));
       const fatalError = drivesError ?? (combinedScore ? apiScoreState.fatalError : null);
-      if (!loading && !fatalError && !isEmpty) return null;
+      if (!paused && !loading && !fatalError && !isEmpty) return null;
       return (
         <SourceContent
           state={loading ? 'loading' : fatalError ? 'error' : 'empty'}
@@ -56,10 +62,10 @@ export default function DriveScorePage() {
           }}
           loadingContent={<Skeleton height={height} />}
           emptyContent={<EmptyState
-            /* no-action: transient empty state — surfaces when no scored drives
-               exist in the selected period; recovery is picking a wider range. */
+            /* Recovery is source-local above for deferred requests, or a wider
+               header range for successfully loaded empty evidence. */
             icon={emptyIcon}
-            message={emptyMsg}
+            message={paused ? (drivesPaused ? historyPausedMessage : serverPausedMessage) : emptyMsg}
           />}
         >
           {null}
@@ -97,6 +103,17 @@ export default function DriveScorePage() {
       query={[drivesQuery, scoreQuery]}
     >
       <ScoreSourceNotices model={model} />
+      {[
+        { source: 'history', paused: drivesPaused, label: historyPausedMessage, retry: refetch },
+        { source: 'server', paused: scorePaused, label: serverPausedMessage, retry: scoreQuery.refetch },
+      ].map(({ source, paused, label, retry }) => paused && (
+        <EmptyState
+          key={source}
+          message={label}
+          description={pausedRecovery}
+          action={{ label: t('common.retry', 'Retry'), onClick: () => { void retry(); } }}
+        />
+      ))}
       {/* ── Band A — KPI summary ─────────────────────────────────── */}
       <ScoreEvidenceBrief model={model}
         retained={model.drivesSource.status === 'stale' || model.drivesSource.refreshError != null} />

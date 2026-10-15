@@ -1,6 +1,6 @@
 import type { StatMetric } from '@/components/data-display';
 import type { PhysicsPage } from '../tesla-physics/PhysicsPageShell';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { VehicleEvidenceBrief } from './VehicleEvidenceBrief';
 
 export function PhysicsEvidenceBrief({ physics, id, metrics, description, available = true }: {
@@ -11,6 +11,7 @@ export function PhysicsEvidenceBrief({ physics, id, metrics, description, availa
   available?: boolean;
 }) {
   const { report, state, t } = physics;
+  const { formatDateTime } = useDateFormat();
   const time = (value: string | null | undefined) => value ? formatDateTime(value) : t('teslaOnly.unknown', 'unknown');
   const evidence = report?.evidence;
   const limited = evidence && (!evidence.history_available || !evidence.black_box_available ||

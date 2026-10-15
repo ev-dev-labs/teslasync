@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
 
-import { EmptyState, SectionErrorBoundary, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { EmptyState, SectionErrorBoundary, StaleRefreshWarning } from '@/components/feedback';
 import { PageLayout, Grid, LayoutCard } from '@/components/layout';
 import { Select, Text } from '@/components/ui';
 import { useDataState } from '@/hooks/useDataState';
@@ -27,6 +27,8 @@ import {
 } from '../components/journey-fragmentation';
 import { analyzeJourneyFragmentation } from '../lib/journeyFragmentation';
 import { JourneyEvidenceBrief } from '../components/operationalbrief-a-m/JourneyEvidenceBrief';
+import { DynamicsPausedNotice } from '../components/driving-dynamics-modernization/DynamicsPausedNotice';
+import { PendingEvidence } from '../components/journey-fragmentation/PendingEvidence';
 
 const HISTORY_LIMIT = 1_000;
 const GAP_OPTIONS = [30, 60, 120, 240] as const;
@@ -51,7 +53,8 @@ export default function JourneyFragmentationPage() {
     [analysisNowMs, drivesQuery.data, maxGapMin, timeZone],
   );
   const initialLoading = vehicleId != null && drivesState.status === 'initial' && !drivesState.isRefreshBlocked;
-  const pendingContext = vehicleId != null && !drivesState.hasData;
+  const pendingContext = !drivesState.hasData;
+  const sectionProps = { result, loading: initialLoading, state: drivesState };
   const gapOptions = GAP_OPTIONS.map((minutes) => ({
     value: String(minutes),
     label: t('journeyFragmentation.gapMinutes', '{{count}} min', { count: minutes }),
@@ -76,58 +79,60 @@ export default function JourneyFragmentationPage() {
         </div>
       )}
     >
+      {vehicleId != null && <DynamicsPausedNotice state={drivesState} label={t('journeyFragmentation.title', 'Journey Fragmentation')} />}
       <StaleRefreshWarning state={drivesState} label={t('journeyFragmentation.title', 'Journey Fragmentation')} />
       <SectionErrorBoundary name="JourneyFragmentationEvidence">
         <JourneyEvidenceBrief
           result={result}
+          state={drivesState}
           loading={initialLoading}
           hasVehicle={vehicleId != null}
           error={drivesState.fatalError}
           onRetry={() => void drivesQuery.refetch()}
           available={drivesState.hasData}
-          retained={drivesState.status === 'stale' || drivesState.refreshError != null}
+          retained={drivesState.hasData && (drivesState.status === 'stale' || drivesState.refreshError != null || drivesState.isRefreshBlocked)}
         />
       </SectionErrorBoundary>
 
       <Grid cols={{ default: 1, lg: 2 }} gap={4}>
         <SectionErrorBoundary name="JourneyFragmentationChainLength">
-          <ChainLengthChart result={result} loading={initialLoading} />
+          <ChainLengthChart {...sectionProps} />
         </SectionErrorBoundary>
         <SectionErrorBoundary name="JourneyFragmentationStopoverGap">
-          <StopoverGapChart result={result} loading={initialLoading} />
+          <StopoverGapChart {...sectionProps} />
         </SectionErrorBoundary>
         <SectionErrorBoundary name="JourneyFragmentationThresholdSensitivity">
-          <ThresholdSensitivityChart result={result} loading={initialLoading} />
+          <ThresholdSensitivityChart {...sectionProps} />
         </SectionErrorBoundary>
         <SectionErrorBoundary name="JourneyFragmentationElapsedComposition">
-          <ElapsedComposition result={result} loading={initialLoading} />
+          <ElapsedComposition {...sectionProps} />
         </SectionErrorBoundary>
       </Grid>
 
       <SectionErrorBoundary name="JourneyFragmentationStructureIndicators">
-        <StructureIndicators result={result} loading={initialLoading} />
+        <StructureIndicators {...sectionProps} />
       </SectionErrorBoundary>
       <SectionErrorBoundary name="JourneyFragmentationEnergyIntensity">
-        <EnergyIntensityPanel result={result} loading={initialLoading} />
+        <EnergyIntensityPanel {...sectionProps} />
       </SectionErrorBoundary>
 
       <Grid cols={{ default: 1, lg: 2 }} gap={4}>
         <SectionErrorBoundary name="JourneyFragmentationStartProfile">
-          <StartProfileChart result={result} loading={initialLoading} />
+          <StartProfileChart {...sectionProps} />
         </SectionErrorBoundary>
         <SectionErrorBoundary name="JourneyFragmentationWeekdayProfile">
-          <WeekdayProfileChart result={result} loading={initialLoading} />
+          <WeekdayProfileChart {...sectionProps} />
         </SectionErrorBoundary>
         <SectionErrorBoundary name="JourneyFragmentationMonthlyTrend">
-          <MonthlyTrendChart result={result} loading={initialLoading} />
+          <MonthlyTrendChart {...sectionProps} />
         </SectionErrorBoundary>
         <SectionErrorBoundary name="JourneyFragmentationDirectory">
-          <JourneyDirectory result={result} loading={initialLoading} />
+          <JourneyDirectory {...sectionProps} />
         </SectionErrorBoundary>
       </Grid>
 
       <SectionErrorBoundary name="JourneyFragmentationAccounting">
-        <AccountingPanel result={result} loading={initialLoading} />
+        <AccountingPanel {...sectionProps} />
       </SectionErrorBoundary>
       <SectionErrorBoundary name="JourneyFragmentationMethodology">
         <MethodologyPanel result={result} />
@@ -135,12 +140,7 @@ export default function JourneyFragmentationPage() {
 
       <LayoutCard title={t('journeyFragmentation.footer.title', 'Report context')}>
         {pendingContext ? (
-          <div aria-busy={initialLoading || undefined} className="min-w-0 space-y-3">
-            <Text as="p" variant="caption">
-              {t('driving.brief.pending', 'Drive evidence is not available yet.')}
-            </Text>
-            {initialLoading && <Skeleton lines={2} />}
-          </div>
+          <PendingEvidence state={drivesState} loading={initialLoading} />
         ) : <Text as="p" variant="caption">
           {result.returnedRows === 0
             ? t('journeyFragmentation.footer.empty', 'All analytical shells remain visible while the returned history window is empty.')

@@ -5,6 +5,9 @@ import {
   Badge, GlassPanel, HelpTooltip, MetricLabel, MetricValue, PanelTitle, Text,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { useDriveHistory } from '@/api/hooks/useDriving';
+import { useDataState } from '@/hooks/useDataState';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 
 import type { TargetSummary } from '../../lib/efficiencyTarget';
 import { EfficiencyTargetSectionBody } from './EfficiencyTargetSectionBody';
@@ -23,6 +26,16 @@ export function TargetMethodology(
 ) {
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
+  const { vehicleId } = useSelectedVehicle();
+  const history = useDriveHistory(vehicleId != null ? String(vehicleId) : undefined, historyLimit);
+  const source = useDataState(history, { provenance: 'historical' });
+  const hasCoverage = source.hasData && !state.isLoading && !state.error;
+  const retained = source.status === 'stale';
+  const coverageState = {
+    ...state,
+    isLoading: state.isLoading || (!source.hasData && !source.fatalError),
+    error: source.fatalError ?? state.error,
+  };
   const coverage = [
     {
       value: fmtInt(summary.observed),
@@ -87,7 +100,7 @@ export function TargetMethodology(
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
-          <Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Database className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
           {t('effTarget.method.title', 'Coverage & methodology')}
           <HelpTooltip
             size="xs"
@@ -100,20 +113,26 @@ export function TargetMethodology(
           />
         </PanelTitle>
         <Badge
-          variant={summary.historyCapReached ? 'warning' : 'neutral'}
+          variant={hasCoverage && (retained || summary.historyCapReached) ? 'warning' : 'neutral'}
           dot
         >
-          {summary.historyCapReached
+          {!hasCoverage
+            ? coverageState.error
+              ? t('driveCalendar.brief.unavailable', 'Drive history unavailable')
+              : t('driveCalendar.brief.loading', 'Loading drive history')
+            : <>
+              {retained && <>{t('driveCalendar.brief.retained', 'Retained drive history')} · </>}
+              {summary.historyCapReached
             ? t('effTarget.method.capReached', '{{limit}}-drive cap reached', {
                 limit: fmtInt(historyLimit),
               })
             : t('effTarget.method.belowCap', 'Observed window below API cap')}
+            </>}
         </Badge>
       </div>
 
-      <EfficiencyTargetSectionBody state={state} className="mt-4 min-h-64">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
-          <div>
+      <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
+          <EfficiencyTargetSectionBody state={coverageState} className="min-h-64">
             <div className="grid grid-cols-3 gap-2">
               {coverage.map((item) => (
                 <div
@@ -149,7 +168,7 @@ export function TargetMethodology(
                 </Text>
               </div>
             )}
-            <div className="mt-3 rounded-xl border border-amber-400/20 bg-amber-400/[0.04] p-3">
+            <div className="mt-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
               <Text as="p" variant="caption">
                 {summary.historyCapReached
                   ? t(
@@ -167,7 +186,7 @@ export function TargetMethodology(
                     )}
               </Text>
             </div>
-          </div>
+          </EfficiencyTargetSectionBody>
 
           <ul className="space-y-3">
             {methods.map((method) => (
@@ -175,7 +194,7 @@ export function TargetMethodology(
                 key={method.text}
                 className="flex items-start gap-2 text-[var(--text-secondary)]"
               >
-                <span className="mt-0.5 shrink-0 text-cyan-300">
+                <span className="mt-0.5 shrink-0 text-[var(--text-secondary)]">
                   {method.icon}
                 </span>
                 <Text as="span" variant="bodySm">
@@ -185,7 +204,6 @@ export function TargetMethodology(
             ))}
           </ul>
         </div>
-      </EfficiencyTargetSectionBody>
     </GlassPanel>
   );
 }

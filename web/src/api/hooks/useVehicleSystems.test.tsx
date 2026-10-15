@@ -199,6 +199,45 @@ describe('useClimate', () => {
 });
 
 describe('useClimateHistory', () => {
+  it('keys and sends both exact workspace bounds with cancellation and safeArray', async () => {
+    const range = {
+      start: '2026-10-13T21:39:59.000Z',
+      end: '2026-10-14T21:39:59.000Z',
+    };
+    requestMock.mockResolvedValueOnce(null);
+    const { result, rerender } = renderHook(
+      ({ end }) => useClimateHistory(VID, { ...range, end }),
+      { wrapper: makeWrapper(), initialProps: { end: range.end } },
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const { url, options } = firstCall();
+    expect(queryOf(url).get('vehicle_id')).toBe(VID);
+    expect(queryOf(url).get('start')).toBe(range.start);
+    expect(queryOf(url).get('end')).toBe(range.end);
+    expect(options.signal).toBeInstanceOf(AbortSignal);
+    expect(result.current.data).toEqual([]);
+    expect(vehicleSystemsKeys.climateHistory(VID, range.start, range.end))
+      .toEqual(['climate', 'history', VID, range.start, range.end]);
+    requestMock.mockResolvedValueOnce([climate]);
+    const nextEnd = '2026-10-15T21:39:59.000Z';
+    rerender({ end: nextEnd });
+    await waitFor(() => expect(requestMock).toHaveBeenCalledTimes(2));
+    expect(queryOf(requestMock.mock.calls[1][0]).get('end')).toBe(nextEnd);
+    expect(vehicleSystemsKeys.climateHistory(VID, range.start, nextEnd))
+      .not.toEqual(vehicleSystemsKeys.climateHistory(VID, range.start, range.end));
+    expect(vehicleSystemsKeys.climateHistory(VID, '2026-10-12T21:39:59.000Z', range.end))
+      .not.toEqual(vehicleSystemsKeys.climateHistory(VID, range.start, range.end));
+  });
+
+  it('keeps scoped history idle without a selected vehicle', () => {
+    const { result } = renderHook(
+      () => useClimateHistory('', { start: '2026-10-01T00:00:00Z', end: '2026-10-02T00:00:00Z' }),
+      { wrapper: makeWrapper() },
+    );
+    expect(requestMock).not.toHaveBeenCalled();
+    expect(result.current.fetchStatus).toBe('idle');
+  });
+
   it('GETs /climate for the vehicle and returns the array body', async () => {
     requestMock.mockResolvedValueOnce([climate]);
     const { result } = renderHook(() => useClimateHistory(VID), { wrapper: makeWrapper() });

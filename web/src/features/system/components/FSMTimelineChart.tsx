@@ -7,10 +7,14 @@ import {
 import { EmptyState } from '@/components/feedback';
 import { chartTokens } from '@/lib/tokens';
 import type { FSMTransition } from '@/types/fsm';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { formatDate, formatDateShort, formatTime, type FormatOptions } from '@/lib/dateFormat';
 
 interface FSMTimelineChartProps {
   transitions: FSMTransition[];
   hours: number;
+  startInstant?: string;
+  endInstantExclusive?: string;
   emptyMessage?: string;
 }
 
@@ -46,18 +50,13 @@ function bucketWidthMs(spanHours: number): number {
 }
 
 /**
- * Axis label for a bucket start. Bare `HH:MM` inside a single day; prefixed with
- * `MM/DD` once the window spans more than a day so the 7d / 30d / 90d / all-time
- * views never render ambiguous, colliding time-of-day ticks.
+ * Include a saved-zone date when the window crosses a calendar-day boundary.
  */
-function bucketLabel(ts: number, bucketMs: number, spanMs: number): string {
+function bucketLabel(ts: number, bucketMs: number, showDate: boolean, opts?: FormatOptions): string {
   const d = new Date(ts);
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mm = String(d.getMinutes()).padStart(2, '0');
-  const md = `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
-  if (bucketMs >= DAY_MS) return md;
-  if (spanMs > DAY_MS) return `${md} ${hh}:${mm}`;
-  return `${hh}:${mm}`;
+  if (bucketMs >= DAY_MS) return formatDateShort(d, opts);
+  if (showDate) return `${formatDateShort(d, opts)} ${formatTime(d, opts)}`;
+  return formatTime(d, opts);
 }
 
 /**
@@ -69,11 +68,15 @@ function bucketLabel(ts: number, bucketMs: number, spanMs: number): string {
  * collapsing to a single trailing bucket (and a non-finite `hours` can never spin
  * the bucket loop forever). Malformed rows (unparseable `ts`, empty `fsm_name`)
  * and out-of-window transitions are skipped; `transitions` may be null/undefined.
+ * Explicit bounds override the rolling clock and use `[start, endExclusive)`.
  */
 export function buildFsmTimeline(
   transitions: readonly FSMTransition[] | null | undefined,
   hours: number,
   now: number = Date.now(),
+  startInstant?: string,
+  endInstantExclusive?: string,
+  opts?: FormatOptions,
 ): FsmTimeline {
   const rows = Array.isArray(transitions) ? transitions : [];
   if (rows.length === 0) return { buckets: [], fsmTypes: [] };
@@ -87,14 +90,21 @@ export function buildFsmTimeline(
 
   let start: number;
   let end: number;
-  if (Number.isFinite(hours) && hours > 0) {
+  const hasExactBounds = Boolean(startInstant && endInstantExclusive);
+  if (startInstant && endInstantExclusive) {
+    start = Date.parse(startInstant);
+    end = Date.parse(endInstantExclusive);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
+      throw new RangeError('FSM timeline requires valid increasing range bounds');
+    }
+  } else if (Number.isFinite(hours) && hours > 0) {
     end = now;
     start = now - hours * HOUR_MS;
   } else {
     let min = Infinity;
     let max = -Infinity;
     for (const tr of rows) {
-      const ms = new Date(tr.ts).getTime();
+      const ms = Date.parse(tr.ts);
       if (Number.isFinite(ms)) {
         if (ms < min) min = ms;
         if (ms > max) max = ms;
@@ -108,12 +118,15 @@ export function buildFsmTimeline(
 
   const spanMs = end - start;
   let bucketMs = bucketWidthMs(spanMs / HOUR_MS);
-  while (spanMs / bucketMs > MAX_BUCKETS) bucketMs *= 2;
+  const lastInstant = hasExactBounds ? end - 1 : end;
+  const bucketCount = () =>
+    Math.floor(lastInstant / bucketMs) - Math.floor(start / bucketMs) + 1;
+  while (bucketCount() > MAX_BUCKETS) bucketMs *= 2;
 
   // Seed every in-window bucket with a zero per series (stacked areas need a
   // value at every x, not just where a transition happened to land).
   const bucketMap = new Map<number, Record<string, number>>();
-  for (let key = Math.floor(start / bucketMs) * bucketMs; key <= end; key += bucketMs) {
+  for (let key = Math.floor(start / bucketMs) * bucketMs; key <= lastInstant; key += bucketMs) {
     const record: Record<string, number> = {};
     for (const type of fsmTypes) record[type] = 0;
     bucketMap.set(key, record);
@@ -121,26 +134,36 @@ export function buildFsmTimeline(
 
   for (const tr of rows) {
     if (!tr || typeof tr.fsm_name !== 'string' || tr.fsm_name === '') continue;
-    const ms = new Date(tr.ts).getTime();
+    const ms = Date.parse(tr.ts);
     if (!Number.isFinite(ms)) continue;
+    if (ms < start || (hasExactBounds ? ms >= end : ms > end)) continue;
     const key = Math.floor(ms / bucketMs) * bucketMs;
     const bucket = bucketMap.get(key);
     if (bucket) bucket[tr.fsm_name] = (bucket[tr.fsm_name] ?? 0) + 1;
   }
 
+  const showDate = spanMs > DAY_MS
+    || formatDate(new Date(Math.floor(start / bucketMs) * bucketMs), opts)
+      !== formatDate(new Date(lastInstant), opts);
   const buckets: FsmTimelinePoint[] = Array.from(bucketMap.entries())
     .sort((a, b) => a[0] - b[0])
-    .map(([ts, counts]) => ({ time: bucketLabel(ts, bucketMs, spanMs), ...counts }));
+    .map(([ts, counts]) => ({
+      time: bucketLabel(ts, bucketMs, showDate, opts),
+      ...counts,
+    }));
 
   return { buckets, fsmTypes };
 }
 
-export function FSMTimelineChart({ transitions, hours, emptyMessage }: FSMTimelineChartProps) {
+export function FSMTimelineChart({
+  transitions, hours, startInstant, endInstantExclusive, emptyMessage,
+}: FSMTimelineChartProps) {
   const { t } = useTranslation();
+  const { opts } = useDateFormat();
 
   const { buckets, fsmTypes } = useMemo(
-    () => buildFsmTimeline(transitions, hours),
-    [transitions, hours],
+    () => buildFsmTimeline(transitions, hours, Date.now(), startInstant, endInstantExclusive, opts),
+    [transitions, hours, startInstant, endInstantExclusive, opts],
   );
 
   // chart-a11y:no-table dynamic per-FSM-type stacked series; transition list view holds the per-row detail

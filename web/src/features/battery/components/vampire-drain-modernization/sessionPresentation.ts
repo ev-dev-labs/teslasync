@@ -1,5 +1,5 @@
 import type { TFunction } from 'i18next';
-import { formatDateTime } from '@/lib/dateFormat';
+import { formatDateTime, type FormatOptions } from '@/lib/dateFormat';
 
 interface DrainSession {
   started_at: string;
@@ -17,11 +17,12 @@ export function sessionPresentation<T extends DrainSession>(
   fmtNumber: (value: number | null | undefined) => string,
   formatTemperature: (value: number | null | undefined) => string,
   t: TFunction,
+  dateOptions?: FormatOptions,
 ) {
   const displayValue = (row: T, key: string) => {
     switch (key) {
-      case 'started_at': return formatDateTime(row.started_at);
-      case 'ended_at': return formatDateTime(row.ended_at);
+      case 'started_at': return formatDateTime(row.started_at, dateOptions);
+      case 'ended_at': return formatDateTime(row.ended_at, dateOptions);
       case 'duration_hours': return row.duration_hours != null ? `${fmtNumber(row.duration_hours)}h` : '—';
       case 'start_battery_pct': return row.start_battery_pct != null ? `${fmtNumber(row.start_battery_pct)}%` : '—';
       case 'end_battery_pct': return row.end_battery_pct != null ? `${fmtNumber(row.end_battery_pct)}%` : '—';

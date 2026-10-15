@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useCardPlacement } from '@/components/layout/layout-reference';
+import { useCardPlacement } from '@/components/layout';
 import { cn } from '@/lib/cn';
 
 /** Consume shared placement, never introduce a feature width/observer engine. */

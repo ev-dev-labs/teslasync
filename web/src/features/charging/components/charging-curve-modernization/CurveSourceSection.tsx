@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BatteryCharging } from 'lucide-react';
 import type { DataState } from '@/api/dataState';
-import { LayoutCard, useCardPlacement } from '@/components/layout/layout-reference';
+import { LayoutCard, useCardPlacement } from '@/components/layout';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { cn } from '@/lib/cn';
 

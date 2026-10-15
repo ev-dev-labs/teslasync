@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/components/feedback'
 import { Badge, Table, Text } from '@/components/ui'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting'
 import { isSensitiveManagementKey } from './managementJson'
 import { parseManagementScalarFields } from './managementData'
 import { ManagementRawDetails } from './ManagementRawDetails'
@@ -9,8 +10,16 @@ interface VehicleSpecsDataViewProps {
   data: unknown
 }
 
+function retainsSourcePrecision(key: string): boolean {
+  const words = key.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase().split(/[_-]+/)
+  return words.some((word) =>
+    ['id', 'vin', 'code', 'year', 'version', 'timestamp', 'latitude', 'longitude', 'lat', 'lon', 'lng', 'precision'].includes(word),
+  )
+}
+
 export function VehicleSpecsDataView({ data }: VehicleSpecsDataViewProps) {
   const { t } = useTranslation()
+  const { fmtNumber } = useNumberFormatting()
   const fields = parseManagementScalarFields(data).filter(
     (field) => !isSensitiveManagementKey(field.key),
   )
@@ -63,7 +72,9 @@ export function VehicleSpecsDataView({ data }: VehicleSpecsDataViewProps) {
                     weight="semibold"
                     mono={typeof field.value === 'number'}
                   >
-                    {String(field.value)}
+                    {typeof field.value === 'number' && !retainsSourcePrecision(field.key)
+                      ? fmtNumber(field.value)
+                      : String(field.value)}
                   </Text>
                 )}
               </td>

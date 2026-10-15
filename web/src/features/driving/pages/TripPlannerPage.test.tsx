@@ -27,6 +27,7 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { StrictMode, type ReactNode } from 'react';
+import * as operationalMetrics from '@/lib/operationalMetrics';
 import type {
   TripPlan,
   TripPlanRoute,
@@ -118,6 +119,9 @@ vi.mock('../components/AddressInput', () => ({
         }}
       >
         select {p.label}
+      </button>
+      <button type="button" data-testid={`address-edit-${p.label}`} onClick={() => p.onChange('Edited location')}>
+        edit {p.label}
       </button>
     </div>
   ),
@@ -211,6 +215,7 @@ const planMutate = vi.fn(
   },
 );
 const commandMutate = vi.fn();
+const formatOperationalMetrics = vi.spyOn(operationalMetrics, 'formatOperationalMetrics');
 
 /* ── fixtures ─────────────────────────────────────────────── */
 
@@ -358,7 +363,8 @@ describe('TripPlannerPage — structure & a11y', () => {
     expect(screen.getByTestId('leg-count')).toHaveTextContent('2');
     expect(screen.getByTestId('soc-points')).toHaveTextContent('2');
     expect(screen.getByRole('button', { name: 'Send to Car' })).toBeEnabled();
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Plan Trip' }));
     expect(planMutate).toHaveBeenCalledTimes(2);
   });
 
@@ -621,13 +627,66 @@ describe('TripPlannerPage — KPI derivation after a successful plan', () => {
     expect(within(screen.getByRole('region', { name: 'Trip summary' })).queryByText('—')).not.toBeInTheDocument();
   });
 
-  it('shows "Free" when the estimated cost is zero and a "—" charging tile with no charging', () => {
+  it('shows "Free" and a zero duration when the plan reports no charging', () => {
     renderPage();
-    planWith(makePlan({ route: { estimated_cost: 0, charging_duration_s: 0 } }));
+    const plan = makePlan({ route: { estimated_cost: 0, charging_duration_s: 0 }, charge_stops: [] });
+    planWith(plan);
 
     expect(screen.getByText('Free')).toBeInTheDocument();
-    // charging_duration_s === 0 → the charging KPI stays a placeholder.
-    expect(within(screen.getByRole('region', { name: 'Trip summary' })).getAllByText('—')).toHaveLength(1);
+    expect(screen.getByText('0m')).toBeInTheDocument();
+    expect(plan.route.estimated_cost).toBe(0);
+    expect(plan.route.charging_duration_s).toBe(0);
+    expect(formatOperationalMetrics).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ occurrenceId: 'cost', rawValue: 0 }),
+        expect.objectContaining({ occurrenceId: 'chargingTime', rawValue: 0 }),
+      ]),
+      expect.any(Object),
+      expect.any(Function),
+    );
+    expect(screen.getByTestId('leg-stops')).toHaveTextContent('0');
+    expect(within(screen.getByRole('region', { name: 'Trip summary' })).queryByText('—')).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['missing', undefined, 'missing'],
+    ['null', null, 'missing'],
+    ['NaN', Number.NaN, 'invalid'],
+    ['infinite', Number.POSITIVE_INFINITY, 'invalid'],
+    ['negative infinite', Number.NEGATIVE_INFINITY, 'invalid'],
+    ['text', '0', 'invalid'],
+  ] as const)('keeps %s charging measurements unknown instead of reporting no charging', (_name, raw, state) => {
+    renderPage();
+    const plan = makePlan({ charge_stops: [] });
+    // Exercise malformed wire payloads without weakening the production API type.
+    Object.assign(plan.route, { charging_duration_s: raw, estimated_cost: raw });
+    planWith(plan);
+
+    const summary = screen.getByRole('region', { name: 'Trip summary' });
+    for (const key of ['chargingTime', 'cost']) {
+      const tile = summary.querySelector(`[data-operational-metric="${key}"]`);
+      expect(tile).toHaveAttribute('data-value-state', state);
+      expect(tile).toHaveTextContent('—');
+    }
+    expect(within(summary).queryByText('Free')).not.toBeInTheDocument();
+    expect(within(summary).queryByText('0m')).not.toBeInTheDocument();
+    expect(within(summary).getByText('100.00 km')).toBeInTheDocument();
+  });
+
+  it.each([-12.5, 0.25, -0.25])('preserves signed fractional estimated cost %s rather than labeling it Free', (cost) => {
+    renderPage();
+    const plan = makePlan({ route: { estimated_cost: cost } });
+    planWith(plan);
+
+    const summary = screen.getByRole('region', { name: 'Trip summary' });
+    expect(within(summary).getByText(`$${cost.toFixed(2)}`)).toBeInTheDocument();
+    expect(within(summary).queryByText('Free')).not.toBeInTheDocument();
+    expect(plan.route.estimated_cost).toBe(cost);
+    expect(formatOperationalMetrics).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.objectContaining({ occurrenceId: 'cost', rawValue: cost })]),
+      expect.any(Object),
+      expect.any(Function),
+    );
   });
 
   it('threads the plan into the map, SOC chart and leg list children', () => {
@@ -648,6 +707,39 @@ describe('TripPlannerPage — KPI derivation after a successful plan', () => {
 /* ── formatDuration hardening (the private helper, via KPIs) ─ */
 
 describe('TripPlannerPage — duration formatting edge cases', () => {
+  it('rejects negative durations before specialist formatting while retaining measured zero', () => {
+    renderPage();
+    planWith(makePlan({ route: {
+      total_duration_s: -60, driving_duration_s: -0.25, charging_duration_s: 0,
+    } }));
+
+    const summary = screen.getByRole('region', { name: 'Trip summary' });
+    for (const key of ['totalTime', 'drivingTime']) {
+      const tile = summary.querySelector(`[data-operational-metric="${key}"]`);
+      expect(tile).toHaveAttribute('data-value-state', 'invalid');
+      expect(tile).toHaveTextContent('Expected a non-negative duration for this display');
+    }
+    expect(within(summary).getAllByText('—')).toHaveLength(2);
+    expect(within(summary).getByText('0m')).toBeInTheDocument();
+  });
+
+  it('rounds fractional seconds only for display and preserves the source measurement', () => {
+    renderPage();
+    const plan = makePlan({ route: { charging_duration_s: 90.5 } });
+    planWith(plan);
+
+    const summary = screen.getByRole('region', { name: 'Trip summary' });
+    expect(within(summary).getByText('2m')).toBeInTheDocument();
+    expect(plan.route.charging_duration_s).toBe(90.5);
+    expect(formatOperationalMetrics).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.objectContaining({ occurrenceId: 'chargingTime', rawValue: 90.5 })]),
+      expect.any(Object),
+      expect.any(Function),
+    );
+    expect(summary.querySelector('[data-operational-metric="chargingTime"]'))
+      .toHaveAttribute('data-value-state', 'value');
+  });
+
   it('rolls a rounded 60-minute remainder into the next hour (no "1h 60m")', () => {
     renderPage();
     // 7199s → 119.98 min and 3599s → 59.98 min both round to a :60 remainder.
@@ -707,6 +799,7 @@ describe('TripPlannerPage — feasibility, weather and estimate insights', () =>
     expect(screen.getByText('Weather Impact')).toBeInTheDocument();
     expect(screen.getByText('Freezing')).toBeInTheDocument();
     expect(screen.getByText('Efficiency factor: 1.20×')).toBeInTheDocument();
+    expect(screen.getByText('The temperature model uses historical temperature, not a departure forecast.')).toBeInTheDocument();
   });
 
   it('omits the factor caption when the temperature is unknown but keeps the note', () => {
@@ -718,6 +811,7 @@ describe('TripPlannerPage — feasibility, weather and estimate insights', () =>
     expect(screen.getByText('Weather Impact')).toBeInTheDocument();
     expect(screen.getByText('Windy')).toBeInTheDocument();
     expect(screen.queryByText(/Efficiency factor:/)).not.toBeInTheDocument();
+    expect(screen.getByText('Temperature evidence is unavailable; the model factor does not establish departure weather conditions.')).toBeInTheDocument();
   });
 
   it('falls back to the "no significant weather impact" note when the factor is neutral', () => {
@@ -728,6 +822,33 @@ describe('TripPlannerPage — feasibility, weather and estimate insights', () =>
       screen.getByText('No significant weather impact expected.'),
     ).toBeInTheDocument();
     expect(screen.queryByText('Weather Impact')).not.toBeInTheDocument();
+    expect(screen.getByText('The temperature model uses historical temperature, not a departure forecast.')).toBeInTheDocument();
+  });
+
+  it.each([null, undefined, Number.NaN, Number.POSITIVE_INFINITY])(
+    'does not interpret a neutral factor as weather evidence when temperature is %s',
+    (temperature) => {
+      renderPage();
+      const plan = makePlan({ weather: { avg_temp_c: temperature ?? null, efficiency_factor: 1, note: '' } });
+      if (temperature === undefined) Reflect.deleteProperty(plan.weather_impact, 'avg_temp_c');
+      planWith(plan);
+
+      expect(screen.getByText('Weather impact is unavailable for this plan.')).toBeInTheDocument();
+      expect(screen.getByText('Temperature evidence is unavailable; the model factor does not establish departure weather conditions.')).toBeInTheDocument();
+      expect(screen.queryByText('No significant weather impact expected.')).not.toBeInTheDocument();
+      expect(screen.queryByText(/Efficiency factor:/)).not.toBeInTheDocument();
+      expect(screen.getByText('100.00 km')).toBeInTheDocument();
+      expect(screen.getByTestId('map-legs')).toHaveTextContent('2');
+    },
+  );
+
+  it('accepts zero degrees as historical temperature evidence for a neutral factor', () => {
+    renderPage();
+    planWith(makePlan({ weather: { avg_temp_c: 0, efficiency_factor: 1 } }));
+
+    expect(screen.getByText('No significant weather impact expected.')).toBeInTheDocument();
+    expect(screen.getByText('The temperature model uses historical temperature, not a departure forecast.')).toBeInTheDocument();
+    expect(screen.queryByText('Weather impact is unavailable for this plan.')).not.toBeInTheDocument();
   });
 });
 
@@ -814,6 +935,208 @@ describe('TripPlannerPage — AI agent input wiring', () => {
 
 
 describe('TripPlannerPage — retained source scope', () => {
+  it('qualifies failed refreshes without changed inputs and restores available status after recovery', () => {
+    const view = renderPage();
+    planWith(makePlan());
+    const summary = screen.getByRole('region', { name: 'Trip summary' });
+    expect(within(summary).getByText('Source available')).toBeInTheDocument();
+    nextPlan = null;
+    fireEvent.click(screen.getByRole('button', { name: 'Plan Trip' }));
+    mockUsePlanTrip.mockReturnValue({
+      ...mockUsePlanTrip(), isError: true, error: new Error('refresh failed'),
+    });
+    view.rerenderPage();
+
+    expect(within(summary).getByText('Cached · refresh failed')).toBeInTheDocument();
+    expect(within(summary).queryByText('Source available')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('trip-inputs-changed')).not.toBeInTheDocument();
+    expect(within(summary).getByText('100.00 km')).toBeInTheDocument();
+    expect(within(summary).getByText(/Current SOC: 80% · Min Arrival SOC: 20%/)).toBeInTheDocument();
+    expect(screen.getByTestId('map-legs')).toHaveTextContent('2');
+    expect(screen.getByTestId('map-stops')).toHaveTextContent('1');
+    expect(screen.getByTestId('leg-count')).toHaveTextContent('2');
+    expect(screen.getByTestId('soc-points')).toHaveTextContent('2');
+    expect(screen.getByRole('button', { name: 'Send to Car' })).toBeEnabled();
+
+    mockUsePlanTrip.mockReturnValue({
+      ...mockUsePlanTrip(), isError: false, error: null,
+    });
+    nextPlan = makePlan({ route: { total_distance_m: 200_000 } });
+    view.rerenderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Plan Trip' }));
+    expect(within(summary).getByText('Source available')).toBeInTheDocument();
+    expect(within(summary).queryByText('Cached · refresh failed')).not.toBeInTheDocument();
+    expect(within(summary).getByText('200.00 km')).toBeInTheDocument();
+  });
+
+  it('labels an initial failure without claiming a cached plan', () => {
+    mockUsePlanTrip.mockReturnValue({
+      ...mockUsePlanTrip(), isError: true, error: new Error('planning failed'),
+    });
+    renderPage();
+    const summary = screen.getByRole('region', { name: 'Trip summary' });
+    expect(within(summary).getByText('Failed')).toBeInTheDocument();
+    expect(within(summary).queryByText('Cached · refresh failed')).not.toBeInTheDocument();
+    expect(screen.getByText('Failed to compute trip plan. Please try again.')).toBeInTheDocument();
+  });
+
+  it.each(['From', 'To'])('retains submitted coordinates when the %s address is edited without a new geocode pick', (label) => {
+    const view = renderPage();
+    planWith(makePlan());
+    fireEvent.click(screen.getByTestId(`address-edit-${label}`));
+    expect(screen.getByTestId('trip-inputs-changed')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Plan Trip' })).toBeDisabled();
+    expect(screen.getByTestId('map-origin')).toHaveTextContent('From Location');
+    expect(screen.getByTestId('map-dest')).toHaveTextContent('To Location');
+    expect(screen.getByTestId('leg-count')).toHaveTextContent('2');
+    mockUsePlanTrip.mockReturnValue({
+      ...mockUsePlanTrip(), isError: true, error: new Error('refresh failed'),
+    });
+    view.rerenderPage();
+    expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Plan Trip' })).toHaveAccessibleDescription(
+      label === 'From' ? 'Enter starting location...' : 'Enter destination...',
+    );
+    expect(screen.getByText('100.00 km')).toBeInTheDocument();
+  });
+
+  it('requires the current workspace vehicle before explicitly replanning retained evidence', () => {
+    const view = renderPage();
+    planWith(makePlan());
+    mockSelectedVehicle.mockReturnValue({ ...mockSelectedVehicle(), vehicleId: null });
+    mockUsePlanTrip.mockReturnValue({
+      ...mockUsePlanTrip(), isError: true, error: new Error('refresh failed'),
+    });
+    view.rerenderPage();
+    expect(screen.getByRole('button', { name: 'Plan Trip' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Plan Trip' })).toHaveAccessibleDescription('Select vehicle');
+    expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument();
+    expect(screen.getByText('100.00 km')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Plan Trip' }));
+    expect(planMutate).toHaveBeenCalledTimes(1);
+
+    mockSelectedVehicle.mockReturnValue({ ...mockSelectedVehicle(), vehicleId: 2 });
+    view.rerenderPage();
+    expect(screen.getByRole('button', { name: 'Plan Trip' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Plan Trip' }));
+    expect(planMutate).toHaveBeenLastCalledWith(
+      expect.objectContaining({ vehicle_id: 2 }),
+      expect.objectContaining({ onSuccess: expect.any(Function) }),
+    );
+  });
+
+  it('shows the original submitted scenario, flags every edited input and clears the flag after recomputation', () => {
+    renderPage();
+    planWith(makePlan({ legs: [] }));
+    const summary = screen.getByRole('region', { name: 'Trip summary' });
+    expect(within(summary).getByText(/From Location → To Location · Vehicle: 1 · Current SOC: 80% · Min Arrival SOC: 20% · Driving Speed: Normal/)).toBeInTheDocument();
+    expect(screen.queryByTestId('trip-inputs-changed')).not.toBeInTheDocument();
+
+    for (const [label, value, original] of [
+      ['Current SOC', '60', '80'],
+      ['Min Arrival SOC', '30', '20'],
+    ]) {
+      fireEvent.change(screen.getByRole('slider', { name: label }), { target: { value } });
+      expect(screen.getByTestId('trip-inputs-changed')).toHaveTextContent('Unsaved changes');
+      expect(within(summary).getByText(/Current SOC: 80% · Min Arrival SOC: 20%/)).toBeInTheDocument();
+      fireEvent.change(screen.getByRole('slider', { name: label }), { target: { value: original } });
+      expect(screen.queryByTestId('trip-inputs-changed')).not.toBeInTheDocument();
+    }
+    fireEvent.change(screen.getByRole('combobox', { name: 'Driving Speed' }), { target: { value: '1.2' } });
+    expect(screen.getByTestId('trip-inputs-changed')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument();
+    expect(within(summary).getByText(/Driving Speed: Normal/)).toBeInTheDocument();
+    expect(screen.getByText('100.00 km')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Plan Trip' }));
+    expect(screen.queryByTestId('trip-inputs-changed')).not.toBeInTheDocument();
+    expect(within(summary).getByText(/Driving Speed: Fast/)).toBeInTheDocument();
+  });
+
+  it('distinguishes active initial loading from a paused request without data', () => {
+    mockUsePlanTrip.mockReturnValue({
+      ...mockUsePlanTrip(), isPending: true, isPaused: false,
+    });
+    const view = renderPage();
+    expect(screen.getByRole('button', { name: 'Planning...' })).toBeDisabled();
+    expect(within(screen.getByRole('region', { name: 'Trip summary' })).getByText('Loading source')).toBeInTheDocument();
+    mockUsePlanTrip.mockReturnValue({
+      ...mockUsePlanTrip(), isPaused: true,
+    });
+    view.rerenderPage();
+    expect(screen.getByRole('button', { name: 'Refresh paused' })).toBeDisabled();
+    expect(within(screen.getByRole('region', { name: 'Trip summary' })).getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.queryByText('Loading source')).not.toBeInTheDocument();
+    expect(screen.queryByText('Failed to compute trip plan. Please try again.')).not.toBeInTheDocument();
+    expect(screen.getByTestId('leg-count')).toHaveTextContent('0');
+  });
+
+  it('treats successful empty arrays and zero metrics as a computed plan rather than unknown data', () => {
+    renderPage();
+    planWith(makePlan({
+      legs: [], charge_stops: [], soc_curve: [],
+      route: {
+        total_distance_m: 0, total_duration_s: 0, driving_duration_s: 0,
+        charging_duration_s: 0, total_energy_wh: 0, estimated_cost: 0,
+      },
+    }));
+    const summary = screen.getByRole('region', { name: 'Trip summary' });
+    expect(within(summary).getByText('Source available')).toBeInTheDocument();
+    expect(within(summary).getByText('0.00 km')).toBeInTheDocument();
+    expect(within(summary).getAllByText('0m')).toHaveLength(3);
+    expect(within(summary).getByText('0.00 kWh')).toBeInTheDocument();
+    expect(within(summary).getByText('Free')).toBeInTheDocument();
+    expect(within(summary).queryByText('—')).not.toBeInTheDocument();
+    expect(screen.getByTestId('leg-count')).toHaveTextContent('0');
+    expect(screen.getByTestId('soc-points')).toHaveTextContent('0');
+    expect(within(summary).getByText(/From Location → To Location/)).toBeInTheDocument();
+  });
+
+  it('keeps old evidence and scenario through changed-input refresh, failure, pause and recovery', () => {
+    const view = renderPage();
+    planWith(makePlan());
+    fireEvent.change(screen.getByRole('slider', { name: 'Current SOC' }), { target: { value: '60' } });
+    nextPlan = null;
+    fireEvent.click(screen.getByRole('button', { name: 'Plan Trip' }));
+    mockUsePlanTrip.mockReturnValue({
+      ...mockUsePlanTrip(), isPending: true, isPaused: false,
+    });
+    view.rerenderPage();
+    expect(screen.getByText('Recomputing; showing the last computed plan')).toBeInTheDocument();
+    expect(screen.getByText('100.00 km')).toBeInTheDocument();
+    expect(screen.getByTestId('soc-points')).toHaveTextContent('2');
+
+    mockUsePlanTrip.mockReturnValue({
+      ...mockUsePlanTrip(), isPending: false, isError: true, error: new Error('refresh failed'),
+    });
+    view.rerenderPage();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Trip summary' })).getByText('Cached · refresh failed')).toBeInTheDocument();
+    expect(screen.getByTestId('leg-count')).toHaveTextContent('2');
+    expect(screen.getByTestId('trip-inputs-changed')).toBeInTheDocument();
+
+    mockUsePlanTrip.mockReturnValue({
+      ...mockUsePlanTrip(), isError: false, error: null, isPending: true, isPaused: true,
+    });
+    view.rerenderPage();
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(screen.getByRole('button', { name: 'Refresh paused' })).toBeDisabled();
+    expect(within(screen.getByRole('region', { name: 'Trip summary' })).getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Recomputing; showing the last computed plan')).not.toBeInTheDocument();
+    expect(screen.getByText('100.00 km')).toBeInTheDocument();
+
+    mockUsePlanTrip.mockReturnValue({
+      ...mockUsePlanTrip(), isPending: false, isPaused: false,
+    });
+    nextPlan = makePlan({ route: { total_distance_m: 200_000 } });
+    view.rerenderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Plan Trip' }));
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('trip-inputs-changed')).not.toBeInTheDocument();
+    expect(screen.getByText('200.00 km')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Trip summary' })).getByText(/Current SOC: 60%/)).toBeInTheDocument();
+  });
+
   it('selects Normal by default and preserves the dimensionless normal speed request', () => {
     renderPage();
     expect(screen.getByRole('combobox', { name: 'Driving Speed' })).toHaveValue('1');
@@ -849,6 +1172,8 @@ describe('TripPlannerPage — retained source scope', () => {
     mockSelectedVehicle.mockReturnValue({ ...selected, vehicleId: 2 });
     view.rerenderPage();
     expect(screen.getByRole('button', { name: 'Send to Car' })).toBeDisabled();
+    expect(screen.getByTestId('trip-inputs-changed')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Trip summary' })).getByText(/Vehicle: 1/)).toBeInTheDocument();
     expect(screen.getByTestId('map-legs')).toHaveTextContent('2');
     expect(screen.getByTestId('leg-count')).toHaveTextContent('2');
   });

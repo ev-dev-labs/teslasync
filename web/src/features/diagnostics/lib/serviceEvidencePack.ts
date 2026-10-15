@@ -38,12 +38,14 @@ import type {
 } from './rootCauseIntelligence';
 import { NO_CAUSAL_PROOF_DISCLAIMER } from './rootCauseIntelligence';
 import { isSensitiveFieldName, redactSensitiveText } from '@/lib/privacy';
+import type { DataState } from '@/api/dataState';
+import type { SignalEvidenceBundleSource } from '@/api/hooks/useTelemetry';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Schema
 // ─────────────────────────────────────────────────────────────────────────
 
-export const SERVICE_EVIDENCE_PACK_SCHEMA_VERSION = '1.0.0';
+export const SERVICE_EVIDENCE_PACK_SCHEMA_VERSION = '1.1.0';
 
 export const SERVICE_EVIDENCE_PACK_INCLUDED_VEHICLE_FIELDS = ['id', 'displayName'] as const;
 
@@ -115,6 +117,44 @@ export interface ServiceEvidencePackPrivacyManifest {
   notes: string;
 }
 
+/** Serializable trust only: payloads, retry callbacks and error messages are
+ * deliberately excluded from the privacy-safe offline snapshot. */
+export interface ServiceEvidencePackSourceTrust {
+  status: DataState<unknown>['status'] | 'unknown';
+  provenance: DataState<unknown>['provenance'];
+  hasData: boolean | null;
+  isRefreshing: boolean | null;
+  isRefreshBlocked: boolean | null;
+  hasRefreshError: boolean | null;
+  hasFatalError: boolean | null;
+  updatedAt: number | null;
+  ageMs: number | null;
+}
+
+export interface ServiceEvidencePackSourceSnapshot {
+  kind: 'catalog' | 'history' | 'softwareUpdates';
+  signal: string | null;
+  responseSignal: string | null;
+  vehicleId: number | null;
+  from: string | null;
+  to: string | null;
+  /** Loaded raw rows, not normalized entries or usable statistical samples.
+   * null means unknown; zero means an explicitly empty source array. */
+  loadedCount: number | null;
+  /** Source-reported count, not a claim of full-window completeness. */
+  reportedCount: number | null;
+  trust: ServiceEvidencePackSourceTrust;
+}
+
+export interface ServiceEvidencePackSnapshot {
+  sources: ServiceEvidencePackSourceSnapshot[];
+  counts: {
+    signalEvidence: number | null;
+    hypotheses: number | null;
+    softwareUpdates: number | null;
+  };
+}
+
 export interface ServiceEvidencePackCore {
   schemaVersion: string;
   generatedAt: string;
@@ -135,6 +175,9 @@ export interface ServiceEvidencePackCore {
   /** Verbatim `NO_CAUSAL_PROOF_DISCLAIMER` — repeated here so the exported
    *  JSON file is self-explanatory even without the app around it. */
   disclaimer: string;
+  /** Added in 1.1; optional for consumers retaining a 1.0 document. No source
+   * trust or full-window completeness is inferred from analysis quality. */
+  snapshot?: ServiceEvidencePackSnapshot;
 }
 
 export interface ServiceEvidencePackIntegrity {
@@ -231,8 +274,85 @@ export interface BuildServiceEvidencePackInput {
    *  when unavailable — the output field is always present (as `null`) so
    *  consumers never need to guess whether it was omitted vs. empty. */
   softwareUpdates?: readonly RawSoftwareUpdateEntry[] | null;
+  /** Original per-query states captured with the analysis. Omission preserves
+   * legacy callers but exports unknown trust, never assumed healthy trust. */
+  sources?: {
+    catalog?: DataState<readonly string[]>;
+    histories?: readonly SignalEvidenceBundleSource[];
+    softwareUpdates?: DataState<readonly RawSoftwareUpdateEntry[]>;
+  };
   /** Injectable clock for deterministic tests; defaults to the real clock. */
   now?: () => string;
+}
+
+function snapshotTrust(state: DataState<unknown> | undefined): ServiceEvidencePackSourceTrust {
+  return {
+    status: state?.status ?? 'unknown',
+    provenance: state?.provenance ?? 'unknown',
+    hasData: state?.hasData ?? null,
+    isRefreshing: state?.isRefreshing ?? null,
+    isRefreshBlocked: state?.isRefreshBlocked ?? null,
+    hasRefreshError: state ? state.refreshError != null : null,
+    hasFatalError: state ? state.fatalError != null : null,
+    updatedAt: state?.updatedAt ?? null,
+    ageMs: state?.ageMs ?? null,
+  };
+}
+
+function sourceCount(value: number | undefined): number | null {
+  return value !== undefined && Number.isSafeInteger(value) && value >= 0 ? value : null;
+}
+
+function buildSnapshot(
+  input: BuildServiceEvidencePackInput,
+  signalEvidence: ServiceEvidencePackSignalEvidence[],
+  hypotheses: ServiceEvidencePackHypothesis[],
+): ServiceEvidencePackSnapshot {
+  const catalog = input.sources?.catalog;
+  const updates = input.sources?.softwareUpdates;
+  const histories = input.sources?.histories ?? [];
+  // Keep requested sources even when they never loaded or entered the graph.
+  const signals = new Set([
+    input.analysis?.focalSignal ?? '',
+    ...(input.analysis?.relatedCandidates ?? []).map((candidate) => candidate.signal),
+    ...signalEvidence.map((entry) => entry.signal),
+    ...histories.map((source) => source.signal),
+  ]);
+  const sources: ServiceEvidencePackSourceSnapshot[] = [{
+    kind: 'catalog', signal: null, responseSignal: null, vehicleId: input.vehicle?.id ?? null,
+    from: null, to: null,
+    loadedCount: Array.isArray(catalog?.data) ? catalog.data.length : null,
+    reportedCount: null, trust: snapshotTrust(catalog),
+  }];
+  for (const signal of signals) {
+    if (!signal || isSensitiveSignal(signal)) continue;
+    const state = histories.find((source) => source.signal === signal)?.state;
+    const response = state?.data;
+    sources.push({
+      kind: 'history', signal,
+      responseSignal: response?.signal && !isSensitiveSignal(response.signal) ? response.signal : null,
+      vehicleId: response?.vehicleId ?? input.vehicle?.id ?? null,
+      from: response?.from ?? null, to: response?.to ?? null,
+      loadedCount: Array.isArray(response?.data) ? response.data.length : null,
+      reportedCount: sourceCount(response?.count),
+      trust: snapshotTrust(state),
+    });
+  }
+  const rawUpdates = updates?.data ?? input.softwareUpdates;
+  const updateCount = Array.isArray(rawUpdates) ? rawUpdates.length : null;
+  sources.push({
+    kind: 'softwareUpdates', signal: null, responseSignal: null, vehicleId: input.vehicle?.id ?? null,
+    from: null, to: null, loadedCount: updateCount, reportedCount: null,
+    trust: snapshotTrust(updates),
+  });
+  return {
+    sources,
+    counts: {
+      signalEvidence: Array.isArray(input.analysis?.graph?.nodes) ? signalEvidence.length : null,
+      hypotheses: Array.isArray(input.analysis?.hypotheses) ? hypotheses.length : null,
+      softwareUpdates: updateCount,
+    },
+  };
 }
 
 /**
@@ -330,6 +450,7 @@ export function buildServiceEvidencePackCore(input: BuildServiceEvidencePackInpu
     softwareUpdates: normalizeSoftwareUpdates(input.softwareUpdates),
     privacy: buildPrivacyManifest(),
     disclaimer: NO_CAUSAL_PROOF_DISCLAIMER,
+    snapshot: buildSnapshot(input, signalEvidence, hypotheses),
   };
 }
 

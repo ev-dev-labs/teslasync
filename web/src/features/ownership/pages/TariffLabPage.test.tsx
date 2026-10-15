@@ -12,7 +12,33 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import type { ReactNode } from 'react';
+import { Children, cloneElement, isValidElement, type ComponentProps, type ReactNode } from 'react';
+
+const chartProbe = vi.hoisted(() => ({
+  axis: vi.fn(),
+  tooltip: vi.fn(),
+  bars: vi.fn(),
+}));
+
+vi.mock('@/components/charts', async () => {
+  const actual = await vi.importActual<typeof import('@/components/charts')>('@/components/charts');
+  function inspect(children: ReactNode) {
+    Children.forEach(children, (child) => {
+      if (!isValidElement<{ children?: ReactNode }>(child)) return;
+      if (child.type === actual.YAxis) chartProbe.axis(child.props);
+      if (child.type === actual.Tooltip) chartProbe.tooltip(child.props);
+      if (child.type === actual.BarChart) chartProbe.bars(child.props);
+      inspect(child.props.children);
+    });
+  }
+  return {
+    ...actual,
+    ChartContainer: (props: ComponentProps<typeof actual.ChartContainer>) => {
+      inspect(props.children);
+      return <actual.ChartContainer {...props} />;
+    },
+  };
+});
 
 vi.mock('react-i18next', () => {
   const interpolate = (str: string, vars?: Record<string, unknown> | null): string => {
@@ -78,7 +104,7 @@ const mockCreate = vi.mocked(useCreateTariff, { partial: true });
 const mockRemove = vi.mocked(useDeleteTariff, { partial: true });
 const mockSimulate = vi.mocked<
   (...args: Parameters<typeof useSimulateTariffs>) => Pick<
-    ReturnType<typeof useSimulateTariffs>, 'mutate' | 'isPending' | 'variables' | 'data' | 'error'
+    ReturnType<typeof useSimulateTariffs>, 'mutate' | 'isPending' | 'isPaused' | 'variables' | 'data' | 'error'
   >
 >(useSimulateTariffs, { partial: true });
 
@@ -229,7 +255,7 @@ describe('TariffLabPage — publication retention', () => {
       act(() => replay.requests[0].resolve(original));
       await waitFor(() => expect(card('Arbitrage summary')).toHaveTextContent('Source returned'));
       const values = replayValues();
-      const economics = card('Ranked plan economics').textContent;
+      const economics = within(card('Ranked plan economics')).getByRole('table').textContent;
       const bands = card('Where your energy actually landed').textContent;
       fireEvent.change(screen.getByLabelText('Analysis window'), { target: { value: '180' } });
       fireEvent.change(screen.getByRole('spinbutton', { name: 'Shiftable load (%)' }), { target: { value: '55' } });
@@ -240,7 +266,10 @@ describe('TariffLabPage — publication retention', () => {
       await waitFor(() => expect(card('Arbitrage summary')).toHaveTextContent('Refreshing source'));
       expect(run).toBeDisabled();
       expect(replayValues()).toEqual(values);
-      expect(card('Ranked plan economics').textContent).toBe(economics);
+      expect(within(card('Ranked plan economics')).getByRole('table').textContent).toBe(economics);
+      for (const title of ['Arbitrage summary', 'Annualised cost by plan', 'Ranked plan economics', 'Where your energy actually landed', 'Evidence, quality, and limitations']) {
+        expect(within(card(title)).getByRole('status')).toHaveTextContent('Previously loaded data remains visible.');
+      }
       expect(card('Where your energy actually landed').textContent).toBe(bands);
       expect(card('Evidence, quality, and limitations')).toHaveTextContent('Original replay provenance');
       expect(card('Evidence, quality, and limitations')).toHaveTextContent('Only recorded vehicle charging load is included.');
@@ -260,7 +289,7 @@ describe('TariffLabPage — publication retention', () => {
         await waitFor(() => expect(card('Arbitrage summary')).toHaveTextContent('Retained source'));
         expect(screen.getByText('replay unavailable')).toBeVisible();
         expect(replayValues()).toEqual(values);
-        expect(card('Ranked plan economics').textContent).toBe(economics);
+        expect(within(card('Ranked plan economics')).getByRole('table').textContent).toBe(economics);
         expect(card('Evidence, quality, and limitations')).toHaveTextContent('Original replay provenance');
         expect(run).toBeEnabled();
         fireEvent.click(run);
@@ -272,6 +301,7 @@ describe('TariffLabPage — publication retention', () => {
         results: [makeResult({ name: 'Replacement Replay' })],
       })));
       await waitFor(() => expect(card('Arbitrage summary')).toHaveTextContent('Source returned'));
+      expect(screen.queryByText(/The latest values are temporarily unavailable/)).not.toBeInTheDocument();
       expect(card('Arbitrage summary')).toHaveTextContent('vehicle #7, 180 days, shiftable 55%');
       expect(summaryMetric('Arbitrage summary', 'saving')).toHaveAttribute('data-value-state', 'missing');
       expect(summaryMetric('Arbitrage summary', 'observed')).toHaveTextContent('42');
@@ -380,6 +410,68 @@ beforeEach(() => {
 });
 
 describe('TariffLabPage — confirm-gated delete', () => {
+  it('keeps the independent plan library and pre-replay prompts available without a vehicle', () => {
+    mockSelected.mockReturnValue({
+      vehicleId: null, vehicle: null, vehicles: [], setVehicleId: vi.fn(),
+    });
+    renderPage();
+    expect(card('Arbitrage summary')).toHaveTextContent('Selection required');
+    expect(card('Arbitrage summary')).toHaveTextContent('Run a replay to see how much your plan choice is worth.');
+    expect(screen.getByRole('button', { name: 'Replay load against plans' })).toBeDisabled();
+    expect(within(card('Your rate plan library')).getByText('EV Nights')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Add plan' }));
+    expect(screen.getByRole('textbox', { name: 'Plan name required' })).toBeVisible();
+    expect(mockSimulate().mutate).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])('uses the real initial replay state (paused: %s) without inferring empty results', paused => {
+    mockSimulate.mockReturnValue({
+      ...makeMutation(), data: undefined, isPending: true, isPaused: paused,
+      variables: {
+        vehicle_id: 7, window_days: 90, tariff_ids: [], shiftable_pct: 35,
+        switch_fee_minor: 0, confirmed: true,
+      },
+    });
+    renderPage();
+    for (const title of ['Arbitrage summary', 'Annualised cost by plan', 'Ranked plan economics', 'Where your energy actually landed', 'Evidence, quality, and limitations']) {
+      const status = within(card(title)).getByRole('status');
+      if (paused) {
+        expect(status).toHaveTextContent('The initial query is paused while the network is unavailable; no empty response is inferred.');
+        expect(within(card(title)).queryByLabelText(`Loading ${title}`)).not.toBeInTheDocument();
+      } else {
+        expect(status).toHaveAccessibleName(`Loading ${title}`);
+      }
+      expect(card(title).querySelector('[data-empty-state]')).toBeNull();
+    }
+    expect(card('Arbitrage summary')).toHaveTextContent(paused ? 'Source paused' : 'Loading source');
+    expect(screen.queryByText('No supporting evidence was returned.')).not.toBeInTheDocument();
+    expect(screen.queryByText('No plan produced a priced result — check that your plans have at least one price band.')).not.toBeInTheDocument();
+    expect(within(card('Your rate plan library')).getByText('EV Nights')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Add plan' })).toBeEnabled();
+  });
+
+  it('renders authoritative empty replay results and measured zeros after success', () => {
+    mockSimulate.mockReturnValue({
+      ...makeMutation(),
+      data: makeSimulation({
+        results: [], session_count: 0, observed_energy_wh: 0, shiftable_pct: 0,
+        evidence: [],
+      }),
+    });
+    renderPage();
+    expect(card('Arbitrage summary')).toHaveTextContent('Source returned');
+    for (const id of ['observed', 'plans', 'shift']) {
+      expect(summaryMetric('Arbitrage summary', id)).toHaveAttribute('data-value-state', 'value');
+      expect(summaryMetric('Arbitrage summary', id)).toHaveTextContent('0');
+    }
+    for (const title of ['Annualised cost by plan', 'Ranked plan economics', 'Where your energy actually landed']) {
+      expect(card(title).querySelector('[data-empty-state]')).not.toBeNull();
+      expect(within(card(title)).queryByRole('status')).not.toBeInTheDocument();
+    }
+    expect(card('Evidence, quality, and limitations')).toHaveTextContent('No supporting evidence was returned.');
+    expect(within(card('Your rate plan library')).getByText('EV Nights')).toBeVisible();
+  });
+
   it('uses the real replay brief without promoting an unknown saving to zero or running another replay', () => {
     mockSimulate.mockReturnValue({ ...makeMutation(), data: makeSimulation() });
     renderPage();
@@ -498,7 +590,7 @@ describe('TariffLabPage — confirm-gated delete', () => {
 
     // The confirm() promise resolves off the click — wait a tick for mutate.
     await waitFor(() => expect(mutate).toHaveBeenCalledTimes(1));
-    expect(mutate).toHaveBeenCalledWith(2);
+    expect(mutate).toHaveBeenCalledWith(2, { onSuccess: expect.any(Function) });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
@@ -523,8 +615,142 @@ describe('TariffLabPage — confirm-gated delete', () => {
     expect(removeButton('Flat Saver')).toBeDisabled();
     expect(removeButton('EV Nights')).not.toBeDisabled();
   });
+
+  it.each(['success', 'error'] as const)(
+    'removes only success-confirmed deleted IDs and preserves selection on %s',
+    async outcome => {
+      let resolve!: () => void;
+      let reject!: (error: Error) => void;
+      const deletion = new Promise<void>((yes, no) => { resolve = yes; reject = no; });
+      function useDeleteMutation() {
+        return useMutation({ mutationFn: (_id: number) => deletion });
+      }
+      vi.mocked(useDeleteTariff).mockImplementation(useDeleteMutation);
+      const mutate = vi.fn();
+      mockSimulate.mockReturnValue({ ...makeMutation({ mutate }), data: undefined });
+      renderPage();
+      for (const name of ['EV Nights', 'Flat Saver']) {
+        const row = screen.getByText(name).closest('tr');
+        if (!row) throw new Error(`Missing selectable row: ${name}`);
+        fireEvent.click(within(row).getByRole('switch'));
+      }
+      fireEvent.click(removeButton('Flat Saver'));
+      fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }));
+      await waitFor(() => expect(removeButton('Flat Saver')).toBeDisabled());
+      expect(screen.getByText('2 plans selected')).toBeVisible();
+      if (outcome === 'success') {
+        await act(async () => resolve());
+        await waitFor(() => expect(screen.getByText('1 plans selected')).toBeVisible());
+      } else {
+        await act(async () => reject(new Error('delete unavailable')));
+        await waitFor(() => expect(screen.getByText('delete unavailable')).toBeVisible());
+        expect(screen.getByText('2 plans selected')).toBeVisible();
+      }
+      fireEvent.click(screen.getByRole('button', { name: 'Replay load against plans' }));
+      expect(mutate).toHaveBeenCalledWith(expect.objectContaining({
+        tariff_ids: outcome === 'success' ? [1] : [1, 2],
+      }));
+    },
+  );
+
+  it('retains selections across unloaded and partial library pages until explicitly cleared', () => {
+    const mutate = vi.fn();
+    mockSimulate.mockReturnValue({ ...makeMutation({ mutate }), data: undefined });
+    const view = renderPage();
+    const row = screen.getByText('Flat Saver').closest('tr');
+    if (!row) throw new Error('Missing selectable row');
+    fireEvent.click(within(row).getByRole('switch'));
+    mockTariffs.mockReturnValue({
+      ...makeQuery(undefined), isLoading: true, isFetching: true,
+    });
+    view.rerender(<TariffLabPage />);
+    expect(screen.getByText('1 plans selected')).toBeVisible();
+    mockTariffs.mockReturnValue(makeQuery({
+      items: [makeTariff()], total: 150, limit: 100, offset: 0,
+    }));
+    view.rerender(<TariffLabPage />);
+    fireEvent.click(screen.getByRole('button', { name: 'Replay load against plans' }));
+    expect(mutate).toHaveBeenLastCalledWith(expect.objectContaining({ tariff_ids: [2] }));
+    fireEvent.click(screen.getByRole('button', { name: 'Clear selection' }));
+    expect(screen.getByText('No plans selected — every stored plan will be evaluated.')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Clear selection' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Replay load against plans' }));
+    expect(mutate).toHaveBeenLastCalledWith(expect.objectContaining({ tariff_ids: [] }));
+  });
 });
 
+
+describe('TariffLabPage — server-paged plan library', () => {
+  it('requests server pages without slicing loaded rows and retains cross-page replay selection', () => {
+    const first = makeTariff();
+    const second = makeTariff({ id: 101, name: 'Later plan', is_current: false });
+    mockTariffs.mockImplementation((limit = 50, offset = 0) => makeQuery({
+      items: offset === 0 ? [first] : [second], total: 150, limit, offset,
+    }));
+    const mutate = vi.fn();
+    mockSimulate.mockReturnValue({ ...makeMutation({ mutate }), data: undefined });
+    renderPage();
+
+    const library = card('Your rate plan library');
+    expect(mockTariffs).toHaveBeenLastCalledWith(100, 0);
+    expect(within(library).getByText('Showing 1–100 of 150')).toBeVisible();
+    expect(within(library).getByText('1 matching / 1 loaded rows')).toBeVisible();
+    fireEvent.click(within(library).getByRole('switch', { name: 'Compare EV Nights' }));
+    fireEvent.click(within(library).getByRole('button', { name: 'Next page' }));
+
+    expect(mockTariffs).toHaveBeenLastCalledWith(100, 100);
+    expect(within(library).queryByText('EV Nights')).not.toBeInTheDocument();
+    expect(within(library).getByText('Later plan')).toBeVisible();
+    expect(within(library).getByRole('button', { name: 'Next page' })).toBeDisabled();
+    fireEvent.click(within(library).getByRole('switch', { name: 'Compare Later plan' }));
+    expect(screen.getByText('2 plans selected')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Replay load against plans' }));
+    expect(mutate).toHaveBeenLastCalledWith(expect.objectContaining({ tariff_ids: [1, 101] }));
+
+    fireEvent.change(within(library).getByRole('combobox', { name: 'Rows per page' }), {
+      target: { value: '25' },
+    });
+    expect(mockTariffs).toHaveBeenLastCalledWith(25, 0);
+    expect(within(library).getByRole('switch', { name: 'Compare EV Nights' })).toBeChecked();
+    expect(screen.getByText('2 plans selected')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear selection' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Replay load against plans' }));
+    expect(mutate).toHaveBeenLastCalledWith(expect.objectContaining({ tariff_ids: [] }));
+  });
+
+  it('does not invent a server total or next page from a full loaded page', () => {
+    mockTariffs.mockReturnValue(makeQuery({
+      items: Array.from({ length: 100 }, (_, index) => makeTariff({
+        id: index + 1, name: `Loaded plan ${index + 1}`,
+      })),
+    }));
+    renderPage();
+
+    const library = card('Your rate plan library');
+    expect(within(library).getByText('Loaded plan 100')).toBeVisible();
+    expect(within(library).getByText('Page 1 of Unknown')).toBeVisible();
+    expect(within(library).queryByText(/Showing .* of 100/)).not.toBeInTheDocument();
+    expect(within(library).getByRole('button', { name: 'Next page' })).toBeDisabled();
+  });
+
+  it('returns to a valid server page when the total shrinks without discarding selection', async () => {
+    let total = 101;
+    mockTariffs.mockImplementation((limit = 50, offset = 0) => makeQuery({
+      items: offset === 0 ? [makeTariff()] : total > 100
+        ? [makeTariff({ id: 101, name: 'Last plan' })] : [],
+      total, limit, offset,
+    }));
+    const view = renderPage();
+    fireEvent.click(within(card('Your rate plan library')).getByRole('button', { name: 'Next page' }));
+    fireEvent.click(screen.getByRole('switch', { name: 'Compare Last plan' }));
+    total = 100;
+    view.rerender(<TariffLabPage />);
+
+    await waitFor(() => expect(mockTariffs).toHaveBeenLastCalledWith(100, 0));
+    expect(within(card('Your rate plan library')).getByText('EV Nights')).toBeVisible();
+    expect(screen.getByText('1 plans selected')).toBeVisible();
+  });
+});
 
 describe('TariffLabPage — supplied monetary values', () => {
   function resultCell(plan: string, column: string) {
@@ -536,6 +762,54 @@ describe('TariffLabPage — supplied monetary values', () => {
     if (!row) throw new Error(`Missing result row: ${plan}`);
     return within(row).getAllByRole('cell')[index];
   }
+
+  it.each([
+    { currency: 'USD', value: 123, expected: '$1.23' },
+    { currency: 'JPY', value: 123, expected: '¥123' },
+    { currency: 'KWD', value: 1234.5, expected: 'KWD 1.235' },
+    { currency: 'JPY', value: 0, expected: '¥0' },
+    { currency: 'USD', value: -123, expected: '-$1.23' },
+    { currency: '', value: 123, expected: '—' },
+  ])('keeps $currency chart values in raw minor units and labels their denomination', ({ currency, value, expected }) => {
+    mockSimulate.mockReturnValue({
+      ...makeMutation(),
+      data: makeSimulation({ results: [
+        makeResult(),
+        makeResult({ tariff_id: 2, name: 'Denomination regression', currency, annual_cost_minor: value, rank: 2 }),
+      ] }),
+    });
+    renderPage();
+
+    const bars = chartProbe.bars.mock.lastCall?.[0];
+    expect(bars.data[1]).toMatchObject({ annual: value, currency });
+    const axis = chartProbe.axis.mock.lastCall?.[0];
+    expect(axis.label.value).toContain('Cost (minor units)');
+    expect(axis.label.value).toContain('USD');
+    if (currency) expect(axis.label.value).toContain(currency);
+    const chart = card('Annualised cost by plan');
+    const row = within(chart).getByText('Denomination regression').closest('tr');
+    expect(row).toHaveTextContent(expected);
+    expect(row).toHaveTextContent(currency || '—');
+    expect(within(chart).getByRole('columnheader', { name: 'ISO currency code' })).toBeInTheDocument();
+    expect(within(chart).getByRole('columnheader', { name: 'Cost (minor units)' })).toBeInTheDocument();
+    if (!row) throw new Error('Missing chart data row');
+    expect(within(row).getAllByRole('cell')[3]).toHaveTextContent(String(value));
+
+    const tooltip = chartProbe.tooltip.mock.lastCall?.[0];
+    if (!isValidElement<ComponentProps<typeof import('@/components/charts').ChartTooltip>>(tooltip.content)) {
+      throw new Error('Missing shared chart tooltip');
+    }
+    const payload = [{ name: 'Annual cost', value, payload: { currency } }];
+    render(cloneElement(tooltip.content, {
+      active: true,
+      label: 'Denomination regression',
+      formatter: tooltip.formatter,
+      payload,
+    }));
+    expect(screen.getByRole('tooltip')).toHaveTextContent(expected);
+    expect(screen.getByRole('tooltip')).toHaveTextContent(currency ? `Annual cost (${currency})` : 'Annual cost');
+    expect(resultCell('Denomination regression', 'Annualised cost')).toHaveTextContent(expected);
+  });
 
   it.each([
     { value: 0, currency: 'USD', expected: '$0.00' },
@@ -647,6 +921,85 @@ describe('TariffLabPage — restrained page adoption', () => {
       switch_fee_minor: 0, confirmed: true,
     });
   });
+    describe('TariffLabPage — complete mobile tables', () => {
+      const observers: Array<{ element: Element; callback: ResizeObserverCallback }> = [];
+      beforeEach(() => {
+        observers.length = 0;
+        vi.stubGlobal('ResizeObserver', class {
+          constructor(private callback: ResizeObserverCallback) {}
+          observe(element: Element) { observers.push({ element, callback: this.callback }); }
+          unobserve() {}
+          disconnect() {}
+        });
+      });
+      afterEach(() => {
+        vi.unstubAllGlobals();
+        localStorage.removeItem('teslasync-mode');
+      });
+
+      function resize(width: number) {
+        act(() => observers.forEach(({ element, callback }) => callback(
+          [{ target: element, contentRect: { width } } as ResizeObserverEntry],
+          {} as ResizeObserver,
+        )));
+      }
+
+      it.each(['light', 'dark'])('preserves every plan field, selection ID and confirmed action in %s mode', async mode => {
+        localStorage.setItem('teslasync-mode', mode);
+        const mutate = vi.fn();
+        const replay = vi.fn();
+        mockRemove.mockReturnValue(makeMutation({ mutate }));
+        mockSimulate.mockReturnValue({ ...makeMutation({ mutate: replay }), data: undefined });
+        renderPage();
+        resize(375);
+        const library = card('Your rate plan library');
+        expect(library.querySelector('[data-mobile-table]')).not.toBeNull();
+        const plan = within(library).getByRole('button', { name: 'Flat Saver' });
+        expect(plan).toHaveAttribute('data-row-key', '2');
+        fireEvent.click(within(library).getByRole('switch', { name: 'Compare Flat Saver' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Replay load against plans' }));
+        expect(replay).toHaveBeenCalledWith(expect.objectContaining({ tariff_ids: [2] }));
+        plan.focus();
+        fireEvent.keyDown(plan, { key: 'Enter' });
+        const detail = screen.getByRole('dialog', { name: 'Flat Saver' });
+        for (const label of ['Compare', 'Plan', 'Structure', 'Price bands', 'Standing charge', 'Demand charge', 'Current', 'Actions']) {
+          expect(within(detail).getByText(label)).toBeVisible();
+        }
+        expect(detail).toHaveTextContent('GridCo');
+        expect(within(detail).getByRole('button', { name: 'Remove' })).toHaveClass('min-h-11', 'min-w-11');
+        fireEvent.click(within(detail).getByRole('button', { name: 'Close' }));
+        const actions = plan.closest('[data-row-key]')?.parentElement?.parentElement;
+        if (!(actions instanceof HTMLElement)) throw new Error('Missing mobile plan actions');
+        fireEvent.click(within(actions).getByRole('button', { name: 'Remove' }));
+        expect(mutate).not.toHaveBeenCalled();
+        const confirmation = screen.getByRole('dialog', { name: 'Delete this tariff?' });
+        expect(confirmation).toHaveTextContent('Flat Saver');
+        fireEvent.click(within(confirmation).getByRole('button', { name: 'Delete' }));
+        await waitFor(() => expect(mutate).toHaveBeenCalledWith(2, { onSuccess: expect.any(Function) }));
+        resize(1440);
+        expect(within(library).getByRole('table')).toBeVisible();
+        expect(within(library).getAllByRole('columnheader')).toHaveLength(8);
+      });
+
+      it('opens every replay economics column from a keyboard-operated mobile summary', () => {
+        mockSimulate.mockReturnValue({ ...makeMutation(), data: makeSimulation() });
+        renderPage();
+        resize(375);
+        const economics = card('Ranked plan economics');
+        const summary = within(economics).getByRole('button', { name: 'Replay Nights' });
+        expect(summary).toHaveAttribute('data-row-key', '1');
+        fireEvent.keyDown(summary, { key: ' ' });
+        const detail = screen.getByRole('dialog', { name: 'Replay Nights' });
+        for (const label of ['Rank', 'Plan', 'Annualised cost', 'vs current', 'Effective price', 'Load-shift upside', 'Break-even', 'Peak demand', 'Energy / standing / demand']) {
+          expect(within(detail).getByText(label)).toBeVisible();
+        }
+        expect(detail).toHaveTextContent('#1');
+        expect(detail).toHaveTextContent('$150.35');
+        fireEvent.click(within(detail).getByRole('button', { name: 'Close' }));
+        resize(1440);
+        expect(within(economics).getAllByRole('columnheader')).toHaveLength(9);
+      });
+    });
 
   it('keeps all independent sections visible with an authoritatively empty library and no replay', () => {
     mockTariffs.mockReturnValue(makeQuery({ items: [] }));
@@ -676,6 +1029,43 @@ describe('TariffLabPage — restrained page adoption', () => {
     expect(meter.firstElementChild).toHaveClass('bg-[var(--text-secondary)]');
     expect(meter.closest('article')).toHaveClass('bg-[var(--surface-1)]', 'border-[var(--border-subtle)]');
     expect(card('Where your energy actually landed')).toHaveTextContent('$123.45');
+  });
+
+  it('round-trips end-of-day and ordinary business clock intervals without timezone conversion', () => {
+    const mutate = vi.fn();
+    mockCreate.mockReturnValue(makeMutation({ mutate }));
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Add plan' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Plan name required' }), { target: { value: 'Clock plan' } });
+    const start = screen.getByLabelText('Starts');
+    const end = screen.getByRole('textbox', { name: 'Ends required' });
+    expect(end).toHaveValue('24:00');
+    expect(end).toBeValid();
+    fireEvent.change(start, { target: { value: '17:45' } });
+    fireEvent.change(end, { target: { value: '23:59' } });
+    expect(end).toBeValid();
+    fireEvent.click(screen.getByRole('button', { name: 'Save rate plan' }));
+    expect(mutate).toHaveBeenLastCalledWith(expect.objectContaining({
+      rates: [expect.objectContaining({ start_minute: 1065, end_minute: 1439 })],
+    }), expect.any(Object));
+    fireEvent.change(end, { target: { value: '24:' } });
+    expect(end).toHaveValue('24:');
+    expect(end).toBeInvalid();
+    fireEvent.click(screen.getByRole('button', { name: 'Save rate plan' }));
+    expect(mutate).toHaveBeenCalledTimes(1);
+    fireEvent.change(end, { target: { value: '24:00' } });
+    expect(end).toBeValid();
+    fireEvent.click(screen.getByRole('button', { name: 'Save rate plan' }));
+    expect(mutate).toHaveBeenLastCalledWith(expect.objectContaining({
+      rates: [expect.objectContaining({ start_minute: 1065, end_minute: 1440 })],
+    }), expect.any(Object));
+    expect(mutate.mock.calls[1][0].rates[0]).not.toHaveProperty('endClock');
+    for (const value of ['', '24:01', '25:00', '12:60']) {
+      fireEvent.change(end, { target: { value } });
+      expect(end).toBeInvalid();
+      fireEvent.click(screen.getByRole('button', { name: 'Save rate plan' }));
+    }
+    expect(mutate).toHaveBeenCalledTimes(2);
   });
 
   it('retains raw tariff rate precision and success-only editor completion', () => {

@@ -525,6 +525,34 @@ describe('Tesla Physics consolidated workbench', () => {
     } finally { report.range = saved; }
   });
 
+  it.each([0, 1000.25, -1000.25])('states equality for identical returned range estimates (%s)', async (value) => {
+    const saved = report.range;
+    report.range = { ...saved, rated_range_m: value, est_range_m: value, ideal_range_m: null, disagree: false };
+    try {
+      await renderAt('/tesla-physics/range');
+      expect(screen.getByText('Rated and Typical are equal in the returned estimates')).toBeInTheDocument();
+      expect(screen.queryByText(/is higher in the returned estimates/)).toBeNull();
+      expect(screen.getByText('Rated vs Typical: 0.0 km apart')).toBeInTheDocument();
+      expect(screen.getByText(`Difference relative to Rated: ${value > 0 ? '0.00%' : 'unknown'}`)).toBeInTheDocument();
+      expect(report.range.rated_range_m).toBe(value);
+      expect(report.range.est_range_m).toBe(value);
+    } finally { report.range = saved; }
+  });
+
+  it('keeps a fractional nonzero difference directional even when displayed distances round to equality', async () => {
+    const saved = report.range;
+    report.range = { ...saved, rated_range_m: 1000.125, est_range_m: 1000.25, ideal_range_m: null };
+    try {
+      await renderAt('/tesla-physics/range');
+      expect(screen.getByText('Rated vs Typical: 0.0 km apart')).toBeInTheDocument();
+      expect(screen.getByText('Typical is higher in the returned estimates')).toBeInTheDocument();
+      expect(screen.queryByText(/are equal in the returned estimates/)).toBeNull();
+      expect(screen.getByText('Difference relative to Rated: 0.01%')).toBeInTheDocument();
+      expect(report.range.rated_range_m).toBe(1000.125);
+      expect(report.range.est_range_m).toBe(1000.25);
+    } finally { report.range = saved; }
+  });
+
   it('does not turn an empty Life Tape into a measured zero-duration state', async () => {
     const saved = report.life_tape.segments;
     report.life_tape.segments = [];
@@ -554,6 +582,28 @@ describe('Tesla Physics consolidated workbench', () => {
       await renderAt('/tesla-physics/range');
       expect(screen.getByText(/At least two estimates are needed for a comparison/)).toBeInTheDocument();
       expect(screen.getByText('Estimate spread: unknown')).toBeInTheDocument();
+    } finally { report.range = saved; }
+  });
+
+  it.each([
+    [null, 'missing'], [NaN, 'invalid'], [Infinity, 'invalid'], [-Infinity, 'invalid'],
+  ] as const)('excludes a missing or invalid rated estimate (%s) while comparing measured zeros', async (rated, state) => {
+    const saved = report.range;
+    report.range = { ...saved, rated_range_m: rated, est_range_m: 0, ideal_range_m: 0, disagree: false };
+    try {
+      await renderAt('/tesla-physics/range');
+      const brief = screen.getByTestId('physics-range-summary');
+      expect(brief.querySelector('[data-operational-metric="rated"]')).toHaveAttribute('data-value-state', state);
+      expect(brief.querySelector('[data-operational-metric="typical"]')).toHaveAttribute('data-value-state', 'value');
+      expect(brief.querySelector('[data-operational-metric="ideal"]')).toHaveAttribute('data-value-state', 'value');
+      expect(screen.getByText('Typical and Ideal are equal in the returned estimates')).toBeInTheDocument();
+      expect(screen.getByText('Typical vs Ideal: 0.0 km apart')).toBeInTheDocument();
+      expect(screen.getByText('Difference relative to Typical: unknown')).toBeInTheDocument();
+      expect(screen.getByText('Spread versus rated: unknown')).toBeInTheDocument();
+      expect(screen.queryByText(/Rated vs|is higher in the returned estimates/)).toBeNull();
+      expect(report.range.rated_range_m).toBe(rated);
+      expect(report.range.est_range_m).toBe(0);
+      expect(report.range.ideal_range_m).toBe(0);
     } finally { report.range = saved; }
   });
 

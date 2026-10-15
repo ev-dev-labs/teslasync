@@ -6,8 +6,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useRangeState } from '@/hooks/useRangeState';
-import { formatDateShort } from '@/lib/dateFormat';
-import { typography } from '@/lib/tokens';
+import { gaugeTone, neonColorMap, typography } from '@/lib/tokens';
 import { Icons } from '@/lib/icons';
 import { getEnergyIntensityWhPerKm } from '@/lib/drivesAggregation';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -47,7 +46,16 @@ export function useDriveScorePage() {
     refetch,
   } = drivesQuery;
   const drivesSource = useDataState(drivesQuery, { provenance: 'historical' });
-  const drivesLoading = vehicleIdStr != null && !drivesSource.hasData && (drivesQuery.isLoading || drivesQuery.isPending);
+  const drivesPaused = vehicleIdStr != null && !drivesSource.hasData
+    && drivesSource.isRefreshBlocked && !drivesSource.fatalError;
+  const scorePaused = vehicleIdStr != null && !apiScoreState.hasData
+    && apiScoreState.isRefreshBlocked && !apiScoreState.fatalError;
+  const drivesLoading = vehicleIdStr != null && !drivesSource.hasData
+    && !drivesSource.isRefreshBlocked && !drivesSource.fatalError
+    && (drivesQuery.isLoading || drivesQuery.isFetching);
+  const scoreLoading = vehicleIdStr != null && !apiScoreState.hasData
+    && !apiScoreState.isRefreshBlocked && !apiScoreState.fatalError
+    && (scoreQuery.isLoading || scoreQuery.isFetching);
   const drivesError = drivesSource.fatalError;
   const drivesIsError = drivesError != null;
 
@@ -173,7 +181,8 @@ export function useDriveScorePage() {
       )
       .slice(-20);
     return recent.map((sd) => ({
-      date: formatDateShort(sd.drive.startTs),
+      date: sd.drive.startTs,
+      driveId: sd.drive.id,
       score: sd.score.total,
       efficiency: sd.score.efficiency,
       smoothness: sd.score.smoothness,
@@ -209,11 +218,11 @@ export function useDriveScorePage() {
   /* ---- score distribution histogram ---- */
   const histogramData = useMemo(() => {
     const ranges = [
-      { range: '0–20', min: 0, max: 20, color: '#f87171' },
-      { range: '20–40', min: 20, max: 40, color: '#fb923c' },
-      { range: '40–60', min: 40, max: 60, color: '#fbbf24' },
-      { range: '60–80', min: 60, max: 80, color: '#22d3ee' },
-      { range: '80–100', min: 80, max: 101, color: '#4ade80' },
+      { range: '0–20', min: 0, max: 20, color: gaugeTone.danger },
+      { range: '20–40', min: 20, max: 40, color: gaugeTone.danger },
+      { range: '40–60', min: 40, max: 60, color: gaugeTone.warning },
+      { range: '60–80', min: 60, max: 80, color: gaugeTone.info },
+      { range: '80–100', min: 80, max: 101, color: gaugeTone.success },
     ];
     return ranges.map((r) => ({
       ...r,
@@ -341,17 +350,17 @@ export function useDriveScorePage() {
           : '—';
   const trendColor =
     overallTrend === 'up'
-      ? 'text-emerald-300'
+      ? neonColorMap.green.text
       : overallTrend === 'down'
-        ? 'text-rose-300'
+        ? neonColorMap.red.text
         : typography.color.secondary;
 
   const noDrivesMsg = t(
     'driveScore.empty',
     'Not enough drives in the selected period to calculate a score.',
   );
-  const completeDistance = filteredDrives.every((drive) => knownNumber(drive.distanceM) != null);
-  const completeDuration = filteredDrives.every((drive) => knownNumber(drive.durationS) != null);
+  const completeDistance = hasDrivePayload && filteredDrives.every((drive) => knownNumber(drive.distanceM) != null);
+  const completeDuration = hasDrivePayload && filteredDrives.every((drive) => knownNumber(drive.durationS) != null);
   const measuredMaxSpeeds = filteredDrives
     .map((drive) => knownNumber(drive.maxSpeedMps))
     .filter((value): value is number => value != null);
@@ -361,7 +370,7 @@ export function useDriveScorePage() {
     scoreQuery, apiScoreState, apiScore, apiScoreCoverage,
     driveHistoryCoverage: { scope: 'selected-range' as const, start: startInstant, end: endInstantExclusive },
     drivesQuery, refetch, drivesSource,
-    drivesLoading, drivesError, drivesIsError,
+    drivesLoading, scoreLoading, drivesPaused, scorePaused, drivesError, drivesIsError,
     formatDistance, formatSpeed, formatPower, efficiencyUnit, efficiencyDisplay, formatEfficiency,
     sortKey, sortDir, onSort, filteredDrives, scoredDrives, unscoredDriveCount, allScores,
     hasDrives, hasDrivePayload, hasScore, hasData, avgScores,

@@ -122,9 +122,11 @@
       "interpretation": "Compare the per-selected-day rates rather than raw shares when judging weekday and weekend frequency."
     },
     "weeklyPunchcard": {
+      "scroll": "Weekly drive-start counts; scroll to see all hours",
+      "day": "Day",
       "timezone": "24-hour departures grouped in {{timezone}}",
       "aria": "Drive starts by local weekday and hour; strongest slot {{slot}}",
-      "cell": "{{day}} {{hour}}:00 · {{count}} drives"
+      "cell": "{{day}} {{hour}} · {{count}} drives"
     },
     "brief": {
       "departureUnit": "Minutes after local midnight; circular 24-hour median, not elapsed duration.",

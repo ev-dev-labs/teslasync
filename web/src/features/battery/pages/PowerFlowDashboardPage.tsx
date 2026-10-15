@@ -129,8 +129,25 @@ export default function PowerFlowDashboardPage() {
     data: history,
     refetch: refetchHistory,
   } = historyQuery;
-  const liveLoading = !liveState.hasData && liveQuery.isLoading;
-  const historyLoading = !historyState.hasData && historyQuery.isLoading;
+  const liveLoading = !liveState.hasData && !liveState.isRefreshBlocked
+    && (liveQuery.isLoading || liveQuery.isFetching || liveQuery.fetchStatus === 'fetching');
+  const historyLoading = !historyState.hasData && !historyState.isRefreshBlocked
+    && (historyQuery.isLoading || historyQuery.isFetching || historyQuery.fetchStatus === 'fetching');
+  const liveUnresolved = liveState.status === 'initial';
+  const historyUnresolved = historyState.status === 'initial';
+  const sourcePending = (label: string, paused: boolean) => (
+    <Caption role="status">
+      {label}: {paused
+        ? t('dataSources.status.paused', 'Refresh paused')
+        : t('dataSources.status.pending', 'Pending')}
+    </Caption>
+  );
+  const livePending = sourcePending(
+    t('dataSources.labels.liveEnergyStatus', 'Live energy status'), liveState.isRefreshBlocked,
+  );
+  const historyPending = sourcePending(
+    t('dataSources.labels.energyStatusHistory', 'Energy status history'), historyState.isRefreshBlocked,
+  );
   const liveIsError = liveState.fatalError != null;
   const liveError = liveState.fatalError;
   const historyError = historyState.fatalError;
@@ -247,6 +264,8 @@ export default function PowerFlowDashboardPage() {
               <Skeleton width="110px" height={24} />
               <Skeleton width="160px" height={24} />
             </>
+          ) : liveUnresolved ? (
+            livePending
           ) : liveIsError || !live ? (
             <Caption>{t('powerFlow.statusUnavailable', 'Live status unavailable — refresh to fetch')}</Caption>
           ) : (
@@ -285,9 +304,12 @@ export default function PowerFlowDashboardPage() {
       <FadeIn delay={0.05}>
         <section>
         <SectionErrorBoundary name="PowerFlowCurrentPower">
+        {liveUnresolved && !liveLoading ? livePending : null}
         <BatteryEvidenceBrief title={t('powerFlow.currentPower', 'Current power')} metrics={powerMetrics}
           loading={liveLoading} retained={liveState.status === 'stale'}
-          period={{ kind: 'snapshot', label: live ? formatDateTime(live.timestamp) : t('powerFlow.statusUnavailable', 'Live status unavailable — refresh to fetch'),
+          period={{ kind: 'snapshot', label: live ? formatDateTime(live.timestamp) : liveUnresolved
+            ? t('dataSources.status.pending', 'Pending')
+            : t('powerFlow.statusUnavailable', 'Live status unavailable — refresh to fetch'),
             observedAt: live?.timestamp ?? null,
             provenance: t('dataSources.labels.liveEnergyStatus', 'Live energy status') }} />
         </SectionErrorBoundary>
@@ -307,6 +329,8 @@ export default function PowerFlowDashboardPage() {
               <Skeleton height={200} />
             ) : liveIsError ? (
               <QueryError error={liveError} onRetry={onRetryLive} />
+            ) : liveUnresolved ? (
+              livePending
             ) : !live ? (
               <EmptyState
                 icon={<Icon icon={Battery} size="xl" />}
@@ -343,6 +367,8 @@ export default function PowerFlowDashboardPage() {
               <Skeleton height={180} />
             ) : liveIsError ? (
               <QueryError error={liveError} onRetry={onRetryLive} />
+            ) : liveUnresolved ? (
+              livePending
             ) : !live ? (
               <EmptyState
                 icon={<Icon icon={Activity} size="xl" />}
@@ -369,6 +395,8 @@ export default function PowerFlowDashboardPage() {
               <Skeleton height={180} />
             ) : liveIsError ? (
               <QueryError error={liveError} onRetry={onRetryLive} />
+            ) : liveUnresolved ? (
+              livePending
             ) : !live ? (
               <EmptyState
                 icon={<Icon icon={Zap} size="xl" />}
@@ -422,22 +450,34 @@ export default function PowerFlowDashboardPage() {
           className="grid grid-cols-1 gap-4 2xl:grid-cols-3"
         >
           <SectionErrorBoundary name="PowerFlowPowerHistory">
-          <PowerHistoryChart
+          {historyUnresolved && !historyLoading ? (
+            <div className="min-w-0 2xl:col-span-2">
+              <LayoutCard title={t('powerFlow.powerOverTime', 'Power Over Time')}>
+                {historyPending}
+              </LayoutCard>
+            </div>
+          ) : <PowerHistoryChart
             className="2xl:col-span-2"
             data={chartData}
             loading={historyLoading}
             error={historyError}
             onRetry={onRetryHistory}
-          />
+          />}
           </SectionErrorBoundary>
           <SectionErrorBoundary name="PowerFlowSocHistory">
-          <BatterySocChart
+          {historyUnresolved && !historyLoading ? (
+            <div className="min-w-0 2xl:col-span-1">
+              <LayoutCard title={t('powerFlow.socOverTime', 'Battery State of Charge')}>
+                {historyPending}
+              </LayoutCard>
+            </div>
+          ) : <BatterySocChart
             className="2xl:col-span-1"
             data={chartData}
             loading={historyLoading}
             error={historyError}
             onRetry={onRetryHistory}
-          />
+          />}
           </SectionErrorBoundary>
         </section>
       </FadeIn>

@@ -62,10 +62,10 @@ export function CoverageCategory({ category, filter }: CoverageCategoryProps) {
       filterValueLabel: (_value, row) => row.subscribed == null ? '—' : row.subscribed
         ? t('coverage.subscribed.yes', 'yes')
         : t('coverage.subscribed.no', 'no'),
-      header: t('coverage.col.subscribed', 'Subscribed'),
+      header: t('coverage.col.subscribed', 'Configured subscription'),
       sortable: true,
       render: row => row.subscribed
-        ? <Badge variant="success" size="sm">{t('coverage.subscribed.yes', 'yes')}</Badge>
+        ? <Badge variant="info" size="sm">{t('coverage.subscribed.yes', 'yes')}</Badge>
         : <Badge variant="neutral" size="sm">{t('coverage.subscribed.no', 'no')}</Badge>,
     },
   ], [t]);

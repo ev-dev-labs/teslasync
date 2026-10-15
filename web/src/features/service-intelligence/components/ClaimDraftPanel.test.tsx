@@ -68,6 +68,52 @@ afterEach(() => {
 });
 
 describe('ClaimDraftPanel', () => {
+  it('distinguishes an active draft load from a paused request and recovers without losing the issue', () => {
+    const view = render(<ClaimDraftPanel vehicleId={42} />);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Issue description' }), {
+      target: { value: 'Inspect charging concerns.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Draft ticket' }));
+    mockDraft.mockReturnValue(idle({ isLoading: true, isFetching: true, fetchStatus: 'fetching' }));
+    view.rerender(<ClaimDraftPanel vehicleId={42} />);
+    expect(screen.getByRole('status', { name: /^Loading / })).toBeInTheDocument();
+    expect(screen.queryByText('No ticket yet')).not.toBeInTheDocument();
+    mockDraft.mockReturnValue(idle({ isPending: true, fetchStatus: 'paused' }));
+    view.rerender(<ClaimDraftPanel vehicleId={42} />);
+    expect(screen.getByText(/Source paused/)).toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: /^Loading / })).not.toBeInTheDocument();
+    expect(screen.queryByText('No ticket yet')).not.toBeInTheDocument();
+    expect(screen.queryByText('This source could not be loaded.')).not.toBeInTheDocument();
+    mockDraft.mockReturnValue(idle({ data: draft }));
+    view.rerender(<ClaimDraftPanel vehicleId={42} />);
+    expect(screen.getByText(draft.subject)).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Issue description' })).toHaveValue('Inspect charging concerns.');
+    expect(screen.queryByText(/Source paused/)).not.toBeInTheDocument();
+  });
+
+  it('keeps a returned draft with empty evidence and zero remaining days authoritative', () => {
+    mockDraft.mockReturnValue(idle({ data: { ...draft, coverages: [{ name: 'Battery', status: 'expired', days_remaining: 0 }], communications: [], symptoms: [], evidence: [] } }));
+    render(<ClaimDraftPanel vehicleId={42} />);
+    expect(screen.getByText('Battery · 0d left')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy ticket text' })).toBeEnabled();
+    expect(screen.queryByText('No ticket yet')).not.toBeInTheDocument();
+  });
+
+  it('retains the draft through paused refresh and failure, then clears its warning on recovery', () => {
+    mockDraft.mockReturnValue(idle({ data: draft, fetchStatus: 'paused' }));
+    const view = render(<ClaimDraftPanel vehicleId={42} />);
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(screen.getByRole('button', { name: 'Copy ticket text' })).toBeEnabled();
+    mockDraft.mockReturnValue(idle({ data: draft, error: new Error('refresh failed') }));
+    view.rerender(<ClaimDraftPanel vehicleId={42} />);
+    expect(screen.getByText(draft.subject)).toBeInTheDocument();
+    expect(screen.getByText(/Previously loaded data remains visible/)).toBeInTheDocument();
+    mockDraft.mockReturnValue(idle({ data: draft }));
+    view.rerender(<ClaimDraftPanel vehicleId={42} />);
+    expect(screen.getByText(draft.subject)).toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+  });
+
   it('copies the exact complete retained report, including symptoms and evidence, rather than reconstructing its visible summary', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
@@ -95,6 +141,12 @@ describe('ClaimDraftPanel', () => {
       .toHaveValue('  Inspect recorded symptoms without diagnosing a fault.  ');
     expect(screen.getByRole('button', { name: 'Draft ticket' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Draft ticket' })).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('button', { name: 'Draft ticket' }))
+      .toHaveClass('min-h-11', 'min-w-11', 'md:min-h-10', 'md:min-w-0', 'whitespace-normal');
+    expect(screen.getByRole('textbox', { name: 'Issue description' }))
+      .toHaveClass('min-h-11', 'md:min-h-10');
+    expect(screen.getByRole('button', { name: 'Copy ticket text' }))
+      .toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0');
     expect(screen.getByText(draft.subject)).toBeInTheDocument();
     mockDraft.mockReturnValue(idle({ data: draft, error: new Error('refresh failed') }));
     view.rerender(<MemoryRouter><ClaimDraftPanel vehicleId={42} /></MemoryRouter>);

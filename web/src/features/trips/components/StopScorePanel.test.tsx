@@ -7,9 +7,9 @@
  * genuinely exercised.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
 // ── i18n stub ──
@@ -102,13 +102,15 @@ function idle(extra = {}) {
 
 function renderPanel() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const view = (value: JourneySession) => (
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <StopScorePanel session={session} />
+        <StopScorePanel session={value} />
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const rendered = render(view(session));
+  return { ...rendered, rerenderSession: (value: JourneySession) => rendered.rerender(view(value)) };
 }
 
 beforeEach(() => {
@@ -118,6 +120,36 @@ beforeEach(() => {
 });
 
 describe('StopScorePanel', () => {
+  it('isolates pending work, rejection and drafts across sessions while retaining same-session results', async () => {
+    let resolve!: (value: typeof scores) => void;
+    let reject!: (reason: Error) => void;
+    mockScore.mockImplementation(() => useMutation({
+      mutationFn: () => new Promise<typeof scores>((yes, no) => { resolve = yes; reject = no; }),
+    }));
+    const { rerenderSession } = renderPanel();
+    fireEvent.click(screen.getByText(/Kettleman City \(200 visits\)/));
+    fireEvent.click(screen.getByRole('button', { name: 'Score 1 stops' }));
+    await waitFor(() => expect(resolve).toBeTypeOf('function'));
+    rerenderSession({ ...session, id: 2 });
+    expect(screen.getByRole('button', { name: 'Score 0 stops' })).toBeDisabled();
+    expect(screen.getByRole('textbox', { name: 'Charge needed' })).toHaveValue('40.00');
+    await act(async () => resolve(scores));
+    expect(screen.queryByText('Kettleman City wins')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText(/Kettleman City \(200 visits\)/));
+    fireEvent.click(screen.getByRole('button', { name: 'Score 1 stops' }));
+    await waitFor(() => expect(screen.getByRole('status', { name: 'Scoring stops…' })).toBeInTheDocument());
+    await act(async () => reject(new Error('rejected')));
+    await waitFor(() => expect(screen.getByText(/Stops could not be scored/)).toBeInTheDocument());
+    expect(screen.getByRole('button', { name: 'Score 1 stops' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Score 1 stops' }));
+    await waitFor(() => expect(screen.getByRole('status', { name: 'Scoring stops…' })).toBeInTheDocument());
+    await act(async () => resolve({ ...scores, session_id: 2 }));
+    await waitFor(() => expect(screen.getByText('Kettleman City wins')).toBeInTheDocument());
+    rerenderSession({ ...session, id: 2, plan_version: 2 });
+    expect(screen.getByText('Kettleman City wins')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Score 1 stops' })).toBeEnabled();
+  });
+
   it('asks for coordinates when the session has none', () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(

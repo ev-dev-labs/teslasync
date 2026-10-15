@@ -1,6 +1,7 @@
 import type { ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { StatMetric } from '@/components/data-display/stat-reference';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import type { DriveDnaKpiBand } from '../drive-dna/DriveDnaKpiBand';
 import { DriveDnaKpiNotices } from '../drive-dna/DriveDnaKpiNotices';
@@ -11,6 +12,7 @@ type Props = ComponentProps<typeof DriveDnaKpiBand>;
 export function DriveDnaEvidenceBrief({ drive, model, state, units, capReached }: Props) {
   const { t } = useTranslation();
   const { fmtNumber } = useNumberFormatting();
+  const { formatDateTime } = useDateFormat('vehicle');
   const metadataReady = state.list.isResolved && !state.list.error;
   const telemetryReady = state.hasDrive && state.telemetry.isResolved && !state.telemetry.error;
   const metrics: readonly StatMetric[] = [
@@ -44,7 +46,8 @@ export function DriveDnaEvidenceBrief({ drive, model, state, units, capReached }
     <DrivingSummaryBrief metrics={metrics} title={t('driveDna.kpis.title', 'Selected-drive evidence')}
       description={t('driveDna.brief.description', 'Aggregate drive totals and sampled telemetry are independent sources; regen emissions are sample share, not time share.')}
       scope={drive ? t('driveDna.brief.window', 'Drive {{id}} · {{start}}–{{end}}; sampled coverage may be incomplete', {
-        id: drive.id, start: drive.startTs, end: drive.endTs ?? t('driveDna.brief.open', 'ongoing'),
+        id: drive.id, start: formatDateTime(drive.startTs),
+        end: drive.endTs == null ? t('driveDna.brief.open', 'ongoing') : formatDateTime(drive.endTs),
       }) : t('driveDna.brief.noDrive', 'No selected drive')}
       provenance={t('driveDna.brief.source', 'Selected drive metadata and returned telemetry emissions after the existing forward fold.')}
       loading={state.list.isLoading && !drive}

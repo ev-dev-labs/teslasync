@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 
 import type { DestinationTransitionResult } from '../../lib/destinationTransitions';
+import type { DestinationTransitionsQueryState } from './types';
 import {
   destinationDateTime,
   destinationPercent,
@@ -14,12 +15,14 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DestinationCoverageMetricsProps {
   model: DestinationTransitionResult;
+  state: DestinationTransitionsQueryState;
   locale: string;
   timeZone: string;
 }
 
 export function DestinationCoverageMetrics({
   model,
+  state,
   locale,
   timeZone,
 }: DestinationCoverageMetricsProps) {
@@ -191,6 +194,7 @@ export function DestinationCoverageMetrics({
         'Spans, recency, activity, and supported coverage',
       )}
       metrics={metrics}
+      state={state}
       testId="destination-coverage-recency-brief"
     />
   );

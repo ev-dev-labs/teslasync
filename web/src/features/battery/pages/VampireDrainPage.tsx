@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   BatteryWarning, Clock, Zap, Activity, ShieldAlert,
   Gauge, RefreshCw, TrendingDown,
@@ -30,39 +30,11 @@ import { formatDayKey } from '@/lib/dateFormat';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { localDayKey } from '@/lib/drivesAggregation';
 
-import { request } from '@/api/client';
+import { useVampireDrainHistory, useVampireDrainStats } from '@/api/hooks/useEnergy';
+import type { VampireDrainEvent } from '@/types/energy';
+import { physicsKeys } from '@/api/hooks/useTeslaPhysics';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState } from '@/hooks/useDataState';
-
-/* ── Types (match internal/api/vampiredrain/handler.go — SI canonical) ── */
-
-/** One parked window derived live from fsm_transitions (mig 000187). */
-interface VampireDrainEvent {
-  started_at: string;
-  ended_at: string;
-  duration_hours: number;
-  start_battery_pct: number;
-  end_battery_pct: number;
-  drain_pct: number;
-  drain_pct_per_day: number;
-  /** SI °C — formatted at the display boundary via useUnits(). Nullable. */
-  ambient_temp_c_avg: number | null;
-}
-
-interface VampireDrainEventsResponse {
-  vehicle_id: number;
-  events: VampireDrainEvent[];
-}
-
-interface VampireDrainStats {
-  vehicle_id: number;
-  event_count: number;
-  total_observed_hours: number;
-  avg_drain_pct_per_day: number | null;
-  median_drain_pct_per_day: number | null;
-  p95_drain_pct_per_day: number | null;
-  sample_window_days: number;
-}
 
 export interface DailyDrainBucket {
   date: string;
@@ -108,17 +80,10 @@ export default function VampireDrainPage() {
   const { formatDate, formatDateTime, tz: timeZone, opts: dateOptions } = useDateFormat();
   const activeId = vehicleId != null ? String(vehicleId) : '';
   const enabled = activeId !== '';
+  const queryClient = useQueryClient();
 
-  const statsQuery = useQuery<VampireDrainStats>({
-    queryKey: ['vampire-drain-stats', activeId],
-    queryFn: ({ signal }) => request<VampireDrainStats>(`/vampire-drain/stats?vehicle_id=${activeId}`, { signal }),
-    enabled,
-  });
-  const eventsQuery = useQuery<VampireDrainEventsResponse>({
-    queryKey: ['vampire-drain-events', activeId],
-    queryFn: ({ signal }) => request<VampireDrainEventsResponse>(`/vampire-drain?vehicle_id=${activeId}&limit=200`, { signal }),
-    enabled,
-  });
+  const statsQuery = useVampireDrainStats(activeId, 0);
+  const eventsQuery = useVampireDrainHistory(activeId);
 
   const stats = statsQuery.data ?? null;
   const statsState = useDataState(statsQuery, { provenance: 'historical' });
@@ -241,7 +206,18 @@ export default function VampireDrainPage() {
       <Button
         variant="ghost"
         className="min-h-11 min-w-11"
-        onClick={() => { void statsQuery.refetch(); void eventsQuery.refetch(); }}
+        disabled={!enabled}
+        onClick={() => {
+          void statsQuery.refetch({ cancelRefetch: false });
+          void eventsQuery.refetch({ cancelRefetch: false });
+          const scope = { vehicleId: activeId };
+          for (const queryKey of [physicsKeys.park(scope), physicsKeys.vampire(scope)]) {
+            void queryClient.refetchQueries(
+              { queryKey, exact: true, type: 'active' },
+              { cancelRefetch: false },
+            );
+          }
+        }}
         aria-label={t('vampireDrain.refresh', 'Refresh vampire drain')}
         icon={<Icon icon={RefreshCw} />}
       />
@@ -256,6 +232,7 @@ export default function VampireDrainPage() {
       query={[statsQuery, eventsQuery]}
       dataSources={dataSources}
     >
+      <Caption>{timeZone}</Caption>
       {/* AI narrator — opt-in, never replaces the deterministic stats below (ADR-015 §I3/§I5). */}
       <FadeIn>
         <SectionErrorBoundary name="VampireDrainNarration">
@@ -295,7 +272,7 @@ export default function VampireDrainPage() {
 
       <FadeIn delay={0.05}>
         <SectionErrorBoundary name="VampireDrainSplit">
-        <VampireSplitPanel vehicleId={activeId || undefined} />
+        <VampireSplitPanel vehicleId={activeId || undefined} dateOptions={dateOptions} />
         </SectionErrorBoundary>
       </FadeIn>
 
@@ -522,7 +499,7 @@ export default function VampireDrainPage() {
               tableId="battery:vampire-drain-sessions"
               caption={t('vampireDrain.sessions.title', 'Drain sessions')}
               columns={columns}
-              mobilePresentation={sessionPresentation(fmtNumber, formatTemperature, t)}
+              mobilePresentation={sessionPresentation(fmtNumber, formatTemperature, t, dateOptions)}
               data={sortedEvents}
               keyExtractor={(r) => r.started_at}
               sortKey={sortKey}

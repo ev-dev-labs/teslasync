@@ -318,7 +318,7 @@ function thresholdHistory(): Drive[] {
 }
 
 function expectPersistentAnalyticalShells() {
-  expect(screen.getAllByTestId('analytical-shell')).toHaveLength(14);
+  expect(screen.getAllByTestId('analytical-shell')).toHaveLength(13);
   expect(within(screen.getByRole('region', { name: 'Journey evidence and summary' }))
     .getByText('Observed history window')).toBeInTheDocument();
   [
@@ -392,6 +392,32 @@ beforeEach(() => {
 });
 
 describe('JourneyFragmentationPage', () => {
+  it('uses one elapsed analysis surface while preserving scope, metrics, explanations, and review provenance', () => {
+    renderPage();
+
+    const composition = screen.getByRole('heading', { name: 'Elapsed composition' })
+      .parentElement!.parentElement!;
+    const brief = elapsedBrief();
+    const explanation = 'Driving time and observed parking time allocated only across linked journey pairs.';
+    const provenance = 'Parking intervals retained inside observed chains';
+
+    expect(within(composition).getAllByTestId('analytical-shell')).toHaveLength(1);
+    expect(within(composition).getAllByRole('region')).toEqual([brief]);
+    expect(within(composition).getAllByText(explanation)).toHaveLength(2);
+    expect(within(brief).getByText('Elapsed composition')).toBeInTheDocument();
+    expect(within(brief).getByText('Returned evidence')).toBeInTheDocument();
+    expect(within(brief).getByText(provenance)).toBeInTheDocument();
+    expect(elapsedValues()).toEqual(['90 min', '30 min', '1']);
+
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const details = screen.getByRole('dialog');
+    expect(within(details).getByText('Linked journey timing details')).toBeInTheDocument();
+    expect(within(details).getByText('Elapsed composition')).toBeInTheDocument();
+    expect(within(details).getByText('Returned evidence')).toBeInTheDocument();
+    expect(within(details).getAllByText(explanation).length).toBeGreaterThan(0);
+    expect(within(details).getAllByText(provenance).length).toBeGreaterThan(0);
+  });
+
   it('uses neutral surfaces and subtle borders for every accounting category without changing counts or layout', () => {
     const result = analyzeJourneyFragmentation(
       readyHistory(), FROZEN_NOW, 'America/Los_Angeles',

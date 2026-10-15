@@ -6,12 +6,13 @@ import { LayoutCard } from '@/components/layout';
 import { Text, HelperText } from '@/components/ui';
 import { QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { TimeStamp } from '@/components/data-display';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { cn } from '@/lib/cn';
 import type { GuardPageModel } from './useGuardPageModel';
 
 export function GuardStatus({ model: m }: { model: GuardPageModel }) {
   const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat();
   const placement = useCardPlacement();
   const LockIcon = m.isLocked == null ? Info : m.isLocked ? Lock : Unlock;
   return (
@@ -48,7 +49,7 @@ export function GuardStatus({ model: m }: { model: GuardPageModel }) {
       {m.stateResponse?.observedAt != null && (
         <Text as="p" variant="caption">
           {t('guard.modernization.lastObserved', 'Vehicle source last observed')}{' '}
-          <TimeStamp value={new Date(m.stateResponse.observedAt).toISOString()} />
+          <TimeStamp value={m.stateResponse.observedAt} />
         </Text>
       )}
       </LayoutCard>

@@ -2,7 +2,7 @@ import type React from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertTriangle, Database, ServerCrash, Radio, Zap } from 'lucide-react'
 
-import { GlassPanel, Badge, Button, Heading, Text, Code } from '@/components/ui'
+import { GlassPanel, Badge, Button, BUTTON_BASE, BUTTON_VARIANTS, Heading, Text, Code } from '@/components/ui'
 import { EmptyState } from '@/components/feedback'
 import { SourceContent } from '@/components/layout'
 import { deriveDataState } from '@/api/dataState'
@@ -264,8 +264,13 @@ function DiagnosticBanner({
           <Text as="p" size="sm" color="secondary">{body}</Text>
           {meta && <DiagnosticMetaList meta={meta} />}
           {cta && ctaHref && (
-            <a href={ctaHref} target="_blank" rel="noreferrer">
-              <Button variant="secondary" size="sm">{cta}</Button>
+            <a
+              href={ctaHref}
+              target="_blank"
+              rel="noreferrer"
+              className={cn(BUTTON_BASE, BUTTON_VARIANTS.secondary, 'min-h-11 min-w-11 px-3 py-2 text-sm md:min-h-9')}
+            >
+              {cta}
             </a>
           )}
           {vehicleId !== undefined && (
@@ -297,7 +302,7 @@ function OtherRedisVehicles({
       </Text>
       {source.refreshError && (
         <Text as="p" variant="bodySm" role="status">
-          {t('dataSources.status.refreshFailed', 'Refresh failed')}
+          {t('dataSources.status.refreshFailed', 'Cached · refresh failed')}
         </Text>
       )}
       {source.isRefreshing && (

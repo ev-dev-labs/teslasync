@@ -36,7 +36,7 @@ export function CabinThermalSourceCoverage({
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'cabinThermal.coverage.subtitle',
-            'Chronological span and cadence of valid, deduplicated climate samples returned by the seven-day endpoint.',
+            'Chronological span and cadence of valid, deduplicated climate samples returned for the selected workspace range.',
           )}
         </Text>
         <CabinThermalSectionBody summary={summary} state={state} requirement="rows">
@@ -44,7 +44,7 @@ export function CabinThermalSourceCoverage({
             title={t('cabinThermal.coverage.title', 'Source coverage')}
             retained={Boolean(state.refreshError) || Boolean(state.isPaused)}
             period={{ kind: 'unknown', label: t('dataSources.labels.climateHistory', 'Climate history'),
-              reason: t('cabinThermal.coverage.subtitle', 'Chronological span and cadence of valid, deduplicated climate samples returned by the seven-day endpoint.') }}
+              reason: t('cabinThermal.coverage.subtitle', 'Chronological span and cadence of valid, deduplicated climate samples returned for the selected workspace range.') }}
             metrics={[
               { metricId: 'text', occurrenceId: 'earliest', label: t('cabinThermal.coverage.earliest', 'Earliest valid sample'), rawValue: coverage.earliestValidTs ? formatDateTime(coverage.earliestValidTs, { locale }) : null },
               { metricId: 'text', occurrenceId: 'latest', label: t('cabinThermal.coverage.latest', 'Latest valid sample'), rawValue: coverage.latestValidTs ? formatDateTime(coverage.latestValidTs, { locale }) : null },

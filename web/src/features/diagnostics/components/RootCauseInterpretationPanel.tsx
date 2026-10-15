@@ -4,6 +4,7 @@ import { GlassPanel, PanelTitle, Text, Caption } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 
 import type { EvidenceQuality, RootCausePresentation } from '../lib/rootCauseIntelligence';
+import { localizeRootCause } from '../lib/rootCauseIntelligence';
 import { QualityBadge } from './QualityBadge';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -43,6 +44,7 @@ export function RootCauseInterpretationPanel({
 }: RootCauseInterpretationPanelProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  const display = presentation ? localizeRootCause(presentation, t) : undefined;
 
   return (
     <GlassPanel className={className ?? 'p-4 sm:p-5'}>
@@ -71,14 +73,14 @@ export function RootCauseInterpretationPanel({
               })}
             </Caption>
           </div>
-          <Text variant="body">{summary}</Text>
+          <Text variant="body">{display && summary === presentation?.summary ? display.summary : summary}</Text>
           {limitations.length > 0 && (
             <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
               <Text variant="body" weight="semibold" className="mb-1.5 block">
                 {t('rootCauseIntelligence.interpretation.limitationsTitle', 'Limitations')}
               </Text>
               <ul className="list-disc space-y-1 pl-5">
-                {limitations.map((note) => (
+                {(display && limitations === presentation?.limitations ? display.limitations : limitations).map((note) => (
                   <li key={note}>
                     <Text variant="bodySm">{note}</Text>
                   </li>

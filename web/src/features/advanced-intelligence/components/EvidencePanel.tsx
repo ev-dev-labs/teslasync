@@ -1,5 +1,6 @@
 import { AlertTriangle, Database, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { EmptyState } from '@/components/feedback';
 import { SourceContent, type SourceState } from '@/components/layout';
 import { Badge, Icon, Text, type BadgeProps } from '@/components/ui';
@@ -26,7 +27,15 @@ interface EvidencePanelProps {
 function qualityVariant(status: DataQuality['status'] | undefined): BadgeProps['variant'] {
   if (status === 'sufficient') return 'success';
   if (status === 'limited') return 'warning';
-  return 'danger';
+  return status == null ? 'neutral' : 'danger';
+}
+
+export function qualityStatusLabel(status: string | null | undefined, t: TFunction): string {
+  if (status === 'sufficient') return t('advancedIntelligence.brief.quality.sufficient', 'Sufficient evidence');
+  if (status === 'limited') return t('advancedIntelligence.brief.quality.limited', 'Limited evidence');
+  if (status === 'insufficient') return t('advancedIntelligence.brief.quality.insufficient', 'Insufficient evidence');
+  if (status != null) return t('advancedIntelligence.quality.unknownCode', 'Unknown quality: {{code}}', { code: status });
+  return t('advancedIntelligence.brief.quality.unknown', 'Quality not supplied');
 }
 
 export function EvidencePanel({
@@ -54,13 +63,7 @@ export function EvidencePanel({
   const evidenceItems = evidence ?? [];
   const limitationItems = limitations ?? [];
   const unsupportedItems = unsupported ?? [];
-  const qualityLabel = quality?.status === 'sufficient'
-    ? t('advancedIntelligence.brief.quality.sufficient', 'Sufficient evidence')
-    : quality?.status === 'limited'
-      ? t('advancedIntelligence.brief.quality.limited', 'Limited evidence')
-      : quality?.status === 'insufficient'
-        ? t('advancedIntelligence.brief.quality.insufficient', 'Insufficient evidence')
-        : t('advancedIntelligence.brief.quality.unknown', 'Quality not supplied');
+  const qualityLabel = qualityStatusLabel(quality?.status, t);
 
   return (
     <InsightPanel

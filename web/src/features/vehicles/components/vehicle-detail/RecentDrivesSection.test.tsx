@@ -6,7 +6,7 @@
  * there is nothing to show, degrades to an <EmptyState> — never a blank panel.
  *
  * These tests render the REAL DataTable + useSortToggle (only `react-i18next`
- * and `@/hooks/useUnits` are stubbed) so the SI→display conversions, the
+ * and the unit/date preference hooks are stubbed) so the SI→display conversions, the
  * null-safe cell renders, and the sort wiring are all exercised end-to-end.
  * A <MemoryRouter> is supplied because the "View all" affordance is a real
  * react-router <Link>.
@@ -21,20 +21,37 @@
  *   - an absent `drives` prop resolves to a stable empty array (no crash, empty
  *     state), and null distance / duration coerce to 0 instead of leaking NaN.
  *
- * `@testing-library/user-event` is not installed in this repo, so the click
- * interaction uses `fireEvent` (matching the sibling suites). No network is
- * touched.
+ * Mobile disclosure and sort interactions use user-event to exercise native
+ * keyboard activation, Escape dismissal and focus restoration. No network is touched.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { act, render, screen, fireEvent, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
 import type { Drive } from '@/api/types'
+import { formatDateTime } from '@/lib/dateFormat'
 
 // Mutable distance preference shared with the `useUnits` mock below so a single
 // test can flip km→mi at the display boundary.
 const unitState = vi.hoisted(() => ({ distance: 'km' as 'km' | 'mi' }))
+const datePreferences = vi.hoisted(() => ({ locale: 'en-US', tz: 'UTC' }))
+
+vi.mock('@/hooks/useDateFormat', async () => {
+  const { useCallback } = await import('react')
+  const { formatDateTime } = await import('@/lib/dateFormat')
+  return {
+    useDateFormat: () => {
+      const { locale, tz } = datePreferences
+      const formatter = useCallback(
+        (value: string | Date | null | undefined) => formatDateTime(value, { locale, tz }),
+        [locale, tz],
+      )
+      return { formatDateTime: formatter, locale, tz }
+    },
+  }
+})
 
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({ unitPrefs: { distance: unitState.distance } }),
@@ -110,7 +127,100 @@ function distanceValues(): number[] {
 }
 
 beforeEach(() => {
+  localStorage.clear()
   unitState.distance = 'km'
+  datePreferences.locale = 'en-US'
+  datePreferences.tz = 'UTC'
+})
+
+describe('RecentDrivesSection — mobile summary and complete details', () => {
+  const observers: { element: Element; callback: ResizeObserverCallback }[] = []
+  const resize = (width: number) => act(() => {
+    observers.forEach(({ element, callback }) => callback(
+      [{ target: element, contentRect: { width } } as ResizeObserverEntry],
+      {} as ResizeObserver,
+    ))
+  })
+
+  beforeEach(() => {
+    observers.length = 0
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(private callback: ResizeObserverCallback) {}
+      observe(element: Element) { observers.push({ element, callback: this.callback }) }
+      unobserve() {}
+      disconnect() {}
+    })
+  })
+
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('uses one presentation at a time and retains every field at 375px and desktop', () => {
+    const { container } = renderSection([makeDrive()])
+    resize(375)
+
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
+    const mobile = screen.getByRole('group', { name: 'Recent drives' })
+    expect(within(mobile).getByText('40.00 km')).toBeInTheDocument()
+    expect(within(mobile).getByText('1h 0m')).toBeInTheDocument()
+    expect(within(mobile).getByText('80% → 70%')).toBeInTheDocument()
+    expect(container.querySelectorAll('[data-mobile-table]')).toHaveLength(1)
+    expect(screen.getByRole('link', { name: 'View all' })).toHaveClass('min-h-11', 'min-w-11')
+
+    resize(1280)
+    expect(screen.getAllByRole('table')).toHaveLength(1)
+    expect(container.querySelector('[data-mobile-table]')).toBeNull()
+    expect(bodyRows()[0].querySelectorAll('td')).toHaveLength(4)
+    expect(cellText(bodyRows()[0], 2)).toBe('1h 0m')
+  })
+
+  it('opens every field with Enter and Space, closes with Escape, and restores focus', async () => {
+    const user = userEvent.setup()
+    renderSection([makeDrive()])
+    resize(375)
+    const card = screen.getByRole('button', { name: formatDateTime(makeDrive().start_ts, datePreferences) })
+    card.focus()
+
+    for (const key of ['{Enter}', ' ']) {
+      await user.keyboard(key)
+      const dialog = screen.getByRole('dialog')
+      for (const label of ['Date', 'Distance', 'Duration', 'Battery']) {
+        expect(within(dialog).getByText(label)).toBeInTheDocument()
+      }
+      expect(within(dialog).getByText('1h 0m')).toBeInTheDocument()
+      expect(within(dialog).getByText('80% → 70%')).toBeInTheDocument()
+      await user.keyboard('{Escape}')
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(card).toHaveFocus()
+    }
+  })
+
+  it('keeps hidden layout columns available in quick view under the original table ID', async () => {
+    localStorage.setItem('teslasync.table.vehicles:detail-recent-drives.columns',
+      JSON.stringify({ order: ['date', 'distance', 'duration', 'battery'], hidden: ['duration'] }))
+    const user = userEvent.setup()
+    renderSection([makeDrive()])
+    resize(375)
+    const mobile = screen.getByRole('group', { name: 'Recent drives' })
+    expect(within(mobile).queryByText('1h 0m')).not.toBeInTheDocument()
+    await user.click(within(mobile).getByRole('button', { name: 'Quick view' }))
+    expect(within(screen.getByRole('dialog')).getByText('1h 0m')).toBeInTheDocument()
+    await user.click(within(screen.getByRole('dialog')).getByText('Close', { exact: true }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('sorts numerically with the keyboard on mobile and preserves the sort on desktop', async () => {
+    const user = userEvent.setup()
+    renderSection([makeDrive({ id: 1, distance_m: 9000 }), makeDrive({ id: 2, distance_m: 40000 })])
+    resize(375)
+    const sort = screen.getByRole('button', { name: 'Distance', exact: true })
+    sort.focus()
+    await user.keyboard('{Enter}')
+    expect(Array.from(document.querySelectorAll('[data-card-primary]')).map(node => node.textContent))
+      .toEqual(['40.00 km', '9.00 km'])
+    resize(1280)
+    expect(distanceValues()).toEqual([40, 9])
+    expect(screen.getByRole('columnheader', { name: 'Distance' })).toHaveAttribute('aria-sort', 'descending')
+  })
 })
 
 describe('RecentDrivesSection — structure & a11y', () => {
@@ -190,6 +300,32 @@ describe('RecentDrivesSection — cell rendering', () => {
     renderSection([makeDrive({ start_ts: '2026-06-15T12:00:00Z' })])
     // Assert the year (timezone-stable for a mid-month noon-UTC timestamp).
     expect(cellText(bodyRows()[0], 0)).toContain('2026')
+  })
+
+  it('updates populated date cells and the disclosed zone when date preferences change', () => {
+    const drives = [makeDrive({ start_ts: '2026-06-15T00:30:00Z' })]
+    const { rerender } = renderSection(drives)
+    const expectedDate = () => formatDateTime(drives[0].start_ts, datePreferences)
+
+    expect(cellText(bodyRows()[0], 0)).toBe(expectedDate())
+    expect(screen.getByText('UTC')).toBeInTheDocument()
+
+    datePreferences.tz = 'America/Los_Angeles'
+    rerender(<MemoryRouter><RecentDrivesSection drives={drives} /></MemoryRouter>)
+
+    expect(cellText(bodyRows()[0], 0)).toBe(expectedDate())
+    expect(cellText(bodyRows()[0], 0)).toContain('Jun 14')
+    expect(screen.getByText('America/Los_Angeles')).toBeInTheDocument()
+    expect(screen.queryByText('UTC')).not.toBeInTheDocument()
+
+    datePreferences.locale = 'de-DE'
+    rerender(<MemoryRouter><RecentDrivesSection drives={drives} /></MemoryRouter>)
+
+    expect(cellText(bodyRows()[0], 0)).toBe(expectedDate())
+    expect(cellText(bodyRows()[0], 0)).toContain('14. Juni')
+    expect(cellText(bodyRows()[0], 1)).toMatch(/^40(\.0+)? km$/)
+    expect(cellText(bodyRows()[0], 2)).toBe('1h 0m')
+    expect(cellText(bodyRows()[0], 3)).toBe('80% → 70%')
   })
 })
 

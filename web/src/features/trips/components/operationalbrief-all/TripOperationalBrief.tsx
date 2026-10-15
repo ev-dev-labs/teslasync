@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import type { DataState } from '@/api/dataState';
 import { DataFreshness, DataProvenanceBadge, OperationalBrief } from '@/components/data-display';
+import { DataSourceNotice } from '@/components/feedback';
 import type { OperationalBriefProps } from '@/components/data-display/OperationalBrief';
 
 interface TripOperationalBriefProps extends Omit<OperationalBriefProps, 'statusLabel' | 'statusTone' | 'loading' | 'compact' | 'freshness'> {
@@ -19,17 +20,32 @@ export function TripOperationalBrief({ source, loading, ...props }: TripOperatio
     unavailable: t('trips.brief.status.unavailable', 'Source unavailable'),
   };
   return (
-    <OperationalBrief
-      {...props}
-      compact
-      loading={loading ?? source.status === 'initial'}
-      statusLabel={labels[source.status]}
-      statusTone={source.fatalError ? 'danger' : source.status === 'stale' || source.status === 'partial' ? 'warning' : 'neutral'}
-      freshness={<>
-        <DataProvenanceBadge provenance={source.provenance} status={source.status} updatedAt={source.updatedAt} />
-        <DataFreshness updatedAt={source.updatedAt} isFetching={source.isRefreshing}
-          isStale={source.status === 'stale'} isError={source.refreshError !== null || source.fatalError !== null} />
-      </>}
-    />
+    <>
+      <DataSourceNotice sources={[{
+        id: 'trip-brief',
+        label: props.title,
+        query: {
+          data: source.data,
+          isError: source.refreshError !== null || source.fatalError !== null,
+          error: source.refreshError ?? source.fatalError,
+          isLoading: source.status === 'initial' && !source.isRefreshBlocked,
+          isFetching: source.isRefreshing,
+          fetchStatus: source.isRefreshBlocked ? 'paused' : source.isRefreshing ? 'fetching' : 'idle',
+          refetch: source.retry ?? undefined,
+        },
+      }]} />
+      <OperationalBrief
+        {...props}
+        compact
+        loading={loading ?? source.status === 'initial'}
+        statusLabel={labels[source.status]}
+        statusTone={source.fatalError ? 'danger' : source.status === 'stale' || source.status === 'partial' ? 'warning' : 'neutral'}
+        freshness={<>
+          <DataProvenanceBadge provenance={source.provenance} status={source.status} updatedAt={source.updatedAt} />
+          <DataFreshness updatedAt={source.updatedAt} isFetching={source.isRefreshing}
+            isStale={source.status === 'stale'} isError={source.refreshError !== null || source.fatalError !== null} />
+        </>}
+      />
+    </>
   );
 }

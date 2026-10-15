@@ -6,11 +6,17 @@
  * static local lookup (`lib/trust.ts`).
  */
 import { useTranslation } from 'react-i18next';
-import { Badge, CopyButton } from '@/components/ui';
+import { Badge, Caption, Code, CopyButton, ErrorText } from '@/components/ui';
 import { formatFingerprint } from '../lib/trust';
+import type { VerificationResult } from '../lib/verifyEnvelope';
+import { VerificationStatusBadge } from './VerificationStatusBadge';
 
 export interface PublisherFingerprintDisplayProps {
   fingerprintHex: string | null;
+  hasSignature?: boolean;
+  verificationResult?: VerificationResult | null;
+  isLoading?: boolean;
+  error?: unknown;
   recognizedName?: string | null;
   claimedMismatch?: boolean;
   className?: string;
@@ -18,17 +24,32 @@ export interface PublisherFingerprintDisplayProps {
 
 export function PublisherFingerprintDisplay({
   fingerprintHex,
+  hasSignature,
+  verificationResult,
+  isLoading,
+  error,
   recognizedName,
   claimedMismatch,
   className,
 }: PublisherFingerprintDisplayProps) {
   const { t } = useTranslation();
 
-  if (!fingerprintHex) {
+  if (hasSignature === false || (hasSignature == null && verificationResult?.status === 'unsigned')) {
     return (
       <span className={className}>
-        <span className="text-xs text-[var(--text-muted)]">{t('intelPacks.fingerprint.none', 'No signing key (unsigned)')}</span>
+        <Caption>{t('intelPacks.fingerprint.none', 'No signing key (unsigned)')}</Caption>
       </span>
+    );
+  }
+
+  if (isLoading || error || !fingerprintHex || !/^[a-f0-9]{64}$/i.test(fingerprintHex)) {
+    return (
+      <VerificationStatusBadge
+        result={verificationResult?.status === 'unsigned' ? null : verificationResult}
+        isLoading={isLoading}
+        error={error}
+        className={className}
+      />
     );
   }
 
@@ -37,7 +58,7 @@ export function PublisherFingerprintDisplay({
   return (
     <div className={className}>
       <div className="flex flex-wrap items-center gap-2">
-        <code className="text-xs text-[var(--text-secondary)] break-all">{formatted}</code>
+        <Code className="break-all">{formatted}</Code>
         <CopyButton text={fingerprintHex} iconOnly label={t('intelPacks.fingerprint.copy', 'Copy fingerprint')} />
         {recognizedName ? (
           <Badge variant="success" size="sm">
@@ -50,12 +71,12 @@ export function PublisherFingerprintDisplay({
         )}
       </div>
       {claimedMismatch && (
-        <p className="mt-1 text-xs text-rose-300">
+        <ErrorText as="p" className="mt-1">
           {t(
             'intelPacks.fingerprint.claimMismatch',
             'The manifest\u2019s self-claimed publisher fingerprint does not match the fingerprint recomputed from the actual signing key. Treat this as suspicious.',
           )}
-        </p>
+        </ErrorText>
       )}
     </div>
   );

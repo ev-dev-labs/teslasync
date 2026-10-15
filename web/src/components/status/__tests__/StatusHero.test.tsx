@@ -4,6 +4,37 @@ import { StatusHero } from '../StatusHero'
 
 describe('StatusHero', () => {
   it.each([
+    ['healthy', 'circle-check'],
+    ['degraded', 'triangle-alert'],
+    ['unhealthy', 'circle-x'],
+    ['unknown', 'circle-help'],
+    ['maintenance', 'wrench'],
+  ] as const)('uses the shared panel shadow without decorative glow for populated %s status', (status, icon) => {
+    const onClick = vi.fn()
+    const { container } = render(
+      <StatusHero
+        status={status}
+        id="system-health"
+        className="mt-4"
+        headline="Instance status"
+        subline="Last checked 12s ago"
+        live
+        cta={{ label: 'Run check', onClick }}
+      />,
+    )
+    const panel = container.querySelector('#system-health')
+    expect(panel).toHaveClass('shadow-panel', 'mt-4')
+    expect(panel).not.toHaveAttribute('style')
+    expect(panel?.querySelector(`svg.lucide-${icon}`)).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite')
+    expect(screen.getByRole('heading', { name: 'Instance status' })).toBeInTheDocument()
+    expect(screen.getByText(/Last checked 12s ago/)).toBeInTheDocument()
+    expect(screen.getByText('Live')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Run check' }))
+    expect(onClick).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
     ['healthy',     'All systems operational'],
     ['degraded',    'Degraded performance'],
     ['unhealthy',   'Service outage'],

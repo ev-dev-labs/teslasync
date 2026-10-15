@@ -4,6 +4,8 @@ import type { StatMetric } from '@/components/data-display/stat-reference/types'
 import type { DriveDetail } from '@/types/driving';
 import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { Text } from '@/components/ui';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
 import { TripOperationalBrief } from './TripOperationalBrief';
@@ -19,14 +21,22 @@ export function TripReplaySummaryBrief({ drive, source, elevation, formatDriveTi
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const { fmtNumber, fmtInt } = useNumberFormatting();
+  const { formatDateTime, tz } = useDateFormat();
   const distanceDisplay = drive?.distanceM != null ? convertDistanceFromSI(drive.distanceM, unitPrefs.distance) : null;
   const efficiency = distanceDisplay != null && distanceDisplay > 0 && drive?.energyUsedWh != null
     ? drive.energyUsedWh / distanceDisplay : null;
-  const scope = drive
+  const rawScope = drive
     ? t('trips.brief.replay.scope', 'Drive #{{id}} · {{start}} – {{end}}', {
       id: drive.id, start: drive.startTs, end: drive.endTs ?? t('trips.detail.inProgress', 'In progress'),
     })
     : t('trips.brief.replay.missingScope', 'Drive record unavailable; event bounds unknown.');
+  const scope = drive
+    ? `${t('trips.brief.replay.scope', 'Drive #{{id}} · {{start}} – {{end}}', {
+      id: drive.id,
+      start: formatDateTime(drive.startTs),
+      end: drive.endTs == null ? t('trips.detail.inProgress', 'In progress') : formatDateTime(drive.endTs),
+    })} (${tz})`
+    : rawScope;
   const summaryDescription = t('trips.brief.replay.description', 'Stored drive totals are independent of the GPS trail. Elevation gain and loss use only consecutive positions with measured elevation.');
   const batteryKnown = drive?.startBatteryPct != null && drive?.endBatteryPct != null;
   const batteryFinite = batteryKnown && Number.isFinite(drive?.startBatteryPct) && Number.isFinite(drive?.endBatteryPct);
@@ -63,7 +73,8 @@ export function TripReplaySummaryBrief({ drive, source, elevation, formatDriveTi
   ];
   const operationalMetrics = useOperationalMetrics(metrics);
   return (
-      <TripOperationalBrief source={source} metrics={operationalMetrics} scope={scope}
+      <TripOperationalBrief source={source} metrics={operationalMetrics}
+        scope={<Text as="span" variant="caption" title={rawScope}>{scope}</Text>}
         eyebrow={t('trips.brief.replay.eyebrow', 'Trip replay')}
         title={t('replay.summary.title', 'Drive Summary')}
         description={summaryDescription}

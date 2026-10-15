@@ -13,7 +13,7 @@ import { MetricBar } from '@/components/data-display';
 import { LayoutCard, SourceContent } from '@/components/layout';
 import { EmptyState, ListSkeleton } from '@/components/feedback';
 import { JourneyEvidenceList } from './continuation-mobility-trips-watch/JourneyEvidenceList';
-import { formatTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { safeArray } from '@/lib/safeArray';
 
 const VERDICT_LABEL_KEYS: Record<JourneyRangeVerdict, string> = {
@@ -50,6 +50,7 @@ function verdictVariant(verdict: JourneyRangeVerdict) {
  * queued offline and replayed on reconnect.
  */
 export function LiveTripPanel({ session }: { session: JourneySession }) {
+  const { formatTime } = useDateFormat();
   const { t } = useTranslation();
   const units = useUnits();
 

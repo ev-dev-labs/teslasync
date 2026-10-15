@@ -1,15 +1,16 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import WarrantyResaleVaultPage from './WarrantyResaleVaultPage';
-import { __resetKeyRepositoryForTests } from '../lib/signingKeyRepository';
+import { __resetKeyRepositoryForTests, generateSigningKey, getActiveSigningKeyRecord } from '../lib/signingKeyRepository';
 import { __resetAuditTrailForTests } from '../lib/auditTrail';
 import * as reportSigner from '../lib/reportSigner';
 import * as auditTrail from '../lib/auditTrail';
-import type { VaultReport } from '../lib/types';
+import type { SignedVaultReport, VaultReport } from '../lib/types';
+import type { BatteryCertificateIssueResponse } from '@/api/hooks/useBatteryCertificate';
 
 const requestMock = vi.fn();
 vi.mock('@/api/client', () => ({
@@ -64,8 +65,20 @@ function renderPage() {
   return { ...render(<WarrantyResaleVaultPage />, { wrapper: Wrapper }), client };
 }
 
+function signedResult(report: VaultReport): SignedVaultReport {
+  return {
+    report, digest_sha256_hex: 'pending-digest',
+    signature: {
+      alg: 'ECDSA_P256_SHA256', key_id: 'key_mock',
+      public_key_jwk: { kty: 'EC', crv: 'P-256', x: 'x', y: 'y' },
+      signature_b64: 'sig', signed_at: '2024-01-01T00:00:00Z',
+    },
+    local_key_status: { persisted: false, revoked: false },
+  };
+}
+
 describe('WarrantyResaleVaultPage', () => {
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => { onlineManager.setOnline(true); vi.restoreAllMocks(); });
   beforeEach(() => {
     selectedVehicleId = 1;
     requestMock.mockReset();
@@ -86,6 +99,46 @@ describe('WarrantyResaleVaultPage', () => {
     expect(await screen.findByText(/evidence inventory/i)).toBeInTheDocument();
   });
 
+  it('scopes browser-only claims to vault reports and discloses automatic server certificate fetching and verification before export', async () => {
+    const issued: BatteryCertificateIssueResponse = {
+      certificate: {
+        issuer: 'TeslaSync', version: 1, vehicle_id: 1,
+        issued_at: '2024-01-01T00:00:00Z', expires_at: '2024-01-31T00:00:00Z',
+        current_soh: 95, estimated_capacity_kwh: 74, original_capacity_kwh: 75,
+        degradation_rate_pct_per_year: 1, battery_age_months: 24, total_cycles: 100,
+        charge_habits_score: 90, stress_level: 'low', fast_charge_pct: 10,
+        temp_exposure_score: null, temp_exposure_reason: 'Insufficient observations',
+      },
+      signature: 'server-signature',
+    };
+    requestMock.mockImplementation((path: string) => {
+      if (path === '/analytics/battery-health/certificate?vehicle_id=1') return Promise.resolve(issued);
+      if (path === '/public/battery-certificate/verify') return Promise.resolve({ valid: true, certificate: issued.certificate });
+      return Promise.resolve(routeResponse(path));
+    });
+    const sign = vi.spyOn(reportSigner, 'signReport');
+    renderPage();
+
+    expect(screen.getByText(/report in this browser using evidence fetched from the server/)).toBeInTheDocument();
+    expect(screen.getByText(/Vault report assembly, report signing, imported report verification/)).toBeInTheDocument();
+    expect(screen.getByText(/opening Evidence fetches it from the server.*automatically sends its certificate payload and signature/)).toBeInTheDocument();
+    expect(screen.getByText(/not the separate server certificate requests/)).toBeInTheDocument();
+    expect(screen.queryByText(/Nothing leaves your browser until you explicitly export it/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/entirely in this browser/)).not.toBeInTheDocument();
+
+    expect(await screen.findByText('Signature verified')).toBeInTheDocument();
+    expect(requestMock).toHaveBeenCalledWith('/analytics/battery-health/certificate?vehicle_id=1', expect.objectContaining({ signal: expect.any(AbortSignal) }));
+    expect(requestMock).toHaveBeenCalledWith('/public/battery-certificate/verify', {
+      method: 'POST', body: JSON.stringify(issued),
+    });
+    expect(screen.getAllByText('95.00%').length).toBeGreaterThan(0);
+    expect(screen.getByText('Passport provenance hash: abc')).toBeInTheDocument();
+    expect(screen.getByText('Basic')).toBeInTheDocument();
+    expect(sign).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Copy certificate' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Copy signature' })).toBeEnabled();
+  });
+
   it('switches to the Disclosure Profile tab and shows the profile builder', async () => {
     renderPage();
     await screen.findByText(/evidence inventory/i);
@@ -103,6 +156,179 @@ describe('WarrantyResaleVaultPage', () => {
     expect(screen.getByText(/signature & key management/i)).toBeInTheDocument();
   });
 
+  it('reconciles automatic signing-key generation even when signing subsequently rejects', async () => {
+    vi.spyOn(reportSigner, 'signReport').mockImplementation(async () => {
+      await generateSigningKey();
+      throw new Error('Signature denied');
+    });
+    renderPage();
+    await screen.findByText('95.00%');
+    fireEvent.click(screen.getByRole('tab', { name: 'Preview & sign' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Sign report' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Sign report' }));
+    expect(await screen.findByText('Signature denied')).toBeInTheDocument();
+    const active = await getActiveSigningKeyRecord();
+    expect(active).not.toBeNull();
+    expect(screen.getByText(`Active key: ${active?.key_id}`)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rotate active key' })).toBeEnabled();
+  });
+
+  it('reconciles a partially applied rotation without clearing its error', async () => {
+    await generateSigningKey();
+    renderPage();
+    await screen.findByText('95.00%');
+    fireEvent.click(screen.getByRole('tab', { name: 'Preview & sign' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Rotate active key' })).toBeEnabled());
+    vi.spyOn(crypto.subtle, 'generateKey').mockRejectedValueOnce(new Error('Generation denied'));
+    fireEvent.click(screen.getByRole('button', { name: 'Rotate active key' }));
+    expect(await screen.findByText('Generation denied')).toBeInTheDocument();
+    expect(screen.getByText(/Active key: none/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rotate active key' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Sign report' })).toBeEnabled();
+    expect(screen.getByText('Revoked')).toBeInTheDocument();
+  });
+
+  it.each(['success', 'rejection'] as const)(
+    'ignores stale signing %s after a vehicle change and holds the cross-panel guard until settlement',
+    async (settlement) => {
+      let resolve!: (result: SignedVaultReport) => void;
+      let reject!: (error: Error) => void;
+      const pending = new Promise<SignedVaultReport>((done, fail) => { resolve = done; reject = fail; });
+      const sign = vi.spyOn(reportSigner, 'signReport').mockReturnValue(pending);
+      const { rerender } = renderPage();
+      await screen.findByText('95.00%');
+      fireEvent.click(screen.getByRole('tab', { name: 'Preview & sign' }));
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Sign report' })).toBeEnabled());
+      fireEvent.click(screen.getByRole('button', { name: 'Sign report' }));
+      expect(screen.getByRole('button', { name: 'Generate new key' })).toBeDisabled();
+      selectedVehicleId = 2;
+      rerender(<WarrantyResaleVaultPage />);
+      expect(screen.getByRole('button', { name: 'Generate new key' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Sign report' })).toBeDisabled();
+      await act(async () => {
+        if (settlement === 'success') resolve(signedResult(sign.mock.calls[0][0]));
+        else reject(new Error('Old vehicle signing denied'));
+      });
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Generate new key' })).toBeEnabled());
+      expect(screen.queryByText('pending-digest')).not.toBeInTheDocument();
+      expect(screen.queryByText('Old vehicle signing denied')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Download JSON' })).toBeDisabled();
+    },
+  );
+
+  it.each(['success', 'rejection'] as const)('settles matching signing %s and releases both panels', async (settlement) => {
+    let resolve!: (result: SignedVaultReport) => void;
+    let reject!: (error: Error) => void;
+    const pending = new Promise<SignedVaultReport>((done, fail) => { resolve = done; reject = fail; });
+    const sign = vi.spyOn(reportSigner, 'signReport').mockReturnValue(pending);
+    renderPage();
+    await screen.findByText('95.00%');
+    fireEvent.click(screen.getByRole('tab', { name: 'Preview & sign' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Sign report' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Sign report' }));
+    expect(screen.getByRole('button', { name: 'Generate new key' })).toBeDisabled();
+    await act(async () => {
+      if (settlement === 'success') resolve(signedResult(sign.mock.calls[0][0]));
+      else reject(new Error('Current signing denied'));
+    });
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Generate new key' })).toBeEnabled());
+    if (settlement === 'success') {
+      expect(screen.getByText('pending-digest')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Download JSON' })).toBeEnabled();
+    } else {
+      expect(screen.getByText('Current signing denied')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Download JSON' })).toBeDisabled();
+    }
+  });
+
+  it('does not revive an old completion after leaving and returning to the same preview scope', async () => {
+    let resolve!: (result: SignedVaultReport) => void;
+    const pending = new Promise<SignedVaultReport>((done) => { resolve = done; });
+    const sign = vi.spyOn(reportSigner, 'signReport').mockReturnValue(pending);
+    renderPage();
+    await screen.findByText('95.00%');
+    fireEvent.click(screen.getByRole('tab', { name: 'Preview & sign' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Sign report' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Sign report' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Disclosure profile' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Preview & sign' }));
+    expect(screen.getByRole('button', { name: 'Sign report' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Generate new key' })).toBeDisabled();
+    await act(async () => { resolve(signedResult(sign.mock.calls[0][0])); });
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Sign report' })).toBeEnabled());
+    expect(screen.queryByText('pending-digest')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Download JSON' })).toBeDisabled();
+    sign.mockImplementation(async (report) => signedResult(report));
+    fireEvent.click(screen.getByRole('button', { name: 'Sign report' }));
+    expect(await screen.findByText('pending-digest')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Generate new key' })).toBeEnabled();
+  });
+
+  it('retains a matching signed report and the error when its audit write rejects', async () => {
+    vi.spyOn(reportSigner, 'signReport').mockImplementation(async (report) => {
+      await generateSigningKey();
+      return signedResult(report);
+    });
+    vi.spyOn(auditTrail, 'recordAuditEvent').mockRejectedValue(new Error('Audit write denied'));
+    renderPage();
+    await screen.findByText('95.00%');
+    fireEvent.click(screen.getByRole('tab', { name: 'Preview & sign' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Sign report' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Sign report' }));
+    expect(await screen.findByText('Audit write denied')).toBeInTheDocument();
+    expect(screen.getByText('pending-digest')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rotate active key' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Download JSON' })).toBeEnabled();
+  });
+
+  it('retains a signed export across disclosure tabs but resets it when leaving its vehicle scope', async () => {
+    vi.spyOn(reportSigner, 'signReport').mockImplementation(async (report) => signedResult(report));
+    const { rerender } = renderPage();
+    await screen.findByText('95.00%');
+    fireEvent.click(screen.getByRole('tab', { name: 'Preview & sign' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Sign report' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Sign report' }));
+    expect(await screen.findByText('pending-digest')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: 'Disclosure profile' }));
+    fireEvent.click(screen.getByDisplayValue('custom'));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Battery health' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Preview & sign' }));
+    expect(screen.getByText('pending-digest')).toBeInTheDocument();
+    expect(screen.getByText(/belongs to an older preview/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Download JSON' })).toBeEnabled();
+
+    selectedVehicleId = 2;
+    rerender(<WarrantyResaleVaultPage />);
+    expect(screen.queryByText('pending-digest')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Download JSON' })).toBeDisabled();
+    selectedVehicleId = 1;
+    rerender(<WarrantyResaleVaultPage />);
+    expect(screen.queryByText('pending-digest')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Download JSON' })).toBeDisabled();
+  });
+
+  it('holds signing during key audit work and reconciles the generated key when that audit rejects', async () => {
+    let rejectAudit!: (error: Error) => void;
+    const pendingAudit = new Promise<never>((_, reject) => { rejectAudit = reject; });
+    const audit = vi.spyOn(auditTrail, 'recordAuditEvent').mockReturnValue(pendingAudit);
+    const sign = vi.spyOn(reportSigner, 'signReport');
+    const { rerender } = renderPage();
+    await screen.findByText('95.00%');
+    fireEvent.click(screen.getByRole('tab', { name: 'Preview & sign' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Generate new key' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Generate new key' }));
+    await waitFor(() => expect(audit).toHaveBeenCalledOnce());
+    expect(screen.getByRole('button', { name: 'Sign report' })).toBeDisabled();
+    selectedVehicleId = 2;
+    rerender(<WarrantyResaleVaultPage />);
+    expect(screen.getByRole('button', { name: 'Sign report' })).toBeDisabled();
+    await act(async () => { rejectAudit(new Error('Key audit denied')); });
+    expect(await screen.findByText('Key audit denied')).toBeInTheDocument();
+    const active = await getActiveSigningKeyRecord();
+    expect(screen.getByText(`Active key: ${active?.key_id}`)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rotate active key' })).toBeEnabled();
+    expect(sign).not.toHaveBeenCalled();
+  });
   it('switches to the Import & Verify tab', async () => {
     renderPage();
     await screen.findByText(/evidence inventory/i);
@@ -147,6 +373,9 @@ describe('WarrantyResaleVaultPage', () => {
     expect(screen.getByRole('row', { name: /Warranty Data found Included/ })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Preview & sign' }));
+    expect(screen.getByRole('button', { name: 'Sign report' })).toBeDisabled();
+    expect(screen.getAllByText(/Source readiness: battery\/battery; status=stale; retained=true/).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('switch', { name: 'Included with warning' }));
     fireEvent.click(screen.getByRole('button', { name: 'Sign report' }));
     await waitFor(() => expect(sign).toHaveBeenCalledOnce());
     const report = sign.mock.calls[0]?.[0];
@@ -154,6 +383,7 @@ describe('WarrantyResaleVaultPage', () => {
     expect(report?.evidence.battery?.source_provenance_hash).toBe('abc');
     expect(report?.evidence.warranty?.data).toEqual({ plan: 'Basic' });
     expect(report?.evidence.vehicle_identity?.vin_full).toBeNull();
+    expect(report?.limitations.join(' ')).toContain('Source readiness: battery/battery; status=stale; retained=true');
 
     fireEvent.click(screen.getByRole('tab', { name: 'Evidence' }));
     requestMock.mockImplementation((path: string) => Promise.resolve(routeResponse(path)));
@@ -161,6 +391,68 @@ describe('WarrantyResaleVaultPage', () => {
     await waitFor(() => expect(screen.queryByText(/Previously loaded data remains visible/)).not.toBeInTheDocument());
     expect(screen.getByText('Passport provenance hash: abc')).toBeInTheDocument();
     expect(screen.getByText('Basic')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: 'Preview & sign' }));
+    expect(screen.queryByRole('switch', { name: 'Included with warning' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sign report' })).toBeEnabled();
+    expect(screen.getByText(/Source readiness: battery\/battery; status=ok; retained=true/)).toBeInTheDocument();
+  });
+
+  it('carries unresolved loading through the preview until successful empty sources resolve', async () => {
+    let resolveSoftware: (data: unknown) => void = () => {};
+    const pending = new Promise((resolve) => { resolveSoftware = resolve; });
+    requestMock.mockImplementation((path: string) => path.startsWith('/software-updates')
+      ? pending : Promise.resolve(routeResponse(path)));
+    renderPage();
+    await screen.findByText('95.00%');
+    fireEvent.click(screen.getByRole('tab', { name: 'Preview & sign' }));
+    expect(screen.getByRole('button', { name: 'Sign report' })).toBeDisabled();
+    expect(screen.getByText(/Source readiness: software_updates\/software; status=initial; retained=false/)).toBeInTheDocument();
+    await act(async () => { resolveSoftware([]); });
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Sign report' })).toBeEnabled());
+    expect(screen.getByText(/Source readiness: software_updates\/software; status=ok; retained=true/)).toBeInTheDocument();
+  });
+
+  it('does not sign paused first reads as empty evidence and recovers when online', async () => {
+    onlineManager.setOnline(false);
+    renderPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'Preview & sign' }));
+    expect(screen.getByRole('button', { name: 'Sign report' })).toBeDisabled();
+    expect(screen.getAllByText(/status=initial; retained=false; refreshing=false; paused=true/).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('switch', { name: 'Included with warning' }));
+    expect(screen.getByRole('button', { name: 'Sign report' })).toBeDisabled();
+    await act(async () => { onlineManager.setOnline(true); });
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Sign report' })).toBeEnabled());
+    expect(screen.queryByText(/status=initial; retained=false/)).not.toBeInTheDocument();
+  });
+
+  it('allows an intentional partial report after a failed first read without deleting other selected evidence', async () => {
+    requestMock.mockImplementation((path: string) => path.includes('/battery-passport')
+      ? Promise.reject(new Error('Battery source unavailable'))
+      : Promise.resolve(routeResponse(path)));
+    const sign = vi.spyOn(reportSigner, 'signReport').mockImplementation(async (report) => ({
+      report, digest_sha256_hex: 'abc',
+      signature: {
+        alg: 'ECDSA_P256_SHA256', key_id: 'key_mock', public_key_jwk: { kty: 'EC', crv: 'P-256', x: 'x', y: 'y' },
+        signature_b64: 'sig', signed_at: '2024-01-01T00:00:00Z',
+      },
+      local_key_status: { persisted: false, revoked: false },
+    }));
+    renderPage();
+    await screen.findByText(/Battery health could not be loaded/);
+    fireEvent.click(screen.getByRole('tab', { name: 'Preview & sign' }));
+    await waitFor(() => expect(screen.getByRole('switch', { name: 'Included with warning' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.queryAllByText(/status=initial; retained=false/)).toHaveLength(0));
+    expect(screen.getByRole('button', { name: 'Sign report' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('switch', { name: 'Included with warning' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Sign report' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Sign report' }));
+    await waitFor(() => expect(sign).toHaveBeenCalledOnce());
+    const snapshot = sign.mock.calls[0][0];
+    expect(snapshot.evidence.battery).toBeNull();
+    expect(snapshot.evidence.warranty?.data).toEqual({ plan: 'Basic' });
+    expect(snapshot.disclosure.sections).toContain('battery');
+    expect(snapshot.limitations.join(' ')).toContain('status=initialFailure; retained=false');
+    expect(snapshot.limitations.join(' ')).toContain('not evidence of an empty history or a zero measurement');
   });
 
   it('wires custom section, VIN and timestamp controls to the actual signed report without mutating unselected inventory', async () => {

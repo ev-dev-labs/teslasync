@@ -287,6 +287,8 @@ func assertErrorBody(t *testing.T, rec *httptest.ResponseRecorder, wantCode stri
 
 func TestHandler_Status(t *testing.T) {
 	lastPoll := time.Date(2026, 3, 1, 12, 30, 0, 0, time.UTC)
+	liter := "liter"
+	gallon := "gallon"
 	tests := []struct {
 		name string
 		in   worker.GasPriceStatus
@@ -299,11 +301,16 @@ func TestHandler_Status(t *testing.T) {
 				LastPollTime:      lastPoll,
 				CurrentPrice:      3.59,
 				CurrentPriceKWhEq: 0.5028,
+				CurrentPriceUnit:  &liter,
 			},
 		},
 		{
 			name: "stopped zero-value",
 			in:   worker.GasPriceStatus{Enabled: false, PollInterval: "daily"},
+		},
+		{
+			name: "successful zero quote",
+			in: worker.GasPriceStatus{LastPollTime: lastPoll, CurrentPriceUnit: &gallon},
 		},
 	}
 
@@ -333,6 +340,16 @@ func TestHandler_Status(t *testing.T) {
 			}
 			if got.CurrentPriceKWhEq != tc.in.CurrentPriceKWhEq {
 				t.Errorf("current_price_kwh_eq = %v, want %v", got.CurrentPriceKWhEq, tc.in.CurrentPriceKWhEq)
+			}
+			if !reflect.DeepEqual(got.CurrentPriceUnit, tc.in.CurrentPriceUnit) {
+				t.Errorf("current_price_unit = %v, want %v", got.CurrentPriceUnit, tc.in.CurrentPriceUnit)
+			}
+			var payload map[string]any
+			if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+				t.Fatal(err)
+			}
+			if _, ok := payload["current_price_unit"]; !ok {
+				t.Fatal("status omitted denomination availability")
 			}
 			if !got.LastPollTime.Equal(tc.in.LastPollTime) {
 				t.Errorf("last_poll_time = %v, want %v", got.LastPollTime, tc.in.LastPollTime)

@@ -246,7 +246,7 @@ function LivePowerRow({
 /* ───────── Main Page ───────── */
 
 export default function EnergyFlowPage() {
-  const { fmtNumber } = useNumberFormatting();
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('energyFlow.title', 'Energy flow'));
 
@@ -422,7 +422,7 @@ export default function EnergyFlowPage() {
   // Do not present the workspace's custom dates as server-side coverage.
   const period: StatPeriod = {
     kind: 'unknown',
-    label: t('energyFlow.summary.trailingWindow', 'Trailing {{days}} days', { days }),
+    label: t('energyFlow.summary.trailingWindow', 'Trailing {{days}} days', { count: days, days: fmtInt(days) }),
     reason: t('energyFlow.summary.windowReason', 'The energy endpoint uses a trailing day count; custom calendar bounds are not applied by this source.'),
   };
   const missingReason = t('energyFlow.state.missing', 'No measurement supplied');
@@ -452,7 +452,13 @@ export default function EnergyFlowPage() {
       description: t('energyFlow.metrics.co2Estimate', 'Estimated avoided CO₂, not a vehicle emissions measurement.') },
     { metricId: 'duration', occurrenceId: 'period-days',
       rawValue: stats?.period_days != null ? stats.period_days * 86400 : null,
-      display: { formatter: raw => ({ value: String(raw / 86400), unit: t('energyFlow.units.days', 'days') }) },
+      display: { formatter: raw => {
+        const count = raw / 86400;
+        return {
+          value: Number.isInteger(count) ? fmtInt(count) : fmtNumber(count),
+          unit: t('energyFlow.units.days', 'days', { count }),
+        };
+      } },
       label: t('energyFlow.kpi.period', 'Period'), missingReason },
   ];
   const efficiencyMetrics: StatMetric[] = [

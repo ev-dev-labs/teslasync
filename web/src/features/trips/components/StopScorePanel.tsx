@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icons } from '@/lib/icons';
-import { useScoreStops, type JourneySession } from '@/api/hooks/useJourney';
+import { useScoreStops, type JourneySession, type StopScores } from '@/api/hooks/useJourney';
 import { useWaitOracleSites } from '@/api/hooks/useCharging';
 import { useDataState } from '@/hooks/useDataState';
 import { Badge, Button, Checkbox, Input, Text } from '@/components/ui';
@@ -31,6 +31,10 @@ function toIsoOrNull(local: string): string | null {
  * persists as a plan version on the session.
  */
 export function StopScorePanel({ session }: { session: JourneySession }) {
+  return <SessionStopScorePanel key={`${session.vehicle_id}:${session.id}`} session={session} />;
+}
+
+function SessionStopScorePanel({ session }: { session: JourneySession }) {
   const { t } = useTranslation();
   const [selected, setSelected] = useState<string[]>([]);
   const [arrival, setArrival] = useState(() => toLocalInput(new Date(Date.now() + 2 * 3600_000)));
@@ -41,7 +45,12 @@ export function StopScorePanel({ session }: { session: JourneySession }) {
   const sites = useMemo(() => safeArray(sitesQuery.data), [sitesQuery.data]);
 
   const score = useScoreStops();
-  const result = score.data ?? null;
+  const [retainedResult, setRetainedResult] = useState<StopScores | null>(null);
+  const matchingResult = score.data?.session_id === session.id ? score.data : null;
+  useEffect(() => {
+    if (matchingResult) setRetainedResult(matchingResult);
+  }, [matchingResult]);
+  const result = matchingResult ?? retainedResult;
   const emptySites = (
     <EmptyState
       icon={<Icons.location className="h-10 w-10" aria-hidden="true" />}

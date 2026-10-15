@@ -91,6 +91,35 @@
     }
   },
   "rootCauseIntelligence": {
+    "reasons": {
+      "concurrent": "{{signal}} shifted within {{minutes}} min of {{focalSignal}}'s change (concurrent), with a robust effect size of {{effectSize}}. Ranked by shift strength, timing proximity, sample coverage, and evidence reliability — a lead worth reviewing, not a diagnosis.",
+      "leads": "{{signal}} shifted about {{minutes}} min before {{focalSignal}}'s change (leading), with a robust effect size of {{effectSize}}. Ranked by shift strength, timing proximity, sample coverage, and evidence reliability — a lead worth reviewing, not a diagnosis.",
+      "lags": "{{signal}} shifted about {{minutes}} min after {{focalSignal}}'s change (lagging), with a robust effect size of {{effectSize}}. Ranked by shift strength, timing proximity, sample coverage, and evidence reliability — a lead worth reviewing, not a diagnosis.",
+      "association": "Every listed item is an evidence-ranked hypothesis derived from statistical association. This is an evidence-ranked hypothesis, not a diagnosis or a claim of causal proof.",
+      "boundedWindow": "Analysis is limited to the selected time window and the bounded set of related signals available in the catalog; unrecorded or unavailable signals cannot be considered.",
+      "noFocalShift": "The focal signal did not show a robust, well-supported shift in this window, so hypotheses are withheld rather than guessed.",
+      "noRelated": "No related signals were identified in the catalog for this focal signal.",
+      "noCorroboration": "None of the related signals cleared the minimum evidence bar for sample coverage or shift strength.",
+      "lowQuality": "Evidence quality is low — treat any listed hypothesis as preliminary and confirm with additional data before acting.",
+      "temporalLimit": "Temporal proximity alone does not establish which signal, if any, is upstream of the other.",
+      "focalUnavailable": "Focal history unavailable; no shift conclusion can be drawn.",
+      "insufficientHistory": "Not enough history yet for this signal and window.",
+      "incompleteEvidence": "{{focalSignal}} shows a robust shift, but related numeric evidence is incomplete; corroboration is unknown. This is an evidence-ranked hypothesis, not a diagnosis or a claim of causal proof.",
+      "coverage": "{{resolved}} of {{selected}} selected related histories resolved; {{usable}} have enough valid numeric samples; {{unknown}} remain unknown. Missing or unusable histories are not evidence of an absent shift.",
+      "scoreDenominator": "The raw evidence score retains all selected candidates in its coverage denominator, including unknown or unusable histories; it is not a score of complete corroboration.",
+      "chooseSignal": "Choose a focal signal to generate an evidence-ranked summary.",
+      "stableSignal": "No robust shift was found for {{focalSignal}} in the analyzed window, so no hypotheses are offered. This may mean the signal was stable, or that the window was too short or sparse.",
+      "isolatedShift": "{{focalSignal}} shows a robust shift, but no other analyzed signal showed a comparable, well-timed shift. Treat this as an isolated change with weak corroborating evidence. This is an evidence-ranked hypothesis, not a diagnosis or a claim of causal proof.",
+      "rankedSummary": "{{focalSignal}} shows a robust shift with {{count}} ranked, evidence-based {{hypothesisLabel}} for review (evidence quality: {{band}}). This is an evidence-ranked hypothesis, not a diagnosis or a claim of causal proof.",
+      "hypothesis": "hypothesis",
+      "hypotheses": "hypotheses",
+      "band": {
+        "insufficient": "insufficient",
+        "weak": "weak",
+        "moderate": "moderate",
+        "strong": "strong"
+      }
+    },
     "graph": {
       "concurrent": "concurrent",
       "consideredOnly": "considered, no corroborating shift · {{n}} samples",
@@ -174,6 +203,33 @@
   },
   "rul": {
     "title": "Remaining useful life",
+    "components": {
+      "hv_battery": "High-voltage battery",
+      "lv_battery": "Low-voltage battery",
+      "tires": "Tires",
+      "brakes": "Brakes",
+      "cabin_filter": "Cabin filter"
+    },
+    "basisKinds": {
+      "soh_trend": "State-of-health trend",
+      "no_measurable_decline": "No measurable decline",
+      "missing_history": "Missing history",
+      "invalid_input": "Invalid inputs",
+      "missing_configuration": "Missing configuration",
+      "whole_life_odometer": "Whole-life odometer model",
+      "enrollment_age": "Enrollment-age model"
+    },
+    "facts": {
+      "model": "Model: {{value}}",
+      "health": "Measured health: {{value}}%",
+      "healthUnavailable": "Measured health: unavailable",
+      "wearRate": "Daily health decline: {{value}} percentage points",
+      "wearRateUnavailable": "Daily health decline: unavailable",
+      "remainingDays": "Projected remaining life: {{value}} days",
+      "remainingDaysUnavailable": "Projected remaining life: unavailable",
+      "confidence": "Model confidence: {{value}}%",
+      "confidenceUnavailable": "Model confidence: unavailable"
+    },
     "subtitle": "Predictive end-of-life forecasts for your wear components",
     "selectVehicle": "Select a vehicle to view its component prognostics.",
     "nextService": {

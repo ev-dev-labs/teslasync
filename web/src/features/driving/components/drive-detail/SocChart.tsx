@@ -49,12 +49,12 @@ export function SocChart({ chartData }: SocChartProps) {
               syncMethod={syncProps.syncMethod}
               onMouseMove={syncProps.onMouseMove}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-              <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} interval="preserveStartEnd" />
-              <YAxis domain={[0, 100]} tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+              <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
+              <XAxis dataKey="time" tick={{ fill: chartTokens.axisStroke, fontSize: 10 }} interval="preserveStartEnd" />
+              <YAxis domain={[0, 100]} tick={{ fill: chartTokens.axisStroke, fontSize: 10 }} />
               <Tooltip content={<ChartTooltip />} />
-              {areaGradient('socGrad', '#10b981')}
-              <Area {...AREA_DEFAULTS} dataKey="battery" stroke="#10b981" fill="url(#socGrad)" name={`${t('driveDetail.soc', 'SOC')} %`} />
+              {areaGradient('socGrad', chartTokens.series[1], 0.08)}
+              <Area {...AREA_DEFAULTS} dataKey="battery" stroke={chartTokens.series[1]} fill="url(#socGrad)" name={`${t('driveDetail.soc', 'SOC')} %`} />
               {syncedX != null && (
                 <ReferenceLine
                   x={syncedX}

@@ -207,7 +207,7 @@ export function DayLogTimeline({
         ) : (
           <>
             <div className="flex flex-wrap items-center gap-2">
-              <div className="min-w-52 flex-1">
+              <div className="min-w-0 basis-full sm:basis-52 sm:flex-1">
                 <Input
                   aria-label={t('dayLog.list.searchLabel', 'Search events')}
                   placeholder={t('dayLog.list.searchPlaceholder', 'Search time, category, component, state…')}
@@ -215,12 +215,13 @@ export function DayLogTimeline({
                   onChange={(e) => setSearch(e.target.value)}
                   icon={<SearchIcon className="h-4 w-4" />}
                   data-testid="daylog-search"
+                  className="min-h-11 min-w-11 md:min-h-10 md:min-w-0"
                 />
               </div>
-              <Button variant="secondary" onClick={showAll} disabled={!isFiltered} data-testid="daylog-show-all">
+              <Button variant="secondary" wrapLabel className="min-h-11 min-w-11 md:min-h-10 md:min-w-0" onClick={showAll} disabled={!isFiltered} data-testid="daylog-show-all">
                 {t('dayLog.list.showAll', 'Show all')}
               </Button>
-              <Button variant="ghost" onClick={clearAll} disabled={allCategoriesHidden} data-testid="daylog-clear-all">
+              <Button variant="ghost" wrapLabel className="min-h-11 min-w-11 md:min-h-10 md:min-w-0" onClick={clearAll} disabled={allCategoriesHidden} data-testid="daylog-clear-all">
                 {t('filters.clearAll', 'Clear all')}
               </Button>
             </div>
@@ -232,6 +233,8 @@ export function DayLogTimeline({
                   <Button
                     key={c}
                     size="sm"
+                    wrapLabel
+                    className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
                     variant={off ? 'ghost' : 'secondary'}
                     aria-pressed={!off}
                     onClick={() => toggleCategory(c)}
@@ -373,7 +376,7 @@ function EventRow({ event, position, total, timezone, expanded, onToggle, t, for
         <div className="min-w-0 flex-1">
           <Text id={titleId} as="div" size="sm" weight="medium" className="break-words">
             {href ? (
-              <Link to={href} className="text-inherit underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]">
+              <Link to={href} className="inline-flex min-h-11 min-w-11 max-w-full items-center break-words text-inherit underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] md:inline md:min-h-0 md:min-w-0">
                 {title}
               </Link>
             ) : (

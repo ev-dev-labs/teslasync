@@ -68,7 +68,8 @@ const hoisted = vi.hoisted(() => ({
   state: {} as HookState,
 }));
 
-vi.mock('@/api/hooks/useFeatureFlags', () => ({
+vi.mock('@/api/hooks/useFeatureFlags', async () => ({
+  ...(await vi.importActual<typeof import('@/api/hooks/useFeatureFlags')>('@/api/hooks/useFeatureFlags')),
   useFlags: () => hoisted.state.flags,
   useFlagChanges: () => hoisted.state.changes,
   useSetFlag: () => ({
@@ -228,7 +229,7 @@ beforeEach(() => {
     .mockResolvedValue({ key: '', old_value: null, audit_id: 1 });
   hoisted.deleteFlagMutateAsync
     .mockReset()
-    .mockResolvedValue({ key: '', old_value: null, deleted: true, audit_id: 2 });
+    .mockImplementation(async ({ key }: { key: string }) => ({ key, deleted: true, audit_id: 2 }));
   hoisted.flagsRefetch.mockReset();
   hoisted.changesRefetch.mockReset();
   hoisted.state.flags = makeFlagsQuery();
@@ -455,6 +456,74 @@ describe('FeatureFlagsPage', () => {
     await waitFor(() =>
       expect(screen.queryByText('Delete flag?')).not.toBeInTheDocument(),
     );
+  });
+
+  it.each([false, undefined])('closes the dialog for an audited absent flag (deleted=%s)', async (deleted) => {
+    hoisted.deleteFlagMutateAsync.mockResolvedValueOnce({
+      key: 'limits.config',
+      audit_id: 3,
+      ...(deleted === undefined ? {} : { deleted }),
+    });
+    renderPage();
+    fireEvent.click(within(registryRow('limits.config')).getByRole('button', { name: /Delete flag/ }));
+    fireEvent.change(screen.getByRole('textbox', { name: /^Reason\b/i }), {
+      target: { value: 'already removed elsewhere' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Delete flag' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Delete flag?' })).not.toBeInTheDocument());
+    expect(hoisted.deleteFlagMutateAsync).toHaveBeenCalledExactlyOnceWith({
+      key: 'limits.config',
+      reason: 'already removed elsewhere',
+    });
+  });
+
+  it.each([
+    { key: 'limits.config', deleted: true, audit_id: 0 },
+    { key: 'limits.config', deleted: false, audit_id: 0 },
+    { key: 'limits.config', audit_id: 0 },
+    { key: 'limits.config', deleted: true },
+    { key: 'wrong.flag', deleted: true, audit_id: 2 },
+    { key: 'limits.config', deleted: 'true', audit_id: 2 },
+    null,
+  ])('retains the selected flag and exact reason for rejected result %j, then allows retry', async (response) => {
+    hoisted.deleteFlagMutateAsync.mockResolvedValueOnce(response);
+    renderPage();
+    fireEvent.click(within(registryRow('limits.config')).getByRole('button', { name: /Delete flag/ }));
+    fireEvent.change(screen.getByRole('textbox', { name: /^Reason\b/i }), {
+      target: { value: '  retain the audit reason  ' },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Delete flag' }));
+    });
+    const dialog = screen.getByRole('dialog', { name: 'Delete flag?' });
+    expect(within(dialog).getByText(/Permanently remove flag "limits.config"/)).toBeInTheDocument();
+    expect(within(dialog).getByRole('textbox', { name: /^Reason\b/i })).toHaveValue('  retain the audit reason  ');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete flag' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Delete flag?' })).not.toBeInTheDocument());
+    expect(hoisted.deleteFlagMutateAsync).toHaveBeenNthCalledWith(2, {
+      key: 'limits.config',
+      reason: '  retain the audit reason  ',
+    });
+  });
+
+  it('retains the dialog and reason when delete rejects, then allows an audited retry', async () => {
+    hoisted.deleteFlagMutateAsync.mockRejectedValueOnce(new Error('Audit persistence failed'));
+    renderPage();
+    fireEvent.click(within(registryRow('limits.config')).getByRole('button', { name: /Delete flag/ }));
+    fireEvent.change(screen.getByRole('textbox', { name: /^Reason\b/i }), {
+      target: { value: '  retry without retyping  ' },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Delete flag' }));
+    });
+    const dialog = screen.getByRole('dialog', { name: 'Delete flag?' });
+    expect(within(dialog).getByRole('textbox', { name: /^Reason\b/i })).toHaveValue('  retry without retyping  ');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete flag' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Delete flag?' })).not.toBeInTheDocument());
+    expect(hoisted.deleteFlagMutateAsync).toHaveBeenNthCalledWith(2, {
+      key: 'limits.config',
+      reason: '  retry without retyping  ',
+    });
   });
 
   it('surfaces retryable error panels and refetches when the flags query fails', () => {

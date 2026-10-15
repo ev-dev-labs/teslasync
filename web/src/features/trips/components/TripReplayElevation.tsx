@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/feedback';
 import { ChartCard } from '@/components/layout';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { chartTokens } from '@/lib/tokens';
+import { useChartPalette } from '@/hooks/useChartPalette';
 
 export interface TripReplayElevationPoint {
   index: number;
@@ -30,6 +31,7 @@ export function TripReplayElevation({
 }: TripReplayElevationProps) {
   const { t } = useTranslation();
   const { fmtNumber } = useNumberFormatting();
+  const palette = useChartPalette();
   const hasElevation = data.some(point => point.elevation != null);
   let gain = 0;
   let loss = 0;
@@ -51,7 +53,7 @@ export function TripReplayElevation({
       subtitle={hasPair ? t('replay.elevation.gainLoss', '↑ {{gain}}m  ↓ {{loss}}m', {
         gain: fmtNumber(Math.round(gain)), loss: fmtNumber(Math.round(loss)),
       }) : undefined}
-      ariaLabel={t('replay.elevation.aria', 'Elevation profile chart along the route, with total gain and loss in meters')}
+      ariaLabel={t('replay.elevation.title', 'Elevation Profile')}
       height={height}
       size="standard"
       exportable
@@ -80,18 +82,18 @@ export function TripReplayElevation({
               if (point) onClickIndex(point.index);
             }}
           >
-            {areaGradient('replayElevationGrad', chartTokens.series[0], 0.08)}
+            {areaGradient('replayElevationGrad', palette[0], 0.08)}
             <CartesianGrid {...chartGrid} />
             <XAxis
               dataKey="distance"
               {...axisTick}
               tickFormatter={(value: number) => fmtNumber(value)}
-              label={{ value: distanceUnit, position: 'insideBottomRight', offset: -5, style: { fontSize: 10, fill: 'var(--text-muted)' } }}
+              label={{ value: distanceUnit, position: 'insideBottomRight', offset: -5, style: axisTick }}
             />
             <YAxis
               {...axisTick}
               tickFormatter={(value: number) => fmtNumber(value)}
-              label={{ value: 'm', angle: -90, position: 'insideLeft', style: { fontSize: 10, fill: 'var(--text-muted)' } }}
+              label={{ value: 'm', angle: -90, position: 'insideLeft', style: axisTick }}
             />
             <Tooltip
               content={<ChartTooltip />}
@@ -101,7 +103,7 @@ export function TripReplayElevation({
             <Area
               {...AREA_DEFAULTS}
               dataKey="elevation"
-              stroke={chartTokens.series[0]}
+              stroke={palette[0]}
               fill="url(#replayElevationGrad)"
               isAnimationActive={false}
               connectNulls={false}

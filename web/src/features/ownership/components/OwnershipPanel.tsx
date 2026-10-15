@@ -39,7 +39,10 @@ export function OwnershipPanel({
   const dataState = useDataState(source ?? {});
   const message = emptyMessage ?? t('ownership.source.empty', 'No supported data is available yet.');
   const independentEditor = editing && !dataState.hasData;
-  const retainedMessage = dataState.refreshError
+  const errorMessage = t('ownership.source.error', 'This source could not be loaded.');
+  const retainedMessage = dataState.fatalError
+    ? errorMessage
+    : dataState.refreshError
     ? t('dataState.stale.message', 'The latest values are temporarily unavailable. Previously loaded data remains visible.')
     : dataState.isRefreshBlocked
       ? dataState.hasData
@@ -49,9 +52,9 @@ export function OwnershipPanel({
   const state = !source || !sourceEnabled
     ? empty ? 'empty' : 'ready'
     // An unsaved editor does not depend on the register's first successful read.
-    : independentEditor ? 'ready'
-      : dataState.fatalError ? 'error'
+    : dataState.fatalError ? independentEditor ? 'retained' : 'error'
       : dataState.isRefreshBlocked ? 'retained'
+        : independentEditor ? 'ready'
         : !dataState.hasData ? 'loading'
         : dataState.status === 'stale' ? 'retained'
           : empty && !editing ? 'empty' : 'ready';
@@ -65,9 +68,9 @@ export function OwnershipPanel({
       state={state}
       label={title}
       emptyMessage={message}
-      errorMessage={t('ownership.source.error', 'This source could not be loaded.')}
+      errorMessage={errorMessage}
       error={dataState.fatalError}
-      errorRecovery={!independentEditor && dataState.retry ? { onRetry: dataState.retry } : undefined}
+      errorRecovery={dataState.retry ? { onRetry: dataState.retry } : undefined}
       retainedMessage={retainedMessage}
       emptyContent={emptyContent}
       loadingContent={preserveSummary ? children : undefined}

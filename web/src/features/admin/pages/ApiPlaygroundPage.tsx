@@ -7,13 +7,14 @@ import { PageLayout, LayoutCard } from '@/components/layout';
 import { Card, Button, Icon, Text } from '@/components/ui';
 import type { StatMetric } from '@/components/data-display';
 import { AdminSummary } from '../components/operationalbrief-a-g/AdminSummary';
-import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
+import { AlertBanner, EmptyState, Skeleton, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { apiUrl, request } from '@/api/client';
 import { deriveDataState } from '@/api/dataState';
 import { isOperationalModeWriteError } from '@/lib/operationalMode';
 import { isOfflineWriteRejectedError } from '@/api/offlineCache';
+import { reportFrontendError } from '@/lib/errorReporter';
 import EndpointSidebar, { type ParsedEndpoint } from '../components/EndpointSidebar';
 import RequestBuilder from '../components/RequestBuilder';
 import ResponseViewer, { SnippetPanel, type ApiResponse, type HistoryEntry } from '../components/ResponseViewer';
@@ -29,7 +30,17 @@ export default function ApiPlaygroundPage() {
   const [selected, setSelected] = useState<ParsedEndpoint | null>(null);
   const [response, setResponse] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(false);
-  const [history, setHistory] = useState<HistoryEntry[]>(loadHistory);
+  const [initialHistory] = useState(() => {
+    try {
+      return { entries: loadHistory(), error: null };
+    } catch {
+      return { entries: [], error: new Error('API playground saved history could not be loaded') };
+    }
+  });
+  const [history, setHistory] = useState<HistoryEntry[]>(initialHistory.entries);
+  useEffect(() => {
+    if (initialHistory.error) reportFrontendError(initialHistory.error, 'react');
+  }, [initialHistory]);
   const [submittedRequest, setSubmittedRequest] = useState<{ method: string; url: string; body?: string } | null>(null);
   const requestGeneration = useRef(0);
   useEffect(() => () => { requestGeneration.current += 1; }, []);
@@ -123,6 +134,11 @@ export default function ApiPlaygroundPage() {
       query={specQuery}
       dataSources={[{ id: 'openapi-spec', label: t('playground.spec', 'API spec'), query: specQuery }]}
     >
+      {initialHistory.error && (
+        <AlertBanner variant="warning" role="alert">
+          {t('playground.historyRecovery', 'Saved request history could not be loaded. The playground has started with an empty history; you can select endpoints and send new requests.')}
+        </AlertBanner>
+      )}
       <FadeIn>
         <section aria-label={t('playground.kpis', 'API overview metrics')} className="space-y-3">
           <AdminSummary testId="api-playground-spec-summary" metrics={kpis.slice(0, 4)}

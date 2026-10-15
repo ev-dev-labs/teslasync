@@ -57,7 +57,11 @@ export function CatalogCard({ entry, onOpenDetail }: CatalogCardProps) {
       </div>
 
       <PublisherFingerprintDisplay
-        fingerprintHex={signature?.publicKeyBase64 ? (verification.data?.recomputedPublisherFingerprint ?? null) : null}
+        fingerprintHex={verification.data?.recomputedPublisherFingerprint ?? null}
+        hasSignature={signature != null}
+        verificationResult={verification.data}
+        isLoading={verification.isLoading}
+        error={verification.error}
         recognizedName={verification.data?.recognizedPublisherName}
         claimedMismatch={verification.data?.claimedFingerprintMismatch}
       />

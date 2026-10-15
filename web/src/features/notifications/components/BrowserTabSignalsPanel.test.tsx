@@ -28,9 +28,9 @@
  *      or dead panel.
  *   8. className passthrough.
  */
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
 // ── i18n: echo the inline fallback string, interpolating {{var}} options ──
@@ -124,10 +124,10 @@ function putBodies() {
     .map((c) => JSON.parse(String(c[1]?.body ?? '{}')));
 }
 
-function renderPanel(props?: { className?: string }) {
+function renderPanel(props?: { className?: string }, enabled = true) {
   const qc = new QueryClient({
     defaultOptions: {
-      queries: { retry: false, gcTime: 0 },
+      queries: { retry: false, gcTime: 0, enabled },
       mutations: { retry: false },
     },
   });
@@ -150,7 +150,40 @@ beforeEach(() => {
   mockedRequest.mockReset();
 });
 
+afterEach(() => {
+  onlineManager.setOnline(true);
+});
+
 describe('BrowserTabSignalsPanel — loading', () => {
+  it('shows an unknown source notice rather than empty settings and retries that source', async () => {
+    setupRequest();
+    renderPanel(undefined, false);
+    expect(screen.getByText('Pending')).toBeInTheDocument();
+    expect(screen.getByText('No requested source has returned usable data yet.')).toBeInTheDocument();
+    expect(screen.queryByText(/unavailable right now/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+    expect(getCalls()).toHaveLength(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(await screen.findByRole('switch', { name: BADGE_LABEL })).toBeInTheDocument();
+    expect(getCalls()).toHaveLength(1);
+    expect(putBodies()).toHaveLength(0);
+  });
+
+  it('shows a paused initial source without inventing an empty result and recovers', async () => {
+    setupRequest();
+    onlineManager.setOnline(false);
+    renderPanel();
+    expect(await screen.findByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.queryByText(/unavailable right now/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+    expect(getCalls()).toHaveLength(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    act(() => { onlineManager.setOnline(true); });
+    expect(await screen.findByRole('switch', { name: BADGE_LABEL })).toBeInTheDocument();
+    expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
+    expect(putBodies()).toHaveLength(0);
+  });
+
   it('shows a skeleton (no toggles) while settings are in flight', () => {
     setupRequest({ get: () => new Promise<unknown>(() => {}) }); // never resolves
     renderPanel();
@@ -169,6 +202,28 @@ describe('BrowserTabSignalsPanel — loading', () => {
 });
 
 describe('BrowserTabSignalsPanel — happy path', () => {
+  it('uses neutral header icon roles and preserves saved theme choices on a tab edit', async () => {
+    const saved = {
+      ...BASE,
+      theme: 'matrix-green',
+      mode: 'oled',
+      chart_palette: 'neon',
+      custom_accent_color: '#123456',
+    };
+    setupRequest({ get: () => Promise.resolve(saved) });
+    const { container } = renderPanel();
+    const badge = await screen.findByRole('switch', { name: BADGE_LABEL });
+    expect(container.querySelector('svg')?.parentElement).toHaveClass(
+      'text-[var(--text-secondary)]',
+      'bg-[var(--surface-2)]',
+      'ring-[var(--border-default)]',
+    );
+    expect(putBodies()).toHaveLength(0);
+    fireEvent.click(badge);
+    await waitFor(() => expect(putBodies()).toHaveLength(1));
+    expect(putBodies()[0]).toEqual({ ...saved, tab_badge_enabled: false });
+  });
+
   it('renders the heading, both switches with accessible names, and the hint', async () => {
     setupRequest();
     renderPanel();
@@ -288,6 +343,11 @@ describe('BrowserTabSignalsPanel — error + recovery', () => {
     expect(badge).toBeEnabled();
     expect(badge).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByRole('switch', { name: FLASH_LABEL })).toHaveAttribute('aria-checked', 'true');
+    expect(putBodies()).toHaveLength(0);
+    failRefresh = false;
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument());
+    expect(badge).toHaveAttribute('aria-checked', 'true');
     expect(putBodies()).toHaveLength(0);
     fireEvent.click(badge);
     await waitFor(() => expect(putBodies()).toHaveLength(1));

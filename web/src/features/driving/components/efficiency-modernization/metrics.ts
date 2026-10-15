@@ -19,6 +19,8 @@ export function efficiencyMetrics(
     ? toStatsDistanceDisplay(1000 / intensity) : null;
   const economy = finite(economyValue) ? fmtNumber(economyValue) : null;
   const co2 = finite(stats?.co2SavedKg) ? `${fmtInt(stats.co2SavedKg)} ${t('efficiency.kgUnit', 'kg')}` : null;
+  const pricingAssumption = t('efficiency.pricingAssumption',
+    'Estimate based on average consumption and an assumed $0.12/kWh electricity price, in source dollars per km; not recorded spending. No currency conversion is applied.');
   const kpis: StatMetric[] = [
     { metricId: 'efficiency', occurrenceId: 'avgConsumption', label: t('efficiency.avgConsumption', 'Avg consumption'),
       rawValue: finite(intensity) ? intensity / 1000 : null, display: { units: { energy: 'Wh' } } },
@@ -32,7 +34,9 @@ export function efficiencyMetrics(
     { metricId: 'text', occurrenceId: 'co2SavedKg', label: t('efficiency.co2Label', 'CO₂ saved'), rawValue: co2 },
     { metricId: 'distance', occurrenceId: 'totalDistanceKm', label: t('efficiency.totalDistLabel', 'Total distance'),
       rawValue: finite(stats?.totalDistanceKm) ? stats.totalDistanceKm * 1000 : null, display: { precision: 0 } },
-    { metricId: 'currency', occurrenceId: 'costPerKm', label: t('efficiency.costPerKm', 'Est. cost/km'), rawValue: cost },
+    { metricId: 'currency', occurrenceId: 'costPerKm', label: t('efficiency.costPerKm', 'Est. cost/km'), rawValue: cost,
+      description: pricingAssumption, context: pricingAssumption,
+      display: { formatter: raw => ({ value: `$${fmtNumber(raw)}`, unit: '/km' }) } },
     { metricId: 'count', occurrenceId: 'totalDrives', label: t('efficiency.drivesAnalyzed', 'Drives analyzed'),
       rawValue: finite(stats?.totalDrives) ? stats.totalDrives : null },
   ];

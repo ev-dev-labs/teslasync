@@ -14,12 +14,14 @@ interface ArrivalReliabilityCoverageMetricsProps {
   analysis: ArrivalReliabilityResult;
   locale: string;
   timeZone: string;
+  retained?: boolean;
 }
 
 export function ArrivalReliabilityCoverageMetrics({
   analysis,
   locale,
   timeZone,
+  retained = false,
 }: ArrivalReliabilityCoverageMetricsProps) {
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
@@ -154,6 +156,7 @@ export function ArrivalReliabilityCoverageMetrics({
       )}
       metrics={metrics}
       testId="arrival-coverage-recurrence-brief"
+      retained={retained}
     />
   );
 }

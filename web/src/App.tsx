@@ -559,7 +559,6 @@ export default function App() {
           adopter can open a menu without prop drilling. */}
       <ContextMenuRoot />
       <Routes>
-      <Route path="quick-stats" element={<SafeRoute name="QuickStats"><QuickStats /></SafeRoute>} />
       <Route path="glance" element={<SafeRoute name="Glance"><GlancePage /></SafeRoute>} />
       <Route path="year-review/:year" element={<SafeRoute name="YearReview"><YearReview /></SafeRoute>} />
       <Route path="s/:token" element={<SafeRoute name="SharedDrive"><SharedDrive /></SafeRoute>} />
@@ -573,6 +572,7 @@ export default function App() {
       } />}
       <Route path="/" element={<Layout />}>
         <Route index element={<SafeRoute name="Dashboard"><Dashboard /></SafeRoute>} />
+        <Route path="quick-stats" element={<SafeRoute name="QuickStats"><QuickStats /></SafeRoute>} />
         {MobileGridReference && <Route path="dev/grid-states" element={<SafeRoute name="MobileGridReference"><MobileGridReference /></SafeRoute>} />}
         {LayoutReference && <Route path="dev/layout" element={<SafeRoute name="LayoutReference"><LayoutReference /></SafeRoute>} />}
         {StatReference && <Route path="dev/stats" element={<SafeRoute name="StatReference"><StatReference /></SafeRoute>} />}

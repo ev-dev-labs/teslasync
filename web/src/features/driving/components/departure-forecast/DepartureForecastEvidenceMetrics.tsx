@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-
+import { Text } from '@/components/ui';
 
 import type { DepartureForecast } from '../../lib/departureForecast';
 import {
@@ -30,47 +30,47 @@ export function DepartureForecastEvidenceMetrics({
   const accountingMetrics: DepartureForecastEvidenceMetric[] = [
     {
       label: t('departure.quality.returned', 'Rows returned'),
-      value: fmtInt(accounting.returnedRows),
+      value: fmtInt(accounting.returnedRows, locale),
     },
     {
       label: t('departure.quality.included', 'Included departures'),
-      value: fmtInt(accounting.includedRows),
+      value: fmtInt(accounting.includedRows, locale),
     },
     {
       label: t('departure.quality.excluded', 'Excluded rows'),
-      value: fmtInt(excluded),
+      value: fmtInt(excluded, locale),
     },
     {
       label: t('departure.quality.invalid', 'Invalid start times'),
-      value: fmtInt(accounting.invalidRows),
+      value: fmtInt(accounting.invalidRows, locale),
     },
     {
       label: t('departure.quality.future', 'Future start times'),
-      value: fmtInt(accounting.futureRows),
+      value: fmtInt(accounting.futureRows, locale),
     },
     {
       label: t('departure.quality.outside', 'Outside 120 days'),
-      value: fmtInt(accounting.outsideWindowRows),
+      value: fmtInt(accounting.outsideWindowRows, locale),
     },
   ];
   const coverageMetrics: DepartureForecastEvidenceMetric[] = [
     {
       label: t('departure.quality.activeDays', 'Active local days'),
-      value: fmtInt(forecast.activeDays),
+      value: fmtInt(forecast.activeDays, locale),
     },
     {
       label: t('departure.quality.activeWeeks', 'Active local weeks'),
-      value: fmtInt(forecast.activeWeeks),
+      value: fmtInt(forecast.activeWeeks, locale),
     },
     {
-      label: t('departure.quality.spanDays', 'Observed span (days)'),
+      label: t('departure.quality.elapsedDays', 'Elapsed returned-history span (days)'),
       value:
         forecast.totalDepartures > 0
           ? fmtNumber(forecast.observedSpanDays, undefined, locale)
           : '—',
     },
     {
-      label: t('departure.quality.spanWeeks', 'Observed span (weeks)'),
+      label: t('departure.quality.elapsedWeeks', 'Elapsed returned-history span (weeks)'),
       value:
         forecast.totalDepartures > 0
           ? fmtNumber(forecast.observedWeeks, undefined, locale)
@@ -78,23 +78,23 @@ export function DepartureForecastEvidenceMetrics({
     },
     {
       label: t('departure.quality.occupiedCells', 'Occupied cells'),
-      value: fmtInt(evidence.occupiedCells),
+      value: fmtInt(evidence.occupiedCells, locale),
     },
     {
       label: t('departure.quality.repeatedCells', 'Repeated cells'),
-      value: fmtInt(evidence.repeatedCells),
+      value: fmtInt(evidence.repeatedCells, locale),
     },
     {
       label: t(
         'departure.quality.repeatedDepartures',
         'Repeat events beyond first',
       ),
-      value: fmtInt(evidence.repeatedDepartures),
+      value: fmtInt(evidence.repeatedDepartures, locale),
     },
     {
       label: t(
-        'departure.quality.meanOccurrences',
-        'Mean occupied-cell occurrences',
+        'departure.quality.meanCalendarOpportunities',
+        'Mean model-assumed opportunities per occupied cell',
       ),
       value:
         forecast.totalDepartures > 0
@@ -130,8 +130,8 @@ export function DepartureForecastEvidenceMetrics({
     },
     {
       label: t(
-        'departure.quality.occurrenceScore',
-        'Cell-exposure ingredient',
+        'departure.quality.calendarOpportunityScore',
+        'Calendar-opportunity ingredient',
       ),
       value: percent(
         forecast.totalDepartures > 0 ? evidence.occurrenceScore : null,
@@ -171,11 +171,17 @@ export function DepartureForecastEvidenceMetrics({
       />
       <DepartureForecastEvidenceMetricGroup
         title={t(
-          'departure.quality.coverageTitle',
-          'Coverage and recurrence',
+          'departure.quality.calendarTitle',
+          'Elapsed calendar opportunity and recorded recurrence',
         )}
         metrics={coverageMetrics}
       />
+      <Text as="p" variant="caption">
+        {t(
+          'departure.quality.calendarQualifier',
+          'Elapsed spans run from the earliest included drive start to the fixed model anchor. Cell opportunities are model-assumed elapsed local-hour boundaries over returned history, not measured recording coverage or proof that the vehicle was monitored during gaps.',
+        )}
+      </Text>
       <DepartureForecastEvidenceMetricGroup
         title={t(
           'departure.quality.supportTitle',

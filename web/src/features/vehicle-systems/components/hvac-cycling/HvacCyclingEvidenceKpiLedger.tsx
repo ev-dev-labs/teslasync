@@ -11,6 +11,8 @@ import { useTranslation } from 'react-i18next';
 import { type StatMetric } from '@/components/data-display';
 import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
 import type { UnitFormatter } from '@/hooks/useUnits';
+import { cn } from '@/lib/cn';
+import { severityTokens, typography } from '@/lib/tokens';
 
 import type { HvacCyclingSummary } from '../../lib/hvacCycling';
 import { HvacCyclingQueryStatus } from './HvacCyclingQueryStatus';
@@ -45,7 +47,7 @@ export function HvacCyclingEvidenceKpiLedger({
       label: t('hvacCycling.kpis.returned', 'Returned rows'),
       rawValue: resolved ? summary.rows.returnedRows : null,
       display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) },
-      context: <><Database aria-hidden="true" className="h-5 w-5 text-indigo-300" />{resolved
+      context: <><Database aria-hidden="true" className={cn('h-5 w-5', typography.color.muted)} />{resolved
         ? t('hvacCycling.kpis.returnedHint', 'raw endpoint rows') : unavailable}</>,
     },
     {
@@ -53,7 +55,7 @@ export function HvacCyclingEvidenceKpiLedger({
       label: t('hvacCycling.kpis.known', 'Known-state samples'),
       rawValue: resolved ? summary.rows.validKnownStateRows : null,
       display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) },
-      context: <><Activity aria-hidden="true" className="h-5 w-5 text-cyan-300" />{resolved
+      context: <><Activity aria-hidden="true" className={cn('h-5 w-5', typography.color.muted)} />{resolved
         ? t('hvacCycling.kpis.knownHint', '{{count}} unique timestamps', {
             count: summary.rows.uniqueTimestampRows,
           }) : unavailable}</>,
@@ -63,7 +65,7 @@ export function HvacCyclingEvidenceKpiLedger({
       label: t('hvacCycling.kpis.intervals', 'Observed intervals'),
       rawValue: resolved ? summary.intervals.observedIntervals : null,
       display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) },
-      context: <><Binary aria-hidden="true" className="h-5 w-5 text-purple-300" />{resolved
+      context: <><Binary aria-hidden="true" className={cn('h-5 w-5', typography.color.muted)} />{resolved
         ? t('hvacCycling.kpis.intervalsHint', '{{count}} candidate pairs', {
             count: summary.intervals.candidateAdjacentPairs,
           }) : unavailable}</>,
@@ -73,7 +75,7 @@ export function HvacCyclingEvidenceKpiLedger({
       label: t('hvacCycling.kpis.observed', 'Observed duration'),
       rawValue: resolved ? summary.observedS : null,
       display: { formatter: raw => ({ value: formatDuration(raw), unit: '' }) },
-      context: <><Clock3 aria-hidden="true" className="h-5 w-5 text-indigo-300" />{resolved
+      context: <><Clock3 aria-hidden="true" className={cn('h-5 w-5', typography.color.muted)} />{resolved
         ? t('hvacCycling.kpis.observedHint', 'gap-qualified on + off time') : unavailable}</>,
     },
     {
@@ -81,7 +83,7 @@ export function HvacCyclingEvidenceKpiLedger({
       label: t('hvacCycling.kpis.duty', 'Observed on duty'),
       rawValue: resolved && summary.dutyCycle != null ? summary.dutyCycle * 100 : null,
       display: { formatter: raw => ({ value: fmtPercent(raw), unit: '' }) },
-      context: <><Gauge aria-hidden="true" className="h-5 w-5 text-cyan-300" />{resolved
+      context: <><Gauge aria-hidden="true" className={cn('h-5 w-5', typography.color.muted)} />{resolved
         ? t('hvacCycling.kpis.dutyHint', 'duration-weighted denominator') : unavailable}</>,
     },
     {
@@ -90,7 +92,9 @@ export function HvacCyclingEvidenceKpiLedger({
       rawValue: resolved && summary.qualifiedShortCycleRate != null
         ? summary.qualifiedShortCycleRate * 100 : null,
       display: { formatter: raw => ({ value: fmtPercent(raw), unit: '' }) },
-      context: <><RotateCw aria-hidden="true" className="h-5 w-5 text-amber-300" />{resolved
+      context: <><RotateCw aria-hidden="true" className={cn('h-5 w-5',
+        resolved && summary.qualifiedShortCycleRate != null && summary.qualifiedShortCycleRate > 0
+          ? severityTokens.warn.fg : typography.color.muted)} />{resolved
         ? t('hvacCycling.kpis.shortRateHint', '{{count}} complete active runs', {
             count: summary.completeOnRunCount,
           }) : unavailable}</>,

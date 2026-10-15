@@ -91,7 +91,7 @@ function makeRow(over: Partial<FeedbackEntry> = {}): FeedbackEntry {
 }
 
 function renderExpansion(
-  opts: { row?: FeedbackEntry; bridgeEnabled?: boolean; updating?: boolean } = {},
+  opts: { row?: FeedbackEntry; bridgeEnabled?: boolean; updating?: boolean; canStart?: boolean } = {},
 ) {
   const onUpdate = vi.fn()
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -102,6 +102,7 @@ function renderExpansion(
         bridgeEnabled={o.bridgeEnabled ?? false}
         onUpdate={onUpdate as unknown as OnUpdate}
         updating={o.updating ?? false}
+        canStart={o.canStart}
       />
     </QueryClientProvider>
   )
@@ -341,5 +342,29 @@ describe('FeedbackExpansion', () => {
     const advisor = screen.getByTestId('ai-advisor')
     expect(advisor).toBeInTheDocument()
     expect(advisor).toHaveAttribute('data-feedback-id', '99')
+  })
+
+  it('withholds actions and the advisor when the scope is ineligible, keeping evidence, and recovers', () => {
+    // Covers loading / paused-without-data / retained refresh failure: all pass canStart=false.
+    const { rerenderWith } = renderExpansion({ bridgeEnabled: true, canStart: false })
+
+    expect(screen.getByText('After arriving home the timeline cuts off ~30 minutes early.')).toBeInTheDocument()
+    expect(screen.getByText('1.2.3')).toBeInTheDocument()
+    expect(screen.getByLabelText('Status')).toBeDisabled()
+    expect(screen.getByLabelText('GitHub issue URL')).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Forward to GitHub' })).toBeDisabled()
+    expect(screen.queryByTestId('ai-advisor')).not.toBeInTheDocument()
+
+    // Recovery restores the controls and advisor.
+    rerenderWith({ bridgeEnabled: true, canStart: true })
+    expect(screen.getByLabelText('Status')).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Forward to GitHub' })).toBeEnabled()
+    expect(screen.getByTestId('ai-advisor')).toBeInTheDocument()
+  })
+
+  it('keeps controls available for a successful empty/zero scope (canStart omitted)', () => {
+    renderExpansion({ row: makeRow({ body: '', recent_errors: null, console_tail: '' }) })
+    expect(screen.getByLabelText('Status')).toBeEnabled()
+    expect(screen.getByTestId('ai-advisor')).toBeInTheDocument()
   })
 })

@@ -1,10 +1,6 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PageLayout } from '@/components/layout';
-import { GlassPanel } from '@/components/ui';
-
-import type { StatMetric } from '@/components/data-display';
-import { QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 
@@ -12,13 +8,12 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useSoftwareUpdates } from '@/api/hooks/useVehicleSystems';
+import { combineDataStates } from '@/api/dataState';
 
 import { useRootCauseWorkspace } from '../hooks/useRootCauseWorkspace';
-import { EvidenceSourceNotice } from '../components/EvidenceSourceNotice';
-import { DiagnosticEvidenceBrief } from '../components/operationalbrief-all/DiagnosticEvidenceBrief';
-import { hasSignalHistory } from '../lib/signalEvidenceAvailability';
+import { ServiceEvidencePackSources } from '../components/service-evidence-pack/ServiceEvidencePackSources';
+import { ServiceEvidencePackSummary } from '../components/service-evidence-pack/ServiceEvidencePackSummary';
 import {
-  SignalWindowPicker,
   ServiceEvidenceInventoryTable,
   ServiceEvidencePrivacyPanel,
   ServiceEvidenceIntegrityPanel,
@@ -70,10 +65,16 @@ export default function ServiceEvidencePackPage() {
   const availableHistories = workspace.evidenceBundle.data.filter(
     ({ response }) => (response.data?.length ?? 0) > 0,
   );
-  const evidenceState = useDataState({
+  const bundleState = useDataState({
     ...workspace.evidenceBundle,
     data: availableHistories.length > 0 ? availableHistories : undefined,
   }, { provenance: 'historical', partial: workspace.evidenceBundle.isError });
+  const evidenceState = {
+    ...bundleState,
+    ...(workspace.evidenceBundle.sources.length > 0
+      ? combineDataStates(workspace.evidenceBundle.sources.map(({ state }) => state))
+      : {}),
+  };
 
   const [pack, setPack] = useState<ServiceEvidencePackDocument | null>(null);
   const [packError, setPackError] = useState<string | null>(null);
@@ -162,58 +163,6 @@ export default function ServiceEvidencePackPage() {
     workspace.evidenceBundle.refetch();
   };
 
-  const qualityLabel =
-    liveCore.quality.band === 'strong'
-      ? t('rootCauseIntelligence.quality.strong', 'Strong evidence')
-      : liveCore.quality.band === 'moderate'
-        ? t('rootCauseIntelligence.quality.moderate', 'Moderate evidence')
-        : liveCore.quality.band === 'weak'
-          ? t('rootCauseIntelligence.quality.weak', 'Weak evidence')
-          : t('rootCauseIntelligence.quality.insufficient', 'Insufficient evidence');
-
-  const corroborating = liveCore.signalEvidence.filter((s) => s.hasEvidence).length;
-  const packStatusLabel = pack
-    ? t('serviceEvidencePack.kpis.statusGenerated', 'Generated')
-    : canGenerate
-      ? t('serviceEvidencePack.kpis.statusReady', 'Ready')
-      : t('serviceEvidencePack.kpis.statusNotReady', 'Not ready');
-  const packStatusSubtitle = pack
-    ? t('serviceEvidencePack.kpis.statusDigest', 'Digest {{digest}}…', { digest: pack.integrity.digestHex.slice(0, 10) })
-    : canGenerate
-      ? t('serviceEvidencePack.kpis.statusReadyHint', 'Generate below to compute its digest')
-      : t('serviceEvidencePack.kpis.statusNotReadyHint', 'Needs stronger evidence first');
-
-  const available = workspace.hasChosenSignal && evidenceState.hasData;
-  const focalAvailable = available && hasSignalHistory(workspace.evidenceBundle.sources, workspace.focalSignal);
-  const metrics: readonly StatMetric[] = [
-    {
-      metricId: 'status', occurrenceId: 'service-evidence-quality',
-      rawValue: available ? qualityLabel : null,
-      label: t('rootCauseIntelligence.kpis.quality', 'Evidence quality'),
-      context: t('serviceEvidencePack.kpis.qualitySubtitle', 'Drives the export gate below'),
-    },
-    {
-      metricId: 'count', occurrenceId: 'service-evidence-signals',
-      rawValue: available ? liveCore.signalEvidence.length : null,
-      label: t('serviceEvidencePack.kpis.signals', 'Signals in pack'),
-      context: t('serviceEvidencePack.kpis.signalsSubtitle', '{{n}} corroborating', { n: available ? corroborating : '—' }),
-      display: { notation: 'source' },
-    },
-    {
-      metricId: 'count', occurrenceId: 'service-evidence-hypotheses',
-      rawValue: focalAvailable ? liveCore.hypotheses.length : null,
-      label: t('serviceEvidencePack.kpis.hypotheses', 'Ranked hypotheses'),
-      context: t('serviceEvidencePack.kpis.hypothesesSubtitle', 'Evidence-ranked, not diagnostic'),
-      display: { notation: 'source' },
-    },
-    {
-      metricId: 'status', occurrenceId: 'service-evidence-pack-status',
-      rawValue: packStatusLabel,
-      label: t('serviceEvidencePack.kpis.status', 'Pack status'),
-      context: packStatusSubtitle,
-    },
-  ];
-
   return (
     <PageLayout
       title={t('serviceEvidencePack.title', 'Service evidence pack')}
@@ -221,59 +170,28 @@ export default function ServiceEvidencePackPage() {
         'serviceEvidencePack.subtitle',
         'A canonical, offline-verifiable JSON export of this evidence-ranked analysis — signal evidence, ranked hypotheses, limitations, and a SHA-256 integrity digest, never a diagnosis or proof of causation.',
       )}
-      query={workspace.signalsQuery}
+      query={[workspace.signalsQuery, workspace.evidenceBundle, updatesQuery]}
     >
       {/* 1 — Focal signal + analysis window (shared with the Root-Cause page) */}
-      <FadeIn>
-        <StaleRefreshWarning state={signalsState} label={t('rootCauseIntelligence.picker.title', 'Choose a signal to investigate')} />
-        <SignalWindowPicker
-          catalog={workspace.catalog}
-          signalsLoading={workspace.signalsQuery.isLoading && !signalsState.hasData}
-          signalsError={signalsState.fatalError}
-          onRetrySignals={() => workspace.signalsQuery.refetch()}
-          focalSignal={workspace.focalSignal}
-          onFocalSignalChange={workspace.setFocalSignal}
-          windowHours={workspace.windowHours}
-          onWindowHoursChange={workspace.setWindowHours}
-        />
-      </FadeIn>
-      <EvidenceSourceNotice
-        state={evidenceState}
-        sources={workspace.evidenceBundle.sources}
-        label={t('serviceEvidencePack.kpis.signals', 'Signals in pack')}
-        hasChosenSignal={workspace.hasChosenSignal}
+      <ServiceEvidencePackSources
+        workspace={workspace}
+        signalsState={signalsState}
+        evidenceState={evidenceState}
+        updatesState={updatesState}
+        onRetryUpdates={() => { void updatesQuery.refetch(); }}
       />
-      <StaleRefreshWarning state={updatesState} label={t('serviceEvidencePack.softwareUpdates', 'Software update history')} />
-      {updatesState.fatalError && (
-        <GlassPanel className="p-4 sm:p-5">
-          <QueryError error={updatesState.fatalError} onRetry={() => { void updatesQuery.refetch(); }} />
-        </GlassPanel>
-      )}
 
       {/* 2 — KPI band */}
-      <FadeIn>
-        <section
-          aria-label={t('serviceEvidencePack.kpis.sectionLabel', 'Service evidence pack metrics')}
-        >
-          <DiagnosticEvidenceBrief
-            testId="service-evidence-summary"
-            eyebrow={t('serviceEvidencePack.title', 'Service evidence pack')}
-            title={t('diagnostics.brief.packTitle', 'Export evidence and readiness')}
-            description={t('serviceEvidencePack.subtitle', 'A canonical, offline-verifiable JSON export of this evidence-ranked analysis — signal evidence, ranked hypotheses, limitations, and a SHA-256 integrity digest, never a diagnosis or proof of causation.')}
-            metrics={metrics}
-            state={evidenceState}
-            loading={isLoading}
-            error={error}
-            onRetry={onRetry}
-            focalSignal={workspace.focalSignal}
-            windowHours={workspace.windowHours}
-            hasChosenSignal={workspace.hasChosenSignal}
-            sources={workspace.evidenceBundle.sources}
-            summary={focalAvailable ? liveCore.summary : null}
-            limitations={liveCore.limitations}
-          />
-        </section>
-      </FadeIn>
+      <ServiceEvidencePackSummary
+        workspace={workspace}
+        liveCore={liveCore}
+        pack={pack}
+        canGenerate={canGenerate}
+        evidenceState={evidenceState}
+        isLoading={isLoading}
+        error={error}
+        onRetry={onRetry}
+      />
 
       {/* 3 — Evidence inventory */}
       <FadeIn>

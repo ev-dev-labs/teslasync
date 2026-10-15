@@ -38,6 +38,9 @@ const defaultDraft: StormGuardDraft = {
   enabled: false, lat: '37.7749', lng: '-122.4194', targetSoc: 90,
 };
 
+const validCoordinate = (value: string, limit: number) =>
+  value.trim() !== '' && Number.isFinite(Number(value)) && Math.abs(Number(value)) <= limit;
+
 export function StormGuardPanel({ vehicleId }: { vehicleId?: number | null }) {
   const { formatSpeed } = useUnits();
   const { t } = useTranslation();
@@ -47,11 +50,13 @@ export function StormGuardPanel({ vehicleId }: { vehicleId?: number | null }) {
   const saveMutation = useSaveStormguardConfig();
   const stored = statusQuery.data?.config;
   const [drafts, setDrafts] = useState<Record<number, StormGuardDraft>>({});
+  const [validationVehicleId, setValidationVehicleId] = useState<number | null>(null);
   const { enabled, lat, lng, targetSoc } = (vehicleId != null && drafts[vehicleId]) || defaultDraft;
   const { reset } = saveMutation;
   useEffect(() => {
     // Detach the mutation observer from work submitted in the previous scope.
     reset();
+    setValidationVehicleId(null);
   }, [vehicleId, reset]);
 
   useEffect(() => {
@@ -77,8 +82,13 @@ export function StormGuardPanel({ vehicleId }: { vehicleId?: number | null }) {
   const currentSoc = matchingStatus?.current_soc;
   const matchingSave = vehicleId != null && saveMutation.variables?.vehicle_id === vehicleId;
   const savePending = matchingSave && saveMutation.isPending;
+  const latValid = validCoordinate(lat, 90);
+  const lngValid = validCoordinate(lng, 180);
+  const showValidation = vehicleId != null && validationVehicleId === vehicleId;
   const handleSave = () => {
-    if (!vehicleId) return;
+    if (!vehicleId || savePending) return;
+    setValidationVehicleId(vehicleId);
+    if (!latValid || !lngValid) return;
     saveMutation.mutate({
       vehicle_id: vehicleId,
       enabled,
@@ -167,12 +177,18 @@ export function StormGuardPanel({ vehicleId }: { vehicleId?: number | null }) {
                 value={lat}
                 onChange={(e) => updateDraft({ lat: e.target.value })}
                 inputMode="decimal"
+                error={showValidation && !latValid
+                  ? t('stormguard.latError', 'Enter a finite latitude between -90 and 90.')
+                  : undefined}
               />
               <Input
                 label={t('stormguard.lng', 'Home longitude')}
                 value={lng}
                 onChange={(e) => updateDraft({ lng: e.target.value })}
                 inputMode="decimal"
+                error={showValidation && !lngValid
+                  ? t('stormguard.lngError', 'Enter a finite longitude between -180 and 180.')
+                  : undefined}
               />
             </div>
             <Slider

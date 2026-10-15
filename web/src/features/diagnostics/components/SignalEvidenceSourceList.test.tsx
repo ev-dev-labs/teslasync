@@ -99,9 +99,10 @@ describe('complete signal evidence source presentation', () => {
       { signal: 'Speed', state: paused },
     ]} />);
     expect(within(row('Speed')).getByText('Refresh paused')).toBeInTheDocument();
-    expect(within(row('Speed')).queryByRole('status')).toBeNull();
+    expect(within(row('Speed')).getByRole('status')).toHaveTextContent('Speed loading is paused. No data has been loaded yet.');
+    expect(within(row('Speed')).queryByLabelText('Loading Speed')).toBeNull();
     expect(within(row('Speed')).queryByRole('alert')).toBeNull();
-    expect(within(row('Speed')).queryByText(/offline|connection|unavailable|No data|sample\(s\)/i)).toBeNull();
+    expect(within(row('Speed')).queryByText(/offline|connection|unavailable|No data available for this period|sample\(s\)/i)).toBeNull();
     expect(paused.hasData).toBe(false);
     expect(paused.updatedAt).toBeNull();
     fireEvent.click(within(row('Speed')).getByRole('button', { name: 'Retry' }));
@@ -115,6 +116,7 @@ describe('complete signal evidence source presentation', () => {
     expect(within(row('Speed')).getByText('Pending')).toBeInTheDocument();
     expect(within(row('Speed')).getByRole('status', { name: 'Loading Speed' })).toBeInTheDocument();
     expect(within(row('Speed')).queryByText('Refresh paused')).toBeNull();
+    expect(within(row('Speed')).queryByText('Speed loading is paused. No data has been loaded yet.')).toBeNull();
     expect(within(row('Speed')).queryByRole('button')).toBeNull();
   });
 
@@ -126,12 +128,31 @@ describe('complete signal evidence source presentation', () => {
     }, { provenance: 'historical' });
     render(<SignalEvidenceSourceList label="History" sources={[{ signal: 'Speed', state }]} />);
     expect(within(row('Speed')).getByText('Refresh paused')).toBeInTheDocument();
+    expect(within(row('Speed')).getByRole('status')).toHaveTextContent('Speed refresh is paused. Previously loaded data remains visible.');
     expect(within(row('Speed')).getByText('1 sample(s)')).toBeInTheDocument();
     expect(within(row('Speed')).getByText(`Fetched ${formatDateTime(new Date(updatedAt), datePreferences)}`)).toBeInTheDocument();
     expect(within(row('Speed')).queryByText(/offline|connection|refresh failed/i)).toBeNull();
     expect(within(row('Speed')).queryByRole('alert')).toBeNull();
     expect(state.data).toBe(retained);
     expect(state.data?.data[0].valueNum).toBe(0);
+  });
+
+  it('resolves a paused initial request to successful empty history without leaving deferred feedback', () => {
+    const retry = vi.fn();
+    const { rerender } = render(<SignalEvidenceSourceList label="History" sources={[
+      { signal: 'Speed', state: deriveDataState<SignalHistoryResponse>({ fetchStatus: 'paused', refetch: retry }) },
+    ]} />);
+    expect(within(row('Speed')).getByRole('status')).toHaveTextContent('No data has been loaded yet.');
+
+    rerender(<SignalEvidenceSourceList label="History" sources={[
+      { signal: 'Speed', state: deriveDataState({ data: response('Speed', []), isSuccess: true, refetch: retry }) },
+    ]} />);
+    expect(within(row('Speed')).getByText('Ready')).toBeVisible();
+    expect(within(row('Speed')).getByText('No data available for this period')).toBeVisible();
+    expect(within(row('Speed')).queryByRole('status')).toBeNull();
+    expect(within(row('Speed')).queryByRole('button')).toBeNull();
+    expect(within(row('Speed')).queryByRole('alert')).toBeNull();
+    expect(retry).not.toHaveBeenCalled();
   });
 
   it('keeps a measured zero ready beside a pending identity without fabricating pending samples', () => {

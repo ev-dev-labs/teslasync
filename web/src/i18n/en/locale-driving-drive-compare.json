@@ -336,6 +336,7 @@
       "profiles": "Normalized telemetry comparisons",
       "verdict": "Comparison verdict and advantages"
     },
+    "selectionUnavailable": "The requested drive is unavailable in this vehicle's loaded history window. Choose a drive to replace it.",
     "subtitle": "Compare context, efficiency, and telemetry from any two drives",
     "title": "Drive compare",
     "verdict": {

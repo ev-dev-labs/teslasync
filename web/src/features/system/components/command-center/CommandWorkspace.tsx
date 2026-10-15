@@ -22,7 +22,7 @@ import { ToggleCommandTile } from '../ToggleCommandTile';
 import { CommandDialogs, type ActiveCommandDialog } from './CommandDialogs';
 import { CommandDomainBrowser } from './CommandDomainBrowser';
 import type { CommandDomainId } from './commandDomains';
-import { getLatestCommandStatus } from './commandLabels';
+import { getCommandDefinition, getLatestCommandStatus } from './commandLabels';
 import { useCommandFavorites } from './useCommandFavorites';
 
 interface CommandWorkspaceProps {
@@ -58,10 +58,20 @@ export function CommandWorkspace({
     setActiveDialog(null);
   }, [disabled, vehicle.id]);
 
-  const latestByCommand = useMemo(
-    () => new Map((latestCommands ?? []).map((entry) => [entry.command, entry])),
-    [latestCommands],
-  );
+  const latestByCommand = useMemo(() => {
+    const latest = new Map<string, CommandLogEntry>();
+    for (const entry of latestCommands ?? []) {
+      const command = getCommandDefinition(entry.command)?.command ?? entry.command;
+      const previous = latest.get(command);
+      const timestamp = Date.parse(entry.created_at);
+      const previousTimestamp = previous ? Date.parse(previous.created_at) : Number.NEGATIVE_INFINITY;
+      if (!previous || timestamp > previousTimestamp ||
+          (timestamp === previousTimestamp && entry.id > previous.id)) {
+        latest.set(command, entry);
+      }
+    }
+    return latest;
+  }, [latestCommands]);
 
   const filteredCommands = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -86,11 +96,7 @@ export function CommandWorkspace({
   }, [vehicle.id]);
 
   const renderTile = useCallback((definition: CommandDef) => {
-    const latest =
-      latestByCommand.get(definition.command) ??
-      (definition.commandOff
-        ? latestByCommand.get(definition.commandOff)
-        : undefined);
+    const latest = latestByCommand.get(definition.command);
     const common = {
       loading,
       disabled,

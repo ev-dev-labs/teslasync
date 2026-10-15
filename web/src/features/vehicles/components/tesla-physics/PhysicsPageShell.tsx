@@ -1,18 +1,20 @@
-import type { ReactNode } from 'react';
+import { Children, isValidElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTeslaExclusive } from '@/api/hooks/useTeslaPhysics';
 import { DataProvenanceBadge } from '@/components/data-display';
-import { EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { PageLayout, LayoutCard } from '@/components/layout';
 import { Badge, GlassPanel, Text } from '@/components/ui';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { useDataState } from '@/hooks/useDataState';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import type { ExclusiveReport } from '@/types/teslaPhysics';
 import { PhysicsEvidenceBrief } from '../operationalbrief-n-z/PhysicsEvidenceBrief';
+import { PhysicsInvestigation } from './PhysicsInvestigation';
 
 export type Translate = (key: string, fallback: string, options?: Record<string, unknown>) => string;
 export const pagination = { defaultPageSize: 25, pageSizeOptions: [25, 50, 100] };
@@ -59,6 +61,9 @@ export function PhysicsPageShell({ physics, children, navigation }: {
   physics: PhysicsPage; children: ReactNode; navigation: ReactNode;
 }) {
   const { slug, t, title, vehicleId, query, state, report } = physics;
+  const { formatDateTime: formatSettingsDateTime } = useDateFormat();
+  const time = (value: string | null | undefined, translate: Translate) =>
+    value ? formatSettingsDateTime(value) : unknown(translate);
   const pageTitle = t('teslaOnly.title', 'Tesla physics');
   usePageTitle(pageTitle);
   if (vehicleId == null) return <NoVehicleSelected pageTitle={pageTitle} />;
@@ -94,13 +99,34 @@ export function PhysicsPageShell({ physics, children, navigation }: {
           </div>
         </> : <Text as="p" variant="bodySm">{t('teslaOnly.scopeUnavailable', 'Evidence coverage metadata was not returned; counts cannot establish completeness.')}</Text>}
       </LayoutCard>
-      {slice && !report[slice] ? <GlassPanel className="p-4 sm:p-5">
+      {Children.map(children, (child) => slice && report[slice] == null &&
+        isValidElement<{ slug: PhysicsSlug }>(child) && child.type === PhysicsInvestigation && child.props.slug === slug ? <GlassPanel className="p-4 sm:p-5">
         {/* no-action: missing evidence cannot be restored from a display-only page. */}
         <EmptyState title={title} message={t('teslaOnly.missingSlice', 'This evidence slice was not returned. No measurement is inferred from its absence.')} />
-      </GlassPanel> : children}
-    </div> : <>
-      {/* no-action: VehicleSelect is already in the header. */}
-      <EmptyState title={title} message={t('teslaOnly.empty', 'Select a vehicle to load Tesla physics.')} />
-    </>}
+      </GlassPanel> : child)}
+    </div> : state.isRefreshBlocked ? <LayoutCard title={title}>
+      <div role="status" aria-live="polite" className="space-y-3">
+        <Badge variant="neutral" size="sm">{t('dataSources.status.paused', 'Refresh paused')}</Badge>
+        <Text as="p" variant="bodySm" color="secondary">
+          {t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}
+        </Text>
+      </div>
+    </LayoutCard> : <div role="status" aria-busy="true" aria-label={t('common.loading', 'Loading…')} className="space-y-6">
+      <LayoutCard title={t('teslaOnly.scopeTitle', 'Evidence boundaries')}>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+        </div>
+        <Skeleton className="mt-4 h-4 w-2/3" />
+        <Skeleton className="mt-3 h-4 w-2/3" />
+      </LayoutCard>
+      <LayoutCard title={slug ? t('teslaOnly.workbench.summary', 'Evidence at a glance') : t('teslaOnly.whereToStart', 'Where to start')}>
+        <Skeleton className="h-4 w-2/3" />
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          {Array.from({ length: 5 }, (_, index) => <Skeleton key={index} className="h-24" />)}
+        </div>
+      </LayoutCard>
+      {slug && <LayoutCard title={title}><Skeleton className="h-48" /></LayoutCard>}
+    </div>}
   </PageLayout>;
 }

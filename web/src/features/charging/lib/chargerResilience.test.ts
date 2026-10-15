@@ -71,16 +71,23 @@ describe('resolveResilienceSite', () => {
     },
   );
 
-  it('buckets a session with no location signal at all into "Unknown location" rather than dropping it', () => {
+  it('retains the unknown identity with no synthetic presentation label', () => {
     const r = resolveResilienceSite(session({ day: 0, energyWh: 1000 }));
     expect(r.key).toBe('type:unknown');
+    expect(r.label).toBeNull();
+    expect(r.groupedBy).toBe('charger_type');
+  });
+
+  it.each(['unknown', 'Unknown location'])('preserves the real source label %s', label => {
+    expect(resolveResilienceSite(session({ day: 0, energyWh: 1000, chargerType: label })).label).toBe(label);
+    expect(resolveResilienceSite(session({ day: 0, energyWh: 1000, place: label })).label).toBe(label);
   });
 });
 
 describe('computeHHI', () => {
   it('is 1 for a single site', () => {
     const sites: ResilienceSite[] = [
-      { key: 'a', label: 'A', groupedBy: 'place', sessions: 1, totalEnergyWh: 100, energyShare: 1 },
+      { key: 'a', label: 'A', groupedBy: 'place', sessions: 1, totalEnergyWh: 100, recordedEnergySessions: 1, positiveEnergyWh: 100, energyShare: 1 },
     ];
     expect(computeHHI(sites)).toBe(1);
   });
@@ -92,6 +99,8 @@ describe('computeHHI', () => {
       groupedBy: 'place' as const,
       sessions: 1,
       totalEnergyWh: 100,
+      recordedEnergySessions: 1,
+      positiveEnergyWh: 100,
       energyShare: 0.1,
     }));
     expect(computeHHI(sites)).toBeCloseTo(0.1, 5);
@@ -121,6 +130,59 @@ describe('computeResilienceScore', () => {
 });
 
 describe('analyzeChargerResilience', () => {
+  it.each([null, undefined, NaN, Infinity, -Infinity, '12'])(
+    'distinguishes missing/invalid energy %s from measured zero', energy => {
+      const input = Object.assign(session({ day: 0, energyWh: 0, place: 'Home' }), { total_energy_added_wh: energy });
+      const summary = analyzeChargerResilience([input, session({ day: 1, energyWh: 0, place: 'Backup' })]);
+      expect(summary.energyDenominator).toBe('missing');
+      expect(summary.hhi).toBeNull();
+      expect(summary.effectiveSiteCount).toBeNull();
+      expect(summary.totalSessions).toBe(2);
+      expect(summary.sites).toHaveLength(2);
+      expect(summary.whatIfTopSiteLoss?.energyAtRiskShare).toBeNull();
+    },
+  );
+
+  it('retains measured zero sites and discloses session fallback without inventing energy shares', () => {
+    const summary = analyzeChargerResilience([
+      session({ day: 0, energyWh: 0, place: 'Home' }),
+      session({ day: 1, energyWh: -0, place: 'Backup' }),
+    ]);
+    expect(summary.energyDenominator).toBe('nonpositive');
+    expect(summary.topSiteDependencyPct).toBe(50);
+    expect(summary.effectiveSiteCount).toBeNull();
+    expect(summary.whatIfTopSiteLoss).toMatchObject({
+      remainingSiteCount: 1, energyDenominator: 'nonpositive', newTopSiteShare: null,
+      energyAtRiskAvailable: true,
+    });
+  });
+
+  it('preserves signed and fractional raw Wh while weighting only positive energy', () => {
+    const summary = analyzeChargerResilience([
+      session({ day: 0, energyWh: 0.25, place: 'Home' }),
+      session({ day: 1, energyWh: -2.5, place: 'Home' }),
+      session({ day: 2, energyWh: 0.75, place: 'Backup' }),
+    ]);
+    expect(summary.totalEnergyWh).toBe(-1.5);
+    expect(summary.energyDenominator).toBe('available');
+    expect(summary.sites.find(site => site.label === 'Home')?.totalEnergyWh).toBe(-2.25);
+    expect(summary.topSiteDependencyPct).toBe(75);
+    expect(summary.hhi).toBe(0.625);
+    expect(summary.whatIfTopSiteLoss).toMatchObject({
+      energyAtRiskWh: 0.75, newTopSiteLabel: 'Home', newTopSiteShare: 1,
+    });
+  });
+
+  it('distinguishes losing the only site from losing the only positive energy', () => {
+    const top = session({ day: 0, energyWh: 12.5, place: 'Home' });
+    expect(analyzeChargerResilience([top]).whatIfTopSiteLoss?.remainingSiteCount).toBe(0);
+    const summary = analyzeChargerResilience([top, session({ day: 1, energyWh: 0, place: 'Backup' })]);
+    expect(summary.whatIfTopSiteLoss).toMatchObject({
+      remainingSiteCount: 1, newTopSiteLabel: 'Backup', energyDenominator: 'nonpositive',
+      newTopSiteShare: null,
+    });
+  });
+
   it('is empty and safe with no sessions', () => {
     const summary = analyzeChargerResilience([]);
     expect(summary.sites).toEqual([]);

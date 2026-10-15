@@ -1,4 +1,4 @@
-import { type FormEvent, useMemo, useState } from 'react';
+import { type FormEvent, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, FilePlus2, ShieldCheck, Trash2, XCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -142,8 +142,10 @@ export default function WarrantyCommandPage() {
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
-  const [formOpen, setFormOpen] = useState(false);
-  const [claimFor, setClaimFor] = useState<number | null>(null);
+  const [formScope, setFormScope] = useState<{ vehicleId: number } | null>(null);
+  const formOpen = formScope != null;
+  const [claimTarget, setClaimTarget] = useState<Warranty | null>(null);
+  const claimFor = claimTarget?.id ?? null;
   const [draft, setDraft] = useState({
     kind: 'basic' as WarrantyKind,
     label: '',
@@ -163,6 +165,25 @@ export default function WarrantyCommandPage() {
     amount_minor: 0,
     evidence_note: '',
   });
+  const initialDraft = useRef(draft);
+  const initialClaimDraft = useRef(claimDraft);
+  const scope = useRef({ vehicleId, generation: 0 });
+  if (scope.current.vehicleId !== vehicleId) {
+    scope.current = { vehicleId, generation: scope.current.generation + 1 };
+  }
+  const editor = useRef({ formScope, draft, claimTarget, claimDraft });
+  editor.current = { formScope, draft, claimTarget, claimDraft };
+
+  const openWarranty = () => {
+    if (vehicleId == null || formOpen) return;
+    setDraft({ ...initialDraft.current });
+    setFormScope({ vehicleId });
+  };
+  const closeWarranty = () => setFormScope(null);
+  const closeClaim = () => {
+    setClaimTarget(null);
+    setClaimDraft({ ...initialClaimDraft.current });
+  };
 
   usePageTitle(t('ownership.warranty.navTitle', 'Warranty command'));
 
@@ -174,6 +195,7 @@ export default function WarrantyCommandPage() {
   const { confirm, dialogProps } = useConfirm();
 
   const handleRemove = async (row: Warranty) => {
+    const submittedScope = scope.current;
     const ok = await confirm({
       title: t('ownership.warranty.delete.title', 'Delete this warranty?'),
       message: t(
@@ -184,7 +206,9 @@ export default function WarrantyCommandPage() {
       variant: 'danger',
       confirmLabel: t('common.delete', 'Delete'),
     });
-    if (ok) remove.mutate(row.id);
+    if (ok && scope.current === submittedScope && row.vehicle_id === scope.current.vehicleId
+      && currentWarranties.current.some((warranty) => warranty.id === row.id
+        && warranty.vehicle_id === row.vehicle_id)) remove.mutate(row.id);
   };
 
   const overview = overviewQuery.data;
@@ -193,6 +217,11 @@ export default function WarrantyCommandPage() {
     () => warrantiesQuery.data?.items ?? [],
     [warrantiesQuery.data?.items],
   );
+  const currentWarranties = useRef(warranties);
+  currentWarranties.current = warranties;
+  const warrantyScopeValid = formScope != null && formScope.vehicleId === vehicleId;
+  const claimScopeValid = claimTarget != null && claimTarget.vehicle_id === vehicleId
+    && warranties.some((row) => row.id === claimTarget.id && row.vehicle_id === claimTarget.vehicle_id);
   const currency = overview?.currency ?? draft.currency;
   const noCoverage = Array.isArray(overview?.coverages) && coverages.length === 0 && warranties.length === 0;
 
@@ -221,10 +250,12 @@ export default function WarrantyCommandPage() {
 
   const submitWarranty = (event: FormEvent) => {
     event.preventDefault();
-    if (vehicleId == null) return;
+    if (!warrantyScopeValid || formScope == null || create.isPending) return;
+    const submittedScope = scope.current;
+    const submittedEditor = editor.current;
     create.mutate(
       {
-        vehicle_id: vehicleId,
+        vehicle_id: formScope.vehicleId,
         kind: draft.kind,
         label: draft.label,
         provider: draft.provider,
@@ -237,19 +268,28 @@ export default function WarrantyCommandPage() {
         currency: draft.currency,
         notes: draft.notes,
       },
-      { onSuccess: () => setFormOpen(false) },
+      { onSuccess: () => {
+        if (scope.current === submittedScope
+          && editor.current.formScope === submittedEditor.formScope
+          && editor.current.draft === submittedEditor.draft) closeWarranty();
+      } },
     );
   };
 
   const submitClaim = (event: FormEvent) => {
     event.preventDefault();
-    if (claimFor == null) return;
+    if (!claimScopeValid || claimTarget == null || createClaim.isPending) return;
+    const submittedScope = scope.current;
+    const submittedEditor = editor.current;
     createClaim.mutate(
-      { ...claimDraft, warranty_id: claimFor, confirmed: true },
+      { ...claimDraft, warranty_id: claimTarget.id, confirmed: true },
       {
         onSuccess: () => {
-          setClaimFor(null);
-          setClaimDraft({ title: '', status: 'draft' as ClaimStatus, amount_minor: 0, evidence_note: '' });
+          if (scope.current === submittedScope
+            && editor.current.claimTarget === submittedEditor.claimTarget
+            && editor.current.claimDraft === submittedEditor.claimDraft
+            && currentWarranties.current.some((row) => row.id === submittedEditor.claimTarget?.id
+              && row.vehicle_id === submittedEditor.claimTarget?.vehicle_id)) closeClaim();
         },
       },
     );
@@ -428,18 +468,25 @@ export default function WarrantyCommandPage() {
       key: 'actions',
       header: t('ownership.action.header', 'Actions'),
       render: (row) => (
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="secondary"
             size="sm"
+            className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
             icon={<Icon icon={FilePlus2} />}
-            onClick={() => setClaimFor(row.id)}
+            disabled={claimTarget != null || row.vehicle_id !== vehicleId}
+            onClick={() => {
+              if (claimTarget != null || row.vehicle_id !== vehicleId) return;
+              setClaimDraft({ ...initialClaimDraft.current });
+              setClaimTarget(row);
+            }}
           >
             {t('ownership.warranty.row.claim', 'Claim')}
           </Button>
           <Button
             variant="ghost"
             size="sm"
+            className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
             icon={<Icon icon={Trash2} />}
             loading={remove.isPending && remove.variables === row.id}
             onClick={() => void handleRemove(row)}
@@ -524,19 +571,21 @@ export default function WarrantyCommandPage() {
         </div>
       </div>
 
-      {coverage.capacity_retention_pct != null ? (
+      {coverage.warranty.kind === 'battery' || coverage.capacity_retention_pct != null ? (
         <Card padding="sm" className="mt-4 shadow-none">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Text as="span" variant="caption">
               {t('ownership.warranty.card.capacity', 'Battery retention vs. warranty floor')}
             </Text>
             <span className="tabular-nums text-sm text-[var(--text-secondary)]">
-              {formatPct(coverage.capacity_retention_pct)} ·{' '}
+              {coverage.capacity_retention_pct != null
+                ? formatPct(coverage.capacity_retention_pct)
+                : t('common.unknown', 'Unknown')} ·{' '}
               {t('ownership.warranty.card.headroom', '{{value}} headroom', {
                 value:
                   coverage.capacity_headroom_pct != null
                     ? formatPct(coverage.capacity_headroom_pct)
-                    : '—',
+                    : t('common.unknown', 'Unknown'),
               })}
             </span>
           </div>
@@ -662,7 +711,7 @@ export default function WarrantyCommandPage() {
             : t('ownership.source.empty', 'No supported data is available yet.')}
           actions={vehicleId != null && overview && allChecks.length === 0 ? (
             noCoverage ? (
-              <Button variant="secondary" size="sm" onClick={() => setFormOpen(true)}>
+              <Button variant="secondary" size="sm" onClick={openWarranty}>
                 {t('ownership.warranty.list.add', 'Add coverage')}
               </Button>
             ) : !overviewQuery.error ? (
@@ -676,7 +725,18 @@ export default function WarrantyCommandPage() {
         >
           <DataTable
             columns={checkColumns}
-            mobileColumns={['label', 'state', 'severity']}
+            mobilePresentation={{
+              roles: { label: 'title', state: 'badge', severity: 'meta' },
+              displayValue: (row, key) => {
+                switch (key) {
+                  case 'label': return `${row.label} · ${row.warrantyLabel}`;
+                  case 'state': return row.satisfied ? t('common.yes', 'Yes') : t('common.no', 'No');
+                  case 'severity': return enumLabel(row.severity, SEVERITY_LABELS, t);
+                  case 'detail': return row.detail;
+                  default: return undefined;
+                }
+              },
+            }}
             data={allChecks}
             keyExtractor={(row) => `${row.warrantyId}-${row.code}`}
             tableId="ownership-warranty-readiness"
@@ -697,7 +757,8 @@ export default function WarrantyCommandPage() {
               variant="secondary"
               size="sm"
               icon={<Icon icon={ShieldCheck} />}
-              onClick={() => setFormOpen((open) => !open)}
+              disabled={!formOpen && vehicleId == null}
+              onClick={formOpen ? closeWarranty : openWarranty}
             >
               {formOpen
                 ? t('ownership.action.cancel', 'Cancel')
@@ -707,6 +768,11 @@ export default function WarrantyCommandPage() {
         >
           {formOpen ? (
             <form className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3" onSubmit={submitWarranty}>
+              {!warrantyScopeValid && (
+                <AlertBanner variant="warning">
+                  {t('productPreferences.defaultVehicle.unavailable', 'Unavailable vehicle {{id}}', { id: formScope?.vehicleId })}
+                </AlertBanner>
+              )}
               <Select
                 label={t('ownership.warranty.form.kind', 'Coverage type')}
                 value={draft.kind}
@@ -823,7 +889,7 @@ export default function WarrantyCommandPage() {
                 />
               </div>
               <div className="md:col-span-2 xl:col-span-3">
-                <Button type="submit" loading={create.isPending} disabled={vehicleId == null}>
+                <Button type="submit" loading={create.isPending} disabled={!warrantyScopeValid || create.isPending}>
                   {t('ownership.warranty.form.save', 'Save coverage')}
                 </Button>
                 <MutationError error={create.error} />
@@ -834,7 +900,20 @@ export default function WarrantyCommandPage() {
           <DataTable
             columns={warrantyColumns}
             enableValueFilters
-            mobileColumns={['label', 'start', 'term']}
+            mobilePresentation={{
+              roles: { label: 'title', start: 'meta', term: 'meta', deductible: 'primary' },
+              displayValue: (row, key) => {
+                switch (key) {
+                  case 'label': return `${row.label} · ${row.provider} · ${enumLabel(row.kind, KIND_LABELS, t)}`;
+                  case 'start': return `${formatDateTime(row.start_at)} · ${units.formatDistance(row.start_odometer_m)}`;
+                  case 'term': return `${formatSpan(row.term_s)} · ${units.formatDistance(row.term_distance_m)}`;
+                  case 'floor': return row.capacity_floor_pct != null ? formatPct(row.capacity_floor_pct) : '—';
+                  case 'deductible': return formatCurrencyMinor(row.deductible_minor, row.currency, units.unitPrefs.locale);
+                  default: return undefined;
+                }
+              },
+              inlineActions: (row) => warrantyColumns.find((column) => column.key === 'actions')?.render(row),
+            }}
             data={warranties}
             keyExtractor={(row) => row.id}
             tableId="ownership-warranty-list"
@@ -862,6 +941,12 @@ export default function WarrantyCommandPage() {
               className="mb-6 grid gap-4 rounded-lg border border-[var(--border-default)] bg-[var(--surface-1)] p-4 md:grid-cols-2"
               onSubmit={submitClaim}
             >
+              <Text as="p" variant="caption">{claimTarget?.label} · {claimTarget?.vehicle_id}</Text>
+              {!claimScopeValid && (
+                <AlertBanner variant="warning">
+                  {t('productPreferences.defaultVehicle.unavailable', 'Unavailable vehicle {{id}}', { id: claimTarget?.vehicle_id })}
+                </AlertBanner>
+              )}
               <Input
                 label={t('ownership.warranty.claimForm.title', 'Claim title')}
                 value={claimDraft.title}
@@ -888,7 +973,7 @@ export default function WarrantyCommandPage() {
               <MoneyInput
                 label={t('ownership.warranty.claimForm.amount', 'Amount')}
                 value={claimDraft.amount_minor}
-                currency={currency}
+                currency={claimTarget?.currency ?? currency}
                 locale={units.unitPrefs.locale}
                 onChange={(value) =>
                   setClaimDraft((current) => ({ ...current, amount_minor: value ?? 0 }))
@@ -903,10 +988,10 @@ export default function WarrantyCommandPage() {
                 }
               />
               <div className="md:col-span-2 flex gap-2">
-                <Button type="submit" loading={createClaim.isPending}>
+                <Button type="submit" loading={createClaim.isPending} disabled={!claimScopeValid || createClaim.isPending}>
                   {t('ownership.warranty.claimForm.submit', 'Record claim')}
                 </Button>
-                <Button type="button" variant="ghost" onClick={() => setClaimFor(null)}>
+                <Button type="button" variant="ghost" onClick={closeClaim}>
                   {t('ownership.action.cancel', 'Cancel')}
                 </Button>
               </div>
@@ -919,7 +1004,19 @@ export default function WarrantyCommandPage() {
           <DataTable
             columns={claimColumns}
             enableValueFilters
-            mobileColumns={['title', 'status', 'opened']}
+            mobilePresentation={{
+              roles: { title: 'title', status: 'badge', opened: 'meta', amount: 'primary' },
+              displayValue: (row, key) => {
+                switch (key) {
+                  case 'title': return `${row.title} · ${row.warrantyLabel}`;
+                  case 'status': return enumLabel(row.status, CLAIM_STATUS_LABELS, t);
+                  case 'opened': return formatDateTime(row.opened_at);
+                  case 'amount': return formatCurrencyMinor(row.amount_minor, currency, units.unitPrefs.locale);
+                  case 'note': return row.evidence_note || '—';
+                  default: return undefined;
+                }
+              },
+            }}
             data={allClaims}
             keyExtractor={(row) => row.id}
             tableId="ownership-warranty-claims"

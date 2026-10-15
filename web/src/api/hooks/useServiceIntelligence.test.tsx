@@ -14,6 +14,7 @@ import {
   type CommunicationsCatalogStatus,
   type CommunicationsImportStatus,
   type OfficialNHTSACommunicationsArtifactURL,
+  type ServiceIntelligenceFinding,
   type ServiceIntelligenceResponse,
 } from './useServiceIntelligence';
 
@@ -112,6 +113,28 @@ afterEach(() => {
 });
 
 describe('useServiceIntelligence', () => {
+  it('preserves all supplied recall flags and conclusions without deriving new applicability or remedy', async () => {
+    const finding: ServiceIntelligenceFinding = {
+      id: 'recall-1', kind: 'recall', title: 'Published recall candidate',
+      component: 'Electrical system', summary: 'Published campaign summary.',
+      consequence: 'Published potential consequence.', remedy: 'Published inspection remedy.',
+      report_received_at: null, applicability: 'unlikely', confidence: 0.2,
+      confidence_label: 'low', completion_status: 'unknown',
+      hypothesis: 'Candidate only, not a diagnosis.', match_factors: [], symptom_matches: [],
+      park_it: true, park_outside: true, over_the_air_update: true,
+      source_document_url: 'https://www.nhtsa.gov/recalls',
+    };
+    const populatedResponse = { ...response, recall_findings: [finding] };
+    mockedRequest.mockResolvedValue(populatedResponse);
+    const { result } = renderHook(() => useServiceIntelligence(42), {
+      wrapper: makeWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual(populatedResponse);
+    expect(result.current.data?.recall_findings[0]).toEqual(finding);
+  });
+
   it('does not fetch without a positive vehicle id', async () => {
     const { result, rerender } = renderHook(
       ({ vehicleId }: { vehicleId: number | null }) =>

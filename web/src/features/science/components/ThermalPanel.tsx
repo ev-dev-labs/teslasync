@@ -6,7 +6,7 @@ import type {
   ScienceThermal,
   ScienceThermalFit
 } from '@/api/types';
-import { EmptyState, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { DataSourceNotice, EmptyState, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { LayoutCard, SourceContent } from '@/components/layout';
 import {
   DataTable,
@@ -15,7 +15,7 @@ import {
 } from '@/components/ui';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { formatTemperatureDelta } from '@/lib/unitConversion';
 import { asList, unknown, useT } from './helpers';
@@ -23,11 +23,13 @@ import { MissingBadges } from './MissingBadges';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ThermalPanel({ window }: { window: ScienceWindow }) {
+  const { formatDateTime } = useDateFormat();
   const { fmtNumber } = useNumberFormatting();
   const t = useT();
   const query = useScienceThermal(window);
   const state = useDataState(query, { provenance: 'historical' });
   const data: ScienceThermal | undefined = state.data;
+  const initialPaused = !state.hasData && state.isRefreshBlocked && !state.fatalError;
   const { formatTemperature, formatDuration, unitPrefs } = useUnits();
   const columns: Column<ScienceThermalFit>[] = [
     { key: 'start', header: t('science.thermal.start', 'Park start'), render: (r) => formatDateTime(r.start) },
@@ -52,14 +54,14 @@ export function ThermalPanel({ window }: { window: ScienceWindow }) {
       <LayoutCard title={t('science.thermal.title', 'Thermal science (τ, residual)')}>
       <StaleRefreshWarning state={state} />
       <SourceContent
-        state={state.status === 'initial' ? 'loading' : state.fatalError ? 'error' : !data ? 'empty' : 'ready'}
+        state={initialPaused ? 'empty' : state.status === 'initial' ? 'loading' : state.fatalError ? 'error' : !data ? 'empty' : 'ready'}
         label={t('science.thermal.title', 'Thermal science (τ, residual)')}
         emptyMessage={t('science.empty', 'No fit inputs in this window.')}
         errorMessage={t('error.loadFailed', 'Failed to load data')}
         error={state.fatalError}
         errorRecovery={{ onRetry: () => { void query.refetch(); } }}
         loadingContent={<Skeleton className="h-32" />}
-        emptyContent={<EmptyState title={t('science.thermal.title', 'Thermal science')} message={t('science.empty', 'No fit inputs in this window.')} action={{ label: t('common.retry', 'Retry'), onClick: () => { void query.refetch(); } }} />}
+        emptyContent={initialPaused ? <DataSourceNotice title={t('dataSources.status.paused', 'Refresh paused')} sources={[{ id: 'thermal', label: t('science.overview.thermal', 'Thermal fits'), query }]} /> : <EmptyState title={t('science.thermal.title', 'Thermal science')} message={t('science.empty', 'No fit inputs in this window.')} action={{ label: t('common.retry', 'Retry'), onClick: () => { void query.refetch(); } }} />}
       >
       {data && (
         <>
@@ -75,6 +77,17 @@ export function ThermalPanel({ window }: { window: ScienceWindow }) {
             emptyMessage={t('science.thermal.empty', 'No park cooldown transients with ambient reference in this window.')}
             pagination={{ defaultPageSize: 10, pageSizeOptions: [10, 25, 50] }}
             mobileColumns={['kind', 'tau', 'samples']}
+            mobilePresentation={{
+              roles: { kind: 'title', tau: 'primary', samples: 'meta' },
+              displayValue: (r, key) => {
+                const values: Record<string, string> = {
+                  kind: r.kind,
+                  tau: r.tau_s != null ? formatDuration(r.tau_s) : unknown(t),
+                  samples: fmtNumber(r.n),
+                };
+                return values[key];
+              },
+            }}
           />
           <MissingBadges missing={data.missing_signals} />
         </>

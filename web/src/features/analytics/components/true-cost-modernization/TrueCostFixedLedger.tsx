@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Wallet } from 'lucide-react';
 
@@ -9,10 +9,13 @@ import {
   DataTable,
   ConfirmDialog,
   ErrorText,
+  Input,
   type Column,
 } from '@/components/ui';
 import { Skeleton, QueryError } from '@/components/feedback';
-import { useFormatting } from '@/hooks/useFormatting';
+import { formatCurrencyValue } from '@/lib/currencyFormat';
+import { useUnits } from '@/hooks/useUnits';
+import { convertDistanceFromSI, convertDistanceToSI } from '@/lib/unitConversion';
 
 import {
   useTcoLedger,
@@ -23,58 +26,97 @@ import type { TcoLedgerCategory, TcoLedgerEntry } from '@/types/analytics';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { makeTrueCostLedgerColumns } from './TrueCostLedgerColumns';
 import { TrueCostLedgerForm } from './TrueCostLedgerForm';
+import { trueCostQueryState } from '../true-cost/queryState';
+import type { TrueCostQueryState } from '../true-cost/types';
 
 interface TrueCostFixedLedgerProps {
   vehicleId?: number;
-  totalKm: number;
-  totalChargingCost: number;
+  aggregateState: TrueCostQueryState;
+  totalKm?: number | null;
+  totalChargingCost?: number | null;
+  /** Source ISO code, never inferred from the workspace display symbol. */
+  chargingCurrency?: string | null;
 }
 
 const CATEGORIES: TcoLedgerCategory[] = [
-  'payment',
-  'insurance',
-  'maintenance',
-  'service',
-  'tires',
-  'accessories',
-  'depreciation',
-  'other',
+  'payment', 'insurance', 'maintenance', 'service',
+  'tires', 'accessories', 'depreciation', 'other',
 ];
 
-/**
- * Fixed-cost ledger: owner-recorded payments, insurance, service, tires,
- * and depreciation that turn the fuel-only TCO into an all-in $/km.
- * Same GlassPanel + DataTable idiom as the Smart Charge plan history.
- */
-export function TrueCostFixedLedger({ vehicleId, totalKm, totalChargingCost }: TrueCostFixedLedgerProps) {
+export function TrueCostFixedLedger({ vehicleId, aggregateState, totalKm, totalChargingCost, chargingCurrency }: TrueCostFixedLedgerProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
-  const { formatCurrency } = useFormatting();
+  const { unitPrefs } = useUnits();
+  const knownCurrency = (code: string) => /^[A-Z]{3}$/.test(code) && code !== 'XXX'
+    && new Intl.DisplayNames(['en'], { type: 'currency', fallback: 'none' }).of(code) != null;
+  const formatCurrency = useCallback((value: number, code: string) =>
+    code ? `${code} ${formatCurrencyValue(value, code, unitPrefs.locale ?? 'en-US', 2)}`
+      : `${fmtNumber(value)} —`, [fmtNumber, unitPrefs.locale]);
 
   const ledgerQuery = useTcoLedger(vehicleId);
-  const { data, isLoading, isError, error, refetch } = ledgerQuery;
-  const fatalError = isError && data === undefined;
-  const refreshError = isError && data !== undefined;
+  const { data, error, refetch } = ledgerQuery;
+  const ledgerState = trueCostQueryState(ledgerQuery, vehicleId != null, () => { void refetch(); });
+  const fatalError = Boolean(ledgerState.error);
+  const refreshError = Boolean(ledgerState.refreshError);
   const addMutation = useAddTcoLedgerEntry();
   const deleteMutation = useDeleteTcoLedgerEntry();
 
   const [category, setCategory] = useState<TcoLedgerCategory>('insurance');
   const [amount, setAmount] = useState('');
+  const [currency, setCurrency] = useState('USD');
   const [incurredOn, setIncurredOn] = useState(() => new Date().toISOString().slice(0, 10));
   const [note, setNote] = useState('');
-  const [pendingDelete, setPendingDelete] = useState<TcoLedgerEntry | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{ vehicleId: number; id: number } | null>(null);
+
+  useEffect(() => {
+    setPendingDelete(null);
+  }, [vehicleId]);
 
   const entries = data?.entries ?? [];
-  const totals = data?.totals;
-  const allInCost = totalChargingCost + (totals?.grand_total ?? 0);
-  const allInPerKm = totalKm > 0 ? allInCost / totalKm : null;
+  const totals = ledgerState.enabled && ledgerState.hasData ? data?.totals : undefined;
+  const aggregateAvailable = aggregateState.enabled && aggregateState.hasData;
+  const chargingCost = aggregateAvailable && typeof totalChargingCost === 'number'
+    && Number.isFinite(totalChargingCost) ? totalChargingCost : null;
+  const distance = aggregateAvailable && typeof totalKm === 'number'
+    && Number.isFinite(totalKm) && totalKm >= 0 ? totalKm : null;
+  const fixedCost = typeof totals?.grand_total === 'number'
+    && Number.isFinite(totals.grand_total) ? totals.grand_total : null;
+  const currencies = [...new Set(entries.map((entry) => entry.currency))];
+  const fixedCurrency = currencies.length === 1 && knownCurrency(currencies[0]) ? currencies[0] : null;
+  const combinedCurrency = chargingCurrency && knownCurrency(chargingCurrency)
+    && (entries.length === 0 || fixedCurrency === chargingCurrency) ? chargingCurrency : null;
+  const allInCost = chargingCost != null && fixedCost != null && combinedCurrency
+    ? chargingCost + fixedCost : null;
+  const displayDistance = distance != null
+    ? convertDistanceFromSI(convertDistanceToSI(distance, 'km'), unitPrefs.distance) : null;
+  const allInPerDistance = allInCost != null && displayDistance != null && displayDistance > 0
+    ? allInCost / displayDistance : null;
 
-  const columns = useMemo<Column<TcoLedgerEntry>[]>(
-    () => makeTrueCostLedgerColumns(t, formatCurrency, setPendingDelete),
-    [t, formatCurrency],
-  );
+  const columns = useMemo<Column<TcoLedgerEntry>[]>(() =>
+    makeTrueCostLedgerColumns(t, formatCurrency, (entry) => {
+      if (vehicleId != null && entry.vehicle_id === vehicleId) {
+        setPendingDelete({ vehicleId, id: entry.id });
+      }
+    }).map((column) => {
+      if (column.key === 'note') return {
+        ...column,
+        render: (entry: TcoLedgerEntry) => (
+          <Text variant="bodySm" className="break-words md:max-w-48 md:truncate">{entry.note || '—'}</Text>
+        ),
+      };
+      if (column.key === 'actions') return {
+        ...column,
+        render: (entry: TcoLedgerEntry) => (
+          <div className="[&_button]:min-h-11 [&_button]:min-w-11 md:[&_button]:min-h-0 md:[&_button]:min-w-0">
+            {column.render(entry)}
+          </div>
+        ),
+      };
+      return column;
+    }), [t, formatCurrency, vehicleId]);
 
-  const canSubmit = !!vehicleId && Number(amount) > 0 && /^\d{4}-\d{2}-\d{2}$/.test(incurredOn);
+  const canSubmit = !!vehicleId && Number(amount) > 0 && knownCurrency(currency)
+    && /^\d{4}-\d{2}-\d{2}$/.test(incurredOn);
 
   const handleAdd = () => {
     if (!canSubmit || !vehicleId) return;
@@ -83,6 +125,7 @@ export function TrueCostFixedLedger({ vehicleId, totalKm, totalChargingCost }: T
         vehicle_id: vehicleId,
         category,
         amount: Number(amount),
+        currency,
         incurred_on: incurredOn,
         note: note.trim() || undefined,
       },
@@ -96,10 +139,11 @@ export function TrueCostFixedLedger({ vehicleId, totalKm, totalChargingCost }: T
   };
 
   const handleDelete = () => {
-    if (!pendingDelete || !vehicleId) return;
+    if (!pendingDelete || pendingDelete.vehicleId !== vehicleId || deleteMutation.isPending) return;
+    const target = pendingDelete;
     deleteMutation.mutate(
-      { vehicleId, id: pendingDelete.id },
-      { onSuccess: () => setPendingDelete(null) },
+      { vehicleId: target.vehicleId, id: target.id },
+      { onSuccess: () => setPendingDelete((current) => current === target ? null : current) },
     );
   };
 
@@ -107,23 +151,37 @@ export function TrueCostFixedLedger({ vehicleId, totalKm, totalChargingCost }: T
     <GlassPanel className="p-4 sm:p-5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
-          <Wallet className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Wallet className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
           {t('tco.ledger.title', 'Fixed-cost ledger')}
         </PanelTitle>
         <Text variant="bodySm" className="tabular-nums">
-          {t('tco.ledger.allIn', 'All-in: {{total}} ({{perKm}}/km)', {
-            total: formatCurrency(allInCost),
-            perKm: allInPerKm != null ? formatCurrency(allInPerKm) : '—',
+          {t('tco.ledger.allInDistance', 'All-in: {{total}} ({{perDistance}}/{{unit}})', {
+            total: allInCost != null && combinedCurrency ? formatCurrency(allInCost, combinedCurrency) : '—',
+            perDistance: allInPerDistance != null && combinedCurrency ? formatCurrency(allInPerDistance, combinedCurrency) : '—',
+            unit: unitPrefs.distance,
           })}
         </Text>
       </div>
 
-      {isLoading && data === undefined ? (
+      {!ledgerState.enabled ? (
+        <Text as="p" variant="bodySm">{t('tco.query.noVehicle', 'Select a vehicle to query its operating-cost envelope.')}</Text>
+      ) : ledgerState.isLoading ? (
         <Skeleton height={180} />
+      ) : ledgerState.isPaused ? (
+        <Text as="p" variant="bodySm" role="status">
+          {t('tco.query.paused', 'Initial loading is paused while the network is unavailable; no empty response is inferred.')}
+        </Text>
       ) : fatalError ? (
         <QueryError error={error} onRetry={() => refetch()} />
+      ) : !ledgerState.hasData ? (
+        <Text as="p" variant="bodySm">{t('tco.states.pending', 'Source availability has not resolved yet.')}</Text>
       ) : (
         <div className="space-y-4">
+          {ledgerState.refreshPaused && (
+            <Text as="p" variant="bodySm" role="status">
+              {t('tco.query.refreshPaused', 'Cached evidence remains visible while its refresh is paused.')}
+            </Text>
+          )}
           {refreshError && (
             <div role="status" className="space-y-2">
               <Text as="p" variant="bodySm">
@@ -139,7 +197,19 @@ export function TrueCostFixedLedger({ vehicleId, totalKm, totalChargingCost }: T
             enableValueFilters
             tableId="analytics:tco-fixed-ledger"
             columns={columns}
-            mobileColumns={['incurred_on', 'category', 'amount']}
+            mobileColumns={columns.map((column) => column.key)}
+            mobilePresentation={{
+              roles: { incurred_on: 'title', amount: 'primary', category: 'meta', note: 'hidden', actions: 'hidden' },
+              displayValue: (entry, key) => {
+                switch (key) {
+                  case 'incurred_on': return entry.incurred_on;
+                  case 'category': return entry.category;
+                  case 'amount': return formatCurrency(entry.amount, entry.currency);
+                  case 'note': return entry.note || '—';
+                  default: return null;
+                }
+              },
+            }}
             data={entries}
             keyExtractor={(e) => e.id}
             emptyMessage={t(
@@ -149,6 +219,12 @@ export function TrueCostFixedLedger({ vehicleId, totalKm, totalChargingCost }: T
             pagination
           />
 
+          <Input
+            label={t('app.currency', 'Currency')}
+            value={currency}
+            maxLength={3}
+            onChange={(event) => setCurrency(event.target.value.toUpperCase())}
+          />
           <TrueCostLedgerForm
             categories={CATEGORIES}
             category={category} setCategory={setCategory}
@@ -165,17 +241,19 @@ export function TrueCostFixedLedger({ vehicleId, totalKm, totalChargingCost }: T
             </ErrorText>
           )}
           <Text as="p" variant="caption" className="tabular-nums">
-            {t('tco.ledger.hint', '{{count}} entries · {{total}} fixed · {{km}} km lifetime', {
-              count: totals?.entries ?? 0,
-              total: formatCurrency(totals?.grand_total ?? 0),
-              km: fmtNumber(totalKm),
+            {t('tco.ledger.hintDistance', '{{count}} entries · {{total}} fixed · {{distance}} {{unit}} lifetime', {
+              count: totals?.entries,
+              total: fixedCost != null && fixedCurrency ? formatCurrency(fixedCost, fixedCurrency)
+                : entries.length === 0 && fixedCost === 0 ? fmtNumber(0) : '—',
+              distance: displayDistance != null ? fmtNumber(displayDistance) : '—',
+              unit: unitPrefs.distance,
             })}
           </Text>
         </div>
       )}
 
       <ConfirmDialog
-        open={pendingDelete != null}
+        open={pendingDelete != null && pendingDelete.vehicleId === vehicleId}
         title={t('tco.ledger.deleteTitle', 'Delete this entry?')}
         message={t('tco.ledger.deleteMessage', 'This removes the recorded cost from the ledger.')}
         variant="danger"

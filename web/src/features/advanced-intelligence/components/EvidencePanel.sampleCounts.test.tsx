@@ -53,7 +53,9 @@ beforeEach(async () => {
         limited: 'Limited evidence',
         insufficient: 'Insufficient evidence',
         unknown: 'Quality not supplied',
-      } }, evidence: {
+      } }, quality: {
+        unknownCode: 'Unknown quality: {{code}}',
+      }, evidence: {
         sampleLine_one: '{{formattedCount}} sample · {{date}}',
         sampleLine_other: '{{formattedCount}} samples · {{date}}',
       } } } },
@@ -62,7 +64,9 @@ beforeEach(async () => {
         limited: 'Begrenzte Evidenz',
         insufficient: 'Unzureichende Evidenz',
         unknown: 'Qualitaet nicht angegeben',
-      } }, evidence: {
+      } }, quality: {
+        unknownCode: 'Unbekannte Qualitaet: {{code}}',
+      }, evidence: {
         sampleLine_one: '{{formattedCount}} Beobachtung · {{date}}',
         sampleLine_other: '{{formattedCount}} Beobachtungen · {{date}}',
       } } } },
@@ -102,15 +106,23 @@ describe('EvidencePanel known quality labels', () => {
     expect(refetch).not.toHaveBeenCalled();
   });
 
-  it('uses the existing unknown label for an unrecognized wire status without treating it as a translation key', async () => {
-    const metadata: DataQuality = Object.freeze(JSON.parse(JSON.stringify({ ...quality, status: 'future-quality' })));
-    render(<I18nextProvider i18n={translations}><EvidencePanel quality={metadata} /></I18nextProvider>);
-    expect(screen.getByText('Quality not supplied')).toBeVisible();
-    expect(screen.queryByText('future-quality')).not.toBeInTheDocument();
-    await act(async () => { await translations.changeLanguage('de'); });
-    expect(screen.getByText('Qualitaet nicht angegeben')).toBeVisible();
-    expect(metadata.status).toBe('future-quality');
-  });
+  it.each(['future-quality', 'advancedIntelligence.brief.quality.sufficient', '<unknown-quality>'])(
+    'preserves unknown wire status %s in a localized neutral fallback without translating the raw code',
+    async (status) => {
+      const metadata: DataQuality = Object.freeze(JSON.parse(JSON.stringify({ ...quality, status })));
+      const item = observation(1);
+      render(<I18nextProvider i18n={translations}><EvidencePanel quality={metadata} evidence={[item]}
+        limitations={['Synthetic uncertainty.']} unsupported={['No identity attribution.']} /></I18nextProvider>);
+      expect(screen.getByText(`Unknown quality: ${status}`)).toHaveClass(...BADGE_VARIANTS.neutral.split(' '));
+      expect(screen.queryByText('Quality not supplied')).not.toBeInTheDocument();
+      await act(async () => { await translations.changeLanguage('de'); });
+      expect(screen.getByText(`Unbekannte Qualitaet: ${status}`)).toHaveClass(...BADGE_VARIANTS.neutral.split(' '));
+      expect(screen.getByText(SOURCE)).toBeVisible();
+      expect(screen.getByText(item.summary)).toBeVisible();
+      expect(screen.getByText('• Synthetic uncertainty.')).toBeVisible();
+      expect(screen.getByText('• No identity attribution.')).toBeVisible();
+      expect(metadata.status).toBe(status);
+    });
 });
 
 afterEach(() => {

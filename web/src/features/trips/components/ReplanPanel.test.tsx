@@ -7,9 +7,9 @@
  * render-boundary wiring is genuinely exercised.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
 // ── i18n stub ──
@@ -112,13 +112,15 @@ function idle(extra = {}) {
 
 function renderPanel() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const view = (value: JourneySession) => (
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <ReplanPanel session={session} />
+        <ReplanPanel session={value} />
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const rendered = render(view(session));
+  return { ...rendered, rerenderSession: (value: JourneySession) => rendered.rerender(view(value)) };
 }
 
 beforeEach(() => {
@@ -128,6 +130,35 @@ beforeEach(() => {
 });
 
 describe('ReplanPanel', () => {
+  it('rejects stale assessment and completion, retains matching success and surfaces matching rejection', async () => {
+    let resolve!: (value: typeof scores) => void;
+    let reject!: (reason: Error) => void;
+    mockReplan.mockImplementation(() => useMutation({
+      mutationFn: () => new Promise<typeof scores>((yes, no) => { resolve = yes; reject = no; }),
+    }));
+    const { rerenderSession } = renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: 'Rescore from here' }));
+    await waitFor(() => expect(resolve).toBeTypeOf('function'));
+    rerenderSession({ ...session, id: 2 });
+    expect(screen.getByRole('button', { name: 'Rescore from here' })).toBeDisabled();
+    expect(screen.queryByText('12500 m off corridor')).not.toBeInTheDocument();
+    await act(async () => resolve(scores));
+    expect(screen.queryByText('Flagler SC wins')).not.toBeInTheDocument();
+    mockAssess.mockReturnValue(idle({ data: { ...assessment, session_id: 2 } }));
+    rerenderSession({ ...session, id: 2 });
+    fireEvent.click(screen.getByRole('button', { name: 'Rescore from here' }));
+    await waitFor(() => expect(screen.getByRole('status', { name: 'Rescoring stops…' })).toBeInTheDocument());
+    await act(async () => resolve({ ...scores, session_id: 2 }));
+    await waitFor(() => expect(screen.getByText('Flagler SC wins')).toBeInTheDocument());
+    rerenderSession({ ...session, id: 2, plan_version: 3 });
+    expect(screen.getByText('Flagler SC wins')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Rescore from here' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Rescore from here' })).toBeDisabled());
+    await act(async () => reject(new Error('rejected')));
+    await waitFor(() => expect(screen.getByText(/Stops could not be rescored/)).toBeInTheDocument());
+    expect(screen.getByText('Flagler SC wins')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rescore from here' })).toBeEnabled();
+  });
   it('renders the verdict, distance, and evidence', () => {
     renderPanel();
     expect(screen.getByText('Off route')).toBeInTheDocument();

@@ -3,7 +3,8 @@ import { Gauge } from 'lucide-react';
 import { LayoutCard } from '@/components/layout';
 import { ThresholdBar, type ThresholdBand } from '@/components/charts';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
-import { Text } from '@/components/ui';
+import { Button, Text } from '@/components/ui';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import type { DataState } from '@/api/dataState';
 import type { TirePosition, TirePressureReading } from '../../pages/TirePressurePage';
 import type { PressureUnitPref } from '@/lib/unitConversion';
@@ -28,17 +29,33 @@ export function PressureCurrentCard({
   source, loading, label, status, unit, precision, format, domain, bands, convert,
 }: PressureCurrentCardProps) {
   const { t } = useTranslation();
+  const { vehicleId } = useSelectedVehicle();
+  const enabled = vehicleId !== null;
+  const unresolved = !source.hasData && !source.fatalError;
   const latest = source.data;
   return (
     <LayoutCard title={t('tirePressure.currentReadings', 'Current readings')} size="third">
       <PressureRefreshNotice source={source} label={t('dataSources.labels.liveTirePressure', 'Latest tire pressure')} />
-      {loading && !latest ? (
+      {enabled && loading && !source.hasData && !source.isRefreshBlocked ? (
         <div className="grid grid-cols-2 gap-3">
           {positions.map(pos => <Skeleton key={pos} height={148} className="w-full" />)}
         </div>
       ) : source.fatalError ? (
         <QueryError error={source.fatalError} onRetry={source.retry ?? undefined}
           resourceName={t('tirePressure.resource', 'Tire pressure')} />
+      ) : unresolved ? (
+        <div className="space-y-3">
+          <Text as="p" variant="bodySm" role="status">
+            {!enabled ? t('common.noVehicleSelected.title', 'No vehicle selected')
+              : source.isRefreshBlocked ? t('dataSources.status.paused', 'Refresh paused')
+                : t('developerReference.layout.source.loading', 'Loading {{label}}', {
+                  label: t('dataSources.labels.liveTirePressure', 'Latest tire pressure'),
+                })}
+          </Text>
+          {enabled && source.retry && <Button variant="secondary" size="sm" onClick={source.retry}>
+            {t('error.retry', 'Retry')}
+          </Button>}
+        </div>
       ) : !latest ? (
         <EmptyState icon={<Gauge className="h-8 w-8" aria-hidden="true" />}
           message={t('tirePressure.noReadings', 'No current readings available')}

@@ -131,7 +131,7 @@ export default function VehicleSettingsTab({ vehicleId }: VehicleSettingsTabProp
   const trust = useDataState(query)
 
   return (
-    <GlassPanel className="p-6" data-testid="vehicle-settings-section">
+    <GlassPanel className="min-w-0 p-4 sm:p-6" data-testid="vehicle-settings-section">
       <div className="mb-4 space-y-1">
         <Heading level="section">{t('vehicleSettings.title', 'Per-vehicle settings')}</Heading>
         <Text variant="bodySm">
@@ -201,7 +201,7 @@ function SourcePill({ source }: { source: EffectiveSettingSource }) {
   const { t } = useTranslation()
   const variant = SOURCE_PILL_VARIANT[source] ?? 'neutral'
   return (
-    <Badge variant={variant} data-testid={`vehicle-settings-source-${source}`}>
+    <Badge variant={variant} className="min-w-0 max-w-full whitespace-normal break-words" data-testid={`vehicle-settings-source-${source}`}>
       {t(`vehicleSettings.source.${source}`, source)}
     </Badge>
   )
@@ -275,20 +275,22 @@ function VehicleSettingRow({ vehicleId, descriptor, effective, refreshBlocked }:
   return (
     <li className="py-4" data-testid={`vehicle-settings-row-${descriptor.key}`}>
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:items-start">
-        <div className="lg:col-span-4 space-y-1">
-          <div className="flex items-center gap-2">
-            <Text size="xs" weight="medium" color="primary">
-              {t(`vehicleSettings.keys.${descriptor.key}.label`, descriptor.key)}
-            </Text>
+        <div className="min-w-0 lg:col-span-4 space-y-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <label htmlFor={`vehicle-setting-${vehicleId}-${descriptor.key}`} className="min-w-0 break-words">
+              <Text size="xs" weight="medium" color="primary">
+                {t(`vehicleSettings.keys.${descriptor.key}.label`, descriptor.key)}
+              </Text>
+            </label>
             <SourcePill source={source} />
           </div>
-          <Text variant="caption">
+          <Text variant="caption" className="break-words">
             {t(`vehicleSettings.keys.${descriptor.key}.help`, '')}
           </Text>
         </div>
 
-        <div className="lg:col-span-5">
-          {renderInput(descriptor, draft, handleChange)}
+        <div className="min-w-0 lg:col-span-5">
+          {renderInput(descriptor, draft, handleChange, `vehicle-setting-${vehicleId}-${descriptor.key}`)}
           {validationError ? (
             <Text
               variant="error"
@@ -300,10 +302,12 @@ function VehicleSettingRow({ vehicleId, descriptor, effective, refreshBlocked }:
           ) : null}
         </div>
 
-        <div className="lg:col-span-3 flex items-center justify-start gap-2 lg:justify-end">
+        <div className="min-w-0 lg:col-span-3 flex flex-wrap items-center justify-start gap-2 lg:justify-end">
           <Button
             variant="primary"
             size="sm"
+            wrapLabel
+            className="min-h-11 md:min-h-9"
             disabled={!dirty || pending || refreshBlocked}
             onClick={handleSave}
             data-testid={`vehicle-settings-save-${descriptor.key}`}
@@ -315,6 +319,8 @@ function VehicleSettingRow({ vehicleId, descriptor, effective, refreshBlocked }:
           <Button
             variant="secondary"
             size="sm"
+            wrapLabel
+            className="min-h-11 md:min-h-9"
             disabled={!isOverride || pending || refreshBlocked}
             onClick={handleReset}
             data-testid={`vehicle-settings-reset-${descriptor.key}`}
@@ -390,11 +396,14 @@ function renderInput(
   descriptor: VehicleSettingDescriptor,
   draft: string,
   onChange: (value: string) => void,
+  id: string,
 ) {
   switch (descriptor.kind) {
     case 'timestamp':
       return (
         <Input
+          id={id}
+          className="min-h-11 md:min-h-10"
           type="datetime-local"
           value={draft}
           onChange={(e) => onChange(e.target.value)}
@@ -404,6 +413,8 @@ function renderInput(
     case 'select':
       return (
         <Select
+          id={id}
+          className="min-h-11 md:min-h-10"
           options={descriptor.options ?? []}
           value={draft}
           onChange={(e) => onChange(e.target.value)}
@@ -414,6 +425,8 @@ function renderInput(
     default:
       return (
         <Input
+          id={id}
+          className="min-h-11 md:min-h-10"
           type="text"
           value={draft}
           onChange={(e) => onChange(e.target.value)}

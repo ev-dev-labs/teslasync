@@ -25,7 +25,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { act, render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import type { ComponentProps } from 'react'
 
@@ -43,7 +43,8 @@ vi.mock('react-i18next', async () => {
 import SessionBreakdownPanelDefault, {
   SessionBreakdownPanel,
 } from './SessionBreakdownPanel'
-import { chartTokens } from '@/lib/tokens'
+import { chartTokens, typography } from '@/lib/tokens'
+import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat'
 import type { BreakdownItem } from './sessionStats'
 
 type Props = ComponentProps<typeof SessionBreakdownPanel>
@@ -74,6 +75,21 @@ function renderPanel(overrides: Partial<Props> = {}) {
 describe('SessionBreakdownPanel', () => {
   it('exposes the same component as its default export', () => {
     expect(SessionBreakdownPanelDefault).toBe(SessionBreakdownPanel)
+  })
+
+  it.each<{ state: string; overrides: Partial<Props> }>([
+    { state: 'loaded', overrides: {} },
+    { state: 'loading', overrides: { isLoading: true } },
+    { state: 'empty', overrides: { items: [] } },
+    { state: 'error', overrides: { isError: true } },
+  ])('keeps the icon muted and decorative when $state', ({ overrides }) => {
+    renderPanel(overrides)
+
+    const decoration = screen.getByTestId('panel-icon').parentElement
+    expect(decoration).toHaveClass(typography.color.muted)
+    expect(decoration).toHaveAttribute('aria-hidden', 'true')
+    expect(decoration).not.toHaveClass('text-cyan-300')
+    expect(screen.getByRole('heading', { name: 'By browser' })).toBeInTheDocument()
   })
 
   it('renders the title, a decorative icon, and one bar per item when loaded', () => {
@@ -123,6 +139,40 @@ describe('SessionBreakdownPanel', () => {
     const bars = screen.getAllByRole('progressbar')
     expect(bars[0].querySelector('.h-full')).toHaveStyle({ background: `linear-gradient(90deg, ${chartTokens.series[0]}99, ${chartTokens.series[0]})` })
     expect(bars[1].querySelector('.h-full')).toHaveStyle({ background: `linear-gradient(90deg, ${chartTokens.series[3]}99, ${chartTokens.series[3]})` })
+  })
+
+  it('reactively formats integer counts without changing raw bar values or maxima', () => {
+    const preferences = getFormatterPreferences()
+    try {
+      act(() => {
+        setGlobalLocale('en-US')
+        setGlobalPrecision(3)
+      })
+      renderPanel({
+        items: [{ key: 'chrome', label: 'Chrome', count: 1234 }],
+        total: 2000,
+      })
+
+      const bar = screen.getByRole('progressbar', { name: 'Chrome' })
+      expect(screen.getByText('1,234')).toBeInTheDocument()
+      expect(bar).toHaveAttribute('aria-valuenow', '1234')
+      expect(bar).toHaveAttribute('aria-valuemax', '2000')
+
+      act(() => {
+        setGlobalLocale('de-DE')
+        setGlobalPrecision(5)
+      })
+
+      expect(screen.getByText('1.234')).toBeInTheDocument()
+      expect(screen.queryByText('1,234')).not.toBeInTheDocument()
+      expect(bar).toHaveAttribute('aria-valuenow', '1234')
+      expect(bar).toHaveAttribute('aria-valuemax', '2000')
+    } finally {
+      act(() => {
+        setGlobalLocale(preferences.locale)
+        setGlobalPrecision(preferences.precision)
+      })
+    }
   })
 
   it('still renders a bar when total is zero (denominator fallback)', () => {

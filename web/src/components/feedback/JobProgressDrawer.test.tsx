@@ -21,11 +21,16 @@
  *      appears (never the full drawer) and persists the promotion.
  *   8. Loading copy shows while the request is in flight.
  *   9. Every status icon + pretty type/status label branch renders.
+ *  10. Paused initial requests are not confused with loading or empty success.
+ *  11. Refresh failures retain jobs, zero-byte downloads and drawer preferences.
+ *  12. Initial failure and retained refresh failure recover through shared retry.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router-dom'
+import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 
 vi.mock('@/api/client', async () => {
@@ -62,7 +67,7 @@ vi.mock('react-i18next', async () => {
 })
 
 import { request } from '@/api/client'
-import { exportDownloadUrl, type ExportJobSummary } from '@/api/hooks/useExports'
+import { exportDownloadUrl, exportKeys, type ExportJobSummary } from '@/api/hooks/useExports'
 import { JobProgressDrawer } from './JobProgressDrawer'
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>
@@ -88,11 +93,14 @@ function renderDrawer(props: { maxRecent?: number; className?: string } = {}) {
       mutations: { retry: false },
     },
   })
-  return render(
+  const result = render(
     <QueryClientProvider client={qc}>
-      <JobProgressDrawer {...props} />
+      <MemoryRouter>
+        <JobProgressDrawer {...props} />
+      </MemoryRouter>
     </QueryClientProvider>,
   )
+  return { ...result, qc }
 }
 
 beforeEach(() => {
@@ -100,7 +108,139 @@ beforeEach(() => {
   localStorage.clear()
 })
 
+afterEach(() => {
+  onlineManager.setOnline(true)
+})
+
 describe('JobProgressDrawer', () => {
+  it.each([
+    ['missing', undefined, '—'],
+    ['null', null, '—'],
+    ['NaN', Number.NaN, '—'],
+    ['positive infinity', Number.POSITIVE_INFINITY, '—'],
+    ['negative infinity', Number.NEGATIVE_INFINITY, '—'],
+    ['measured zero', 0, '0 B'],
+    ['positive', 512, '512 B'],
+    ['negative', -512, '-512 B'],
+    ['fractional', 0.5, '0.5 B'],
+    ['negative fractional', -0.5, '-0.5 B'],
+    ['scaled fractional', 1536, '1.50 KB'],
+  ])('renders %s bytes distinctly from missing measurements', async (_case, fileSize, expected) => {
+    localStorage.setItem(STORAGE_KEY, 'open')
+    mockedRequest.mockResolvedValue([{ ...makeJob({ status: 'ready' }), file_size: fileSize }])
+    renderDrawer()
+
+    expect(await screen.findByText(`${expected} · 10m ago`)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /download drives export/i })).toBeInTheDocument()
+  })
+
+  it('shows paused feedback without inventing loading, empty results or a failure', async () => {
+    localStorage.setItem(STORAGE_KEY, 'open')
+    onlineManager.setOnline(false)
+    mockedRequest.mockResolvedValue([])
+    const { container } = renderDrawer()
+
+    expect(await screen.findByText('Refresh paused')).toBeInTheDocument()
+    expect(screen.queryByText(/loading export jobs|no active exports|no recent exports/i)).toBeNull()
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(mockedRequest).not.toHaveBeenCalled()
+    expect(localStorage.getItem(STORAGE_KEY)).toBe('open')
+
+    act(() => onlineManager.setOnline(true))
+    await waitFor(() => expect(container).toBeEmptyDOMElement())
+    expect(localStorage.getItem(STORAGE_KEY)).toBe('open')
+  })
+
+  it('retains jobs and downloads through refresh failure, retry and recovery', async () => {
+    localStorage.setItem(STORAGE_KEY, 'open')
+    mockedRequest.mockResolvedValue([makeJob({ status: 'ready', file_size: 0 })])
+    const { qc } = renderDrawer()
+    expect(await screen.findByText('0 B · 10m ago')).toBeInTheDocument()
+    const download = screen.getByRole('link', { name: /download drives export/i })
+
+    mockedRequest.mockRejectedValueOnce(new Error('refresh failed'))
+    await act(async () => {
+      await qc.refetchQueries({ queryKey: exportKeys.jobs })
+    })
+    expect(await screen.findByTestId('stale-refresh-warning')).toBeInTheDocument()
+    expect(download).toBeInTheDocument()
+    expect(screen.getByText('0 B · 10m ago')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(localStorage.getItem(STORAGE_KEY)).toBe('open')
+
+    let resolveRefresh!: (jobs: ExportJobSummary[]) => void
+    mockedRequest.mockReturnValueOnce(new Promise<ExportJobSummary[]>((resolve) => {
+      resolveRefresh = resolve
+    }))
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+    expect(await screen.findByRole('button', { name: 'Updating…' })).toBeDisabled()
+    expect(download).toBeInTheDocument()
+    await act(async () => {
+      resolveRefresh([makeJob({ status: 'ready', file_size: 1024 })])
+    })
+    await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).toBeNull())
+    expect(screen.getByText('1.00 KB · 10m ago')).toBeInTheDocument()
+    expect(localStorage.getItem(STORAGE_KEY)).toBe('open')
+  })
+
+  it('offers initial failure recovery rather than treating a failed request as empty', async () => {
+    localStorage.setItem(STORAGE_KEY, 'open')
+    mockedRequest.mockRejectedValueOnce(new Error('request failed'))
+    renderDrawer()
+    const retry = await screen.findByRole('button', { name: 'Retry' })
+    expect(screen.queryByText(/no active exports|no recent exports/i)).toBeNull()
+    mockedRequest.mockResolvedValueOnce([makeJob({ status: 'ready' })])
+    fireEvent.click(retry)
+    expect(await screen.findByRole('link', { name: /download drives export/i })).toBeInTheDocument()
+  })
+
+  it.each(['minimized', 'dismissed'] as const)('preserves %s preference across a retained refresh failure', async (preference) => {
+    localStorage.setItem(STORAGE_KEY, preference)
+    mockedRequest.mockResolvedValue([makeJob({ status: 'ready' })])
+    const { qc, container } = renderDrawer()
+    await waitFor(() => expect(qc.getQueryData(exportKeys.jobs)).toBeDefined())
+    mockedRequest.mockRejectedValueOnce(new Error('refresh failed'))
+    await act(async () => {
+      await qc.refetchQueries({ queryKey: exportKeys.jobs })
+    })
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(preference)
+    expect(screen.queryByRole('region')).toBeNull()
+    if (preference === 'dismissed') {
+      expect(container).toBeEmptyDOMElement()
+    } else {
+      fireEvent.click(screen.getByRole('button', { name: /show export jobs/i }))
+      expect(await screen.findByTestId('stale-refresh-warning')).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: /download drives export/i })).toBeInTheDocument()
+    }
+  })
+
+  it('keeps mobile targets, dense desktop actions, full errors and keyboard expansion', async () => {
+    const user = userEvent.setup()
+    const error = 'An export failed with a long diagnostic that must remain fully accessible on narrow screens.'
+    mockedRequest.mockResolvedValue([
+      makeJob({ id: 'ready', status: 'ready' }),
+      makeJob({ id: 'failed', status: 'failed', error_message: error }),
+    ])
+    renderDrawer()
+    const chip = await screen.findByRole('button', { name: /show export jobs/i })
+    expect(chip).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'whitespace-normal')
+    chip.focus()
+    await user.keyboard('{Enter}')
+    const region = await screen.findByRole('region', { name: /export job progress/i })
+    const message = await within(region).findByText(error)
+    expect(message).toHaveClass('break-words')
+    expect(message).not.toHaveClass('truncate')
+    for (const name of ['Minimize', 'Dismiss']) {
+      expect(within(region).getByRole('button', { name })).toHaveClass('min-h-11', 'min-w-11', 'md:h-6', 'md:w-6')
+    }
+    expect(within(region).getByRole('link', { name: /download drives export/i })).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-0')
+    const minimize = within(region).getByRole('button', { name: 'Minimize' })
+    minimize.focus()
+    await user.keyboard(' ')
+    expect(await screen.findByRole('button', { name: /show export jobs/i })).toBeInTheDocument()
+    expect(localStorage.getItem(STORAGE_KEY)).toBe('minimized')
+  })
+
   it('preserves format acronyms without forcing the casing of other format values', async () => {
     localStorage.setItem(STORAGE_KEY, 'open')
     mockedRequest.mockResolvedValue([
@@ -252,6 +392,8 @@ describe('JobProgressDrawer', () => {
 
     expect(await screen.findByText(/loading export jobs/i)).toBeInTheDocument()
     expect(screen.getByRole('region', { name: /export job progress/i })).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent(/loading export jobs/i)
+    expect(screen.queryByText(/no active exports|no recent exports/i)).toBeNull()
   })
 
   it('renders every status branch and pretty type/status label', async () => {

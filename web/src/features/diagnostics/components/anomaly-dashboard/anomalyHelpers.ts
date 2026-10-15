@@ -23,15 +23,8 @@ export const HEALTH_FALLBACK_ICON = Shield;
  * Map a raw health-summary status onto the canonical {@link Severity} union so
  * status chips get a color-independent icon + tone from `severityTokens`.
  *
- * The backend emits one of 'normal' | 'info' | 'warning' | 'critical' per
- * category (a category inherits the severity of its worst anomaly, and an
- * info-level anomaly out-ranks the seeded 'normal' — see severityOrder in
- * internal/api/anomaly/handler.go). 'normal' surfaces as `success` (green +
- * check); everything else that is not a warning/critical — including 'info'
- * and any status the frontend does not yet recognize, plus a missing/null
- * value — maps to the neutral `info` tone. It must never fall through to a
- * green `success`, which would let an unknown or info-level state masquerade
- * as an all-clear "healthy".
+ * Only explicit anomalies establish a severity. Unknown and legacy seeded
+ * 'normal' statuses stay neutral: neither establishes category coverage.
  */
 export function healthSeverity(status: string | null | undefined): Severity {
   switch (status) {
@@ -39,12 +32,17 @@ export function healthSeverity(status: string | null | undefined): Severity {
       return 'critical';
     case 'warning':
       return 'warn';
-    case 'normal':
-      return 'success';
     default:
       return 'info';
   }
 }
+
+/** Legacy normal statuses do not establish category-level detector coverage. */
+export function healthStatus(status: string | null | undefined): string {
+  return status === 'critical' || status === 'warning' || status === 'info'
+    ? status : 'unknown';
+}
+
 
 /** Human-readable label for an anomaly detector type, i18n-aware. */
 export function anomalyTypeLabel(t: TFunction, type: string): string {

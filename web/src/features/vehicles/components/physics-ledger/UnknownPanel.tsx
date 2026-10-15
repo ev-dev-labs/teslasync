@@ -28,8 +28,8 @@ export function UnknownPanel({ ledger }: { ledger: PhysicsLedger }) {
     <GlassPanel padding="auto" className="space-y-4" data-testid="ledger-unknown">
       <PanelTitle>{t('physicsLedger.unknown.title', 'Unknown budget')}</PanelTitle>
       <div className="flex flex-wrap gap-2">
-        <Badge variant={ledger.unknown_hours > 0 ? 'warning' : 'success'} size="sm">
-          {t('physicsLedger.unknown.hours', 'Unknown hours')}: {fmtNumber(ledger.unknown_hours)}
+        <Badge variant={ledger.unknown_hours > 0 ? 'warning' : 'neutral'} size="sm">
+          {t('physicsLedger.unknown.hours', 'Unknown hours')}: {ledger.unknown_hours == null ? t('common.unknown', 'Unknown') : fmtNumber(ledger.unknown_hours)}
         </Badge>
         {ledger.truncated ? (
           <Badge variant="danger" size="sm">
@@ -39,7 +39,9 @@ export function UnknownPanel({ ledger }: { ledger: PhysicsLedger }) {
       </div>
       {intervals.length === 0 ? (
         <Text as="p" size="sm" color="secondary">
-          {t('physicsLedger.unknown.empty', 'Full coverage: no gaps in this window.')}
+          {ledger.unknown_intervals == null
+            ? t('common.unknown', 'Unknown')
+            : t('physicsLedger.unknown.empty', 'No unknown intervals returned; coverage is not established.')}
         </Text>
       ) : (
         <DataTable
@@ -48,7 +50,7 @@ export function UnknownPanel({ ledger }: { ledger: PhysicsLedger }) {
           mobileColumns={['start', 'duration', 'reason']}
           data={intervals}
           keyExtractor={(row) => `${row.started_at}-${row.ended_at}`}
-          emptyMessage={t('physicsLedger.unknown.empty', 'Full coverage: no gaps in this window.')}
+          emptyMessage={t('physicsLedger.unknown.empty', 'No unknown intervals returned; coverage is not established.')}
           pagination={{ defaultPageSize: 10, pageSizeOptions: [10, 25, 50] }}
         />
       )}

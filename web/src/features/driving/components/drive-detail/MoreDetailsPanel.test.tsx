@@ -2,19 +2,36 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { MoreDetailsPanel } from './MoreDetailsPanel';
 import { driveFixture, pointFixture, statsFixture } from './detailTestFixtures';
+import type { DriveTelemetryPoint } from '@/types/driving';
+import { driveOdometerEvidence } from './odometerEvidence';
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string, fallback?: string) => fallback ?? key }),
+  useTranslation: () => ({ t: (key: string, fallback?: string) => prefs.translations[key] ?? fallback ?? key }),
 }));
-const prefs = vi.hoisted(() => ({ distance: 'km' }));
+const prefs = vi.hoisted(() => ({ distance: 'km', translations: {} as Record<string, string> }));
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({ unitPrefs: prefs, formatEnergy: (wh: number) => `${wh / 1000} kWh` }),
 }));
 
 const value = (label: string) => within(screen.getByRole('rowheader', { name: label }).closest('tr')!).getAllByRole('cell')[0].textContent;
-beforeEach(() => { prefs.distance = 'km'; });
+beforeEach(() => { prefs.distance = 'km'; prefs.translations = {}; });
 
 describe('Energy and range evidence', () => {
+  it.each([
+    ['aggregate', { start_odometer_m: 120000000, end_odometer_m: 120040000 }, 'persisted', 'Persisted drive aggregate', '120,000.00 → 120,040.00 km'],
+    ['sampled', {}, 'sampled', 'Recorded telemetry samples', '10,000.00 → 10,040.00 km'],
+    ['mixed', { start_odometer_m: 120000000 }, 'odometerMixed', 'Recorded endpoints with telemetry fallback', '120,000.00 → 10,040.00 km'],
+  ] as const)('localizes %s odometer provenance and preserves readings and the adapter enum', (source, endpoints, key, label, reading) => {
+    const drive = driveFixture(endpoints);
+    const stats = statsFixture();
+    prefs.translations[`driveDetail.report.${key}`] = `Localized: ${label}`;
+    render(<MoreDetailsPanel drive={drive} stats={stats} />);
+    const cells = within(screen.getByRole('rowheader', { name: 'Odometer (from → to)' }).closest('tr')!).getAllByRole('cell');
+    expect(cells[0]).toHaveTextContent(reading);
+    expect(cells[1].textContent).toBe(`Localized: ${label}`);
+    expect(driveOdometerEvidence(drive, stats, 'km').source).toBe(source);
+  });
+
   it('keeps every evidence row and its source in a semantic matrix', () => {
     render(<MoreDetailsPanel drive={driveFixture()} stats={statsFixture()} />);
     expect(screen.getByRole('table', { name: 'Energy and range evidence' })).toBeInTheDocument();
@@ -62,6 +79,36 @@ describe('Energy and range evidence', () => {
   it('shows both odometer endpoints including independently missing readings', () => {
     render(<MoreDetailsPanel drive={driveFixture()} stats={statsFixture({ odometerEnd: 0 })} />);
     expect(value('Odometer (from → to)')).toBe('10,000.00 → — km');
+  });
+
+  it('shows eligible power coverage and a fractional estimate without counting missing or invalid samples as zero', () => {
+    const telemetry = [-0.5, 0.25, 0, null, NaN, Infinity].map((power) => ({ power } as DriveTelemetryPoint));
+    render(<MoreDetailsPanel drive={driveFixture({
+      durationS: 3600, energyUsedWh: null, regenEnergyWh: null, avgPowerW: null, telemetry,
+    })} stats={statsFixture()} />);
+    expect(value('Energy recovered')).toBe(`${1 / 6} kWh`);
+    expect(screen.getByText(/Recorded telemetry samples: 3 \/ 6/)).toBeInTheDocument();
+    expect(screen.getByText(/assumes uniform sampling/)).toBeInTheDocument();
+  });
+
+  it.each([0, 0.25])('shows measured nonnegative power %s as estimated zero recovery, not unknown', (power) => {
+    render(<MoreDetailsPanel drive={driveFixture({
+      energyUsedWh: null, regenEnergyWh: null, avgPowerW: null,
+      telemetry: [{ power } as DriveTelemetryPoint, { power: null } as DriveTelemetryPoint],
+    })} stats={statsFixture()} />);
+    expect(value('Energy recovered')).toBe('0 kWh');
+    expect(screen.getByText(/Recorded telemetry samples: 1 \/ 2/)).toBeInTheDocument();
+  });
+
+  it('labels invalid aggregates and absent power as unknown, not persisted zero', () => {
+    render(<MoreDetailsPanel drive={driveFixture({
+      energyUsedWh: NaN, regenEnergyWh: Infinity, avgPowerW: null,
+      telemetry: [{ power: NaN } as DriveTelemetryPoint, { power: null } as DriveTelemetryPoint],
+    })} stats={statsFixture()} />);
+    expect(value('Energy consumed')).toBe('—');
+    expect(value('Energy recovered')).toBe('—');
+    expect(screen.getByText(/Recorded telemetry samples: 0 \/ 2/)).toBeInTheDocument();
+    expect(screen.getAllByText('Unknown')).toHaveLength(2);
   });
 
   it('labels an ongoing drive odometer as start to latest rather than a completed endpoint', () => {

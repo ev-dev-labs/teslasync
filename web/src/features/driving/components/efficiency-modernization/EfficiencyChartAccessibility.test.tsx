@@ -58,7 +58,7 @@ describe('efficiency chart data alternatives (AUTHORED NOT RUN)', () => {
     const efficiencyUnit = miles ? 'Wh/mi' : 'Wh/km';
     const speedTable = screen.getByRole('table', { name: 'Speed vs efficiency — data table' });
     const tempTable = screen.getByRole('table', { name: 'Temperature vs efficiency — data table' });
-    const trendTable = screen.getByRole('table', { name: `Daily Efficiency (${efficiencyUnit}) — data table` });
+    const trendTable = screen.getByRole('table', { name: `Per-drive efficiency (${efficiencyUnit}) — data table` });
     const distributionTable = screen.getByRole('table', { name: 'Efficiency by speed range — data table' });
     expect(screen.getAllByRole('figure')).toHaveLength(4);
     expect(screen.getAllByRole('table')).toHaveLength(4);

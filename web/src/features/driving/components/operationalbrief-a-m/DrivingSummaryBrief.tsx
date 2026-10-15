@@ -42,7 +42,7 @@ export function DrivingSummaryBrief({
         : loading
           ? t('driving.brief.loading', 'Loading source')
           : retained
-            ? t('driving.brief.retained', 'Retained evidence')
+            ? t('driving.brief.retained', 'Retained source')
             : t('driving.brief.returned', 'Returned evidence'))}
       statusTone={error ? 'danger' : retained ? 'warning' : 'neutral'}
       metrics={values}

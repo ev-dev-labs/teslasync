@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import type { DataState } from '@/api/dataState';
-import { LayoutCard } from '@/components/layout/layout-reference';
-import { type StatMetric } from '@/components/data-display/stat-reference';
+import { LayoutCard } from '@/components/layout';
+import type { StatMetric } from '@/components/data-display';
 import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBrief';
 import { QueryError } from '@/components/feedback';
 import { useFormatting } from '@/hooks/useFormatting';

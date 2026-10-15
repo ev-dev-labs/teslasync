@@ -1,7 +1,7 @@
 /**
  * WhyEndedPanel — "Why did this drive end?" diagnostic panel.
  *
- * The panel is a lazy, collapsible disclosure that joins the FSM transition
+ * The panel is an initially expanded, collapsible disclosure that joins the FSM transition
  * history with the raw signal window around a drive's end. It has two exports:
  * the pure `formatTransitionTime` helper and the `WhyEndedPanel` component.
  * This suite pins behaviour + the hardening fixes rather than smoke rendering,
@@ -11,13 +11,13 @@
  *   1. formatTransitionTime — the "Invalid Date" guard: an empty / unparseable
  *      `ts` renders the universal "—" placeholder, while a valid ISO threads
  *      through to `toLocaleString()`.
- *   2. Collapsed / lazy — the panel starts collapsed with aria-expanded=false,
- *      the query stays disabled (3rd arg false), and NO content leaks even when
+ *   2. Collapsed — collapsing the panel sets aria-expanded=false,
+ *      the query becomes disabled (3rd arg false), and NO content leaks even when
  *      the mock already has data (the `{expanded && …}` gate).
  *   3. Expand — a click flips aria-expanded, reveals the window selector + the
  *      diagnostic region, enables the query (3rd arg true), and wires
  *      aria-controls ⇄ the region's id.
- *   4. Loading / error — the spinner shows while loading; a first-load failure
+ *   4. Loading / error — skeletons show while actively loading; a first-load failure
  *      surfaces the error message + a Retry that calls refetch; a non-Error
  *      rejection falls back to the generic copy.
  *   5. Populated — FSM transitions bind into the timeline (state path + the
@@ -40,6 +40,15 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { formatDateTime } from '@/lib/dateFormat';
+
+const dateOpts = { locale: 'de-DE', tz: 'America/Los_Angeles' };
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({ locale: 'de-DE', settings: { tz_display_default: 'user', timezone_user: 'America/Los_Angeles' } }),
+}));
+vi.mock('@/hooks/useSelectedVehicle', () => ({
+  useSelectedVehicle: () => ({ vehicle: null }),
+}));
 
 import type {
   DriveDiagnosticResponse,
@@ -77,7 +86,7 @@ vi.mock('@/components/ui', () => ({
   GlassPanel: ({ children, className }: any) => (
     <section className={className}>{children}</section>
   ),
-  Button: ({ children, icon, onClick, variant: _v, size: _s, loading: _l, ...rest }: any) => (
+  Button: ({ children, icon, onClick, variant: _v, size: _s, loading: _l, wrapLabel: _w, ...rest }: any) => (
     <button type="button" onClick={onClick} {...rest}>
       {icon}
       {children}
@@ -134,7 +143,8 @@ vi.mock('@/components/data-display', () => ({
   ),
 }));
 
-vi.mock('@/components/feedback', () => ({
+vi.mock('@/components/feedback', async () => ({
+  StaleRefreshWarning: (await import('@/components/feedback/StaleRefreshWarning')).StaleRefreshWarning,
   ListSkeleton: ({ testId, label }: any) => (
     <div role="status" aria-label={label} data-testid={testId} />
   ),
@@ -188,12 +198,13 @@ const SIGNALS: DriveDiagnosticSignal[] = [
 interface WhyState {
   data?: DriveDiagnosticResponse;
   isLoading: boolean;
+  fetchStatus: 'fetching' | 'paused' | 'idle';
   error: unknown;
   refetch: () => void;
 }
 
 function makeWhy(overrides: Partial<WhyState> = {}): WhyState {
-  return { data: undefined, isLoading: false, error: null, refetch: vi.fn(), ...overrides };
+  return { data: makeResponse(), isLoading: false, fetchStatus: 'idle', error: null, refetch: vi.fn(), ...overrides };
 }
 
 function makeResponse(overrides: Partial<DriveDiagnosticResponse> = {}): DriveDiagnosticResponse {
@@ -234,8 +245,8 @@ describe('formatTransitionTime', () => {
     expect(formatTransitionTime('2026-13-99T99:99:99Z')).toBe('—');
   });
 
-  it('formats a valid ISO timestamp through toLocaleString', () => {
-    expect(formatTransitionTime(TS_A)).toBe(new Date(TS_A).toLocaleString());
+  it('formats a valid ISO timestamp through the shared formatter', () => {
+    expect(formatTransitionTime(TS_A)).toBe(formatDateTime(TS_A));
     expect(formatTransitionTime(TS_A)).not.toBe('—');
   });
 });
@@ -243,6 +254,20 @@ describe('formatTransitionTime', () => {
 // ── 2. Inline evidence / independent disclosure ──────────────────────────────
 
 describe('WhyEndedPanel — inline evidence', () => {
+  it('scopes mobile target sizing to the panel and gives the window field a full mobile row', () => {
+    render(<WhyEndedPanel driveId="42" />);
+    const panel = toggleBtn().closest('section');
+    expect(panel).toHaveClass('max-md:[&_button]:min-h-11', 'max-md:[&_button]:min-w-11', 'max-md:[&_select]:min-h-11');
+    expect(screen.getByRole('combobox', { name: 'Diagnostic window' }).parentElement).toHaveClass('w-full', 'md:w-40');
+  });
+
+  it.each(['2026-04-02T00:30:00Z', '2026-04-02T08:30:00Z', 'invalid', ''])('formats transition %s in the saved timezone, retaining UTC provenance', (ts) => {
+    useDriveWhyEnded.mockReturnValue(makeWhy({ data: makeResponse({ fsm_transitions: [{ ...TRANSITIONS[0], ts }] }) }));
+    render(<WhyEndedPanel driveId="42" />);
+    expect(screen.getByTestId('tl-time')).toHaveTextContent(formatTransitionTime(ts, dateOpts));
+    expect(screen.getByTestId('tl-title').querySelector('span')).toHaveAttribute('title', ts);
+  });
+
   it('starts expanded with its selector and query enabled, without tabs', () => {
     render(<WhyEndedPanel driveId="42" />);
 
@@ -300,7 +325,7 @@ describe('WhyEndedPanel — expand', () => {
 
 describe('WhyEndedPanel — loading & error', () => {
   it('shows diagnostic skeletons (and no data tables) while loading', () => {
-    useDriveWhyEnded.mockReturnValue(makeWhy({ isLoading: true }));
+    useDriveWhyEnded.mockReturnValue(makeWhy({ data: undefined, isLoading: true, fetchStatus: 'fetching' }));
 
     render(<WhyEndedPanel driveId="42" />);
     expand();
@@ -314,7 +339,7 @@ describe('WhyEndedPanel — loading & error', () => {
   it('surfaces the error message and retries via refetch', () => {
     const refetch = vi.fn();
     useDriveWhyEnded.mockReturnValue(
-      makeWhy({ error: new Error('window too small'), refetch }),
+      makeWhy({ data: undefined, error: new Error('window too small'), refetch }),
     );
 
     render(<WhyEndedPanel driveId="42" />);
@@ -329,7 +354,7 @@ describe('WhyEndedPanel — loading & error', () => {
   });
 
   it('falls back to the generic copy for a non-Error rejection', () => {
-    useDriveWhyEnded.mockReturnValue(makeWhy({ error: 'boom' }));
+    useDriveWhyEnded.mockReturnValue(makeWhy({ data: undefined, error: 'boom' }));
 
     render(<WhyEndedPanel driveId="42" />);
     expand();
@@ -363,7 +388,7 @@ describe('WhyEndedPanel — populated', () => {
     expect(within(items[1]).getByTestId('tl-subtitle')).toHaveTextContent('trigger: —');
     // The time slot routes through the guard for a valid ISO.
     expect(within(items[0]).getByTestId('tl-time')).toHaveTextContent(
-      formatTransitionTime(TS_A),
+      formatTransitionTime(TS_A, dateOpts),
     );
     expect(within(items[0]).getByTestId('tl-time').textContent).not.toBe('—');
   });
@@ -401,6 +426,58 @@ describe('WhyEndedPanel — populated', () => {
 // ── 6. Empty states ──────────────────────────────────────────────────────────
 
 describe('WhyEndedPanel — empty states', () => {
+  it('renders successful empty evidence without a loading or failure state', () => {
+    render(<WhyEndedPanel driveId="42" />);
+    expect(screen.getByText('No transitions in window')).toBeVisible();
+    expect(screen.getByTestId('signal-empty')).toBeVisible();
+    expect(screen.queryByTestId('why-ended-timeline-loading')).toBeNull();
+    expect(screen.queryByTestId('stale-refresh-warning')).toBeNull();
+  });
+
+  it('does not infer empty evidence when the initial query is paused', () => {
+    useDriveWhyEnded.mockReturnValue(makeWhy({ data: undefined, fetchStatus: 'paused' }));
+    const { rerender } = render(<WhyEndedPanel driveId="42" />);
+    expect(screen.getByText('Refresh paused')).toBeVisible();
+    expect(screen.getByText('Drive evidence is not available yet.')).toBeVisible();
+    expect(screen.queryByTestId('signal-table')).toBeNull();
+    expect(screen.queryByTestId('why-ended-timeline-loading')).toBeNull();
+
+    useDriveWhyEnded.mockReturnValue(makeWhy());
+    rerender(<WhyEndedPanel driveId="42" />);
+    expect(screen.queryByText('Refresh paused')).toBeNull();
+    expect(screen.getByTestId('signal-empty')).toBeVisible();
+  });
+
+  it('retains a successful empty response when a refresh fails', () => {
+    useDriveWhyEnded.mockReturnValue(makeWhy({ error: new Error('refresh failed') }));
+    render(<WhyEndedPanel driveId="42" />);
+    expect(screen.getByTestId('stale-refresh-warning')).toBeVisible();
+    expect(screen.getByText('No transitions in window')).toBeVisible();
+    expect(screen.getByTestId('signal-empty')).toBeVisible();
+    expect(screen.queryByText('Could not load diagnostic')).toBeNull();
+  });
+
+  it('retains transitions and zero-valued signals after refresh failure and recovers locally', () => {
+    const data = makeResponse({ fsm_transitions: TRANSITIONS, signal_window: SIGNALS });
+    const refetch = vi.fn();
+    useDriveWhyEnded.mockReturnValue(makeWhy({ data, refetch }));
+    const { rerender } = render(<WhyEndedPanel driveId="42" />);
+    useDriveWhyEnded.mockReturnValue(makeWhy({ data, refetch, error: new Error('refresh failed') }));
+    rerender(<WhyEndedPanel driveId="42" />);
+
+    expect(screen.getByTestId('stale-refresh-warning')).toBeVisible();
+    expect(screen.getAllByTestId('timeline-item')).toHaveLength(2);
+    expect(screen.getByText('0')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+
+    useDriveWhyEnded.mockReturnValue(makeWhy({ data, refetch }));
+    rerender(<WhyEndedPanel driveId="42" />);
+    expect(screen.queryByTestId('stale-refresh-warning')).toBeNull();
+    expect(screen.getAllByTestId('timeline-item')).toHaveLength(2);
+    expect(screen.getByText('0')).toBeVisible();
+  });
+
   it('shows the FSM empty card while still rendering the signal rows', () => {
     useDriveWhyEnded.mockReturnValue(
       makeWhy({ data: makeResponse({ fsm_transitions: [], signal_window: SIGNALS }) }),

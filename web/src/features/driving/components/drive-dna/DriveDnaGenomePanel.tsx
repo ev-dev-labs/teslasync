@@ -159,11 +159,12 @@ export function DriveDnaGenomePanel({
         <Button
           type="button"
           variant="secondary"
-          className="mt-4 w-full"
+          wrapLabel
+          icon={<Download className="h-4 w-4" aria-hidden="true" />}
+          className="mt-4 min-h-11 w-full md:min-h-10"
           disabled={!canDownload}
           onClick={() => downloadDriveDnaSvg(model.genome, driveLabel)}
         >
-          <Download className="h-4 w-4" aria-hidden="true" />
           {t('driveDna.genome.download', 'Download safe SVG')}
         </Button>
       </GlassPanel>

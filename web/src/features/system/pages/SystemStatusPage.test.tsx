@@ -6,8 +6,7 @@
  * SystemInfoRows) is exercised through it by driving the data sources it reads.
  *
  * Strategy:
- *   - The seven inline `useQuery(...)` devtools calls (extended-health, version,
- *     update-check, backup-stats, workers, errors) are controlled
+ *   - The inline queries and the extended-health domain hook are controlled
  *     synchronously via a mocked `@tanstack/react-query.useQuery` keyed off
  *     `queryKey[1]`, so there is no async network flush.
  *   - The domain hooks (`useSystemHealth`, `useBackupRuns`, `useBackupConfigs`,
@@ -70,18 +69,14 @@ vi.mock('@tanstack/react-query', async () => {
   return { ...actual, useQuery: vi.fn(), useQueryClient: vi.fn() }
 })
 
-// devtools functions are passed as queryFns to the mocked useQuery (never
-// invoked); stub them so the import chain stays inert.
-vi.mock('@/api/devtools', () => ({
-  getVersionInfo: vi.fn(),
-  getExtendedHealth: vi.fn(),
-  checkForUpdates: vi.fn(),
-  getBackupStats: vi.fn(),
-  getWorkersHealth: vi.fn(),
+vi.mock('@/api/client', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/api/client')>(),
+  request: vi.fn(),
 }))
 
 vi.mock('@/api/hooks/useAdmin', () => ({
   useSystemHealth: vi.fn(),
+  useExtendedSystemHealth: vi.fn(),
   useBackupRuns: vi.fn(),
   useBackupConfigs: vi.fn(),
   useMaintenanceState: vi.fn(),
@@ -135,9 +130,10 @@ vi.mock('../components/status', () => ({
   SLOTrackingCard: () => <div data-testid="slo-card" />,
 }))
 
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { QueryClient, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   useSystemHealth,
+  useExtendedSystemHealth,
   useBackupRuns,
   useBackupConfigs,
   useMaintenanceState,
@@ -147,6 +143,7 @@ import { useVehicles } from '@/api/hooks/useVehicles'
 import { useStatusLiveSSE } from '../hooks/useStatusLiveSSE'
 import SystemStatusPage from './SystemStatusPage'
 import { useMotionPreference } from '@/hooks/useMotionPreference'
+import { request } from '@/api/client'
 
 const mockUseQuery = vi.mocked(useQuery)
 const mockUseQueryClient = vi.mocked(useQueryClient)
@@ -343,6 +340,9 @@ beforeEach(() => {
     workers: workersHealth(),
   }
   inlineOverrides = {}
+  vi.mocked(useExtendedSystemHealth).mockImplementation(() => (
+    q(inline['extended-health'], inlineOverrides['extended-health'])
+  ) as ReturnType<typeof useExtendedSystemHealth>)
   mockUseQuery.mockImplementation(
     (opts: unknown) =>
       ({
@@ -380,6 +380,63 @@ beforeEach(() => {
     state: 'live',
     lastUpdateAt: NOW,
     reconnect: liveReconnect,
+  })
+})
+
+describe('SystemStatusPage query contracts', () => {
+  it('reuses extended health and preserves inline keys, cadence, raw payloads and cancellation', async () => {
+    renderPage()
+    expect(useExtendedSystemHealth).toHaveBeenCalledWith()
+    const signal = new AbortController().signal
+    const cases = [
+      { key: 'version', path: '/system/version', interval: 60_000 },
+      { key: 'update-check', path: '/system/update-check', interval: 3_600_000, staleTime: 3_600_000 },
+      { key: 'backup-stats', path: '/system/backup/stats', interval: 30_000 },
+      { key: 'workers', path: '/system/workers', interval: 30_000 },
+    ]
+    for (const source of cases) {
+      const options = mockUseQuery.mock.calls
+        .map(([options]) => options)
+        .find((options) => options.queryKey[1] === source.key)
+      expect(options).toBeDefined()
+      expect(options?.queryKey).toEqual(['system-status', source.key])
+      expect(options?.refetchInterval).toBe(source.interval)
+      expect(options?.staleTime).toBe(source.staleTime)
+      expect(options?.select).toBeUndefined()
+      if (!options) throw new Error('Expected query options')
+      const queryFn = options.queryFn
+      if (typeof queryFn !== 'function') throw new Error('Expected a callable query function')
+      const payload = inline[source.key]
+      vi.mocked(request).mockResolvedValueOnce(payload)
+      expect(await queryFn({
+        signal,
+        queryKey: options.queryKey,
+        client: new QueryClient(),
+        meta: undefined,
+      })).toBe(payload)
+      expect(request).toHaveBeenLastCalledWith(source.path, { signal })
+    }
+  })
+
+  it('preserves the domain hook signal and accepted 503 health payload', async () => {
+    const actual = await vi.importActual<typeof import('@/api/hooks/useAdmin')>('@/api/hooks/useAdmin')
+    actual.useExtendedSystemHealth()
+    const options = mockUseQuery.mock.calls.at(-1)?.[0]
+    expect(options?.queryKey).toEqual(['system-status', 'extended-health'])
+    expect(options?.refetchInterval).toBe(30_000)
+    if (!options) throw new Error('Expected health query options')
+    const queryFn = options.queryFn
+    if (typeof queryFn !== 'function') throw new Error('Expected a callable health query function')
+    const signal = new AbortController().signal
+    const payload = extHealth({ status: 'unhealthy' })
+    vi.mocked(request).mockResolvedValueOnce(payload)
+    expect(await queryFn({
+      signal,
+      queryKey: options.queryKey,
+      client: new QueryClient(),
+      meta: undefined,
+    })).toBe(payload)
+    expect(request).toHaveBeenLastCalledWith('/system/health', { signal, acceptedStatuses: [503] })
   })
 })
 

@@ -1,11 +1,10 @@
 /**
  * Active-incidents block on /system-status.
- * Renders above the chip bar when one or more incidents are active.
+ * Keeps its shell and creation action visible above the chip bar.
  * Each row is a compact summary; clicking opens the post-mortem
  * timeline page at /system-status/incidents/:id.
- * Empty state: when a successful read confirms no active incidents, the
- * supplementary card collapses. Past incidents live in History below
- * the chip bar.
+ * Empty state: a successful read confirms no active incidents. Past
+ * incidents live in History below the chip bar.
  * "Log incident" CTA opens the IncidentForm dialog so operators can
  * record manual incidents (e.g., "Wall connector restart at 14:00").
  */
@@ -28,9 +27,9 @@ import {
 import { IncidentForm } from './IncidentForm'
 
 const SEVERITY_TONE: Record<IncidentSeverity, { Icon: typeof AlertCircle; cls: string; label: string }> = {
-  minor:    { Icon: AlertCircle,   cls: 'text-amber-300',  label: 'minor' },
-  major:    { Icon: AlertTriangle, cls: 'text-orange-300', label: 'major' },
-  critical: { Icon: AlertOctagon,  cls: 'text-rose-300',   label: 'critical' },
+  minor:    { Icon: AlertCircle,   cls: 'text-[var(--semantic-warning)]', label: 'minor' },
+  major:    { Icon: AlertTriangle, cls: 'text-[var(--semantic-warning)]', label: 'major' },
+  critical: { Icon: AlertOctagon,  cls: 'text-[var(--semantic-danger)]', label: 'critical' },
 }
 
 // Fallback tone for a severity outside the known enum. The API contract types
@@ -72,12 +71,8 @@ export function IncidentsCard({ now }: IncidentsCardProps) {
   const openForm = useCallback(() => setOpen(true), [])
   const closeForm = useCallback(() => setOpen(false), [])
 
-  if (state.hasData && state.status === 'ok' && incidents.length === 0 && !open) {
-    return null
-  }
-
   return (
-    <GlassPanel className="p-3 ring-1 ring-amber-400/30 bg-amber-500/[0.03]">
+    <GlassPanel className="p-3">
       <div className="flex flex-wrap items-center justify-between gap-3 px-2 pb-2">
         <PanelTitle as="h3" className="inline-flex flex-wrap items-center gap-2">
           <AlertTriangle className="h-4 w-4" aria-hidden />
@@ -97,6 +92,18 @@ export function IncidentsCard({ now }: IncidentsCardProps) {
         </Button>
       </div>
       <StaleRefreshWarning state={state} label={t('systemStatus.incidents.active', 'Active incidents')} />
+      {!state.hasData && !state.fatalError && state.isRefreshBlocked ? (
+        <div className="space-y-2">
+          <Text role="status" color="secondary">
+            {t('dataState.status.paused', 'Refresh paused')}
+          </Text>
+          {state.retry && (
+            <Button type="button" variant="ghost" size="sm" onClick={state.retry}>
+              {t('common.refresh', 'Refresh')}
+            </Button>
+          )}
+        </div>
+      ) : (
       <SourceContent
         state={state.fatalError ? 'error' : !state.hasData ? 'loading' : incidents.length === 0 ? 'empty' : 'ready'}
         label={t('systemStatus.incidents.active', 'Active incidents')}
@@ -115,7 +122,7 @@ export function IncidentsCard({ now }: IncidentsCardProps) {
             <li key={inc.id}>
               <Link
                 to={`/system-status/incidents/${inc.id}`}
-                className="flex items-start gap-3 rounded-md px-2 py-2 text-sm hover:bg-white/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+                className="flex items-start gap-3 rounded-md px-2 py-2 hover:bg-[var(--surface-3)] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-[var(--surface-1)]"
               >
                 <Icon className={cn('h-4 w-4 mt-0.5 shrink-0', tone.cls)} aria-hidden />
                 <div className="flex-1 min-w-0">
@@ -141,6 +148,7 @@ export function IncidentsCard({ now }: IncidentsCardProps) {
         })}
       </ul>
       </SourceContent>
+      )}
       {open && <IncidentForm onClose={closeForm} />}
     </GlassPanel>
   )

@@ -110,13 +110,13 @@ export type TimelineScrubberProps =
 
 /** Marker tick colors. Aligns with severity tokens for a consistent feel. */
 const MARKER_COLORS: Record<TimelineMarkerKind, string> = {
-  start: 'bg-emerald-400',
-  stop: 'bg-rose-400',
-  'charge-start': 'bg-emerald-300',
-  'charge-stop': 'bg-amber-300',
-  'fast-segment': 'bg-amber-400',
-  'regen-peak': 'bg-sky-300',
-  'low-soc': 'bg-rose-300',
+  start: 'bg-[var(--semantic-success)]',
+  stop: 'bg-[var(--semantic-danger)]',
+  'charge-start': 'bg-[var(--semantic-success)]',
+  'charge-stop': 'bg-[var(--semantic-warning)]',
+  'fast-segment': 'bg-[var(--semantic-warning)]',
+  'regen-peak': 'bg-[var(--semantic-info)]',
+  'low-soc': 'bg-[var(--semantic-danger)]',
   event: 'bg-[var(--surface-2)]',
 };
 
@@ -154,7 +154,7 @@ function clamp01(value: number): number {
  *  - Keyframe marker ticks (charge boundaries, fast segments, regen peaks, low SoC).
  *  - Optional decorative background (e.g. a `<Sparkline>`) to show where the
  *    action is at a glance.
- *  - Touch-friendly hit area (32px tall on coarse pointers).
+ *  - 44px mobile track target and invisible 44px marker hit areas.
  *
  * Accessibility:
  *  - Track has `role="slider"`, `aria-valuemin/max/now`, and `aria-valuetext`
@@ -499,16 +499,16 @@ function InteractiveTimelineScrubber({
           <div className="flex flex-col items-center gap-1 rounded-md border border-[var(--border-subtle)] bg-[var(--surface-overlay)] px-2.5 py-1.5 text-xs font-mono text-[var(--text-primary)] shadow-lg backdrop-blur-md">
             {previewTimeStr && <div className="text-[var(--text-secondary)]">{previewTimeStr}</div>}
             {hoverPreview?.speed && (
-              <div className="flex items-center gap-1 text-cyan-300">
+              <div className="flex items-center gap-1 text-[var(--text-secondary)]">
                 <span className="text-[var(--text-muted)]">⛰</span>
                 <span>{hoverPreview.speed}</span>
               </div>
             )}
             {hoverPreview?.power && (
-              <div className="text-amber-300">{hoverPreview.power}</div>
+              <div className="text-[var(--text-secondary)]">{hoverPreview.power}</div>
             )}
             {hoverPreview?.soc && (
-              <div className="text-emerald-300">{hoverPreview.soc}</div>
+              <div className="text-[var(--text-secondary)]">{hoverPreview.soc}</div>
             )}
             {hoverPreview?.elevation && (
               <div className="text-[var(--text-secondary)]">{hoverPreview.elevation}</div>
@@ -521,7 +521,7 @@ function InteractiveTimelineScrubber({
       <div
         ref={trackRef}
         className={cn(
-          'relative flex h-8 w-full items-center',
+          'touch-target relative flex h-8 w-full items-center md:min-h-0 md:min-w-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] forced-colors:focus-visible:outline-[Highlight]',
           disabled ? 'cursor-default' : 'cursor-pointer touch-none',
         )}
         role="slider"
@@ -542,7 +542,7 @@ function InteractiveTimelineScrubber({
       >
         {/* Background sparkline (decorative, behind track). */}
         {background && (
-          <div className="pointer-events-none absolute inset-x-0 top-1 h-6 overflow-hidden opacity-20">
+          <div className="pointer-events-none absolute inset-x-0 top-1/2 h-6 -translate-y-1/2 overflow-hidden opacity-20">
             {background}
           </div>
         )}
@@ -652,7 +652,7 @@ function TimelineMarkerTick({
         disabled={disabled || !validPosition}
         data-timeline-marker
         className={cn(
-          'touch-target-overlay relative h-3 w-1 border-0 p-0 rounded-sm [outline-style:solid] outline-1 outline-[var(--border-strong)] opacity-80 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-white/40',
+          'touch-target-overlay relative h-3 w-1 border-0 p-0 rounded-sm [outline-style:solid] outline-1 outline-[var(--border-strong)] opacity-80 transition-opacity hover:opacity-100',
           color,
           FORCED_MARKER,
         )}

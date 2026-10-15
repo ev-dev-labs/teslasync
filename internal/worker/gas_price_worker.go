@@ -38,10 +38,12 @@ type GasPriceWorker struct {
 
 	mu             sync.Mutex
 	pollInterval   string
+	ticker         *time.Ticker
 	lastPollTime   time.Time
 	lastPrice      float64 // price in the configured gas unit
 	lastPriceGal   float64 // provider price persisted in backward-compatible gallons
 	lastPriceKWhEq float64 // kWh-equivalent price
+	lastPriceUnit  *string // denomination of lastPrice, not the current settings
 	running        atomic.Bool
 
 	// stopCh is used to signal the ticker loop to stop.
@@ -52,11 +54,12 @@ type GasPriceWorker struct {
 
 // NewGasPriceWorker creates a new gas price polling worker.
 func NewGasPriceWorker(db *database.DB, cfg config.GasPriceConfig, provider external.GasPriceProvider) *GasPriceWorker {
+	interval, _ := gasPricePollInterval(cfg.PollInterval)
 	return &GasPriceWorker{
 		db:           db,
 		cfg:          cfg,
 		provider:     provider,
-		pollInterval: cfg.PollInterval,
+		pollInterval: interval,
 		stopCh:       make(chan struct{}, 1),
 		resumeCh:     make(chan struct{}, 1),
 	}
@@ -71,13 +74,22 @@ func (w *GasPriceWorker) Start(ctx context.Context) {
 		w.running.Store(true)
 	}
 
-	interval := w.tickerDuration()
+	w.mu.Lock()
+	pollInterval, interval := gasPricePollInterval(w.pollInterval)
+	w.pollInterval = pollInterval
 	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
+	w.ticker = ticker
+	w.mu.Unlock()
+	defer func() {
+		w.mu.Lock()
+		ticker.Stop()
+		w.ticker = nil
+		w.mu.Unlock()
+	}()
 
 	log.Info().
 		Bool("enabled", w.cfg.Enabled).
-		Str("poll_interval", w.pollInterval).
+		Str("poll_interval", pollInterval).
 		Dur("ticker_duration", interval).
 		Msg("gas price worker started")
 
@@ -105,7 +117,10 @@ func (w *GasPriceWorker) Start(ctx context.Context) {
 			case <-w.resumeCh:
 				w.running.Store(true)
 				// Reset ticker with current interval
-				ticker.Reset(w.tickerDuration())
+				w.mu.Lock()
+				_, duration := gasPricePollInterval(w.pollInterval)
+				ticker.Reset(duration)
+				w.mu.Unlock()
 				log.Info().Msg("gas price auto-poll resumed")
 			}
 		case <-ticker.C:
@@ -135,6 +150,11 @@ func (w *GasPriceWorker) Poll(ctx context.Context) {
 		log.Error().Err(err).Msg("gas price poll: provider fetch failed")
 		return
 	}
+	if result == nil {
+		span.SetStatus(codes.Error, "provider returned no quote")
+		log.Warn().Msg("gas price poll: provider returned no quote")
+		return
+	}
 
 	pricePerGallon := result.PricePerGallon
 	kwhEqPrice := result.PricePerKWh
@@ -151,12 +171,7 @@ func (w *GasPriceWorker) Poll(ctx context.Context) {
 		return
 	}
 
-	w.mu.Lock()
-	w.lastPollTime = time.Now()
-	w.lastPrice = pricePerUnit
-	w.lastPriceGal = pricePerGallon
-	w.lastPriceKWhEq = kwhEqPrice
-	w.mu.Unlock()
+	w.setPriceSnapshot(time.Now().UTC(), pricePerUnit, pricePerGallon, kwhEqPrice, gasUnit)
 
 	// Persist poll state
 	w.persistState(ctx)
@@ -201,8 +216,7 @@ func (w *GasPriceWorker) recordPrice(
 			COALESCE((SELECT value_text FROM settings WHERE key = 'gas_unit'), 'gallon'),
 			COALESCE((SELECT value_num FROM settings WHERE key = 'gas_efficiency_mpg'), 25)`).Scan(&gasUnit, &efficiencyMPG)
 	if err != nil {
-		gasUnit = "gallon"
-		efficiencyMPG = 25
+		return 0, "", fmt.Errorf("read gas price settings: %w", err)
 	}
 	gasUnit = normalizeGasPriceUnit(gasUnit)
 	pricePerUnit := gasPricePerConfiguredUnit(pricePerGallon, gasUnit)
@@ -250,11 +264,22 @@ func (w *GasPriceWorker) IsRunning() bool {
 	return w.running.Load()
 }
 
-// SetPollInterval updates the poll interval at runtime.
+// SetPollInterval resets the existing ticker before publishing the new interval.
 func (w *GasPriceWorker) SetPollInterval(interval string) {
+	validInterval, duration := gasPricePollInterval(interval)
+	if validInterval != interval {
+		log.Warn().Str("poll_interval", interval).Msg("gas price worker: rejected invalid poll interval")
+		return
+	}
 	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.pollInterval == interval {
+		return
+	}
+	if w.ticker != nil {
+		w.ticker.Reset(duration)
+	}
 	w.pollInterval = interval
-	w.mu.Unlock()
 }
 
 // Status returns the current worker state.
@@ -267,6 +292,7 @@ func (w *GasPriceWorker) Status() GasPriceStatus {
 		LastPollTime:      w.lastPollTime,
 		CurrentPrice:      w.lastPrice,
 		CurrentPriceKWhEq: w.lastPriceKWhEq,
+		CurrentPriceUnit:  w.lastPriceUnit,
 	}
 }
 
@@ -276,26 +302,41 @@ type GasPriceStatus struct {
 	PollInterval      string    `json:"poll_interval"`
 	LastPollTime      time.Time `json:"last_poll_time"`
 	CurrentPrice      float64   `json:"current_price"`
-	CurrentPriceKWhEq float64   `json:"current_price_kwh_eq"`
+	CurrentPriceKWhEq  float64   `json:"current_price_kwh_eq"`
+	// Nil means no quote has been recorded; numeric zero alone is not evidence.
+	CurrentPriceUnit *string `json:"current_price_unit"`
+}
+
+func (w *GasPriceWorker) setPriceSnapshot(at time.Time, price, priceGal, priceKWhEq float64, unit string) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.lastPollTime = at
+	w.lastPrice = price
+	w.lastPriceGal = priceGal
+	w.lastPriceKWhEq = priceKWhEq
+	w.lastPriceUnit = &unit
 }
 
 // tickerDuration converts the poll interval string to a time.Duration.
 func (w *GasPriceWorker) tickerDuration() time.Duration {
 	w.mu.Lock()
-	interval := w.pollInterval
-	w.mu.Unlock()
+	defer w.mu.Unlock()
+	_, duration := gasPricePollInterval(w.pollInterval)
+	return duration
+}
 
+func gasPricePollInterval(interval string) (string, time.Duration) {
 	switch interval {
 	case "daily":
-		return 24 * time.Hour
+		return interval, 24 * time.Hour
 	case "7d":
-		return 7 * 24 * time.Hour
+		return interval, 7 * 24 * time.Hour
 	case "15d":
-		return 15 * 24 * time.Hour
+		return interval, 15 * 24 * time.Hour
 	case "30d":
-		return 30 * 24 * time.Hour
+		return interval, 30 * 24 * time.Hour
 	default:
-		return 7 * 24 * time.Hour
+		return "7d", 7 * 24 * time.Hour
 	}
 }
 
@@ -329,32 +370,28 @@ func (w *GasPriceWorker) restoreState(ctx context.Context) {
 	var interval string
 	var lastPoll time.Time
 	var lastPrice float64
-	var gasUnit string
 
 	err := w.db.Pool.QueryRow(ctx,
 		`SELECT
 			enabled,
 			poll_interval,
 			last_poll_time,
-			last_price,
-			COALESCE((SELECT value_text FROM settings WHERE key = 'gas_unit'), 'gallon')
+			last_price
 		FROM gas_price_poll_state
 		WHERE id = 1`,
-	).Scan(&enabled, &interval, &lastPoll, &lastPrice, &gasUnit)
+	).Scan(&enabled, &interval, &lastPoll, &lastPrice)
 	if err != nil {
 		// Table may not exist yet or no row — use config defaults
 		return
 	}
 
 	w.mu.Lock()
-	w.pollInterval = interval
-	w.lastPollTime = lastPoll
-	w.lastPrice = gasPricePerConfiguredUnit(lastPrice, gasUnit)
-	w.lastPriceGal = lastPrice
-	if lastPrice > 0 {
-		w.lastPriceKWhEq = lastPrice / gallonToKWhFactor
-	}
+	w.pollInterval, _ = gasPricePollInterval(interval)
 	w.mu.Unlock()
+	// Persisted last_price is per gallon, independent of today's settings.
+	if !lastPoll.IsZero() {
+		w.setPriceSnapshot(lastPoll, lastPrice, lastPrice, lastPrice/gallonToKWhFactor, "gallon")
+	}
 
 	w.running.Store(enabled)
 	log.Info().

@@ -6,7 +6,7 @@ import { AlertBanner } from '@/components/feedback';
 
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, DataTable, Icon, Pagination, Text, type Column, type MobileDataTablePresentation } from '@/components/ui';
+import { Badge, DataTable, Icon, Pagination, Text, useTableExpansion, type Column, type MobileDataTablePresentation } from '@/components/ui';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -27,6 +27,8 @@ export default function ChargingForensicsPage() {
   const { formatDateTime } = useDateFormat();
   const { fmtInt } = useNumberFormatting();
   const [pagination, setPagination] = useState({ vehicleId, page: 1 });
+  const { expandedKeys, setExpandedKeys, clear: clearExpansion } = useTableExpansion();
+  useEffect(() => clearExpansion(), [vehicleId, pagination.page, clearExpansion]);
   const page = pagination.vehicleId === vehicleId ? pagination.page : 1;
   if (pagination.vehicleId !== vehicleId) setPagination({ vehicleId, page: 1 });
   const query = useChargingForensics(vehicleId, PAGE_SIZE, (page - 1) * PAGE_SIZE);
@@ -121,14 +123,7 @@ export default function ChargingForensicsPage() {
     },
   ], [t, units, money, formatDateTime]);
 
-  const mobilePresentation = useMemo<MobileDataTablePresentation<ChargingForensicsItem>>(() => ({
-    roles: { session: 'title', vehicle_energy: 'primary', started: 'meta', status: 'badge' },
-    displayValue: (row, key) => {
-      if (key === 'status') return row.status;
-      const value = columns.find((column) => column.key === key)?.render(row);
-      return typeof value === 'string' || typeof value === 'number' ? value : null;
-    },
-    allDetails: (row) => [
+  const recordDetails = useCallback<NonNullable<MobileDataTablePresentation<ChargingForensicsItem>['allDetails']>>((row) => [
       { key: 'ended_at', label: t('charging.detail.ended', 'Ended'), value: formatDateTime(row.ended_at) },
       { key: 'currency', label: t('charging.detail.currency', 'Currency'), value: row.currency },
       ...(row.evidence ?? []).map((evidence, index) => ({
@@ -154,8 +149,30 @@ export default function ChargingForensicsPage() {
             <Text as="li" variant="bodySm" key={index}>{limitation}</Text>)}</ul>
           : t('advancedIntelligence.limitations.empty', 'No additional limitations were returned.'),
       },
-    ],
-  }), [columns, formatDateTime, fmtInt, t]);
+  ], [formatDateTime, fmtInt, t]);
+
+  const renderRecordDetails = useCallback((row: ChargingForensicsItem) => (
+    <dl className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {[...columns.map(column => ({
+        key: column.key, label: column.header, value: column.render(row),
+      })), ...recordDetails(row)].map(field => (
+        <div key={field.key} className="min-w-0 space-y-1 break-words">
+          <Text as="dt" variant="caption">{field.label}</Text>
+          <Text as="dd" variant="body">{field.value ?? '—'}</Text>
+        </div>
+      ))}
+    </dl>
+  ), [columns, recordDetails]);
+
+  const mobilePresentation = useMemo<MobileDataTablePresentation<ChargingForensicsItem>>(() => ({
+    roles: { session: 'title', vehicle_energy: 'primary', started: 'meta', status: 'badge' },
+    displayValue: (row, key) => {
+      if (key === 'status') return row.status;
+      const value = columns.find((column) => column.key === key)?.render(row);
+      return typeof value === 'string' || typeof value === 'number' ? value : null;
+    },
+    allDetails: recordDetails,
+  }), [columns, recordDetails]);
 
   return (
     <PageLayout
@@ -193,6 +210,10 @@ export default function ChargingForensicsPage() {
             keyExtractor={(row) => row.session_id}
             mobileColumns={['session', 'started', 'status']}
             mobilePresentation={mobilePresentation}
+            expandable
+            expandedKeys={expandedKeys}
+            onExpandedChange={setExpandedKeys}
+            renderExpanded={renderRecordDetails}
             rowLabel={(row) => `${t('advancedIntelligence.forensics.session', 'Session')} #${row.session_id}`}
             exportable
             exportFilename="charging-forensics"

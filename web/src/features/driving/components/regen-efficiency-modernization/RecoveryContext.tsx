@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { CHART_COLORS } from '@/components/charts';
 import { MetricBar } from '@/components/data-display';
-import { LayoutCard } from '@/components/layout/layout-reference';
+import { LayoutCard } from '@/components/layout';
 import { MetricLabel, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';

@@ -8,7 +8,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, within, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -43,6 +44,87 @@ vi.mock('react-i18next', () => {
   };
 });
 
+describe('WarrantyCommandPage — mobile table preservation', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(private callback: ResizeObserverCallback) {}
+      observe(target: Element) {
+        this.callback([{ target, contentRect: { width: 375 } } as ResizeObserverEntry], this);
+      }
+      unobserve() {}
+      disconnect() {}
+    });
+    const overview = makeOverview();
+    overview.coverages[0].readiness = [{
+      code: 'receipt', label: 'Service receipt', satisfied: false,
+      detail: 'Full service receipt detail remains available.', severity: 'high',
+    }];
+    mockOverview.mockReturnValue(makeQuery(overview));
+  });
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('exposes every checklist, coverage and claim field in keyboard-reachable details', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    const checklist = within(card('Claim readiness checklist'));
+    const quickView = checklist.getByRole('button', { name: 'Quick view' });
+    quickView.focus();
+    await user.keyboard('{Enter}');
+    let dialog = within(screen.getByRole('dialog'));
+    expect(dialog.getByText('Full service receipt detail remains available.')).toBeInTheDocument();
+    expect(dialog.getByLabelText('No')).toBeInTheDocument();
+    expect(dialog.getByText('High')).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(quickView).toHaveFocus();
+
+    await user.click(within(card('Recorded coverages')).getAllByRole('button', { name: 'Quick view' })[0]);
+    dialog = within(screen.getByRole('dialog'));
+    for (const label of ['Coverage', 'Starts', 'Term', 'Capacity floor', 'Deductible', 'Actions']) {
+      expect(dialog.getByText(label)).toBeInTheDocument();
+    }
+    expect(dialog.getByText(formatPct(70))).toBeInTheDocument();
+    expect(dialog.getByRole('button', { name: 'Claim' })).toBeInTheDocument();
+    expect(dialog.getByRole('button', { name: 'Remove' })).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+
+    await user.click(within(card('Claim ledger')).getByRole('button', { name: 'Quick view' }));
+    dialog = within(screen.getByRole('dialog'));
+    for (const label of ['Claim', 'Status', 'Opened', 'Amount', 'Evidence note']) {
+      expect(dialog.getByText(label)).toBeInTheDocument();
+    }
+    expect(dialog.getByText('Full claim evidence retained.')).toBeInTheDocument();
+    expect(dialog.getByText('$123.45')).toBeInTheDocument();
+  });
+
+  it('retains row order and original IDs for inline claim and confirmed removal actions', async () => {
+    const user = userEvent.setup();
+    const mutate = vi.fn();
+    mockRemove.mockReturnValue(makeMutation({ mutate }));
+    renderPage();
+    const register = within(card('Recorded coverages'));
+    const claims = register.getAllByRole('button', { name: 'Claim' });
+    for (const action of [...claims, ...register.getAllByRole('button', { name: 'Remove' })]) {
+      expect(action).toHaveClass('min-h-11', 'min-w-11');
+    }
+    claims[1].focus();
+    await user.keyboard('{Enter}');
+    fireEvent.change(screen.getByLabelText(/Claim title/), { target: { value: 'Paint claim' } });
+    fireEvent.submit(screen.getByRole('button', { name: 'Record claim' }).closest('form')!);
+    expect(mockClaim().mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ warranty_id: 2, title: 'Paint claim', confirmed: true }),
+      expect.any(Object),
+    );
+    await user.click(register.getAllByRole('button', { name: 'Remove' })[1]);
+    expect(mutate).not.toHaveBeenCalled();
+    const dialog = within(screen.getByRole('dialog'));
+    expect(dialog.getByText(/Paint Guard/)).toBeInTheDocument();
+    await user.click(dialog.getByRole('button', { name: 'Delete' }));
+    expect(mutate).toHaveBeenCalledWith(2);
+  });
+});
+
 vi.mock('@/hooks/useSelectedVehicle', () => ({ useSelectedVehicle: vi.fn() }));
 vi.mock('@/api/hooks/useOwnership', async () => {
   const actual =
@@ -71,6 +153,7 @@ import type { ClaimStatus, Warranty, WarrantyCoverage, WarrantyKind, WarrantyOve
 import { formatDateTime } from '@/lib/dateFormat';
 import * as settingsHook from '@/hooks/useSettings';
 import * as timezoneHook from '@/lib/timezone';
+import { formatPct } from '../formatters';
 
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
 const mockOverview = useWarrantyOverview as unknown as ReturnType<typeof vi.fn>;
@@ -203,6 +286,185 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+});
+
+describe('WarrantyCommandPage — editor scope and completion ownership', () => {
+  const workflows = [
+    { name: 'coverage', hook: mockCreate, field: 'Label', submit: 'Save coverage' },
+    { name: 'claim', hook: mockClaim, field: 'Claim title', submit: 'Record claim' },
+  ];
+
+  function openEditor(name: string) {
+    if (name === 'coverage') {
+      fireEvent.click(screen.getByRole('button', { name: 'Add coverage' }));
+    } else {
+      fireEvent.click(within(card('Recorded coverages')).getAllByRole('button', { name: 'Claim' })[0]);
+    }
+  }
+
+  function changeVehicle(id: number | null) {
+    mockSelected.mockReturnValue({ ...mockSelected(), vehicleId: id });
+    mockWarranties.mockReturnValue(makeQuery({
+      items: id == null ? [] : [makeWarranty({ vehicle_id: id })],
+    }));
+  }
+
+  it.each(workflows)('retains and blocks a $name draft outside its original vehicle, including manual submission', ({ name, hook, field, submit }) => {
+    const view = renderPage();
+    openEditor(name);
+    fireEvent.change(screen.getByLabelText(field), { target: { value: 'Original draft' } });
+    for (const id of [8, null]) {
+      changeVehicle(id);
+      view.rerenderPage();
+      expect(screen.getByLabelText(field)).toHaveValue('Original draft');
+      expect(screen.getByText('Unavailable vehicle 7')).toBeInTheDocument();
+      const save = screen.getByRole('button', { name: submit });
+      expect(save).toBeDisabled();
+      fireEvent.submit(save.closest('form')!);
+      expect(hook().mutate).not.toHaveBeenCalled();
+    }
+    changeVehicle(7);
+    view.rerenderPage();
+    fireEvent.submit(screen.getByRole('button', { name: submit }).closest('form')!);
+    expect(hook().mutate).toHaveBeenCalledWith(
+      expect.objectContaining(name === 'coverage' ? { vehicle_id: 7 } : { warranty_id: 1 }),
+      expect.any(Object),
+    );
+  });
+
+  it.each(workflows)('does not let pending $name work close a draft after a scope round trip', ({ name, hook, field, submit }) => {
+    const mutate = vi.fn();
+    hook.mockReturnValue(makeMutation({ mutate }));
+    const view = renderPage();
+    openEditor(name);
+    fireEvent.change(screen.getByLabelText(field), { target: { value: 'Pending draft' } });
+    fireEvent.submit(screen.getByRole('button', { name: submit }).closest('form')!);
+    const success = mutate.mock.calls[0][1].onSuccess as () => void;
+    hook.mockReturnValue(makeMutation({ mutate, isPending: true }));
+    changeVehicle(8);
+    view.rerenderPage();
+    fireEvent.submit(screen.getByRole('button', { name: submit }).closest('form')!);
+    expect(mutate).toHaveBeenCalledOnce();
+    changeVehicle(7);
+    view.rerenderPage();
+    act(success);
+    expect(screen.getByLabelText(field)).toHaveValue('Pending draft');
+  });
+
+  it.each(workflows)('protects newer $name field edits from a late success', ({ name, hook, field, submit }) => {
+    const mutate = vi.fn();
+    hook.mockReturnValue(makeMutation({ mutate }));
+    renderPage();
+    openEditor(name);
+    fireEvent.submit(screen.getByRole('button', { name: submit }).closest('form')!);
+    fireEvent.change(screen.getByLabelText(field), { target: { value: 'Newer edit' } });
+    act(mutate.mock.calls[0][1].onSuccess);
+    expect(screen.getByLabelText(field)).toHaveValue('Newer edit');
+  });
+
+  it.each(workflows)('protects a reopened $name editor from the previous editor completion', ({ name, hook, field, submit }) => {
+    const mutate = vi.fn();
+    hook.mockReturnValue(makeMutation({ mutate }));
+    renderPage();
+    openEditor(name);
+    const form = screen.getByRole('button', { name: submit }).closest('form')!;
+    fireEvent.submit(form);
+    const success = mutate.mock.calls[0][1].onSuccess as () => void;
+    const cancel = name === 'coverage'
+      ? within(card('Recorded coverages')).getByRole('button', { name: 'Cancel' })
+      : within(form).getByRole('button', { name: 'Cancel' });
+    fireEvent.click(cancel);
+    openEditor(name);
+    act(success);
+    expect(screen.getByLabelText(field)).toBeInTheDocument();
+  });
+
+  it.each(workflows)('retains rejected $name work and closes only the matching successful retry', ({ name, hook, field, submit }) => {
+    const mutate = vi.fn();
+    hook.mockReturnValue(makeMutation({ mutate }));
+    const view = renderPage();
+    openEditor(name);
+    fireEvent.change(screen.getByLabelText(field), { target: { value: 'Retry draft' } });
+    fireEvent.submit(screen.getByRole('button', { name: submit }).closest('form')!);
+    hook.mockReturnValue(makeMutation({ mutate, error: new Error('Save rejected') }));
+    view.rerenderPage();
+    expect(screen.getByText('Save rejected')).toBeInTheDocument();
+    expect(screen.getByLabelText(field)).toHaveValue('Retry draft');
+    hook.mockReturnValue(makeMutation({ mutate }));
+    view.rerenderPage();
+    fireEvent.submit(screen.getByRole('button', { name: submit }).closest('form')!);
+    act(mutate.mock.calls[1][1].onSuccess);
+    expect(screen.queryByLabelText(field)).not.toBeInTheDocument();
+  });
+
+  it('blocks a removed claim target and retains its original identity through reordering', () => {
+    const view = renderPage();
+    fireEvent.click(within(card('Recorded coverages')).getAllByRole('button', { name: 'Claim' })[1]);
+    fireEvent.change(screen.getByLabelText('Claim title'), { target: { value: 'Paint evidence' } });
+    mockWarranties.mockReturnValue(makeQuery({ items: [makeWarranty()] }));
+    view.rerenderPage();
+    const submit = screen.getByRole('button', { name: 'Record claim' });
+    expect(submit).toBeDisabled();
+    fireEvent.submit(submit.closest('form')!);
+    expect(mockClaim().mutate).not.toHaveBeenCalled();
+    mockWarranties.mockReturnValue(makeQuery({
+      items: [makeWarranty({ id: 2, label: 'Renamed coverage' }), makeWarranty()],
+    }));
+    view.rerenderPage();
+    fireEvent.submit(submit.closest('form')!);
+    expect(mockClaim().mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ warranty_id: 2, title: 'Paint evidence' }), expect.any(Object),
+    );
+  });
+
+  it('does not close pending claim evidence when its warranty disappears before success', () => {
+    const mutate = vi.fn();
+    mockClaim.mockReturnValue(makeMutation({ mutate }));
+    const view = renderPage();
+    openEditor('claim');
+    fireEvent.change(screen.getByLabelText('Claim title'), { target: { value: 'Retained evidence' } });
+    fireEvent.submit(screen.getByRole('button', { name: 'Record claim' }).closest('form')!);
+    mockWarranties.mockReturnValue(makeQuery({ items: [] }));
+    view.rerenderPage();
+    act(mutate.mock.calls[0][1].onSuccess);
+    expect(screen.getByLabelText('Claim title')).toHaveValue('Retained evidence');
+    expect(screen.getByRole('button', { name: 'Record claim' })).toBeDisabled();
+  });
+
+  it('requires cancelling the current claim before opening another target and ignores the old completion', () => {
+    const mutate = vi.fn();
+    mockClaim.mockReturnValue(makeMutation({ mutate }));
+    renderPage();
+    openEditor('claim');
+    fireEvent.change(screen.getByLabelText('Claim title'), { target: { value: 'Battery evidence' } });
+    fireEvent.submit(screen.getByRole('button', { name: 'Record claim' }).closest('form')!);
+    const success = mutate.mock.calls[0][1].onSuccess as () => void;
+    const actions = within(card('Recorded coverages')).getAllByRole('button', { name: 'Claim' });
+    expect(actions[1]).toBeDisabled();
+    fireEvent.click(actions[1]);
+    expect(screen.getByLabelText('Claim title')).toHaveValue('Battery evidence');
+    const form = screen.getByRole('button', { name: 'Record claim' }).closest('form')!;
+    fireEvent.click(within(form).getByRole('button', { name: 'Cancel' }));
+    fireEvent.click(actions[1]);
+    expect(screen.getByLabelText('Claim title')).toHaveValue('');
+    fireEvent.change(screen.getByLabelText('Claim title'), { target: { value: 'Paint evidence' } });
+    act(success);
+    expect(screen.getByLabelText('Claim title')).toHaveValue('Paint evidence');
+    fireEvent.submit(screen.getByRole('button', { name: 'Record claim' }).closest('form')!);
+    expect(mutate).toHaveBeenLastCalledWith(
+      expect.objectContaining({ warranty_id: 2, title: 'Paint evidence' }), expect.any(Object),
+    );
+  });
+
+  it('does not delete after vehicle scope changes while confirmation is open', async () => {
+    const view = renderPage();
+    fireEvent.click(removeButton('Battery Shield'));
+    changeVehicle(8);
+    view.rerenderPage();
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }));
+    await act(async () => {});
+    expect(mockRemove().mutate).not.toHaveBeenCalled();
+  });
 });
 
 describe('WarrantyCommandPage — saved date preferences', () => {
@@ -602,6 +864,52 @@ describe('WarrantyCommandPage — restrained shared adoption', () => {
     expect(screen.getByRole('progressbar', { name: 'Distance consumed' })).toHaveAttribute('aria-valuenow', '0');
     expect(overview.coverages[0].time_used_pct).toBe(125);
     expect(overview.coverages[0].distance_used_pct).toBe(-5);
+  });
+
+  it.each([
+    [null, null],
+    [null, -2],
+    [68, null],
+    [0, 0],
+    [68, -2],
+  ])('keeps the battery subsection with retention %s and headroom %s', (retention, headroom) => {
+    const overview = makeOverview();
+    overview.coverages[0].capacity_retention_pct = retention;
+    overview.coverages[0].capacity_headroom_pct = headroom;
+    mockOverview.mockReturnValue(makeQuery(overview));
+    renderPage();
+
+    const burnDown = within(card('Coverage burn-down'));
+    expect(burnDown.getByText('Battery retention vs. warranty floor')).toBeInTheDocument();
+    const expectedRetention = retention == null ? 'Unknown' : formatPct(retention);
+    const expectedHeadroom = headroom == null ? 'Unknown' : formatPct(headroom);
+    expect(burnDown.getByText(`${expectedRetention} · ${expectedHeadroom} headroom`)).toBeInTheDocument();
+    expect(overview.coverages[0].capacity_retention_pct).toBe(retention);
+    expect(overview.coverages[0].capacity_headroom_pct).toBe(headroom);
+  });
+
+  it('localizes unknown battery retention and headroom', () => {
+    translations['common.unknown'] = 'Unbekannt';
+    mockOverview.mockReturnValue(makeQuery(makeOverview()));
+    renderPage();
+
+    expect(within(card('Coverage burn-down')).getByText('Unbekannt · Unbekannt headroom')).toBeInTheDocument();
+  });
+
+  it.each([null, 68])('keeps non-battery capacity metadata conditional on retention %s', (retention) => {
+    const overview = makeOverview();
+    overview.coverages[0].warranty.kind = 'basic';
+    overview.coverages[0].capacity_retention_pct = retention;
+    mockOverview.mockReturnValue(makeQuery(overview));
+    renderPage();
+
+    const label = within(card('Coverage burn-down')).queryByText('Battery retention vs. warranty floor');
+    if (retention == null) {
+      expect(label).not.toBeInTheDocument();
+    } else {
+      expect(label).toBeInTheDocument();
+      expect(within(card('Coverage burn-down')).getByText(`${formatPct(retention)} · Unknown headroom`)).toBeInTheDocument();
+    }
   });
 
   it('keeps unknown usage unknown and signed battery headroom intact', () => {

@@ -26,7 +26,8 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useUrlNumber, useUrlBatch } from '@/hooks/useUrlState';
-import { formatDate } from '@/lib/dateFormat';
+import { ymdInTz } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { useSoftwareUpdatesPage, PAGE_SIZE, type SoftwareUpdate } from '@/api/hooks/useSoftwareUpdatesPage';
 
@@ -39,12 +40,15 @@ import { getUpdateStatus } from '../components/softwareUpdateStatus';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { deriveDataState } from '@/api/dataState';
 import { VehicleSourceContent } from '../components/VehicleSourceContent';
+import { VehicleSourcePause } from '../components/VehicleSourcePause';
 
 /** `YYYY-MM` → short label, e.g. `Mar '25`. */
-function monthLabel(key: string): string {
+function monthLabel(key: string, locale: string): string {
   const [y, m] = key.split('-').map(Number);
   if (!Number.isFinite(y) || !Number.isFinite(m)) return key;
-  return new Date(y, m - 1, 1).toLocaleDateString(undefined, {
+  // The bucket is already a selected-zone calendar month, not an instant.
+  return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString(locale, {
+    timeZone: 'UTC',
     month: 'short',
     year: '2-digit',
   });
@@ -54,21 +58,23 @@ function monthLabel(key: string): string {
 
 export default function SoftwareUpdatesPage() {
   const { fmtInt, locale } = useNumberFormatting();
+  const { formatDate, locale: dateLocale, tz } = useDateFormat();
   const { t } = useTranslation();
   usePageTitle(t('softwareUpdates.title', 'Software updates'));
 
   const { vehicleId, vehicles } = useSelectedVehicle();
   const [page, setPage] = useUrlNumber('page', 1);
   const setUrl = useUrlBatch();
-  const { start, end, presetId, reset: resetRange } = useRangeState({
+  const { start, end, startInstant, endInstantExclusive, presetId, setPreset } = useRangeState({
     persistKey: 'software-updates.range',
     defaultPresetId: 'all',
   });
 
-  const updatesQuery = useSoftwareUpdatesPage(vehicleId, page, start, end);
+  const updatesQuery = useSoftwareUpdatesPage(vehicleId, page, startInstant, endInstantExclusive);
   const { data, isLoading, isError, error, refetch } = updatesQuery;
   const source = softwareSourceState(data, isLoading, isError);
   const historySource = deriveDataState(updatesQuery, { provenance: 'historical' });
+  const initialPaused = vehicleId != null && !source.available && historySource.isRefreshBlocked;
   // Paused refreshes retain the same historical rows; they are not server failures.
   const refreshBlocked = source.available && historySource.isRefreshBlocked;
   const retained = source.retained || refreshBlocked;
@@ -99,8 +105,8 @@ export default function SoftwareUpdatesPage() {
   const lastInstalledAt = useMemo(() => {
     const dates = installedUpdates
       .map((u) => u.installed_at)
-      .filter((d): d is string => Boolean(d))
-      .sort();
+      .filter((d): d is string => typeof d === 'string' && Number.isFinite(Date.parse(d)))
+      .sort((a, b) => Date.parse(a) - Date.parse(b));
     return dates.length > 0 ? dates[dates.length - 1] : null;
   }, [installedUpdates]);
 
@@ -118,15 +124,16 @@ export default function SoftwareUpdatesPage() {
     const buckets = new Map<string, number>();
     for (const u of updates) {
       const iso = u.installed_at ?? u.created_at;
-      const d = new Date(iso);
-      if (Number.isNaN(d.getTime())) continue;
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      if (!iso) continue;
+      const day = ymdInTz(new Date(iso), tz);
+      if (!day) continue;
+      const key = day.slice(0, 7);
       buckets.set(key, (buckets.get(key) ?? 0) + 1);
     }
     return Array.from(buckets.entries())
       .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([month, count]) => ({ month, label: monthLabel(month), count }));
-  }, [updates]);
+      .map(([month, count]) => ({ month, label: monthLabel(month, dateLocale), count }));
+  }, [updates, dateLocale, tz]);
 
   // ── Status breakdown ──
   const statusCounts = useMemo(() => {
@@ -178,12 +185,16 @@ export default function SoftwareUpdatesPage() {
   ];
   const retryContent = isError ? <QueryError error={error} onRetry={handleRetry} /> : undefined;
   const resetAction = presetId !== 'all'
-    ? { label: t('softwareUpdates.resetRangeCta', 'View all time'), onClick: resetRange }
+    ? { label: t('softwareUpdates.resetRangeCta', 'View all time'), onClick: () => setPreset('all') }
     : undefined;
   const unavailableMessage = t('softwareUpdates.source.unavailable', 'Update history is not available. Select a vehicle to load its history.');
   const unavailableContent = <EmptyState message={unavailableMessage}
     action={vehicleId != null ? { label: t('common.refresh', 'Refresh'), onClick: handleRetry } : undefined}
     actionTo={vehicleId == null ? { label: t('nav.manageVehicles', 'Manage vehicles'), to: '/vehicles' } : undefined} />;
+  const pauseContent = (label: string) => (
+    <VehicleSourcePause label={label} retained={false} onRetry={handleRetry}
+      message={t('timeline.source.paused', '{{section}} is paused while the connection is unavailable', { section: label })} />
+  );
 
   return (
     <PageLayout
@@ -207,7 +218,7 @@ export default function SoftwareUpdatesPage() {
             label: t('softwareUpdates.source.period', 'Loaded update history'),
             reason: t('softwareUpdates.source.scope', 'Summary and charts describe this page of up to 50 updates in the selected range, not the complete fleet history.'),
           }}
-          footer={refreshBlocked ? (
+          footer={initialPaused ? pauseContent(t('softwareUpdates.kpi.label', 'Software update summary')) : refreshBlocked ? (
             <VehicleSourceContent source={historySource} enabled={vehicleId != null}
               label={t('softwareUpdates.kpi.label', 'Software update summary')}>
               {null}
@@ -225,13 +236,13 @@ export default function SoftwareUpdatesPage() {
               loading={source.initialLoading}
               error={source.fatalError ? error : undefined}
               onRetry={handleRetry}
-              errorContent={source.retained ? retryContent : refreshBlocked ? (
+              errorContent={initialPaused ? pauseContent(t('softwareUpdates.cadence.title', 'Update cadence')) : source.retained ? retryContent : refreshBlocked ? (
                 <VehicleSourceContent source={historySource} enabled={vehicleId != null}
                   label={t('softwareUpdates.cadence.title', 'Update cadence')}>
                   {null}
                 </VehicleSourceContent>
               ) : undefined}
-              emptyMessage={source.available ? t('softwareUpdates.cadence.empty', 'No update activity in this range') : unavailableMessage}
+              emptyMessage={initialPaused ? t('softwareUpdates.cadence.title', 'Update cadence') : source.available ? t('softwareUpdates.cadence.empty', 'No update activity in this range') : unavailableMessage}
               emptyContent={source.available && resetAction ? <Button variant="outline" onClick={resetAction.onClick}>{resetAction.label}</Button> : undefined}
             />
           ) },
@@ -240,7 +251,9 @@ export default function SoftwareUpdatesPage() {
           <LayoutCard title={t('softwareUpdates.breakdown.title', 'By status')}>
             <VehicleSourceContent source={historySource} enabled={vehicleId != null}
               label={t('softwareUpdates.breakdown.title', 'By status')}>
-            {source.initialLoading ? (
+            {initialPaused ? (
+              pauseContent(t('softwareUpdates.breakdown.title', 'By status'))
+            ) : source.initialLoading ? (
               <Skeleton height={160} />
             ) : source.fatalError ? (
               <QueryError error={error} onRetry={handleRetry} />
@@ -250,11 +263,7 @@ export default function SoftwareUpdatesPage() {
               <EmptyState
                 icon={<ListChecks className="h-8 w-8" />}
                 message={t('softwareUpdates.breakdown.empty', 'No updates to summarize')}
-                action={
-                  presetId !== 'all'
-                    ? { label: t('softwareUpdates.resetRangeCta', 'View all time'), onClick: resetRange }
-                    : undefined
-                }
+                action={resetAction}
               />
             ) : (
               <SoftwareUpdateStatusBreakdown counts={statusCounts} total={totalUpdates} />
@@ -275,7 +284,9 @@ export default function SoftwareUpdatesPage() {
         <LayoutCard title={t('softwareUpdates.timeline.title', 'Update timeline')}>
           <VehicleSourceContent source={historySource} enabled={vehicleId != null}
             label={t('softwareUpdates.timeline.title', 'Update timeline')}>
-          {source.initialLoading ? (
+          {initialPaused ? (
+            pauseContent(t('softwareUpdates.timeline.title', 'Update timeline'))
+          ) : source.initialLoading ? (
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3 3xl:grid-cols-4">
               {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
             </div>
@@ -288,11 +299,7 @@ export default function SoftwareUpdatesPage() {
               icon={<Smartphone className="h-12 w-12" />}
               title={t('softwareUpdates.timeline.emptyTitle', 'No update history')}
               message={t('softwareUpdates.timeline.empty', 'No software update history available for this vehicle yet.')}
-              action={
-                presetId !== 'all'
-                  ? { label: t('softwareUpdates.resetRangeCta', 'View all time'), onClick: resetRange }
-                  : undefined
-              }
+              action={resetAction}
             />
           ) : (
             <>

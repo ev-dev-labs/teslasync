@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import {
   ChartLegend,
   ChartTooltip,
-  CHART_COLORS,
   EmbeddedChart,
   Line,
   LineChart,
@@ -22,6 +21,7 @@ import type {
   SpeedUnitPref,
 } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useChartPalette } from '@/hooks/useChartPalette';
 
 export interface DriveDnaSpeedPowerRow {
   elapsed: number;
@@ -64,6 +64,7 @@ export function DriveDnaSpeedPowerPlot({
 }: DriveDnaSpeedPowerPlotProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  const palette = useChartPalette();
 
   const effectiveAriaLabel =
     ariaLabel ??
@@ -146,7 +147,7 @@ export function DriveDnaSpeedPowerPlot({
                 <ReferenceLine
                   yAxisId="power"
                   y={0}
-                  stroke={CHART_COLORS[4]}
+                  stroke={palette[4]}
                   strokeDasharray="4 4"
                 />
               ) : null}
@@ -156,7 +157,7 @@ export function DriveDnaSpeedPowerPlot({
                   type="linear"
                   dataKey="speed"
                   name={speedName}
-                  stroke={CHART_COLORS[0]}
+                  stroke={palette[0]}
                   strokeWidth={2.5}
                   dot={false}
                   connectNulls={false}
@@ -171,7 +172,7 @@ export function DriveDnaSpeedPowerPlot({
                   type="linear"
                   dataKey="power"
                   name={powerName}
-                  stroke={CHART_COLORS[3]}
+                  stroke={palette[3]}
                   strokeWidth={2}
                   dot={false}
                   connectNulls={false}

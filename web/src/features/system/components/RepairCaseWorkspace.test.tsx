@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import type { RepairCase, RepairQuarantine } from '@/api/hooks/useDataRepair';
 import { ToastProvider } from '@/components/feedback/Toast';
@@ -239,12 +239,15 @@ describe('RepairCaseWorkspace', () => {
     });
 
     expect(screen.getByText('Case #7')).toBeInTheDocument();
-    const warning = await screen.findByTestId('repair-case-refresh-warning');
+    const warning = await screen.findByTestId('stale-refresh-warning');
     expect(warning).toHaveTextContent(
       'Repair cases could not refresh',
     );
-    expect(screen.getByRole('button', { name: /Repair cases could not refresh/i }))
-      .toBe(warning);
+    expect(within(warning).getByRole('button', { name: 'Refresh' })).toBeEnabled();
+    mockRequest.mockResolvedValue({ cases: [repairCase], has_more: false });
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument());
+    expect(screen.getByText('Case #7')).toBeInTheDocument();
   });
 
   it('retains case statistics independently when their background refresh fails', async () => {
@@ -283,9 +286,62 @@ describe('RepairCaseWorkspace', () => {
     });
 
     expect(screen.getByText('Drive #42')).toBeInTheDocument();
-    expect(await screen.findByTestId('repair-quarantine-refresh-warning')).toHaveTextContent(
+    expect(await screen.findByTestId('stale-refresh-warning')).toHaveTextContent(
       'Quarantine records could not refresh',
     );
+  });
+
+  it('does not infer empty cases or zero metrics while initial queries are paused', async () => {
+    onlineManager.setOnline(false);
+    try {
+      const { client } = renderWorkspace();
+      expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+      expect(screen.getByText('The initial query is paused while the network is unavailable; no empty response is inferred.')).toBeInTheDocument();
+      expect(screen.queryByText('No repair cases match these filters.')).not.toBeInTheDocument();
+      expect(screen.queryByText('0 cases on this page')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('repair-case-queue-skeleton')).not.toBeInTheDocument();
+      expect(within(screen.getByRole('region', { name: 'Repair case metrics' })).getAllByText('—')).toHaveLength(4);
+      await act(async () => { onlineManager.setOnline(true); });
+      expect(await screen.findByText('Case #7')).toBeInTheDocument();
+      client.clear();
+    } finally {
+      onlineManager.setOnline(true);
+    }
+  });
+
+  it('shows active initial loading without asserting an empty response', () => {
+    mockRequest.mockImplementation(() => new Promise<never>(() => {}));
+    const { client } = renderWorkspace();
+    expect(screen.getByTestId('repair-case-queue-skeleton')).toBeInTheDocument();
+    expect(screen.getByText('Loading')).toBeInTheDocument();
+    expect(screen.queryByText('No repair cases match these filters.')).not.toBeInTheDocument();
+    client.clear();
+  });
+
+  it('preserves confirmed empty cases through a paused refresh and independent recovery', async () => {
+    mockRequest.mockImplementation((url: string) => Promise.resolve(
+      url.startsWith('/data-repair/cases?')
+        ? { cases: [], has_more: false }
+        : { open: 0, in_review: 0, quarantined: 0, last_scan_at: null },
+    ));
+    const { client } = renderWorkspace();
+    expect(await screen.findByText('No repair cases match these filters.')).toBeInTheDocument();
+    onlineManager.setOnline(false);
+    try {
+      act(() => { void client.invalidateQueries({ queryKey: ['data-repair', 'cases'] }); });
+      await waitFor(() => expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2));
+      for (const warning of screen.getAllByTestId('stale-refresh-warning')) {
+        expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
+      }
+      expect(screen.getByText('0 cases on this page')).toBeInTheDocument();
+      expect(within(screen.getByRole('region', { name: 'Repair case metrics' })).getAllByText('0')).toHaveLength(4);
+      await act(async () => { onlineManager.setOnline(true); });
+      await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument());
+      expect(screen.getByText('0 cases on this page')).toBeInTheDocument();
+      client.clear();
+    } finally {
+      onlineManager.setOnline(true);
+    }
   });
 
   it('reports skipped bulk cases and keeps the selection for operator review', async () => {
@@ -433,6 +489,27 @@ describe('RepairCaseWorkspace dismiss scope', () => {
       }
       return Promise.resolve({});
     });
+  });
+
+  it('labels old-scope rows and metrics and blocks row writes while the new vehicle loads', async () => {
+    const { rerender } = renderScopedWorkspace(3);
+    await screen.findByText('Case #7');
+    mockRequest.mockImplementation(() => new Promise<never>(() => {}));
+
+    rerender(<RepairCaseWorkspace vehicleId={4} canWrite />);
+
+    expect(await screen.findByText(
+      'Retained source: /data-repair/cases?vehicle_id=3&status=open&limit=50',
+    )).toBeInTheDocument();
+    expect(screen.getByText('Retained source: /data-repair/cases/stats?vehicle_id=3'))
+      .toBeInTheDocument();
+    expect(screen.getByText('Case #7')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review case 7' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all rows' }));
+    expect(screen.getByRole('button', { name: 'Begin review' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Dismiss selected' })).toBeDisabled();
+    expect(mockRequest.mock.calls.every(([, options]) => !options.method)).toBe(true);
   });
 
   it('clears a populated dismiss confirmation and cannot submit old cases after a vehicle switch', async () => {

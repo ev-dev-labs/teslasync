@@ -62,6 +62,25 @@ const memoryKeyPairs = new Map<string, { privateKey: CryptoKey; publicKey: Crypt
 let memoryRegistry: SigningKeyRecord[] = [];
 let hydrated = false;
 let capabilityCache: VaultKeyCapability | null = null;
+const listeners = new Set<() => void>();
+
+export function subscribeSigningKeys(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => { listeners.delete(listener); };
+}
+
+export function getSigningKeysSnapshot(): readonly SigningKeyRecord[] {
+  return memoryRegistry;
+}
+
+export function getSigningKeyCapabilitySnapshot(): VaultKeyCapability | null {
+  return capabilityCache;
+}
+
+function publishRegistry(records: SigningKeyRecord[]): void {
+  memoryRegistry = records;
+  for (const listener of listeners) listener();
+}
 
 function newKeyId(): string {
   const bytes = new Uint8Array(9);
@@ -170,7 +189,7 @@ async function hydrateFromIndexedDbIfNeeded(): Promise<void> {
     const registryRows = await idbGetAll<SigningKeyRecord>(db, STORE_KEY_REGISTRY);
     const keyRows = await idbGetAll<StoredKeyPairRow>(db, STORE_SIGNING_KEYS);
     db.close();
-    memoryRegistry = registryRows.sort((a, b) => a.created_at.localeCompare(b.created_at));
+    publishRegistry(registryRows.sort((a, b) => a.created_at.localeCompare(b.created_at)));
     for (const row of keyRows) {
       if (row.key_id.startsWith('__probe__')) continue;
       memoryKeyPairs.set(row.key_id, { privateKey: row.private_key, publicKey: row.public_key });
@@ -247,7 +266,7 @@ export async function generateSigningKey(): Promise<SigningKeyRecord> {
     persisted: false,
   };
   record.persisted = await persistKeyPair(record, pair);
-  memoryRegistry = [...memoryRegistry, record];
+  publishRegistry([...memoryRegistry, record]);
   return record;
 }
 
@@ -286,7 +305,7 @@ async function markRevoked(keyId: string, reason: string): Promise<SigningKeyRec
   if (idx === -1) return null;
   const updated: SigningKeyRecord = { ...memoryRegistry[idx]!, revoked_at: new Date().toISOString(), revoked_reason: reason };
   updated.persisted = await persistRegistryEntry(updated);
-  memoryRegistry = [...memoryRegistry.slice(0, idx), updated, ...memoryRegistry.slice(idx + 1)];
+  publishRegistry([...memoryRegistry.slice(0, idx), updated, ...memoryRegistry.slice(idx + 1)]);
   return updated;
 }
 
@@ -312,6 +331,6 @@ export async function rotateSigningKey(reason = 'rotated'): Promise<SigningKeyRe
   const linked: SigningKeyRecord = { ...next, rotated_from: current.key_id };
   const idx = memoryRegistry.findIndex((k) => k.key_id === next.key_id);
   linked.persisted = await persistRegistryEntry(linked);
-  if (idx !== -1) memoryRegistry = [...memoryRegistry.slice(0, idx), linked, ...memoryRegistry.slice(idx + 1)];
+  if (idx !== -1) publishRegistry([...memoryRegistry.slice(0, idx), linked, ...memoryRegistry.slice(idx + 1)]);
   return linked;
 }

@@ -1,14 +1,13 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { GlassPanel, Badge, Button, Input, Select, Textarea, ConfirmDialog, Caption, Code, HelperText, PanelTitle, SectionTitle, Text, type Column } from '@/components/ui'
+import { GlassPanel, Badge, Button, Input, Select, Textarea, ConfirmDialog, SignalConfigModal, Caption, Code, HelperText, PanelTitle, SectionTitle, Text, type Column } from '@/components/ui'
 import { Skeleton, AlertBanner } from '@/components/feedback'
 import { cn } from '@/lib/cn'
 import { typography } from '@/lib/tokens'
 import { formatDateTime } from '@/lib/dateFormat'
 
 import { getErrorMessage } from '@/lib/errorMessage'
-import SignalConfigModal from '@/components/ui/SignalConfigModal'
 
 import { ToolCard } from './ToolCard'
 import { CopyButton } from '@/components/ui'

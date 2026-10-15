@@ -23,7 +23,7 @@ beforeEach(() => {
 
 /** The value fill is the first child of the track; the zero rule is the second. */
 function fill(container: HTMLElement): HTMLElement {
-  const el = container.querySelector('[role="meter"] > div > div');
+  const el = container.querySelector('[data-bipolar-fill]');
   if (!el) throw new Error('value fill not found');
   return el as HTMLElement;
 }
@@ -105,7 +105,7 @@ describe('BipolarBar — direction (the reason this component exists)', () => {
   });
 
   it('applies the negative colour only below zero', () => {
-    // jsdom normalises hex to rgb() inside the gradient.
+    // jsdom normalises hex to rgb().
     const neg = render(
       <BipolarBar
         value={-10}
@@ -162,21 +162,51 @@ describe('BipolarBar — asymmetric scales', () => {
   });
 });
 
-describe('BipolarBar — clamping', () => {
-  it('caps an over-max value to the positive end', () => {
-    render(<BipolarBar value={99_999} max={1000} min={1000} label="Torque" />);
-    expect(screen.getByRole('meter', { name: 'Torque' })).toHaveAttribute(
-      'aria-valuenow',
-      '1000',
+describe('BipolarBar — raw readings and bounded geometry', () => {
+  it.each([
+    { value: 99_999, display: '99,999.00', left: 400 / 1400 * 100, width: 1000 / 1400 * 100 },
+    { value: -99_999, display: '-99,999.00', left: 0, width: 400 / 1400 * 100 },
+  ])('preserves $value while bounding only the fill', ({ value, display, left, width }) => {
+    const { container } = render(
+      <BipolarBar value={value} max={1000} min={400} label="Torque" unit=" Nm" />,
     );
+    const group = screen.getByRole('group', { name: 'Torque' });
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
+    for (const attribute of ['aria-valuenow', 'aria-valuemin', 'aria-valuemax', 'aria-valuetext']) {
+      expect(group).not.toHaveAttribute(attribute);
+    }
+    expect(group).toHaveAccessibleDescription(
+      `${display} Nm Reading outside displayed scale (-400.00 to 1,000.00 Nm)`,
+    );
+    expect(screen.getByText(display)).toBeInTheDocument();
+    expect(screen.getByText(/Reading outside displayed scale/)).toBeInTheDocument();
+    expect(Number.parseFloat(fill(container).style.left)).toBeCloseTo(left);
+    expect(Number.parseFloat(fill(container).style.width)).toBeCloseTo(width);
   });
 
-  it('caps an under-min value to the negative end', () => {
-    render(<BipolarBar value={-99_999} max={1000} min={400} label="Torque" />);
-    expect(screen.getByRole('meter', { name: 'Torque' })).toHaveAttribute(
-      'aria-valuenow',
-      '-400',
-    );
+  it.each([-400, 1000])('retains an exact scale endpoint %s as a raw meter', (value) => {
+    render(<BipolarBar value={value} max={1000} min={400} label="Torque" />);
+    expect(screen.getByRole('meter', { name: 'Torque' })).toHaveAttribute('aria-valuenow', `${value}`);
+    expect(screen.queryByText(/Reading outside displayed scale/)).not.toBeInTheDocument();
+  });
+
+  it('removes stale scale context when the reading returns to range or becomes missing', () => {
+    const { rerender } = render(<BipolarBar value={-800} max={1000} min={400} label="Torque" />);
+    expect(screen.getByRole('group')).toHaveAccessibleDescription(/-800.*outside displayed scale/);
+    rerender(<BipolarBar value={-200} max={1000} min={400} label="Torque" />);
+    expect(screen.getByRole('meter')).toHaveAttribute('aria-valuenow', '-200');
+    expect(screen.queryByText(/Reading outside displayed scale/)).not.toBeInTheDocument();
+    rerender(<BipolarBar value={null} max={1000} min={400} label="Torque" />);
+    expect(screen.getByRole('group')).not.toHaveAttribute('aria-describedby');
+    expect(screen.queryByText(/Reading outside displayed scale/)).not.toBeInTheDocument();
+  });
+
+  it('uses theme tokens for default fills without a decorative gradient', () => {
+    const { container, rerender } = render(<BipolarBar value={50} max={100} label="Torque" />);
+    expect(fill(container).style.backgroundColor).toBe('var(--semantic-info)');
+    expect(fill(container).style.backgroundImage).toBe('');
+    rerender(<BipolarBar value={-50} max={100} label="Torque" />);
+    expect(fill(container).style.backgroundColor).toBe('var(--text-secondary)');
   });
 });
 

@@ -131,6 +131,19 @@ export function ChargeInterruptionStats({
     <ChargingSummaryBrief
       id="charge-interruption-summary"
       title={t('chargeInterruption.kpis', 'Charge interruption metrics')}
+      description={t(
+        'chargeInterruption.modernization.modelDescription',
+        'Modeled interruption probabilities from indirect session evidence, not measured failures or a hardware diagnosis.',
+      )}
+      sourceStatus={retained && summary != null
+        ? t('chargeInterruption.modernization.modelRetained', 'Retained interruption analysis')
+        : loading
+          ? t('chargeInterruption.modernization.modelLoading', 'Loading interruption evidence')
+          : summary == null
+            ? missingReason
+            : summary.evaluableSessions === 0
+              ? noEvidence
+              : t('chargeInterruption.modernization.modelAvailable', 'Interruption estimate based on evaluable sessions')}
       metrics={metrics}
       loading={loading}
       retained={retained}

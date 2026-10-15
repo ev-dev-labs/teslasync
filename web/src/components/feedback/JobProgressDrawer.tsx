@@ -13,7 +13,7 @@ import {
   Package,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { Button } from '@/components/ui';
+import { Button, BUTTON_BASE, BUTTON_VARIANTS } from '@/components/ui/Button';
 
 import { formatRelative } from '@/lib/dateFormat';
 import {
@@ -22,6 +22,11 @@ import {
   type ExportJobSummary,
 } from '@/api/hooks/useExports';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDataState } from '@/hooks/useDataState';
+import { DataStateNotice } from './DataStateNotice';
+import { ErrorDisplay } from './ErrorDisplay';
+import { Skeleton } from './Skeleton';
+import { StaleRefreshWarning } from './StaleRefreshWarning';
 
 /**
  * Floating, minimizable widget that surfaces in-flight + recently-finished
@@ -72,13 +77,13 @@ function statusIcon(status: ExportJobSummary['status']): React.ReactNode {
     case 'queued':
       return <Clock className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />;
     case 'processing':
-      return <Loader2 className="h-3.5 w-3.5 text-cyan-300 animate-spin" aria-hidden="true" />;
+      return <Loader2 className="h-3.5 w-3.5 text-[var(--semantic-info)] animate-spin" aria-hidden="true" />;
     case 'ready':
-      return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-300" aria-hidden="true" />;
+      return <CheckCircle2 className="h-3.5 w-3.5 text-[var(--semantic-success)]" aria-hidden="true" />;
     case 'failed':
-      return <XCircle className="h-3.5 w-3.5 text-rose-300" aria-hidden="true" />;
+      return <XCircle className="h-3.5 w-3.5 text-[var(--semantic-danger)]" aria-hidden="true" />;
     case 'expired':
-      return <AlertTriangle className="h-3.5 w-3.5 text-amber-300" aria-hidden="true" />;
+      return <AlertTriangle className="h-3.5 w-3.5 text-[var(--semantic-warning)]" aria-hidden="true" />;
     default:
       return <Clock className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />;
   }
@@ -94,8 +99,9 @@ interface JobProgressDrawerProps {
 
 export function JobProgressDrawer({ maxRecent = 5, className }: JobProgressDrawerProps) {
   const { t } = useTranslation();
-  const { data: jobs, isLoading } = useExportJobs();
-  const allJobs = jobs ?? [];
+  const jobsQuery = useExportJobs();
+  const jobsState = useDataState(jobsQuery);
+  const allJobs = jobsState.data ?? [];
 
   const [state, setState] = useState<DrawerState>(() => readPersistedState());
 
@@ -122,7 +128,7 @@ export function JobProgressDrawer({ maxRecent = 5, className }: JobProgressDrawe
   // Hide the drawer entirely when there's nothing to show and the user has
   // dismissed it. The dashboard page can still surface jobs without us.
   if (state === 'dismissed' && activeJobs.length === 0) return null;
-  if (allJobs.length === 0 && !isLoading) return null;
+  if (jobsState.status === 'ok' && allJobs.length === 0) return null;
 
   const positionClass = className ?? 'fixed bottom-4 right-4 z-40';
 
@@ -135,29 +141,24 @@ export function JobProgressDrawer({ maxRecent = 5, className }: JobProgressDrawe
     const activeCount = activeJobs.length;
     return (
       <div className={positionClass}>
-        <button
+        <Button
           type="button"
+          variant="secondary"
+          size="sm"
+          wrapLabel
           onClick={() => persist('open')}
           aria-label={t('export.jobDrawer.expand', 'Show export jobs ({{count}} active)', { count: activeCount })}
-          className={cn(
-            'inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-medium shadow-lg',
-            'border border-white/[0.08] bg-[var(--surface-elevated)]',
-            'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/[0.06]',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
-            'transition-colors',
+          className="min-h-11 min-w-11 md:min-h-9 md:min-w-0 max-w-[calc(100vw-2rem)] rounded-full"
+          icon={activeCount > 0 ? (
+            <Loader2 className="h-3.5 w-3.5 shrink-0 text-[var(--semantic-info)] animate-spin" aria-hidden="true" />
+          ) : (
+            <Package className="h-3.5 w-3.5 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
           )}
         >
-          {activeCount > 0 ? (
-            <Loader2 className="h-3.5 w-3.5 text-cyan-300 animate-spin" aria-hidden="true" />
-          ) : (
-            <Package className="h-3.5 w-3.5 text-emerald-300" aria-hidden="true" />
-          )}
-          <span>
-            {activeCount > 0
-              ? t('export.jobDrawer.activeCount', '{{count}} export running', { count: activeCount })
-              : t('export.jobDrawer.recentLabel', 'Exports')}
-          </span>
-        </button>
+          {activeCount > 0
+            ? t('export.jobDrawer.activeCount', '{{count}} export running', { count: activeCount })
+            : t('export.jobDrawer.recentLabel', 'Exports')}
+        </Button>
       </div>
     );
   }
@@ -166,21 +167,21 @@ export function JobProgressDrawer({ maxRecent = 5, className }: JobProgressDrawe
     <div
       className={cn(
         positionClass,
-        'w-[360px] max-w-[calc(100vw-2rem)] rounded-xl border border-white/[0.08]',
-        'bg-[var(--surface-elevated)] shadow-2xl',
+        'w-[360px] max-w-[calc(100vw-2rem)] rounded-xl border border-[var(--border-default)]',
+        'bg-[var(--surface-elevated)] shadow-lg',
       )}
       role="region"
       aria-label={t('export.jobDrawer.label', 'Export job progress')}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-white/[0.06]">
-        <div className="flex items-center gap-2 min-w-0">
-          <Package className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-          <span className="text-xs font-semibold text-[var(--text-primary)] truncate">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 border-b border-[var(--border-subtle)]">
+        <div className="flex flex-1 flex-wrap items-center gap-2 min-w-0">
+          <Package className="h-4 w-4 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
+          <span className="text-xs font-semibold text-[var(--text-primary)] break-words">
             {t('export.jobDrawer.title', 'Export jobs')}
           </span>
           {activeJobs.length > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-2xs font-medium bg-cyan-400/10 text-cyan-300">
+            <span className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-xs font-medium bg-[var(--surface-2)] text-[var(--text-secondary)]">
               {t('export.jobDrawer.activePill', '{{count}} active', { count: activeJobs.length })}
             </span>
           )}
@@ -189,7 +190,7 @@ export function JobProgressDrawer({ maxRecent = 5, className }: JobProgressDrawe
           <Button
             variant="ghost"
             size="sm"
-            className="!h-6 !w-6 !p-0 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+            className="h-11 w-11 min-h-11 min-w-11 md:h-6 md:w-6 md:min-h-6 md:min-w-6 p-0 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             icon={<Minus className="h-3.5 w-3.5" />}
             onClick={() => persist('minimized')}
             aria-label={t('export.jobDrawer.minimize', 'Minimize')}
@@ -197,7 +198,7 @@ export function JobProgressDrawer({ maxRecent = 5, className }: JobProgressDrawe
           <Button
             variant="ghost"
             size="sm"
-            className="!h-6 !w-6 !p-0 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+            className="h-11 w-11 min-h-11 min-w-11 md:h-6 md:w-6 md:min-h-6 md:min-w-6 p-0 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             icon={<X className="h-3.5 w-3.5" />}
             onClick={() => persist('dismissed')}
             aria-label={t('export.jobDrawer.close', 'Dismiss')}
@@ -207,10 +208,27 @@ export function JobProgressDrawer({ maxRecent = 5, className }: JobProgressDrawe
 
       {/* Body */}
       <div className="max-h-[60vh] overflow-y-auto p-2 space-y-2">
-        {isLoading && allJobs.length === 0 ? (
-          <p className="px-2 py-4 text-center text-xs text-[var(--text-muted)]">
+        <StaleRefreshWarning state={jobsState} label={t('export.jobDrawer.title', 'Export jobs')} />
+        {jobsState.fatalError ? (
+          <ErrorDisplay error={jobsState.fatalError} compact onRetry={jobsState.retry ?? undefined} />
+        ) : !jobsState.hasData && jobsState.isRefreshBlocked ? (
+          <DataStateNotice
+            state="stale"
+            title={t('dataSources.status.paused', 'Refresh paused')}
+            role="status"
+          >
+            {jobsState.retry && (
+              <Button variant="ghost" size="sm" className="min-h-11 md:min-h-9" onClick={jobsState.retry}>
+                {t('common.refresh', 'Refresh')}
+              </Button>
+            )}
+          </DataStateNotice>
+        ) : !jobsState.hasData ? (
+          <div role="status" className="space-y-2 px-2 py-4 text-center text-xs text-[var(--text-muted)]">
             {t('export.jobDrawer.loading', 'Loading export jobs…')}
-          </p>
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
         ) : (
           <>
             <DrawerSection
@@ -265,34 +283,34 @@ function JobRow({ job }: { job: ExportJobSummary }) {
   return (
     <li
       className={cn(
-        'flex items-center gap-2 rounded-md px-2 py-1.5 text-xs',
-        'border border-transparent hover:border-white/[0.06] hover:bg-white/[0.03]',
-        bucket === 'active' && 'bg-white/[0.02]',
+        'flex flex-wrap items-center gap-2 rounded-md px-2 py-1.5 text-xs',
+        'border border-transparent hover:border-[var(--border-subtle)] hover:bg-[var(--surface-2)]',
+        bucket === 'active' && 'bg-[var(--surface-1)]',
       )}
     >
       <div className="shrink-0">{statusIcon(job.status)}</div>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="font-medium text-[var(--text-primary)] truncate">
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
+          <span className="min-w-0 font-medium text-[var(--text-primary)] break-words">
             {typeLabel}
           </span>
           <span className="text-2xs tracking-wider text-[var(--text-muted)]">
             {job.format === 'csv' ? 'CSV' : job.format === 'json' ? 'JSON' : job.format}
           </span>
         </div>
-        <div className="text-2xs text-[var(--text-muted)] truncate">
+        <div className="text-xs text-[var(--text-muted)] break-words">
           {bucket === 'active'
             ? t('export.jobDrawer.statusLine', '{{status}} · started {{relative}}', {
                 status: prettyStatus(job.status, t),
                 relative: formatRelative(job.created_at),
               })
             : t('export.jobDrawer.completedLine', '{{size}} · {{relative}}', {
-                size: formatBytes(job.file_size, { zeroAsEmpty: true }) || '—',
+                size: formatBytes(job.file_size, { zeroAsEmpty: false }),
                 relative: formatRelative(job.completed_at ?? job.created_at),
               })}
         </div>
         {job.error_message && (
-          <p className="mt-0.5 text-2xs text-rose-300 truncate" title={job.error_message}>
+          <p className="mt-0.5 text-xs text-[var(--semantic-danger)] break-words" title={job.error_message}>
             {job.error_message}
           </p>
         )}
@@ -306,9 +324,9 @@ function JobRow({ job }: { job: ExportJobSummary }) {
             type: typeLabel,
           })}
           className={cn(
-            'shrink-0 inline-flex items-center gap-1 rounded px-2 py-1 text-2xs font-medium',
-            'border border-white/[0.08] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/[0.06]',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
+            BUTTON_BASE,
+            BUTTON_VARIANTS.outline,
+            'shrink-0 min-h-11 min-w-11 md:min-h-0 md:min-w-0 max-w-full whitespace-normal break-words px-2 py-1 text-xs',
           )}
         >
           <Download className="h-3 w-3" aria-hidden="true" />

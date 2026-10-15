@@ -7,7 +7,7 @@ import {
   type RepairQuarantine,
   type RepairQuarantineFilters,
 } from '@/api/hooks/useDataRepair';
-import { ListSkeleton, QueryError } from '@/components/feedback';
+import { ListSkeleton, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
 import {
   Badge,
@@ -21,7 +21,6 @@ import {
   Textarea,
 } from '@/components/ui';
 import { useRepairQuarantineColumns } from './useRepairQuarantineColumns';
-import { RepairRefreshWarning } from './RepairRefreshWarning';
 
 interface RepairQuarantinePanelProps {
   vehicleId?: number;
@@ -51,17 +50,22 @@ export function RepairQuarantinePanel({
     scope.current = { vehicleId, revision: scope.current.revision + 1 };
   }
   const query = useRepairQuarantines(filters);
-  const state = useDataState(query, { provenance: 'historical' });
+  const responseIsCurrent = filters.vehicle_id === vehicleId && query.canWriteCurrentScope;
+  const state = useDataState(
+    query,
+    { provenance: 'historical' },
+  );
   const restore = useRestoreQuarantine();
   const inFlight = useRef(false);
-  const current = useRef({ canWrite, restoreTarget, restoreReason, pending: restore.isPending });
-  current.current = { canWrite, restoreTarget, restoreReason, pending: restore.isPending };
+  const writesAllowed = canWrite && responseIsCurrent;
+  const current = useRef({ canWrite: writesAllowed, restoreTarget, restoreReason, pending: restore.isPending });
+  current.current = { canWrite: writesAllowed, restoreTarget, restoreReason, pending: restore.isPending };
   const targetIsCurrent = restoreTarget?.vehicleId === vehicleId
     && restoreTarget?.revision === scope.current.revision;
-  const restoreDisabled = !canWrite || !targetIsCurrent || restore.isPending;
-  const records = query.data?.quarantines ?? [];
+  const restoreDisabled = !writesAllowed || !targetIsCurrent || restore.isPending;
+  const records = state.data?.quarantines ?? [];
   const hasData = state.hasData;
-  const busy = query.isFetching && !query.isLoading;
+  const busy = state.isRefreshing;
   const statusOptions = useMemo(() => [
     { value: '', label: t('dataRepair.quarantine.all', 'All records') },
     { value: 'false', label: t('dataRepair.quarantine.active', 'Awaiting restore') },
@@ -75,7 +79,7 @@ export function RepairQuarantinePanel({
     setRestoreReason('');
   }, [vehicleId]);
 
-  const columns = useRepairQuarantineColumns(canWrite, writeBlockReason, (quarantine) => {
+  const columns = useRepairQuarantineColumns(writesAllowed, writeBlockReason, (quarantine) => {
     if (!current.current.canWrite || current.current.pending || inFlight.current
       || filters.vehicle_id !== scope.current.vehicleId
       || (scope.current.vehicleId != null && quarantine.vehicle_id !== scope.current.vehicleId)
@@ -85,6 +89,7 @@ export function RepairQuarantinePanel({
   });
 
   const moveNext = () => {
+    if (!responseIsCurrent || query.isFetching) return;
     const cursor = query.data?.next_cursor;
     if (!cursor) return;
     setHistory((current) => [
@@ -145,34 +150,48 @@ export function RepairQuarantinePanel({
                 restored: value === '' ? undefined : value === 'true',
               });
               setHistory([]);
+              setRestoreTarget(null);
+              setRestoreReason('');
             }}
           />
         </div>
 
+        {query.isPreviousScope ? (
+          <Text as="p" variant="bodySm" role="status" className="mb-3 break-words">
+            {t('operations.sourceStatus.stale', 'Retained source')}: {query.sourceScope}
+          </Text>
+        ) : null}
         {state.fatalError ? (
           <QueryError
             error={state.fatalError}
             resourceName={t('dataRepair.quarantine.resourceName', 'Quarantine records')}
             onRetry={() => query.refetch()}
           />
-        ) : query.isLoading && !hasData ? (
-          <ListSkeleton
-            rows={6}
-            label={t('dataRepair.quarantine.loading', 'Loading quarantine ledger…')}
-            testId="repair-quarantine-skeleton"
-          />
-        ) : (
-          <>
-            {state.refreshError ? (
-              <RepairRefreshWarning
-                message={t(
-                  'dataRepair.quarantine.refreshFailed',
-                  'Quarantine records could not refresh. Showing the most recently loaded ledger.',
-                )}
-                onRetry={() => { void query.refetch(); }}
-                testId="repair-quarantine-refresh-warning"
+        ) : !hasData ? (
+          <div role="status">
+            <Text as="p" variant="bodySm" className="mb-3">
+              {state.isRefreshBlocked
+                ? t('shareCard.states.paused', 'The initial query is paused while the network is unavailable; no empty response is inferred.')
+                : t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}
+            </Text>
+            {query.isFetching || query.isLoading ? (
+              <ListSkeleton
+                rows={6}
+                label={t('dataRepair.quarantine.loading', 'Loading quarantine ledger…')}
+                testId="repair-quarantine-skeleton"
               />
             ) : null}
+          </div>
+        ) : (
+          <>
+            <StaleRefreshWarning
+              state={state}
+              label={t('dataRepair.quarantine.resourceName', 'Quarantine records')}
+              message={state.refreshError ? t(
+                'dataRepair.quarantine.refreshFailed',
+                'Quarantine records could not refresh. Showing the most recently loaded ledger.',
+              ) : undefined}
+            />
             <DataTable
               tableId="data-repair:quarantine"
               enableValueFilters={false}
@@ -191,7 +210,9 @@ export function RepairQuarantinePanel({
                   ))}
                 </dl>
               )}
-              emptyMessage={t('dataRepair.quarantine.empty', 'No quarantine records match this filter.')}
+              emptyMessage={query.isPreviousScope
+                ? t('operations.sourceStatus.stale', 'Retained source')
+                : t('dataRepair.quarantine.empty', 'No quarantine records match this filter.')}
               maxHeight={620}
               stickyHeader
             />
@@ -201,7 +222,7 @@ export function RepairQuarantinePanel({
                 size="sm"
                 icon={<ArrowLeft className="h-4 w-4" aria-hidden="true" />}
                 onClick={movePrevious}
-                disabled={history.length === 0 || query.isLoading || busy}
+                disabled={history.length === 0 || query.isLoading || busy || !responseIsCurrent}
               >
                 {t('pagination.previous', 'Previous')}
               </Button>
@@ -213,7 +234,7 @@ export function RepairQuarantinePanel({
                 size="sm"
                 icon={<ArrowRight className="h-4 w-4" aria-hidden="true" />}
                 onClick={moveNext}
-                disabled={!query.data?.has_more || query.isLoading || busy}
+                disabled={!query.data?.has_more || query.isLoading || busy || !responseIsCurrent}
               >
                 {t('pagination.next', 'Next')}
               </Button>

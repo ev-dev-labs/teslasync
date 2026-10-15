@@ -1,18 +1,34 @@
 import { DataStateNotice, StaleRefreshWarning } from '@/components/feedback';
 import { Button } from '@/components/ui';
 import type { DriveScorePageModel } from '../../hooks/useDriveScorePage';
+import { summarizeScoreAdmission } from './scoreDomain';
 
 interface ScoreSourceNoticesProps {
   model: Pick<DriveScorePageModel,
     't' | 'drivesSource' | 'apiScoreState' | 'vehicleIdStr' | 'hasDrives'
-    | 'scoreQuery' | 'drivesIsError' | 'hasScore' | 'drivesLoading' | 'unscoredDriveCount'>;
+    | 'scoreQuery' | 'drivesIsError' | 'hasScore' | 'drivesLoading' | 'filteredDrives' | 'fmtInt'>;
 }
 
 export function ScoreSourceNotices({ model }: ScoreSourceNoticesProps) {
   const {
     t, drivesSource, apiScoreState, vehicleIdStr, hasDrives,
-    scoreQuery, drivesIsError, hasScore, drivesLoading, unscoredDriveCount,
+    scoreQuery, drivesIsError, hasScore, drivesLoading, filteredDrives, fmtInt,
   } = model;
+  const { excluded, counts } = summarizeScoreAdmission(filteredDrives);
+  const reasons = [
+    counts.missing > 0 ? t('driveScore.partial.missing', {
+      count: counts.missing, displayCount: fmtInt(counts.missing),
+      defaultValue: '{{displayCount}} with missing inputs.',
+    }) : '',
+    counts.invalid > 0 ? t('driveScore.partial.invalid', {
+      count: counts.invalid, displayCount: fmtInt(counts.invalid),
+      defaultValue: '{{displayCount}} with invalid inputs.',
+    }) : '',
+    counts.shortDistance > 0 ? t('driveScore.partial.shortDistance', {
+      count: counts.shortDistance, displayCount: fmtInt(counts.shortDistance),
+      defaultValue: '{{displayCount}} below the 1,000 m minimum distance.',
+    }) : '',
+  ].filter(Boolean).join(' ');
 
   return (
     <>
@@ -48,20 +64,15 @@ export function ScoreSourceNotices({ model }: ScoreSourceNoticesProps) {
           title={t('driveScore.historyUnavailable', 'Drive history is unavailable; the server drive score remains visible')}
         />
       )}
-      {!drivesLoading && unscoredDriveCount > 0 && (
+      {!drivesLoading && excluded > 0 && (
         <DataStateNotice
           state="partial"
           title={t('driveScore.partial.title', 'Score evidence is partial')}
-          message={unscoredDriveCount === 1
-            ? t(
-                'driveScore.partial.message_one',
-                '1 drive is excluded because measured energy, average power, or maximum speed is unavailable.',
-              )
-            : t(
-                'driveScore.partial.message_other',
-                '{{count}} drives are excluded because measured energy, average power, or maximum speed is unavailable.',
-                { count: unscoredDriveCount },
-              )}
+          message={`${t('driveScore.partial.message', {
+            count: excluded,
+            displayCount: fmtInt(excluded),
+            defaultValue: '{{displayCount}} drives are excluded from the local heuristic. Reason counts may overlap.',
+          })} ${reasons}`}
         />
       )}
     </>

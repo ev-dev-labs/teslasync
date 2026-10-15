@@ -39,7 +39,7 @@ export function ScoreCategoryChart({ data }: { data: ScoreCategoryDatum[] }) {
           <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={24}>
             {data.map((entry) => <Cell key={entry.name} fill={entry.fill} />)}
           </Bar>
-          <Bar dataKey="max" radius={[0, 6, 6, 0]} barSize={24} fill="#1e293b" opacity={0.3} />
+          <Bar dataKey="max" radius={[0, 6, 6, 0]} barSize={24} fill={chartTokens.gridStroke} opacity={0.3} />
         </BarChart>
       </ResponsiveContainer>
     </ChartCard>

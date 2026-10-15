@@ -7,6 +7,7 @@ import { PageLayout, type CardGridItem } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { useDataState } from '@/hooks/useDataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 
@@ -37,13 +38,17 @@ export default function CabinThermalPage() {
   usePageTitle(t('cabinThermal.title', 'Cabin thermal model'));
 
   const { vehicleId } = useSelectedVehicle();
+  const { startInstant, endInstantExclusive } = useRangeState();
   const {
     unitPrefs,
     formatTemperature,
     formatDuration,
   } = useUnits();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : '';
-  const climateQuery = useClimateHistory(vehicleIdStr);
+  const climateQuery = useClimateHistory(vehicleIdStr, {
+    start: startInstant,
+    end: endInstantExclusive,
+  });
   const climateState = useDataState(climateQuery, { provenance: 'historical' });
   const samples = useMemo(
     () => (vehicleId != null ? climateState.data ?? [] : []),

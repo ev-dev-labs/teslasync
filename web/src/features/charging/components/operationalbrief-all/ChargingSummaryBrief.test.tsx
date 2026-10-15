@@ -7,6 +7,8 @@ import { Button } from '@/components/ui';
 import type { MetricPreferences } from '@/lib/metric-reference';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { ChargingSummaryBrief } from './ChargingSummaryBrief';
+import { ChargeInterruptionStats } from '../charge-interruption-modernization/ChargeInterruptionStats';
+import { analyzeChargeInterruptions, type ChargeInterruptionSummary } from '../../lib/chargeInterruption';
 
 vi.mock('@/hooks/useUnits', () => ({ useUnits: () => ({
   unitPrefs: { distance: 'km', speed: 'km/h', temperature: '°C', pressure: 'kPa',
@@ -42,6 +44,47 @@ function metric(container: HTMLElement, key: string) {
 }
 
 describe('charging summaries use the real compact OperationalBrief and numeric bridge', () => {
+  it('passes interruption model copy and prior-only status through the brief without hiding evidence', () => {
+    const summary = analyzeChargeInterruptions([]);
+    const { container } = render(<ChargeInterruptionStats summary={summary}
+      loading={false} retained={false} error={null} onRetry={vi.fn()} />, { wrapper });
+    expect(screen.getByText(
+      'Modeled interruption probabilities from indirect session evidence, not measured failures or a hardware diagnosis.',
+    )).toBeInTheDocument();
+    expect(screen.getAllByText(
+      'No evaluable sessions; this is the model prior, not an evidence-based estimate.',
+    ).length).toBeGreaterThan(0);
+    expect(screen.queryByText('Source measurements available')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(metric(container, 'charge-interruption-overall-risk')).toHaveTextContent('50');
+    expect(metric(container, 'charge-interruption-evaluable-sessions')).toHaveTextContent('0');
+    expect(screen.getByText('Indirect evidence, not a hardware diagnosis')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getAllByText(
+      'Selected vehicle · up to 1,000 returned sessions. Coverage and time bounds are not reported; this model does not use the workspace date range.',
+    ).length).toBeGreaterThan(0);
+  });
+  it('preserves populated interruption values and distinguishes retained, loading and unavailable analysis', () => {
+    const summary: ChargeInterruptionSummary = {
+      ...analyzeChargeInterruptions([]),
+      totalSessions: 8, evaluableSessions: 6, suspectedSessions: 2, overallPosteriorMean: 0.25,
+    };
+    const props = { summary, loading: false, retained: false, error: null, onRetry: vi.fn() };
+    const { container, rerender } = render(<ChargeInterruptionStats {...props} />, { wrapper });
+    expect(screen.getByText('Interruption estimate based on evaluable sessions')).toBeInTheDocument();
+    expect(metric(container, 'charge-interruption-overall-risk')).toHaveTextContent('25');
+    expect(metric(container, 'charge-interruption-suspected')).toHaveTextContent('2');
+    expect(metric(container, 'charge-interruption-loaded-sessions')).toHaveTextContent('8');
+    expect(metric(container, 'charge-interruption-evaluable-sessions')).toHaveTextContent('6');
+    rerender(<ChargeInterruptionStats {...props} loading retained />);
+    expect(screen.getByText('Retained interruption analysis')).toBeInTheDocument();
+    expect(metric(container, 'charge-interruption-overall-risk')).toHaveTextContent('25');
+    rerender(<ChargeInterruptionStats {...props} summary={undefined} loading />);
+    expect(screen.getByText('Loading interruption evidence')).toBeInTheDocument();
+    rerender(<ChargeInterruptionStats {...props} summary={undefined} unavailableReason="Source paused" />);
+    expect(screen.getAllByText('Source paused').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Interruption estimate based on evaluable sessions')).not.toBeInTheDocument();
+  });
   it('retains raw SI operands independently of the saved display preference', () => {
     const original = JSON.stringify(metrics);
     const { result } = renderHook(() => useOperationalMetrics(metrics, preferences), { wrapper });

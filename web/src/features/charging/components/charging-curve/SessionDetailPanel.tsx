@@ -18,12 +18,15 @@ interface SessionDetailPanelProps {
  * A `null`/non-finite SOC is shown as the universal "—" placeholder rather
  * than a misleading "0%" (0 is a valid charge level, not "unknown").
  */
-function fmtSoc(pct: number | null | undefined): string {
-  return typeof pct === 'number' && Number.isFinite(pct) ? `${pct}%` : '—';
+function fmtSoc(
+  pct: number | null | undefined,
+  fmtPercent: (value: unknown) => string,
+): string {
+  return typeof pct === 'number' && Number.isFinite(pct) ? fmtPercent(pct) : '—';
 }
 
 export default function SessionDetailPanel({ session }: SessionDetailPanelProps) {
-  const { fmtWithUnit } = useNumberFormatting();
+  const { fmtWithUnit, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
   const headingId = useId();
@@ -34,7 +37,7 @@ export default function SessionDetailPanel({ session }: SessionDetailPanelProps)
       { label: t('charging.curve.col.charger', 'Charger Type'), value: getChargerLabel(session) },
       {
         label: t('charging.curve.socRange', 'SOC Range'),
-        value: `${fmtSoc(session.start_soc_pct)} → ${fmtSoc(session.end_soc_pct)}`,
+        value: `${fmtSoc(session.start_soc_pct, fmtPercent)} → ${fmtSoc(session.end_soc_pct, fmtPercent)}`,
       },
       {
         label: t('charging.curve.energyAdded', 'Energy Added'),
@@ -70,7 +73,7 @@ export default function SessionDetailPanel({ session }: SessionDetailPanelProps)
       rows.push({ label: t('charging.curve.location', 'Location'), value: session.start_place });
     }
     return rows;
-  }, [t, session, formatCurrency, fmtWithUnit]);
+  }, [t, session, formatCurrency, fmtWithUnit, fmtPercent]);
 
   return (
     <GlassPanel className="p-4 sm:p-5" role="region" aria-labelledby={headingId}>

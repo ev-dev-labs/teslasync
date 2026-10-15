@@ -1,12 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createInstance } from 'i18next';
+import { I18nextProvider } from 'react-i18next';
 import { MemoryRouter } from 'react-router-dom';
 import { resolve } from 'node:path';
 import postcss from 'postcss';
 import tailwindcss from 'tailwindcss';
 import loadConfig from 'tailwindcss/loadConfig';
 import '@/i18n';
+import english from '@/i18n/en.json';
 import { Button } from '@/components/ui/Button';
 import { MetricSwitcherChart, resolveYAxisProps } from './MetricSwitcherChart';
 
@@ -41,6 +44,47 @@ describe('resolveYAxisProps', () => {
 });
 
 describe('MetricSwitcherChart native trend controls', () => {
+  it('translates the complete selector label with title interpolation and stable metric keys', async () => {
+    const i18n = createInstance();
+    await i18n.init({
+      lng: 'fr',
+      fallbackLng: 'en',
+      resources: {
+        en: { translation: { chart: english.chart } },
+        fr: { translation: { chart: { a11y: { metricSelector: 'Mesure pour {{title}}' } } } },
+      },
+      interpolation: { escapeValue: false },
+    });
+    const onMetricChange = vi.fn();
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <I18nextProvider i18n={i18n}>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter>
+            <MetricSwitcherChart
+              title="Tendances de recharge"
+              ariaLabel="Tendances de recharge"
+              series={{
+                energy: [{ date: '2026-10-12', value: 2200 }],
+                cost: [{ date: '2026-10-12', value: 4.5 }],
+              }}
+              metrics={[{ key: 'energy', label: 'Énergie' }, { key: 'cost', label: 'Coût' }]}
+              activeMetric="energy"
+              onMetricChange={onMetricChange}
+              emptyMessage="Aucune recharge"
+            />
+          </MemoryRouter>
+        </QueryClientProvider>
+      </I18nextProvider>,
+    );
+    const tabs = within(screen.getByRole('tablist', { name: 'Mesure pour Tendances de recharge' }));
+    expect(tabs.getByRole('tab', { name: 'Énergie' })).toHaveAttribute('aria-selected', 'true');
+    fireEvent.click(tabs.getByRole('tab', { name: 'Coût' }));
+    expect(onMetricChange).toHaveBeenCalledExactlyOnceWith('cost');
+    expect(screen.getByRole('table')).toHaveTextContent('2200');
+    expect(screen.queryByRole('tablist', { name: 'Tendances de recharge metric' })).toBeNull();
+  });
+
       it('bounds the five metric trend allocation and reflows caller actions below md', async () => {
         const onMetricChange = vi.fn();
         const onCompare = vi.fn();

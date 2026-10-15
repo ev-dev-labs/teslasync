@@ -46,6 +46,7 @@ vi.mock('@/components/charts', () => ({
 }));
 
 import { VehicleDetailCharts } from './VehicleDetailCharts';
+import { VehicleBatteryChart } from './VehicleBatteryChart';
 
 const syntheticState: VehicleState = {
   vehicle_id: 1, state: 'online', latitude: 0, longitude: 0, speed: 0, power: 0,
@@ -74,6 +75,44 @@ beforeEach(() => { fixtures.distance = 'km'; fixtures.hideDistance = false });
 afterEach(() => vi.unstubAllGlobals());
 
 describe('production vehicle charts through shared layout', () => {
+  it.each([null, undefined, NaN, Infinity, -Infinity, -1, 101, '42', ''])(
+    'keeps both battery rows and the unavailable gauge shell for %s', battery_level => {
+      render(<VehicleBatteryChart state={Object.assign({}, syntheticState, { battery_level })} />);
+      const rows = JSON.parse(screen.getByTestId('battery-bars').getAttribute('data-series') ?? '[]');
+      expect(rows).toEqual([{ name: 'Current', value: null }, { name: 'Remaining', value: null }]);
+      expect(screen.getByTestId('battery-gauge')).not.toHaveAttribute('data-value');
+      const brief = screen.getByTestId('vehicle-battery-readouts');
+      expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(2);
+      expect(brief.querySelector('[data-operational-metric="percent"]'))
+        .toHaveAttribute('data-value-state', battery_level == null ? 'missing' : 'invalid');
+      expect(screen.getByLabelText('Battery current and remaining levels bar chart')).toBeInTheDocument();
+    },
+  );
+
+  it.each([0, 42.25, 100])('preserves measured battery %s and its exact complementary row', battery_level => {
+    render(<VehicleBatteryChart state={{ ...syntheticState, battery_level }} />);
+    const rows = JSON.parse(screen.getByTestId('battery-bars').getAttribute('data-series') ?? '[]');
+    expect(rows.map((row: { value: number }) => row.value)).toEqual([battery_level, 100 - battery_level]);
+    expect(screen.getByTestId('battery-gauge')).toHaveAttribute('data-value', String(battery_level));
+    expect(screen.getByText(`${battery_level.toFixed(2)}%`)).toBeInTheDocument();
+  });
+
+  it.each([0, -1250, 1250, -1250.5, 1250.5])('preserves valid signed and fractional range %s in the retained readout', rated_range => {
+    render(<VehicleBatteryChart state={{ ...syntheticState, rated_range }} />);
+    const range = screen.getByTestId('vehicle-battery-readouts').querySelector('[data-operational-metric="distance"]');
+    expect(range).toHaveAttribute('data-value-state', 'value');
+    expect(range).toHaveTextContent(`${(rated_range / 1000).toFixed(2)} km`);
+  });
+
+  it.each([null, undefined, NaN, Infinity, -Infinity, '1250', ''])('keeps invalid or missing range %s distinct from zero', rated_range => {
+    render(<VehicleBatteryChart state={Object.assign({}, syntheticState, { rated_range })} />);
+    const range = screen.getByTestId('vehicle-battery-readouts').querySelector('[data-operational-metric="distance"]');
+    expect(range).toHaveAttribute('data-value-state', rated_range == null ? 'missing' : 'invalid');
+    expect(range).not.toHaveTextContent('0.00 km');
+    expect(screen.getByTestId('battery-bars')).toBeInTheDocument();
+    expect(screen.getByTestId('battery-gauge')).toHaveAttribute('data-value', '42');
+  });
+
   it('keeps drive evidence when the independent live-state source fails', () => {
     render(<MemoryRouter><VehicleDetailCharts state={undefined} drives={syntheticDrives}
       stateQuery={{ error: new Error('Fixture state failed'), isError: true }}
@@ -95,13 +134,13 @@ describe('production vehicle charts through shared layout', () => {
       drivesQuery={{ data: syntheticDrives, isSuccess: true }} />);
     const rows = JSON.parse(screen.getByTestId('drive-areas').getAttribute('data-series') ?? '[]') as Array<{ distance: number; duration: number }>;
     expect(rows.map(row => row.distance)).toEqual([
-      Math.round(convertDistanceFromSI(40_000, unit)), Math.round(convertDistanceFromSI(80_000, unit)),
+      convertDistanceFromSI(40_000, unit), convertDistanceFromSI(80_000, unit),
     ]);
     expect(rows.map(row => row.duration)).toEqual([30, 60]);
     const battery = JSON.parse(screen.getByTestId('battery-bars').getAttribute('data-series') ?? '[]') as Array<{ value: number }>;
     expect(battery.map(row => row.value)).toEqual([42, 58]);
     expect(screen.getByTestId('battery-gauge')).toHaveAttribute('data-value', '42');
-    expect(screen.getByText('42%')).toBeInTheDocument();
+    expect(screen.getByText('42.00%')).toBeInTheDocument();
     const order = screen.getByTestId('battery-gauge').compareDocumentPosition(screen.getByTestId('battery-bars'));
     expect(order & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
   });

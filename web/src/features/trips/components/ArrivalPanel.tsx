@@ -6,7 +6,7 @@ import { Badge, MetricValue, Text } from '@/components/ui';
 import { LayoutCard, SourceContent } from '@/components/layout';
 import { ListSkeleton } from '@/components/feedback';
 import { JourneyEvidenceList } from './continuation-mobility-trips-watch/JourneyEvidenceList';
-import { formatTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { safeArray } from '@/lib/safeArray';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -44,6 +44,7 @@ function verdictVariant(verdict: ChecklistStatus) {
  * tick and on every check-in.
  */
 export function ArrivalPanel({ session }: { session: JourneySession }) {
+  const { formatTime } = useDateFormat();
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const units = useUnits();

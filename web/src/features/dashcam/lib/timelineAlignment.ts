@@ -1,3 +1,5 @@
+import i18n from 'i18next';
+import { fmtInt, fmtNumber, fmtScientificNumber } from '@/lib/numberFormat';
 import { RECONSTRUCTION, SIGNAL_NAME_HINTS } from './constants';
 
 /** Minimal shape of a telemetry sample this module needs (matches `SignalPoint` from `@/types/telemetry`). */
@@ -70,8 +72,8 @@ export function toReconstructionMarkers(result: ReconstructionResult): Reconstru
   if (span <= 0) return [];
   const normalize = (seconds: number) => Math.min(1, Math.max(0, (seconds - reconstructionWindow.startSeconds) / span));
   const markers: ReconstructionMarker[] = [
-    { at: normalize(clipWindow.startSeconds), kind: 'start', label: 'Clip start' },
-    { at: normalize(clipWindow.endSeconds), kind: 'stop', label: 'Clip end' },
+    { at: normalize(clipWindow.startSeconds), kind: 'start', label: i18n.t('dashcam.reconstruction.clipStart', 'Clip start') },
+    { at: normalize(clipWindow.endSeconds), kind: 'stop', label: i18n.t('dashcam.reconstruction.clipEnd', 'Clip end') },
   ];
   for (const evt of incidentSequence) {
     markers.push({ at: normalize(evt.atSeconds), kind: 'event', label: evt.description });
@@ -120,6 +122,31 @@ function hintForSignal(signalName: string): 'hard_brake' | 'hard_accel' | 'sharp
     if (lower.includes(keyword)) return kind;
   }
   return null;
+}
+
+function describeSpike(signal: string, hint: ReturnType<typeof hintForSignal>, delta: number, z: number, at: number): string {
+  const direction = delta < 0
+    ? i18n.t('dashcam.reconstruction.generated.decrease', 'decrease')
+    : i18n.t('dashcam.reconstruction.generated.increase', 'increase');
+  const values = {
+    signal, direction,
+    delta: fmtScientificNumber(delta, 2),
+    z: fmtScientificNumber(z, 1),
+    at: fmtScientificNumber(at, 1),
+    interpolation: { escapeValue: false },
+  };
+  if (!hint) {
+    return i18n.t('dashcam.reconstruction.generated.spike',
+      '"{{signal}}" statistical spike: {{direction}} of {{delta}} (z≈{{z}}) at t={{at}}s', values);
+  }
+  const labels = {
+    hard_brake: i18n.t('dashcam.reconstruction.generated.hardBrake', 'hard brake'),
+    hard_accel: i18n.t('dashcam.reconstruction.generated.hardAccel', 'hard accel'),
+    sharp_turn: i18n.t('dashcam.reconstruction.generated.sharpTurn', 'sharp turn'),
+  };
+  return i18n.t('dashcam.reconstruction.generated.hintedSpike',
+    '"{{signal}}" suggests a {{hint}}: largest {{direction}} in window (z≈{{z}}) at t={{at}}s',
+    { ...values, hint: labels[hint] });
 }
 
 /**
@@ -172,13 +199,30 @@ export function alignSignalHistoryToClip(params: {
     const coverage = classifyCoverage(measuredPoints.length, largestGap, windowSeconds);
     if (coverage === 'none') {
       gapNotes.push(points.length > 0
-        ? `No usable telemetry values found for "${input.signal}" in the reconstruction window.`
-        : `No telemetry samples found for "${input.signal}" in the reconstruction window.`);
+        ? i18n.t('dashcam.reconstruction.generated.noValues',
+          'No usable telemetry values found for "{{signal}}" in the reconstruction window.',
+          { signal: input.signal, interpolation: { escapeValue: false } })
+        : i18n.t('dashcam.reconstruction.generated.noSamples',
+          'No telemetry samples found for "{{signal}}" in the reconstruction window.',
+          { signal: input.signal, interpolation: { escapeValue: false } }));
     } else if (coverage === 'sparse') {
-      gapNotes.push(`Only ${measuredPoints.length} sample(s) for "${input.signal}" — too few to plot a reliable trend.`);
+      gapNotes.push(i18n.t('dashcam.reconstruction.generated.sparse', {
+        count: measuredPoints.length,
+        defaultValue_one: 'Only {{samples}} sample for "{{signal}}" — too few to plot a reliable trend.',
+        defaultValue_other: 'Only {{samples}} samples for "{{signal}}" — too few to plot a reliable trend.',
+        samples: fmtInt(measuredPoints.length),
+        signal: input.signal,
+        interpolation: { escapeValue: false },
+      }));
     } else if (coverage === 'partial') {
       gapNotes.push(
-        `Largest data gap for "${input.signal}" is ${largestGap.toFixed(1)}s (${Math.round((largestGap / windowSeconds) * 100)}% of the window).`,
+        i18n.t('dashcam.reconstruction.generated.gap',
+          'Largest data gap for "{{signal}}" is {{gap}}s ({{percent}}% of the window).',
+          {
+            signal: input.signal, gap: fmtNumber(largestGap),
+            percent: fmtInt(Math.round((largestGap / windowSeconds) * 100)),
+            interpolation: { escapeValue: false },
+          }),
       );
     }
 
@@ -196,16 +240,13 @@ export function alignSignalHistoryToClip(params: {
         if (z >= RECONSTRUCTION.spikeZScore) {
           const at = numericPoints[i + 1].atSeconds;
           const kind: IncidentEventKind = hint ?? 'signal_spike';
-          const direction = delta < 0 ? 'decrease' : 'increase';
           incidentSequence.push({
             id: nextEventId(),
             atSeconds: at,
             kind,
             signal: input.signal,
             zScore: z,
-            description: hint
-              ? `"${input.signal}" suggests a ${hint.replace('_', ' ')}: largest ${direction} in window (z≈${z.toFixed(1)}) at t=${at.toFixed(1)}s`
-              : `"${input.signal}" statistical spike: ${direction} of ${delta.toFixed(2)} (z≈${z.toFixed(1)}) at t=${at.toFixed(1)}s`,
+            description: describeSpike(input.signal, hint, delta, z, at),
           });
         }
       });
@@ -223,7 +264,12 @@ export function alignSignalHistoryToClip(params: {
           kind: 'state_change',
           signal: input.signal,
           zScore: 0,
-          description: `"${input.signal}" changed to ${String(curr)} at t=${points[i].atSeconds.toFixed(1)}s`,
+          description: i18n.t('dashcam.reconstruction.generated.stateChange',
+            '"{{signal}}" changed to {{value}} at t={{at}}s',
+            {
+              signal: input.signal, value: String(curr), at: fmtScientificNumber(points[i].atSeconds, 1),
+              interpolation: { escapeValue: false },
+            }),
         });
       }
     }
@@ -235,13 +281,14 @@ export function alignSignalHistoryToClip(params: {
   let overallQuality: CoverageQuality = 'none';
   if (coverages.length > 0) {
     if (coverages.every((c) => c === 'none')) overallQuality = 'none';
-    else if (coverages.some((c) => c === 'partial' || c === 'sparse')) overallQuality = 'partial';
+    else if (coverages.some((c) => c !== 'good')) overallQuality = 'partial';
     else overallQuality = 'good';
   }
 
   const qualityNotes = series.flatMap((s) => s.gapNotes);
   if (series.length === 0) {
-    qualityNotes.push('No telemetry signals were selected for this reconstruction.');
+    qualityNotes.push(i18n.t('dashcam.reconstruction.generated.noSelection',
+      'No telemetry signals were selected for this reconstruction.'));
   }
 
   return {

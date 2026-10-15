@@ -29,6 +29,15 @@ import type { ReactElement, ReactNode } from 'react';
 import { ChartTimeRangeProvider } from '@/components/charts';
 import { TirePressureSection } from './TirePressureSection';
 import type { ChartDataPoint, DriveStats } from './types';
+import { chartTokens } from '@/lib/tokens';
+
+vi.mock('@/components/charts', async () => ({
+  ...await vi.importActual<typeof import('@/components/charts')>('@/components/charts'),
+  ResponsiveContainer: ({ children }: { children: ReactNode }) => <>{children}</>,
+  LineChart: ({ children }: { children: ReactNode }) => <>{children}</>,
+  Line: ({ dataKey, stroke }: { dataKey: string; stroke: string }) =>
+    <span data-testid={`pressure-${dataKey}`} data-stroke={stroke} />,
+}));
 
 // U+2013 EN DASH separates min–max; U+2014 EM DASH is the "no reading" marker.
 const EN_DASH = '\u2013';
@@ -151,6 +160,14 @@ function renderSection(
 }
 
 describe('TirePressureSection', () => {
+  it('uses distinct shared wheel identities rather than a danger color for a normal rear-right reading', () => {
+    renderSection(fullPressure, driveStats({ hasTirePressure: true }));
+    for (const [key, index] of Object.entries({ tireFl: 0, tireFr: 1, tireRl: 2, tireRr: 4 })) {
+      expect(screen.getByTestId(`pressure-${key}`)).toHaveAttribute('data-stroke', chartTokens.series[index]);
+    }
+    expect(screen.getByTestId('pressure-tireRr')).not.toHaveAttribute('data-stroke', chartTokens.series[3]);
+    expect(screen.getByText(`3.10${EN_DASH}3.40 bar`)).toBeInTheDocument();
+  });
   it('suppresses image export according to the same pressure flag as the chart body', () => {
     const { container, unmount } = renderSection(fullPressure, driveStats({ hasTirePressure: false }));
     expect(container.querySelector('[data-chart-state]')).toHaveAttribute('data-chart-state', 'empty');

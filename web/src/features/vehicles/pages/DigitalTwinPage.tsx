@@ -13,7 +13,7 @@ import {
   deriveTrustedVehicleStatus, resolveVehicleStateFreshness,
 } from '@/api/hooks/useVehicles';
 import { PageLayout, Section } from '@/components/layout';
-import { Badge, GlassPanel, Icon, PanelTitle, Text } from '@/components/ui';
+import { Badge, Button, GlassPanel, Icon, PanelTitle, Text } from '@/components/ui';
 import { OperationalBrief, StatusBadge } from '@/components/data-display';
 import type { StatMetric } from '@/components/data-display/stat-reference/types';
 import { DataSourceNotice, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
@@ -141,11 +141,11 @@ export default function DigitalTwinPage() {
     ? t('timeMachine.banner.title', 'Viewing data as of {{when}}', { when: asOf })
     : latestLabel;
   const sourceObservation = [
-    { label: t('digitalTwin.securityTitle', 'Security & status'), state: securityState,
+    { label: t('digitalTwin.securityTitle', 'Security & status'), state: securityState, query: securityQ,
       scope: latestLabel, hasReading: securityData !== null, loading: securityQ.isLoading && securityQ.isFetching, timestamp: securityData?.ts },
-    { label: stateTitle, state: stateState,
+    { label: stateTitle, state: stateState, query: stateQ,
       scope: stateScope, hasReading: vehicleState !== null, loading: stateQ.isLoading && stateQ.isFetching, timestamp: null },
-    { label: t('common.charging', 'Charging'), state: chargingState,
+    { label: t('common.charging', 'Charging'), state: chargingState, query: chargingQ,
       scope: latestLabel, hasReading: chargingData !== null, loading: chargingQ.isLoading && chargingQ.isFetching, timestamp: chargingData?.ts },
   ];
   const temporalScope = sourceObservation.map((source) => `${source.label}: ${source.scope}`).join(' · ');
@@ -264,10 +264,13 @@ export default function DigitalTwinPage() {
     (query) => query.isLoading && query.isFetching && query.fetchStatus !== 'paused',
   );
   const combinedError = anyLiveData ? undefined : (securityState.fatalError ?? stateState.fatalError ?? chargingState.fatalError);
-  const refetchAll = () => {
-    void securityQ.refetch();
-    void stateQ.refetch();
-    void chargingQ.refetch();
+  const retryUnavailable = () => {
+    sourceObservation.forEach(({ query, state }) => {
+      if (query.isError || state.isRefreshBlocked
+        || (query.data === undefined && !query.isSuccess && !query.isFetching)) {
+        void query.refetch();
+      }
+    });
   };
 
   const freshnessQueries = vehicleId > 0 ? [securityQ, stateQ, chargingQ] : undefined;
@@ -346,6 +349,11 @@ export default function DigitalTwinPage() {
         </GlassPanel>
       ) : (
         <div className="space-y-6">
+          <DataSourceNotice sources={[
+            { id: 'security', label: t('digitalTwin.securityTitle', 'Security & status'), query: securityQ },
+            { id: 'state', label: stateTitle, query: stateQ },
+            { id: 'charging', label: t('common.charging', 'Charging'), query: chargingQ },
+          ]} />
           <StaleRefreshWarning state={securityState} label={t('digitalTwin.securityTitle', 'Security & status')} />
           <StaleRefreshWarning state={stateState} label={stateTitle} />
           <StaleRefreshWarning state={chargingState} label={t('common.charging', 'Charging')} />
@@ -411,7 +419,7 @@ export default function DigitalTwinPage() {
                     <span>{historical ? t('digitalTwin.brief.title', 'Physical-state summary') : stateTitle}</span>
                   </PanelTitle>
                   <div className="space-y-4">
-                    <StatusBadge status={badgeStatus} />
+                    <StatusBadge status={badgeStatus} label={statusText ?? undefined} />
                     <div className="space-y-2" data-testid="twin-source-observations">
                       {sourceObservation.map((source, index) => (
                         <Text as="p" variant="caption" key={source.label}>
@@ -443,6 +451,19 @@ export default function DigitalTwinPage() {
                               ? t('digitalTwin.brief.timestamp', 'Signal timestamp: {{time}}', { time: formatTime(source.timestamp) })
                               : t('digitalTwin.brief.timestampUnknown', 'Signal timestamp unknown')}
                           {index === 1 && !historical && streamFreshness === 'stale' ? <> · {t('freshness.stale', 'Stale')}</> : null}
+                          {!source.hasReading && source.query.data === undefined
+                            && !source.query.isSuccess && !source.query.isError
+                            && !source.state.isRefreshBlocked && !source.query.isFetching ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="min-h-11"
+                                aria-label={`${t('dataSources.retry', 'Retry unavailable sources')}: ${source.label}`}
+                                onClick={() => { void source.query.refetch(); }}
+                              >
+                                {t('common.retry', 'Retry')}
+                              </Button>
+                            ) : null}
                         </Text>
                       ))}
                       <Text as="p" variant="caption">
@@ -503,8 +524,8 @@ export default function DigitalTwinPage() {
                   isEmpty={!anyLiveData}
                   emptyIcon={<Icon icon={Info} size="xl" aria-hidden />}
                   emptyMessage={t('digitalTwin.noSecurityData', 'No live status available')}
-                  onRetry={refetchAll}
-                  footer={<StatusBadge status={badgeStatus} />}
+                  onRetry={retryUnavailable}
+                  footer={<StatusBadge status={badgeStatus} label={statusText ?? undefined} />}
                 />
                 <TwinDetailPanel
                   title={t('digitalTwin.lightsTitle', 'Lights & signals')}

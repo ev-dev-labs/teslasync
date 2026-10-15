@@ -1,16 +1,19 @@
 import { Pencil, Plus, Trash2, Users } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { Button, DataTable, StatusPill, type Column } from '@/components/ui';
 import { LayoutCard } from '@/components/layout';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import type { FleetAssignment } from '@/api/hooks/useFleetOps';
+import type { DataState } from '@/api/dataState';
 
 interface AssignmentRosterProps {
   items: FleetAssignment[];
   enableValueFilters?: boolean;
   loading: boolean;
+  source?: DataState<unknown>;
+  pendingContent?: ReactNode;
   error: unknown;
   onRetry: () => void;
   onAdd: () => void;
@@ -24,6 +27,8 @@ export function AssignmentRoster({
   items,
   enableValueFilters = false,
   loading,
+  source,
+  pendingContent,
   error,
   onRetry,
   onAdd,
@@ -33,6 +38,7 @@ export function AssignmentRoster({
   actionsDisabledReason,
 }: AssignmentRosterProps) {
   const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat();
   const columns = useMemo<Column<FleetAssignment>[]>(() => [
     {
       key: 'driver',
@@ -64,7 +70,7 @@ export function AssignmentRoster({
       filterValueLabel: (_value, item) => item.ends_at
         ? formatDateTime(item.ends_at) : t('fleetOps.assignments.ongoing', 'Ongoing'),
       render: (item) => item.ends_at ? formatDateTime(item.ends_at) : (
-        <StatusPill color="bg-emerald-500">
+        <StatusPill color="bg-[var(--semantic-success)]">
           {t('fleetOps.assignments.ongoing', 'Ongoing')}
         </StatusPill>
       ),
@@ -91,7 +97,7 @@ export function AssignmentRoster({
             type="button"
             variant="ghost"
             size="sm"
-            className="min-h-11 min-w-11 px-0 text-rose-300"
+            className="min-h-11 min-w-11 px-0 text-[var(--semantic-danger)]"
             aria-label={t('fleetOps.assignments.delete', 'Delete assignment for {{name}}', { name: item.driver_display_name })}
             disabled={actionsDisabled}
             title={actionsDisabledReason}
@@ -102,13 +108,14 @@ export function AssignmentRoster({
         </div>
       ),
     },
-  ], [actionsDisabled, actionsDisabledReason, onDelete, onEdit, t]);
+  ], [actionsDisabled, actionsDisabledReason, onDelete, onEdit, formatDateTime, t]);
 
   return (
     <LayoutCard title={t('fleetOps.assignments.title', 'Assignment roster')} actions={
         <Button
           type="button"
           size="sm"
+          className="min-h-11"
           icon={<Plus className="h-4 w-4" />}
           onClick={onAdd}
           disabled={actionsDisabled}
@@ -117,9 +124,11 @@ export function AssignmentRoster({
           {t('fleetOps.assignments.add', 'Add assignment')}
         </Button>
       }>
-      {loading ? <Skeleton lines={5} /> : error ? (
+      {source?.hasData !== true && error ? (
         <QueryError error={error} onRetry={onRetry} resourceName={t('fleetOps.assignments.resource', 'Assignments')} />
-      ) : items.length === 0 ? (
+      ) : source && !source.hasData ? (
+        pendingContent
+      ) : !source && loading ? <Skeleton lines={5} /> : items.length === 0 ? (
         <EmptyState
           icon={<Users className="h-8 w-8" />}
           message={t('fleetOps.assignments.empty', 'No driver assignments are scheduled.')}
@@ -130,11 +139,26 @@ export function AssignmentRoster({
       ) : (
         <DataTable
           tableId="fleet-ops:assignments"
+          caption={t('fleetOps.assignments.title', 'Assignment roster')}
           columns={columns}
           data={items}
           enableValueFilters={enableValueFilters}
           keyExtractor={(item) => item.id}
           mobileColumns={['driver', 'vehicle', 'actions']}
+          mobilePresentation={{
+            roles: { driver: 'title', vehicle: 'primary', starts_at: 'meta', ends_at: 'meta' },
+            displayValue: (item, key) => {
+              switch (key) {
+                case 'driver': return item.driver_display_name;
+                case 'vehicle': return item.vehicle_display_name;
+                case 'starts_at': return formatDateTime(item.starts_at);
+                case 'ends_at': return item.ends_at ? formatDateTime(item.ends_at)
+                  : t('fleetOps.assignments.ongoing', 'Ongoing');
+                default: return null;
+              }
+            },
+            inlineActions: (item) => columns.find((column) => column.key === 'actions')?.render(item),
+          }}
           pagination
         />
       )}

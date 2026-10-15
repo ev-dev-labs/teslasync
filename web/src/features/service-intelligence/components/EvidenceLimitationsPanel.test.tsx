@@ -2,6 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { EvidenceLimitationsPanel } from './EvidenceLimitationsPanel';
 import type { ServiceIntelligenceEvidenceBundle } from '@/api/hooks/useServiceIntelligence';
+import { BUTTON_BASE } from '@/components/ui';
 
 describe('Service evidence remains domain-owned', () => {
   it('retains interpretation limits and the supplied disclaimer even when the evidence inventory is genuinely empty', () => {
@@ -38,6 +39,16 @@ describe('Service evidence remains domain-owned', () => {
     expect(rows[1]).toHaveTextContent('Second supplied evidence');
     expect(within(rows[0]).getByRole('link', { name: 'Open evidence source' })).toHaveAttribute('href', 'https://example.org/first');
     expect(within(rows[1]).getByRole('link', { name: 'Open evidence source' })).toHaveAttribute('href', 'https://example.org/second');
+    expect(screen.getByText('2 items')).toHaveClass('text-[var(--text-secondary)]');
+    for (const row of rows.slice(0, 2)) {
+      const link = within(row).getByRole('link', { name: 'Open evidence source' });
+      expect(link).toHaveClass(...BUTTON_BASE.split(' '));
+      expect(link).toHaveClass('text-[var(--text-primary)]');
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    }
+    expect(screen.getByRole('heading', { name: 'Interpretation limits' }).querySelector('svg'))
+      .toHaveClass('text-[var(--text-secondary)]');
     expect(screen.getByText(evidence.limitations[0])).toBeInTheDocument();
     expect(screen.getByText(evidence.limitations[1])).toBeInTheDocument();
     expect(screen.getByText(evidence.disclaimer)).toBeInTheDocument();

@@ -1,3 +1,4 @@
+// The motion barrel exports FadeIn, which depends on this hook.
 import { useReducedMotion as useFramerReducedMotion } from 'framer-motion'
 
 import { useLowBandwidthMode } from '@/hooks/useLowBandwidthMode'

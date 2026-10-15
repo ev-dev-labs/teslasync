@@ -5,7 +5,10 @@ import type { AutomationExecutionDetail as Detail } from '@/api/types';
 import { AutomationExecutionDetail } from './AutomationExecutionDetail';
 
 const source = vi.hoisted(() => ({
-  data: undefined as Detail | null | undefined,
+  data: undefined as (Detail & {
+    action_results_availability?: { status: string; complete: boolean; truncated: boolean; total: number };
+    fsm_transitions_availability?: { status: string; complete: boolean; truncated: boolean; total: number };
+  }) | null | undefined,
   error: null as Error | null,
   retry: vi.fn(),
 }));
@@ -77,5 +80,40 @@ describe('Execution detail continuation retention', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(source.retry).toHaveBeenCalledOnce();
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it.each(['failed', 'unavailable', 'not_applicable'])('keeps empty subsection shells without claiming no transitions when %s', (status) => {
+    source.data = {
+      ...detail(), actions_executed: [], fsm_transitions: [],
+      action_results_availability: { status: 'unavailable', complete: false, truncated: false, total: 0 },
+      fsm_transitions_availability: { status, complete: false, truncated: false, total: 0 },
+    };
+    renderDetail();
+    expect(screen.getByRole('heading', { name: 'Action results' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Vehicle state transitions' })).toBeInTheDocument();
+    expect(screen.queryByText('No vehicle state transitions were recorded during this execution window.')).not.toBeInTheDocument();
+    expect(screen.queryByText('No action results are recorded for this execution.')).not.toBeInTheDocument();
+    const message = status === 'failed' ? 'This history section could not be loaded.'
+      : status === 'not_applicable' ? 'No vehicle is associated with this execution.' : 'History availability is unknown.';
+    expect(screen.getAllByText(message).length).toBeGreaterThan(0);
+  });
+
+  it('claims empty transitions only for a successfully loaded complete window', () => {
+    source.data = {
+      ...detail(), fsm_transitions: [],
+      fsm_transitions_availability: { status: 'available', complete: true, truncated: false, total: 0 },
+    };
+    renderDetail();
+    expect(screen.getByText('No vehicle state transitions were recorded during this execution window.')).toBeInTheDocument();
+  });
+
+  it.each([true, false])('preserves populated transitions while warning about incomplete coverage (truncated=%s)', (truncated) => {
+    source.data = {
+      ...detail(),
+      fsm_transitions_availability: { status: 'available', complete: false, truncated, total: truncated ? 101 : 1 },
+    };
+    renderDetail();
+    expect(screen.getByText('vehicle: charging → parked')).toBeInTheDocument();
+    expect(screen.getByText(truncated ? 'Only part of this history is shown.' : 'This execution window is still open; history may be incomplete.')).toBeInTheDocument();
   });
 });

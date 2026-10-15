@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChartCard, LayoutCard } from '@/components/layout/layout-reference';
+import { ChartCard, LayoutCard } from '@/components/layout';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 
 type FleetTrendCardProps = ComponentProps<typeof ChartCard> & {

@@ -1,15 +1,19 @@
 import { Pencil, Plus, Trash2, Wrench } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { Button, Text, Subhead, StatusPill } from '@/components/ui';
 import { LayoutCard } from '@/components/layout';
 import { useUnits } from '@/hooks/useUnits';
-import { formatDate } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import type { FleetWorkOrder, WorkOrderStatus } from '@/api/hooks/useFleetOps';
+import type { DataState } from '@/api/dataState';
 
 interface WorkOrderBoardProps {
   items: FleetWorkOrder[];
   loading: boolean;
+  source?: DataState<unknown>;
+  pendingContent?: ReactNode;
   error: unknown;
   onRetry: () => void;
   onAdd: () => void;
@@ -30,6 +34,8 @@ const severityColor: Record<FleetWorkOrder['severity'], string> = {
 export function WorkOrderBoard({
   items,
   loading,
+  source,
+  pendingContent,
   error,
   onRetry,
   onAdd,
@@ -39,6 +45,7 @@ export function WorkOrderBoard({
   actionsDisabledReason,
 }: WorkOrderBoardProps) {
   const { t } = useTranslation();
+  const { formatDate } = useDateFormat();
   const { formatDistance } = useUnits();
   const statusLabel = (status: WorkOrderStatus) => ({
     open: t('fleetOps.workOrders.open', 'Open'),
@@ -60,9 +67,11 @@ export function WorkOrderBoard({
           {t('fleetOps.workOrders.add', 'Add work order')}
         </Button>
       }>
-      {loading ? <Skeleton lines={8} /> : error ? (
+      {source?.hasData !== true && error ? (
         <QueryError error={error} onRetry={onRetry} resourceName={t('fleetOps.workOrders.resource', 'Work orders')} />
-      ) : items.length === 0 ? (
+      ) : source && !source.hasData ? (
+        pendingContent
+      ) : !source && loading ? <Skeleton lines={8} /> : items.length === 0 ? (
         <EmptyState
           icon={<Wrench className="h-8 w-8" />}
           message={t('fleetOps.workOrders.empty', 'No maintenance work orders are open.')}

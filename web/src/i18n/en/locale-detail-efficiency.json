@@ -35,6 +35,12 @@
     "temp": "Temp",
     "tempEfficiency": "Efficiency by temperature range",
     "tempRange": "Temp range",
+    "temperatureTable": {
+      "averageConsumption": "Avg {{unit}}",
+      "economy": "{{unit}}/kWh",
+      "totalDistance": "Total {{unit}}",
+      "measurement": "{{value}} {{unit}}"
+    },
     "drives": "Drives",
     "total": "Total",
     "avgSpeedCol": "Avg speed",

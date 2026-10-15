@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 )
@@ -58,13 +59,12 @@ type createLedgerRequest struct {
 
 // Create serves POST /analytics/tco/ledger.
 func (h *LedgerHandler) Create(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "tco.ledger.create")
+	defer span.End()
 	var req createLedgerRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
-	}
-	if req.Currency == "" {
-		req.Currency = "USD"
 	}
 	e := LedgerEntry{
 		VehicleID: req.VehicleID,
@@ -78,8 +78,9 @@ func (h *LedgerHandler) Create(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	if err := h.store.Create(r.Context(), &e); err != nil {
-		log.Error().Err(err).Int64("vehicle_id", e.VehicleID).Msg("tco.ledger: create failed")
+	if err := h.store.Create(ctx, &e); err != nil {
+		span.RecordError(err)
+		log.Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).Int64("vehicle_id", e.VehicleID).Msg("tco.ledger: create failed")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to save ledger entry")
 		return
 	}

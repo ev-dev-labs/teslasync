@@ -2,6 +2,9 @@ import type { ReactNode } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
+import { ChartCard, LayoutCard } from '@/components/layout';
+import { ChartCard as EstablishedChartCard } from '@/components/layout/layout-reference/ChartCard';
+import { LayoutCard as EstablishedLayoutCard } from '@/components/layout/layout-reference/LayoutCard';
 import { FleetTrendCard } from './FleetTrendCard';
 
 // This focused presenter test uses real shared shells. Resize/ChartContainer
@@ -12,6 +15,11 @@ function TestRouter({ children }: { children: ReactNode }) {
 }
 
 describe('FleetTrendCard source preservation', () => {
+  it('uses the established card exports from the public layout barrel', () => {
+    expect(ChartCard).toBe(EstablishedChartCard);
+    expect(LayoutCard).toBe(EstablishedLayoutCard);
+  });
+
   const base = {
     title: 'Monthly distance',
     ariaLabel: 'Monthly distance comparison',

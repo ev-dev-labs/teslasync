@@ -18,6 +18,7 @@ import {
 
 import { useSignals, useSignalAnalysisHistory } from '@/api/hooks/useTelemetry';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useRangeState } from '@/hooks/useRangeState';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useDateFormat } from '@/hooks/useDateFormat';
@@ -28,8 +29,6 @@ import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
 import { summarizeSignalChangePoints, toNumericPoints } from '../lib/signalChangePoints';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
-const HOURS = 72;
-
 export default function SignalChangePointsPage() {
   const { fmtScientificNumber, fmtNumber } = useNumberFormatting();
   const { formatDateTime } = useDateFormat();
@@ -39,9 +38,14 @@ export default function SignalChangePointsPage() {
   const { vehicleId } = useSelectedVehicle();
   const id = vehicleId ?? 0;
   const [signalName, setSignalName] = useState('');
+  const { startInstant, endInstantExclusive } = useRangeState();
+  const hours = (Date.parse(endInstantExclusive) - Date.parse(startInstant)) / 3_600_000;
 
   const signalsQuery = useSignals(id);
-  const historyQuery = useSignalAnalysisHistory(id, signalName, HOURS);
+  const historyQuery = useSignalAnalysisHistory(id, signalName, hours, 10_000, {
+    startInstant,
+    endInstantExclusive,
+  });
   const catalogState = useDataState(signalsQuery);
   const historyState = useDataState(historyQuery, { provenance: 'historical' });
   const chosen = signalName !== '';
@@ -186,7 +190,7 @@ export default function SignalChangePointsPage() {
           metrics={metrics} testId="signal-change-points-summary" loading={isLoading}
           unavailable={isError} unknown={!sufficientEvidence} sourceStatus={historyState.status}
           retained={historyHasData && (historyState.isRefreshing || historyState.status === 'stale' || historyState.refreshError != null)}
-          scope={t('telemetry.brief.historyWindow', '{{hours}}h requested · {{signal}}', { hours: HOURS, signal: signalName || '—' })}
+          scope={t('telemetry.brief.historyWindow', '{{hours}}h requested · {{signal}}', { hours: fmtNumber(hours), signal: signalName || '—' })}
           sourceBounds={signalName ? [{ signal: signalName, from: historyQuery.data?.from, to: historyQuery.data?.to }] : []}
           provenance={t('telemetry.brief.historyProvenance', 'Selected signal history; numeric samples only')}
           description={t('telemetry.brief.analysisBounds', 'Analysis covers returned numeric samples, not guaranteed full-window coverage. Exact bounds remain unknown when not supplied by the source.')} />
@@ -268,7 +272,7 @@ export default function SignalChangePointsPage() {
                   <Badge variant="info">{t('signalChangePoints.scope', 'Scope')}</Badge>
                 </div>
                 <Text variant="body">
-                  {t('signalChangePoints.scopeText', 'This detector looks only at this one signal\u2019s raw sample sequence over {{h}}h — it is not the same as the aggregate drive-week regime clustering elsewhere in the app.', { h: HOURS })}
+                  {t('signalChangePoints.scopeText', 'This detector looks only at this one signal\u2019s raw sample sequence over {{h}}h — it is not the same as the aggregate drive-week regime clustering elsewhere in the app.', { h: fmtNumber(hours) })}
                 </Text>
               </div>
             </div>

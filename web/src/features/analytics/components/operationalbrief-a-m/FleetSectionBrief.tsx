@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { OperationalBrief, type StatMetric } from '@/components/data-display';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
-import type { FleetAnalyticsQuery } from '../analytics/constants';
+import type { FleetContentQuery } from '../overview-modernization/retainFleetContent';
 
 interface FleetSectionBriefProps {
-  query: FleetAnalyticsQuery;
+  query: FleetContentQuery;
   title: string;
   description: string;
   metrics: readonly StatMetric[];
@@ -14,9 +14,10 @@ interface FleetSectionBriefProps {
 export function FleetSectionBrief({ query, title, description, metrics, scope }: FleetSectionBriefProps) {
   const { t } = useTranslation();
   const operationalMetrics = useOperationalMetrics(metrics);
-  const loading = query.isLoading && query.data == null;
-  const unavailable = query.data == null;
-  const retained = query.data != null && (query.fetchStatus === 'paused' || query.isError);
+  const source = query.sourceQuery ?? query;
+  const loading = source.isLoading && source.data == null;
+  const unavailable = source.data == null;
+  const retained = source.data != null && (source.fetchStatus === 'paused' || source.isError);
 
   return (
     <OperationalBrief
@@ -29,9 +30,9 @@ export function FleetSectionBrief({ query, title, description, metrics, scope }:
       statusLabel={loading ? t('analytics.brief.loading', 'Loading evidence')
         : unavailable ? t('analytics.brief.unavailable', 'Evidence unavailable')
           : retained ? t('analytics.brief.retained', 'Retained evidence')
-            : query.isFetching ? t('analytics.brief.refreshing', 'Updating evidence')
+            : source.isFetching ? t('analytics.brief.refreshing', 'Updating evidence')
               : t('analytics.brief.returned', 'Returned evidence')}
-      statusTone={unavailable || retained ? 'warning' : 'neutral'}
+      statusTone={!loading && (unavailable || retained) ? 'warning' : 'neutral'}
       scope={scope ?? t('analytics.brief.sectionScope', 'Returned aggregates for the selected fleet range; exact recording coverage is unknown.')}
       provenance={t('analytics.brief.sectionProvenance', 'The fleet response does not supply an observation timestamp for these aggregates.')}
     />

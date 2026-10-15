@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   vehicleId: 4 as number | null,
   query: vi.fn(),
   refetch: vi.fn(),
+  translations: {} as Record<string, string>,
 }));
 
 vi.mock('@/api/hooks/useAdvancedIntelligence', () => ({
@@ -40,7 +41,7 @@ vi.mock('react-i18next', () => ({
       const template = typeof fallbackOrOptions === 'string'
         ? fallbackOrOptions
         : String(values?.defaultValue ?? key);
-      return template.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(values?.[name] ?? ''));
+      return (mocks.translations[key] ?? template).replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(values?.[name] ?? ''));
     },
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
@@ -121,6 +122,7 @@ beforeEach(() => {
   vi.stubEnv('TZ', 'UTC');
   vi.clearAllMocks();
   mocks.vehicleId = 4;
+  mocks.translations = {};
   mocks.query.mockReturnValue(query(payload()));
 });
 
@@ -133,7 +135,7 @@ describe('BehavioralSentinelPage', () => {
     renderPage();
     const article = within(findingArticle());
     expect(article.getByRole('heading', { name: 'identity_pattern' })).toBeInTheDocument();
-    expect(article.getByText('high')).toHaveClass(...BADGE_VARIANTS.danger.split(' '));
+    expect(article.getByText('High')).toHaveClass(...BADGE_VARIANTS.danger.split(' '));
     expect(article.getByText('72.50% confidence')).toBeInTheDocument();
     expect(article.getByText('Test-only unusual aggregate command timing; not personal attribution.')).toBeInTheDocument();
     expect(article.getByText('2 Jun 2026, 00:30')).toBeInTheDocument();
@@ -190,9 +192,54 @@ describe('BehavioralSentinelPage', () => {
     renderPage();
     const article = within(findingArticle());
     expect(article.getByText(expected)).toBeInTheDocument();
-    expect(article.getByText('unclassified')).toHaveClass(...BADGE_VARIANTS.neutral.split(' '));
+    expect(article.getByText('Unknown severity: unclassified')).toHaveClass(...BADGE_VARIANTS.neutral.split(' '));
     expect(article.queryByText('NaN% confidence')).not.toBeInTheDocument();
   });
+
+  it.each([
+    { severity: 'critical', label: 'Critical', translated: 'Kritisch', variant: 'danger' },
+    { severity: 'high', label: 'High', translated: 'Hoch', variant: 'danger' },
+    { severity: 'medium', label: 'Medium', translated: 'Mittel', variant: 'warning' },
+    { severity: 'warning', label: 'Warning', translated: 'Warnung', variant: 'warning' },
+    { severity: 'low', label: 'Low', translated: 'Niedrig', variant: 'info' },
+    { severity: 'info', label: 'Info', translated: 'Information', variant: 'info' },
+  ] satisfies Array<{ severity: string; label: string; translated: string; variant: keyof typeof BADGE_VARIANTS }>)(
+    'localizes $severity at the badge without changing source data or variants',
+    ({ severity, label, translated, variant }) => {
+      const item = Object.freeze(finding({ severity }));
+      mocks.query.mockReturnValue(query(payload({ items: [item] })));
+      const view = renderPage();
+      expect(within(findingArticle()).getByText(label)).toHaveClass(...BADGE_VARIANTS[variant].split(' '));
+      mocks.translations[`advancedIntelligence.sentinel.severity.${severity}`] = translated;
+      view.rerender(<BehavioralSentinelPage />);
+      const article = within(findingArticle());
+      expect(article.getByText(translated)).toHaveClass(...BADGE_VARIANTS[variant].split(' '));
+      expect(article.getByText(item.explanation)).toBeVisible();
+      expect(article.getByText(`${item.evidence[0].source}: ${item.evidence[0].summary}`)).toBeVisible();
+      expect(article.getByText(item.limitations[0])).toBeVisible();
+      expect(screen.getByText('Limited evidence')).toBeVisible();
+      expect(item.severity).toBe(severity);
+      expect(mocks.refetch).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['future-severity', 'advancedIntelligence.sentinel.severity.high', '<unknown-severity>'])(
+    'shows unknown severity %s explicitly without translating its raw code',
+    (severity) => {
+      const item = Object.freeze(finding({ severity }));
+      mocks.query.mockReturnValue(query(payload({ items: [item] })));
+      mocks.translations['advancedIntelligence.sentinel.severity.high'] = 'Hoch';
+      const view = renderPage();
+      expect(within(findingArticle()).getByText(`Unknown severity: ${severity}`))
+        .toHaveClass(...BADGE_VARIANTS.neutral.split(' '));
+      mocks.translations['advancedIntelligence.sentinel.severity.unknownCode'] = 'Unbekannter Schweregrad: {{code}}';
+      view.rerender(<BehavioralSentinelPage />);
+      expect(within(findingArticle()).getByText(`Unbekannter Schweregrad: ${severity}`))
+        .toHaveClass(...BADGE_VARIANTS.neutral.split(' '));
+      expect(item.severity).toBe(severity);
+      expect(mocks.refetch).not.toHaveBeenCalled();
+    },
+  );
 
   it('requests the first page immediately when the workspace vehicle changes and returns', () => {
     mocks.query.mockImplementation((_vehicleId: number, _limit: number, offset: number) =>

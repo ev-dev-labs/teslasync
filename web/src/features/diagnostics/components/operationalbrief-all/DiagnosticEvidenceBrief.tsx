@@ -4,6 +4,7 @@ import type { SignalEvidenceBundleSource } from '@/api/hooks/useTelemetry';
 import { OperationalBrief, type StatMetric } from '@/components/data-display';
 import { QueryError } from '@/components/feedback';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
+import { localizeDiagnosticReason, type DiagnosticReason } from '../../lib/rootCauseIntelligence';
 
 interface DiagnosticEvidenceBriefProps {
   testId: string;
@@ -19,8 +20,8 @@ interface DiagnosticEvidenceBriefProps {
   windowHours: number;
   hasChosenSignal: boolean;
   sources?: readonly SignalEvidenceBundleSource[];
-  summary: string | null;
-  limitations: readonly string[];
+  summary: string | DiagnosticReason | null;
+  limitations: readonly (string | DiagnosticReason)[];
 }
 
 export function DiagnosticEvidenceBrief({
@@ -67,7 +68,8 @@ export function DiagnosticEvidenceBrief({
           : t('diagnostics.brief.sourceUnknown', 'Per-signal freshness unavailable')}
         provenance={provenance}
         narrative={{
-          whatChanged: summary ?? description,
+          whatChanged: summary == null ? description
+            : typeof summary === 'string' ? summary : localizeDiagnosticReason(summary, t),
           whyItMatters: null,
           confidence: {
             label: 'not_scored', score: null,
@@ -77,7 +79,7 @@ export function DiagnosticEvidenceBrief({
           },
           likelyCause: null,
           recommendedResponse: null,
-          limitations,
+          limitations: limitations.map(note => typeof note === 'string' ? note : localizeDiagnosticReason(note, t)),
           evidence: [],
           provenance: [{ source: provenance }],
         }}

@@ -40,6 +40,7 @@ export function NotificationSoundChannelRow({
         wrapLabel
         variant="ghost"
         size="sm"
+        className="min-h-11 md:min-h-9"
         type="button"
         icon={<Play className="h-3.5 w-3.5" aria-hidden="true" />}
         onClick={onTest}

@@ -51,7 +51,7 @@ export function BrowserPermissionPanel({
     <GlassPanel className={className} data-tour="settings-notifications">
       <div className="space-y-4 p-4 sm:p-5">
         <div className="flex items-center gap-3">
-          <IconBox color="cyan">
+          <IconBox color="neutral">
             <Bell className="h-5 w-5" aria-hidden="true" />
           </IconBox>
           <div className="min-w-0">
@@ -79,6 +79,7 @@ export function BrowserPermissionPanel({
                 <Button
                   wrapLabel
                   variant="primary"
+                  className="min-h-11 md:min-h-10"
                   icon={<Bell className="h-4 w-4" aria-hidden="true" />}
                   onClick={handleEnable}
                 >

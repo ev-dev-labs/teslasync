@@ -1,10 +1,22 @@
 import { Eye } from 'lucide-react';
 import { Currency } from '@/components/data-display';
 import { Button, Text, type Column } from '@/components/ui';
-import { formatDateTime } from '@/lib/dateFormat';
+import { formatDateTime, formatDayKey } from '@/lib/dateFormat';
+import type { DateFormatter } from '@/hooks/useDateFormat';
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
 import type { DistanceFormatter, ServiceRecord } from './maintenanceModel';
+
+/** Calendar-only service dates are business days, not midnight UTC instants. */
+export function formatMaintenanceDate(
+  value: string | Date | null | undefined,
+  formatInstant: DateFormatter,
+  locale: string,
+): string {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? formatDayKey(value, { locale })
+    : formatInstant(value);
+}
 
 /** Keep column/filter/persistence identities and render-boundary SI formatting.
  * DataTable still owns exports, sort/value filters and saved column controls. */
@@ -12,13 +24,14 @@ export function buildServiceColumns(
   t: (key: string, fallback: string) => string,
   formatDistance: DistanceFormatter,
   onPreview: (record: ServiceRecord) => void,
+  formatServiceDate: DateFormatter = formatDateTime,
 ): Column<ServiceRecord>[] {
   return [
     {
       key: 'date',
       header: t('maintenance.col.date', 'Date'),
       sortable: true,
-      render: record => <Text variant="body">{formatDateTime(record.date)}</Text>,
+      render: record => <Text variant="body">{formatServiceDate(record.date)}</Text>,
     },
     {
       key: 'description',
@@ -62,7 +75,7 @@ export function buildServiceColumns(
           type="button"
           variant="ghost"
           size="sm"
-          className="h-11 w-11 p-0"
+          className="min-h-11 min-w-11 p-0 md:min-h-9 md:min-w-9"
           aria-label={t('maintenance.inspectRecord', 'Inspect service record')}
           onClick={() => onPreview(record)}
         >

@@ -138,7 +138,7 @@ export interface WatchSummary {
   vehicle_name: string;
   state: string;
   battery_level: number;
-  range_km: number;
+  range_m: number;
   is_charging: boolean;
   charge_rate: number;
   time_to_full: number;

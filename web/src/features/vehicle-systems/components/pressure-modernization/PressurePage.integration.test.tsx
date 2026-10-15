@@ -1,10 +1,12 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import TirePressurePage, { type TirePressureReading } from '../../pages/TirePressurePage';
+import summarySource from './PressureSummary.tsx?raw';
+import historySource from './PressureHistoryCard.tsx?raw';
 
 const H = vi.hoisted(() => ({
   unit: 'bar' as 'bar' | 'psi' | 'kPa',
@@ -16,6 +18,7 @@ const H = vi.hoisted(() => ({
   pendingLatest: false,
   calls: [] as string[],
   observed: [] as Element[],
+  observers: new Map<Element, ResizeObserverCallback>(),
   csv: vi.fn(),
 }));
 
@@ -127,22 +130,130 @@ beforeEach(() => {
   H.pendingLatest = false;
   H.calls = [];
   H.observed = [];
+  H.observers.clear();
   H.csv.mockClear();
   setGlobalPrecision(2);
   setGlobalLocale('en-US');
   vi.stubGlobal('ResizeObserver', class {
-    observe(target: Element) { H.observed.push(target); }
-    unobserve() {}
-    disconnect() {}
+    constructor(private callback: ResizeObserverCallback) {}
+    observe(target: Element) { H.observed.push(target); H.observers.set(target, this.callback); }
+    unobserve(target: Element) { H.observers.delete(target); }
+    disconnect() { H.observers.forEach((callback, target) => {
+      if (callback === this.callback) H.observers.delete(target);
+    }); }
   });
 });
 afterEach(() => {
+  onlineManager.setOnline(true);
+  delete document.documentElement.dataset.theme;
   setGlobalPrecision(originalFormatting.precision);
   setGlobalLocale(originalFormatting.locale);
   vi.unstubAllGlobals();
 });
 
 describe('pressure page live composition — authored, execution owned by parent', () => {
+  it.each([
+    ['PressureSummary', summarySource],
+    ['PressureHistoryCard', historySource],
+  ])('%s consumes the existing placement hook through the public layout barrel', (_name, source) => {
+    expect(source).toMatch(/import\s*\{\s*useCardPlacement\s*\}\s*from\s*['"]@\/components\/layout['"]/);
+    expect(source).not.toMatch(/from\s*['"]@\/components\/layout\//);
+  });
+
+  it('keeps pending idle sources unresolved rather than claiming empty readings', async () => {
+    H.pendingLatest = true;
+    const { client } = mount();
+    await historyTable().findByRole('columnheader', { name: /Front left/ });
+    const query = client.getQueryCache().find({ queryKey: ['tire-pressure-latest', 42], exact: true });
+    if (!query) throw new Error('Missing latest pressure query');
+    act(() => query.setState({ fetchStatus: 'idle' }));
+    const card = screen.getByRole('heading', { name: 'Current readings' }).closest('[data-card]');
+    if (!(card instanceof HTMLElement)) throw new Error('Missing current pressure shell');
+    await within(card).findByText('Loading Latest tire pressure');
+    expect(within(card).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    expect(screen.queryByText('No current readings available')).not.toBeInTheDocument();
+    expect(screen.getByTestId('pressure-series')).toBeInTheDocument();
+  });
+
+  it('shows paused source feedback instead of empty claims and recovers independently', async () => {
+    onlineManager.setOnline(false);
+    const { client } = mount();
+    await waitFor(() => expect(client.getQueryState(['tire-pressure-latest', 42])?.fetchStatus).toBe('paused'));
+    expect(screen.getAllByText('Refresh paused').length).toBeGreaterThanOrEqual(3);
+    expect(screen.queryByText('No current readings available')).not.toBeInTheDocument();
+    expect(screen.queryByText('No history data')).not.toBeInTheDocument();
+    expect(historyTable().getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    expect(H.calls).toHaveLength(0);
+    H.pendingLatest = true;
+    act(() => onlineManager.setOnline(true));
+    await historyTable().findByRole('columnheader', { name: /Front left/ });
+    expect(screen.getByTestId('pressure-series')).toBeInTheDocument();
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
+    expect(screen.queryByText('No current readings available')).not.toBeInTheDocument();
+    expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
+    for (const title of ['Tire pressure summary', 'Current readings', 'Pressure history', 'History table']) {
+      expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
+    }
+  });
+
+  it('keeps retained current readings on refresh failure and clears the warning on retry recovery', async () => {
+    const { client } = mount();
+    await waitFor(() => expect(screen.getAllByRole('meter')).toHaveLength(4));
+    H.failLatest = true;
+    await act(async () => { await client.refetchQueries({ queryKey: ['tire-pressure-latest', 42] }); });
+    await screen.findByText('Could not refresh Latest tire pressure. Retained readings remain available.');
+    expect(screen.getAllByRole('meter')).toHaveLength(4);
+    expect(screen.getByTestId('pressure-series')).toBeInTheDocument();
+    const historyCalls = H.calls.filter(url => url.startsWith('/tire-pressure?')).length;
+    H.failLatest = false;
+    const card = screen.getByRole('heading', { name: 'Current readings' }).closest('[data-card]');
+    if (!(card instanceof HTMLElement)) throw new Error('Missing current pressure shell');
+    fireEvent.click(within(card).getByRole('button', { name: 'Retry' }));
+    await waitFor(() => expect(screen.queryByText(
+      'Could not refresh Latest tire pressure. Retained readings remain available.',
+    )).not.toBeInTheDocument());
+    expect(screen.getAllByRole('meter')).toHaveLength(4);
+    expect(H.calls.filter(url => url.startsWith('/tire-pressure?'))).toHaveLength(historyCalls);
+  });
+
+  it.each(['light', 'dark'])('keeps all history fields in keyboard-accessible mobile details and desktop columns (%s)', async theme => {
+    document.documentElement.dataset.theme = theme;
+    H.history = [row({ id: 2, front_left: 230_000, tpms_hard_warnings: '{"fl":true}' }), row()];
+    const { container } = mount();
+    await historyTable().findByRole('columnheader', { name: /Front left/ });
+    const resize = (width: number) => act(() => H.observers.forEach((callback, target) => callback(
+      [{ target, contentRect: { width } } as ResizeObserverEntry], {} as ResizeObserver,
+    )));
+    resize(375);
+    const mobile = container.querySelector('[data-mobile-table]');
+    if (!(mobile instanceof HTMLElement)) throw new Error('Mobile history absent');
+    expect(within(mobile).getByRole('button', { name: /Front left.*filter/i })).toBeInTheDocument();
+    expect(mobile.querySelectorAll('[data-row-key]')).toHaveLength(2);
+    const first = mobile.querySelector('[data-row-key="2"]');
+    if (!(first instanceof HTMLElement)) throw new Error('Stable history row identity absent');
+    first.focus();
+    fireEvent.keyDown(first, { key: 'Enter' });
+    const detail = await screen.findByRole('dialog', { name: 'History table' });
+    for (const field of ['Time', 'Front left (bar)', 'Front right (bar)', 'Rear left (bar)', 'Rear right (bar)', 'Warnings']) {
+      expect(within(detail).getByText(field)).toBeInTheDocument();
+    }
+    expect(within(detail).getByText('2.30 bar · Low')).toBeInTheDocument();
+    expect(within(detail).getByText('Hard warning')).toBeInTheDocument();
+    fireEvent.keyDown(detail, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'History table' })).not.toBeInTheDocument());
+    await waitFor(() => expect(first).toHaveFocus());
+    resize(640);
+    expect(container.querySelector('[data-mobile-table]')).not.toBeInTheDocument();
+    for (const cell of [...historyTable().getAllByRole('columnheader'), ...historyTable().getAllByRole('cell')]) {
+      expect(cell).not.toHaveClass('hidden');
+    }
+    resize(1280);
+    expect(container.querySelector('[data-mobile-table]')).not.toBeInTheDocument();
+    expect(historyTable().getAllByRole('columnheader')).toHaveLength(6);
+    expect(historyTable().getAllByRole('row').slice(1).every(item => within(item).getAllByRole('cell').length === 6)).toBe(true);
+    delete document.documentElement.dataset.theme;
+  });
+
   it('refreshes empty current readings and history independently without creating pressure values', async () => {
     H.latest = null;
     H.history = [];
@@ -221,6 +332,13 @@ describe('pressure page live composition — authored, execution owned by parent
     expect(container.querySelector('[data-operational-metric="tire-pressure-average"]')).toHaveAttribute('data-value-state', 'value');
     expect(container.querySelector('[data-source-retained]')).toHaveAttribute('data-source-retained', 'true');
     expect(screen.getAllByRole('button', { name: /^Retry$/ }).length).toBeGreaterThan(0);
+    H.failHistory = false;
+    fireEvent.click(historyTable().getByRole('button', { name: /^Retry$/ }));
+    await waitFor(() => expect(historyTable().queryByText(
+      'Could not refresh Tire pressure history. Retained readings remain available.',
+    )).not.toBeInTheDocument());
+    expect(screen.getByTestId('pressure-series')).toBeInTheDocument();
+    expect(screen.getAllByRole('meter')).toHaveLength(4);
   });
 
   it('keeps initial source retry reachable without hiding the successful chart', async () => {

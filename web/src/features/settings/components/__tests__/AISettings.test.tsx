@@ -27,7 +27,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
@@ -120,6 +120,37 @@ beforeEach(() => {
 })
 
 describe('AISettings — §I1 default-off rendering', () => {
+  it('locks writes during active initial loading and unlocks successful empty/zero settings', async () => {
+    let resolveRead!: (value: Partial<AppSettings>) => void
+    mockedRequest.mockImplementation(() => new Promise<Partial<AppSettings>>(resolve => { resolveRead = resolve }))
+    renderPanel(null)
+    expect(screen.getByTestId('ai-settings-save')).toBeDisabled()
+    expect(screen.getByTestId('ai-mode-cloud')).toBeDisabled()
+    expect(screen.getByTestId('helix-status-strip')).not.toHaveTextContent('Off (default)')
+    await act(async () => { resolveRead({ ...baseSettings, ai_features_archived: {} }) })
+    await waitFor(() => expect(screen.getByTestId('ai-settings-save')).toBeEnabled())
+    expect(screen.getByTestId('ai-mode-off')).toBeChecked()
+    expect(screen.getByTestId('helix-status-strip')).toHaveTextContent('0')
+    expect(screen.queryByTestId('ai-restore-panel')).toBeNull()
+  })
+
+  it('keeps paused-without-data distinct from loading and prevents writes until recovery', async () => {
+    onlineManager.setOnline(false)
+    try {
+      mockedRequest.mockResolvedValue(baseSettings)
+      renderPanel(null)
+      expect(await screen.findByText('Refresh paused')).toBeInTheDocument()
+      expect(screen.getByTestId('ai-settings-save')).toBeDisabled()
+      expect(screen.getByTestId('ai-mode-local')).toBeDisabled()
+      expect(mockedRequest).not.toHaveBeenCalled()
+      await act(async () => { onlineManager.setOnline(true) })
+      await waitFor(() => expect(screen.getByTestId('ai-settings-save')).toBeEnabled())
+      expect(screen.queryByText('Refresh paused')).toBeNull()
+    } finally {
+      onlineManager.setOnline(true)
+    }
+  })
+
   it('keeps the opt-in surface mounted on a failed first read without exposing credentials or making writes', async () => {
     mockedRequest.mockRejectedValue(new ApiError('Read unavailable', 500))
     renderPanel(null)
@@ -142,6 +173,7 @@ describe('AISettings — §I1 default-off rendering', () => {
       },
     })
     await waitFor(() => expect(screen.getByTestId('ai-provider-api-key')).toHaveValue('fixture-key'))
+    fireEvent.change(screen.getByTestId('ai-provider-model'), { target: { value: 'unsaved-model' } })
     mockedRequest.mockRejectedValue(new ApiError('Refresh unavailable', 500))
     await act(async () => { await client.refetchQueries({ queryKey: ['settings'], exact: true }) })
     await waitFor(() => expect(client.getQueryState(['settings'])?.status).toBe('error'))
@@ -153,6 +185,16 @@ describe('AISettings — §I1 default-off rendering', () => {
     expect(mockedRequest.mock.calls.some(call => ['POST', 'PUT', 'DELETE'].includes(
       (call[1] as RequestInit | undefined)?.method ?? 'GET',
     ))).toBe(false)
+    mockedRequest.mockResolvedValue({
+      ...baseSettings, ai_mode: 'cloud',
+      ai_provider_config: {
+        default: 'openai',
+        openai: { base_url: 'https://api.example.test', model: 'refreshed-model', api_key: 'fixture-key' },
+      },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    await waitFor(() => expect(screen.queryByText('Data may be stale')).toBeNull())
+    expect(screen.getByTestId('ai-provider-model')).toHaveValue('unsaved-model')
   })
   it('does not query usage or mount the cap bar before an off-mode user saves the opt-in', async () => {
     renderPanel({ ...baseSettings, ai_cost_cap_cents: 1000 })
@@ -307,6 +349,58 @@ describe('AISettings — §I7 per-feature toggles generated from registry', () =
 })
 
 describe('AISettings — §I7 archive restore is explicit, never silent', () => {
+  it('keeps confirmation pending, retains the archive and draft on failure, and dismisses only after retry succeeds', async () => {
+    const initial = {
+      ...baseSettings,
+      ai_mode: 'local' as const,
+      ai_features_archived: { 'chatbot-llm': true },
+    }
+    let rejectSave!: (error: Error) => void
+    let resolveSave!: (value: Partial<AppSettings>) => void
+    let attempts = 0
+    mockedRequest.mockImplementation((path: string, init?: RequestInit) => {
+      if (path === '/settings' && init?.method === 'PUT') {
+        attempts++
+        return new Promise<Partial<AppSettings>>((resolve, reject) => {
+          resolveSave = resolve
+          rejectSave = reject
+        })
+      }
+      if (path === '/settings') return Promise.resolve(initial)
+      throw new Error(`Unexpected request: ${path}`)
+    })
+    const { client } = renderPanel(initial)
+    fireEvent.change(screen.getByTestId('ai-provider-model'), { target: { value: 'draft-model' } })
+    fireEvent.click(screen.getByTestId('ai-restore-confirm'))
+    await waitFor(() => expect(attempts).toBe(1))
+    expect(screen.getByTestId('ai-restore-panel')).toBeInTheDocument()
+    expect(screen.getByTestId('ai-restore-confirm')).toBeDisabled()
+    expect(screen.getByTestId('ai-restore-decline')).toBeDisabled()
+    expect(screen.getByTestId('ai-settings-save')).toBeDisabled()
+    expect(screen.getByTestId('ai-mode-off')).toBeDisabled()
+    expect(screen.getByTestId('ai-restore-pending')).toHaveTextContent('Saving')
+    fireEvent.click(screen.getByTestId('ai-restore-confirm'))
+    expect(attempts).toBe(1)
+
+    await act(async () => { rejectSave(new ApiError('Save unavailable', 500)) })
+    await waitFor(() => expect(screen.getByTestId('ai-restore-confirm')).toBeEnabled())
+    expect(screen.getByTestId('ai-restore-panel')).toBeInTheDocument()
+    expect(screen.getByTestId('ai-provider-model')).toHaveValue('draft-model')
+    expect(screen.getByTestId('ai-feature-toggle-chatbot-llm')).toBeChecked()
+    expect(client.getQueryData(['settings'])).toMatchObject({ ai_features_archived: { 'chatbot-llm': true } })
+    expect(screen.getByText('Server error')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('ai-restore-confirm'))
+    await waitFor(() => expect(attempts).toBe(2))
+    const saved = { ...initial, ai_features: { 'chatbot-llm': true }, ai_features_archived: {} }
+    mockedRequest.mockResolvedValue(saved)
+    await act(async () => { resolveSave(saved) })
+    await waitFor(() => expect(screen.queryByTestId('ai-restore-panel')).toBeNull())
+    expect(screen.getByTestId('ai-provider-model')).toHaveValue('draft-model')
+    expect(screen.queryByText('Server error')).toBeNull()
+    expect(screen.getByTestId('ai-settings-save')).toBeEnabled()
+  })
+
   it('shows the restore panel when archive is present and mode is non-off', () => {
     renderPanel({
       ...baseSettings,
@@ -430,6 +524,103 @@ describe('AISettings — validate endpoint exercised end-to-end', () => {
 })
 
 describe('AISettings — F1↔F2 provider config schema (namespaced shape)', () => {
+  it('selects a saved mode-compatible provider for review and preserves edits to both providers', async () => {
+    let saved: Partial<AppSettings> | undefined
+    mockedRequest.mockImplementation(async (path, init) => {
+      if (path === '/settings' && init?.method === 'PUT') {
+        saved = JSON.parse(String(init.body))
+        return saved
+      }
+      if (path === '/settings') return saved
+      throw new Error(`Unexpected request: ${path}`)
+    })
+    const openai = { model: 'cloud-model', api_key: 'saved-key', extra: 'preserved' }
+    const ollama = { base_url: 'http://localhost:11434', model: 'local-model' }
+    renderPanel({
+      ...baseSettings,
+      ai_mode: 'local',
+      ai_provider_config: { default: 'ollama', ollama, openai },
+    })
+    fireEvent.change(screen.getByTestId('ai-provider-model'), { target: { value: 'edited-local' } })
+    fireEvent.click(screen.getByTestId('ai-mode-cloud'))
+    expect(screen.getByTestId('ai-provider-select')).toHaveValue('openai')
+    expect(screen.getByTestId('ai-provider-model')).toHaveValue('cloud-model')
+    expect(screen.getByTestId('ai-provider-api-key')).toHaveValue('')
+    fireEvent.change(screen.getByTestId('ai-provider-model'), { target: { value: 'edited-cloud' } })
+    fireEvent.change(screen.getByTestId('ai-provider-api-key'), { target: { value: 'typed-key' } })
+    fireEvent.click(screen.getByTestId('ai-mode-local'))
+    expect(screen.getByTestId('ai-provider-select')).toHaveValue('ollama')
+    expect(screen.getByTestId('ai-provider-model')).toHaveValue('edited-local')
+    fireEvent.click(screen.getByTestId('ai-mode-cloud'))
+    expect(screen.getByTestId('ai-provider-model')).toHaveValue('edited-cloud')
+    expect(screen.getByTestId('ai-provider-api-key')).toHaveValue('typed-key')
+    expect(mockedRequest).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByTestId('ai-settings-save'))
+    await waitFor(() => expect(saved?.ai_provider_config).toEqual({
+      default: 'openai',
+      ollama: { ...ollama, model: 'edited-local' },
+      openai: { ...openai, base_url: '', model: 'edited-cloud', api_key: 'typed-key' },
+    }))
+  })
+
+  it('selects a compatible default on opt-in without saving automatically', () => {
+    renderPanel()
+    fireEvent.click(screen.getByTestId('ai-mode-cloud'))
+    expect(screen.getByTestId('ai-provider-select')).toHaveValue('openai')
+    expect(screen.getByTestId('ai-provider-model')).toHaveValue('')
+    expect(screen.getByTestId('ai-provider-api-key')).toHaveValue('')
+    expect(mockedRequest).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByTestId('ai-mode-local'))
+    expect(screen.getByTestId('ai-provider-select')).toHaveValue('ollama')
+  })
+
+  it('restores archived features with the reviewed compatible provider when changing mode', async () => {
+    let saved: Partial<AppSettings> | undefined
+    mockedRequest.mockImplementation(async (path, init) => {
+      if (path === '/settings' && init?.method === 'PUT') {
+        saved = JSON.parse(String(init.body))
+        return saved
+      }
+      if (path === '/settings') return saved
+      throw new Error(`Unexpected request: ${path}`)
+    })
+    const ollama = { model: 'local-model', base_url: 'http://localhost:11434' }
+    const google = { model: 'cloud-model', api_key: 'saved-key' }
+    renderPanel({
+      ...baseSettings,
+      ai_mode: 'local',
+      ai_features_archived: { 'chatbot-llm': true },
+      ai_provider_config: { default: 'ollama', ollama, google },
+    })
+    fireEvent.click(screen.getByTestId('ai-mode-cloud'))
+    expect(screen.getByTestId('ai-provider-select')).toHaveValue('google')
+    fireEvent.click(screen.getByTestId('ai-restore-confirm'))
+    await waitFor(() => expect(saved).toMatchObject({
+      ai_mode: 'cloud',
+      ai_features: { 'chatbot-llm': true },
+      ai_provider_config: { default: 'google', ollama, google },
+    }))
+  })
+
+  it('requires a compatible selection before saving an inconsistent loaded configuration', () => {
+    renderPanel({
+      ...baseSettings,
+      ai_mode: 'local',
+      ai_provider_config: { default: 'openai', openai: { model: 'cloud-model' } },
+      ai_features_archived: { 'chatbot-llm': true },
+    })
+    expect(screen.getByTestId('ai-settings-save')).toBeDisabled()
+    expect(screen.getByTestId('ai-restore-confirm')).toBeDisabled()
+    expect(screen.getByTestId('ai-provider-incompatible')).toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('ai-settings-save'))
+    expect(mockedRequest).not.toHaveBeenCalled()
+    fireEvent.change(screen.getByTestId('ai-provider-select'), { target: { value: 'ollama' } })
+    expect(screen.getByTestId('ai-settings-save')).toBeEnabled()
+    expect(screen.getByTestId('ai-restore-confirm')).toBeEnabled()
+    fireEvent.click(screen.getByTestId('ai-mode-off'))
+    expect(screen.getByTestId('ai-settings-save')).toBeEnabled()
+  })
+
   it.each([
     { oldFlavor: 'openai', effectiveModel: 'old-deployment' },
     { oldFlavor: 'foundry', effectiveModel: 'visible-model' },

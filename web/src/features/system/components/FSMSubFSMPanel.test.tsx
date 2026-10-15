@@ -47,6 +47,24 @@ afterEach(() => {
 });
 
 describe('FSMSubFSMPanel', () => {
+  it('shows a visible static semantic Live cue only for a non-terminal session', () => {
+    const { container, rerender } = render(
+      <FSMSubFSMPanel fsmType="vehicle" activeSubs={[makeSub()]} />,
+    );
+    const live = screen.getByText('Live');
+    expect(live).not.toHaveClass('sr-only');
+    expect(live).toHaveClass('text-[var(--semantic-success)]');
+    expect(container.querySelector('.bg-\\[var\\(--semantic-success\\)\\]')).not.toBeNull();
+    expect(container.querySelector('[class*="animate-"]')).toBeNull();
+
+    rerender(
+      <FSMSubFSMPanel fsmType="vehicle" activeSubs={[makeSub({ state: 'completed' })]} />,
+    );
+    expect(screen.queryByText('Live')).toBeNull();
+    expect(screen.getByTestId('state-badge')).toHaveAttribute('data-state', 'completed');
+    expect(screen.getByTestId('timestamp')).toHaveTextContent('2025-01-15T12:00:00Z');
+  });
+
   it('renders nothing unless viewing vehicle-level FSMs (vehicle | all)', () => {
     const { container, rerender } = render(
       <FSMSubFSMPanel fsmType="telemetry_connection" activeSubs={[makeSub()]} />,

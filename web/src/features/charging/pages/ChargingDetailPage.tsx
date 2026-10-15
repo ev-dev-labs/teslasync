@@ -15,7 +15,9 @@ import { useChartPalette } from '@/hooks/useChartPalette';
 import { convertTempFromSI, convertDistanceFromSI, convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
-import { formatDate, formatTime } from '@/lib/dateFormat';
+import { useSettings } from '@/hooks/useSettings';
+import { resolveLocale } from '@/lib/locale';
+import { formatDate as displayDate, formatTime as displayTime, formatDateTime } from '@/lib/dateFormat';
 
 import { chartTokens } from '@/lib/tokens';
 
@@ -26,7 +28,7 @@ import {
 } from '@/components/ui';
 import {
   MetricBar, InlineMetric, KVList,
-  DateTime, DataProvenanceBadge,
+  DataProvenanceBadge,
 } from '@/components/data-display';
 import { LinearGauge } from '@/components/charts';
 import {
@@ -197,7 +199,10 @@ export default function ChargingDetailPage() {
    * replace the page. */
   const sessionDataState = useDataState(sessionQuery, { provenance: 'historical' });
   const telemetryQuery = useChargeTelemetry(session?.id ?? null);
-  const telemetryDataState = useDataState(telemetryQuery, { provenance: 'historical' });
+  const telemetryDataState = useDataState(telemetryQuery, {
+    provenance: 'historical',
+    unavailable: telemetryQuery.data?.length === 0,
+  });
   const {
     data: telemetry,
     isLoading: telemetryLoading,
@@ -205,6 +210,38 @@ export default function ChargingDetailPage() {
   } = telemetryQuery;
   const telemetryError = telemetryDataState.fatalError;
   const { data: vehicle } = useVehicle(String(session?.vehicle_id ?? ''));
+  const { settings } = useSettings();
+  const locale = resolveLocale(settings.locale);
+  const sourceTimezone = useMemo(() => {
+    if (!vehicle?.timezone || vehicle.id !== session?.vehicle_id) return null;
+    try {
+      return new Intl.DateTimeFormat('en-US', { timeZone: vehicle.timezone })
+        .resolvedOptions().timeZone;
+    } catch {
+      return null;
+    }
+  }, [vehicle?.id, vehicle?.timezone, session?.vehicle_id]);
+  const dateOptions = useMemo(
+    () => ({ locale, tz: sourceTimezone ?? 'UTC' }),
+    [locale, sourceTimezone],
+  );
+  const formatDate = useCallback(
+    (value: string | null | undefined) => displayDate(value, dateOptions),
+    [dateOptions],
+  );
+  const formatTime = useCallback(
+    (value: string | null | undefined) => displayTime(value, dateOptions),
+    [dateOptions],
+  );
+  const recordTimestamp = (value: string | null | undefined) => {
+    const display = formatDateTime(value, dateOptions);
+    const instant = value ? new Date(value) : null;
+    return (
+      <span title={instant && Number.isFinite(instant.getTime()) ? instant.toISOString() : undefined}>
+        {display}{display !== '—' ? ` (${dateOptions.tz})` : ''}
+      </span>
+    );
+  };
   const liveQuery = useChargingTelemetryLatest(
     session?.vehicle_id ?? 0,
   );
@@ -248,6 +285,25 @@ export default function ChargingDetailPage() {
     return synthesizeCurve(session);
   }, [session, telemetry, hasTelemetry]);
 
+  const curveProvenance = hasTelemetry ? telemetryDataState.provenance : 'inferred';
+  const curveExportData = useMemo(() => chargeCurve.map((point) => ({
+    ...point,
+    power_unit: 'kW',
+    provenance: curveProvenance,
+    telemetry_status: telemetryDataState.status,
+    telemetry_provenance: telemetryDataState.provenance,
+    telemetry_sample_count: telemetryCount,
+    input_provenance: hasTelemetry ? telemetryDataState.provenance : sessionDataState.provenance,
+    input_status: hasTelemetry ? telemetryDataState.status : sessionDataState.status,
+    ...(!hasTelemetry && session ? {
+      start_soc_pct: session.start_soc_pct,
+      end_soc_pct: session.end_soc_pct,
+      peak_power_w: session.peak_power_w,
+      charger_type: session.charger_type,
+    } : {}),
+  })), [chargeCurve, curveProvenance, telemetryDataState.status, telemetryDataState.provenance,
+    telemetryCount, hasTelemetry, session, sessionDataState.provenance, sessionDataState.status]);
+
   const timeSeriesData = useMemo(() => {
     if (!hasTelemetry) return [];
     return telemetry.map((r: ChargeTelemetryReading) => ({
@@ -257,7 +313,7 @@ export default function ChargingDetailPage() {
       range: r.rated_range != null ? toDistanceDisplay(r.rated_range) : null,
       power: r.power_w != null ? convertPowerFromSI(Math.abs(r.power_w), 'kW') : null,
     }));
-  }, [telemetry, hasTelemetry, toDistanceDisplay]);
+  }, [telemetry, hasTelemetry, toDistanceDisplay, formatTime]);
 
   const tempData = useMemo(() => {
     if (!hasTelemetry) return [];
@@ -267,7 +323,7 @@ export default function ChargingDetailPage() {
       inside: r.inside_temp != null ? convertTempFromSI(r.inside_temp, unitPrefs.temperature) : null,
       outside: r.outside_temp != null ? convertTempFromSI(r.outside_temp, unitPrefs.temperature) : null,
     }));
-  }, [telemetry, hasTelemetry, unitPrefs.temperature]);
+  }, [telemetry, hasTelemetry, unitPrefs.temperature, formatTime]);
 
   const voltCurrentData = useMemo(() => {
     if (!hasTelemetry) return [];
@@ -278,7 +334,7 @@ export default function ChargingDetailPage() {
         voltage: r.voltage,
         current: r.current_amps != null ? Math.abs(r.current_amps) : null,
       }));
-  }, [telemetry, hasTelemetry]);
+  }, [telemetry, hasTelemetry, formatTime]);
 
   /* ─── primary-resource states (session drives the whole page) ─── */
 
@@ -331,6 +387,9 @@ export default function ChargingDetailPage() {
     ? (rateEnergyWh / 1000) / (durationSeconds / 3600) : null;
   const billedCost = session.billed_cost_decimal ?? null;
   const displayCost = billedCost ?? session.cost_decimal ?? null;
+  const costDenomination = billedCost != null ? session.billed_currency : session.cost_currency;
+  const recordedMoney = (amount: number, denomination: string | null | undefined) =>
+    `${fmtNumber(amount)} ${denomination?.trim() || '—'}`;
   const perKwhRate =
     displayCost != null && displayEnergyWh > 0
       ? displayCost / (displayEnergyWh / 1000)
@@ -339,7 +398,7 @@ export default function ChargingDetailPage() {
 
   const costValue =
     displayCost != null
-      ? formatCurrency(displayCost)
+      ? recordedMoney(displayCost, costDenomination)
       : displayEnergyWh > 0
         ? formatEnergyCost(displayEnergyWh / 1000)
         : '—';
@@ -402,7 +461,7 @@ export default function ChargingDetailPage() {
       value: durationSeconds != null ? durationMin : null,
       max: Math.max(durationSeconds != null ? durationMin : 1, 120),
       label: t('charging.detail.duration', 'Duration'),
-      unit: 'min',
+      unit: t('common.min', 'min'),
     },
     {
       key: 'avgPower',
@@ -525,7 +584,11 @@ export default function ChargingDetailPage() {
             costText={costValue}
             configuredRate={settingsCostPerKwh}
             calculatedRate={perKwhRate}
-            rateText={displayPerKwhRate != null ? `${formatCurrency(displayPerKwhRate)}/kWh` : '—'}
+            rateText={displayPerKwhRate != null
+              ? `${perKwhRate != null
+                ? recordedMoney(displayPerKwhRate, displayCost != null ? costDenomination : session.billed_currency)
+                : formatCurrency(displayPerKwhRate)}/kWh`
+              : '—'}
             currencySymbol={currencySymbol}
             distanceM={addedDistanceM}
             distanceText={addedDistanceM != null
@@ -647,7 +710,13 @@ export default function ChargingDetailPage() {
           ) },
           { id: 'charge-curve', size: 'full', content: (
             <DetailPlacement sourceId="jsx-17259">
-            <section aria-label={t('charging.detail.chargeCurve', 'Charge Curve')} className="min-w-0 space-y-3">
+            <section
+              aria-label={t('charging.detail.chargeCurve', 'Charge Curve')}
+              className="min-w-0 space-y-3"
+              data-curve-provenance={curveProvenance}
+              data-telemetry-status={telemetryDataState.status}
+              data-telemetry-provenance={telemetryDataState.provenance}
+            >
               <div className="flex flex-wrap items-center gap-1.5">
                 <Text as="p" variant="body" weight="medium">{t('charging.detail.chargeCurve', 'Charge Curve')}</Text>
                 <TrendingUp className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
@@ -656,8 +725,19 @@ export default function ChargingDetailPage() {
                     <Text as="span" variant="caption">
                       ({t('charging.detail.estimated', 'estimated')})
                     </Text>
-                    <DataProvenanceBadge provenance="inferred" />
+                    <DataProvenanceBadge
+                      provenance="inferred"
+                      status={sessionDataState.status}
+                      updatedAt={sessionDataState.updatedAt}
+                    />
                   </>
+                )}
+                {hasTelemetry && (
+                  <DataProvenanceBadge
+                    provenance={telemetryDataState.provenance}
+                    status={telemetryDataState.status}
+                    updatedAt={telemetryDataState.updatedAt}
+                  />
                 )}
                 <HelpTooltip
                   size="sm"
@@ -666,6 +746,40 @@ export default function ChargingDetailPage() {
                   ariaLabel={t('help.charging.chargeCurveAria', { defaultValue: 'More info about taper and derating' })}
                 />
               </div>
+              {telemetryDataState.status === 'stale' && (
+                <StaleRefreshWarning
+                  state={telemetryDataState}
+                  label={t('charging.detail.chargeCurve', 'Charge Curve')}
+                />
+              )}
+              {!hasTelemetry && chargeCurve.length > 0 && (
+                <div className="space-y-2" data-testid="charge-curve-inputs">
+                  <Text variant="caption">
+                    {t('charging.curve.modernization.modeledCurves', 'Curves are modeled from session metadata, not sampled charging telemetry.')}
+                  </Text>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Text variant="caption">{t('charging.detail.resource', 'Charge session')}</Text>
+                    <DataProvenanceBadge
+                      provenance={sessionDataState.provenance}
+                      status={sessionDataState.status}
+                      updatedAt={sessionDataState.updatedAt}
+                    />
+                  </div>
+                </div>
+              )}
+              {telemetryDataState.status === 'initial' ? (
+                <ChartBlockSkeleton />
+              ) : telemetryError ? (
+                <QueryError error={telemetryError} onRetry={() => refetchTelemetry()} />
+              ) : telemetryDataState.status === 'unavailable' && chargeCurve.length > 0 ? (
+                <EmptyState
+                  message={t(
+                    'charging.detail.noTimelineData',
+                    'No battery level, energy, or range samples were recorded for this session.',
+                  )}
+                  className="py-4"
+                />
+              ) : null}
               {chargeCurve.length > 0 ? (
                 <EmbeddedChart
                   title={t('charging.detail.chargeCurve', 'Charge Curve')}
@@ -677,7 +791,12 @@ export default function ChargingDetailPage() {
                   // Dense series above the cap omit the SR table (no-table
                   // pattern) — the chart itself still draws every sample.
                   data={isLargeDataset ? undefined : chargeCurve}
-                  exportData={chargeCurve}
+                  metadata={{
+                    sourceLabel: !hasTelemetry
+                      ? `${t('provenance.inferred', 'Estimated')} · ${t('charging.curve.modernization.modeledCurves', 'Curves are modeled from session metadata, not sampled charging telemetry.')}`
+                      : t('provenance.historical', 'Historical'),
+                  }}
+                  exportData={curveExportData}
                   exportable
                   fullscreen
                   dataColumns={[
@@ -1226,7 +1345,7 @@ export default function ChargingDetailPage() {
                   },
                   {
                     label: t('charging.detail.vehicle', 'Vehicle'),
-                    value: vehicle?.display_name ?? `ID ${session.vehicle_id}`,
+                    value: vehicle?.display_name ?? t('admin.vehicleCost.rowId', 'ID {{id}}', { id: fmtInt(session.vehicle_id) }),
                   },
                 ]}
               />
@@ -1256,16 +1375,21 @@ export default function ChargingDetailPage() {
                 <div>
                   <Text as="p" variant="caption" className="mb-1 block">{t('charging.detail.started', 'Started')}</Text>
                   <Text as="p" variant="body" weight="medium">
-                    <DateTime value={session.started_at} in="vehicle" showTz />
+                    {recordTimestamp(session.started_at)}
                   </Text>
                 </div>
                 <div>
                   <Text as="p" variant="caption" className="mb-1 block">{t('charging.detail.ended', 'Ended')}</Text>
                   <Text as="p" variant="body" weight="medium">
-                    {session.ended_at ? <DateTime value={session.ended_at} in="vehicle" showTz /> : '—'}
+                    {recordTimestamp(session.ended_at)}
                   </Text>
                 </div>
               </div>
+              {!sourceTimezone && (
+                <Text as="p" variant="caption" className="mt-4">
+                  {t('charging.detail.sourceTimezoneUnresolved', 'Source timezone unresolved; timestamps are shown in UTC.')}
+                </Text>
+              )}
             </LayoutCard>
           ) },
         ] satisfies readonly CardGridItem[]}

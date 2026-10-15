@@ -80,7 +80,7 @@ export function TwinDetailPanel({
              not yet arrived for this vehicle; no explicit recovery action. */
           <EmptyState icon={emptyIcon} message={emptyMessage} />
         ) : (
-          <KVList items={rows} columns={columns} />
+          <KVList items={rows} columns={columns} layout="responsive" wrap />
         )}
       </div>
     </LayoutCard>

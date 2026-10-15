@@ -17,7 +17,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { useDataState } from '@/hooks/useDataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { formatDateShort } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { chartTokens } from '@/lib/tokens';
 import type { Drive } from '@/types/driving';
 
@@ -55,6 +55,7 @@ const COMPONENTS: {
 
 export default function WhatIfPage() {
   const { fmtNumber } = useNumberFormatting();
+  const { formatDateShort } = useDateFormat();
   const { t } = useTranslation();
   usePageTitle(t('whatIf.title', 'What-If Simulator'));
 
@@ -93,7 +94,7 @@ export default function WhatIfPage() {
         value: String(d.id),
         label: `${formatDateShort(d.startTs)} · ${formatDistance(d.distanceM)}`,
       })),
-    [drives, formatDistance],
+    [drives, formatDistance, formatDateShort],
   );
 
   const componentLabels = useMemo(
@@ -120,6 +121,15 @@ export default function WhatIfPage() {
   const drivesState = useDataState({ ...drivesQuery, data: listResolved ? drivesQuery.data : undefined });
   const driveState = useDataState({ ...driveQuery, data: driveData });
   const telemetryState = useDataState({ ...telemetryQuery, data: telemetryData });
+  const telemetryCoverage = useMemo(() => {
+    const points = (telemetryData ?? []).filter(Boolean);
+    return {
+      total: points.length,
+      elevation: points.filter((point) => Number.isFinite(point.elevation) && point.elevation != null).length,
+      climate: points.filter((point) => typeof point.isClimateOn === 'boolean').length,
+      ambient: points.filter((point) => Number.isFinite(point.outsideTemp) && point.outsideTemp != null).length,
+    };
+  }, [telemetryData]);
   const sources = [
     { id: 'drives', label: t('whatIf.pickDrive', 'Choose a drive'), query: { ...drivesQuery, data: listResolved ? drivesQuery.data : undefined }, enabled: Boolean(vehicleIdStr) },
     { id: 'drive', label: t('whatIf.baseline', 'Actual drive'), query: { ...driveQuery, data: driveData }, enabled: Boolean(activeId) },
@@ -248,8 +258,8 @@ export default function WhatIfPage() {
 
                 <Text variant="caption" as="p" className="mb-4">
                   {t(
-                    'whatIf.blurb',
-                    'Take a real drive and change how it was driven. The engine decomposes the energy you actually used and recomputes it — no guesswork, anchored to your data.',
+                    'whatIf.modelHelp',
+                    'The recorded energy total anchors an estimated decomposition using generic vehicle constants. Aero, rolling, elevation and climate are modeled, not separately measured. Other is a signed unexplained residual; a negative value means the model exceeds the recorded total.',
                   )}
                 </Text>
 
@@ -339,10 +349,20 @@ export default function WhatIfPage() {
                   </div>
 
                   )}
-                  {activeId && (!telemetryState.hasData || telemetryQuery.data?.length === 0) && result.ok && (
+                  {activeId && result.ok && (
+                    <>
                     <Text as="p" variant="caption" className="mt-3">
-                      {t('whatIf.telemetryAssumptions', 'Telemetry is incomplete; elevation and climate use model assumptions, not complete observations.')}
+                      {t('whatIf.fieldCoverage', 'Valid telemetry fields in {{total}} returned samples: elevation {{elevation}}, climate state {{climate}}, ambient temperature {{ambient}}. Field presence does not establish complete drive observations. Missing elevation yields no modeled climb; missing climate state assumes HVAC on; missing ambient temperature assumes {{temperature}}.', {
+                        ...telemetryCoverage,
+                        temperature: formatTemperature(DEFAULT_KNOBS.ambientC),
+                      })}
                     </Text>
+                    <Text as="p" variant="caption" className="mt-2">
+                      {t('whatIf.packAssumptions', 'Arrival battery is modeled using a pack inferred from recorded energy and a valid battery drop when the inferred capacity is within model bounds; otherwise it uses the default pack. Current modeled capacity: {{capacity}}. Neither capacity nor arrival battery is a direct pack measurement.', {
+                        capacity: kwh(result.packWh),
+                      })}
+                    </Text>
+                    </>
                   )}
                 </GlassPanel>
                 </SectionErrorBoundary>

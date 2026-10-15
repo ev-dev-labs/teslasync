@@ -13,14 +13,18 @@ import { Heading, Text } from '@/components/ui';
 import { LayoutCard } from '@/components/layout';
 
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
+import { ComfortConsistencySectionBody } from './ComfortConsistencySectionBody';
+import type { ComfortConsistencyQueryState } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ComfortConsistencyMethodologyProps {
   summary: ComfortConsistencySummary;
+  state: ComfortConsistencyQueryState;
 }
 
 export function ComfortConsistencyMethodology({
   summary,
+  state,
 }: ComfortConsistencyMethodologyProps) {
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
@@ -104,19 +108,26 @@ export function ComfortConsistencyMethodology({
             </article>
           ))}
         </div>
-        <AlertBanner className="mt-4" variant="warning">
-          <Text as="p" variant="caption">
-            {t(
-              'comfortConsistency.method.notice',
-              '{{rows}} returned rows, {{samples}} active samples, and {{windows}} outside-band fragments support only the disclosed observational summaries.',
-              {
-                rows: fmtInt(summary.rows.returnedRows),
-                samples: fmtInt(summary.analyzedSamples),
-                windows: fmtInt(summary.stabilizationWindows.length),
-              },
-            )}
-          </Text>
-        </AlertBanner>
+        <ComfortConsistencySectionBody
+          summary={summary}
+          state={state}
+          className="mt-4"
+          skeletonHeight={64}
+        >
+          <AlertBanner variant="warning">
+            <Text as="p" variant="caption">
+              {t(
+                'comfortConsistency.method.notice',
+                '{{rows}} returned rows, {{samples}} active samples, and {{windows}} outside-band fragments support only the disclosed observational summaries.',
+                {
+                  rows: fmtInt(summary.rows.returnedRows),
+                  samples: fmtInt(summary.analyzedSamples),
+                  windows: fmtInt(summary.stabilizationWindows.length),
+                },
+              )}
+            </Text>
+          </AlertBanner>
+        </ComfortConsistencySectionBody>
       </LayoutCard>
     </section>
   );

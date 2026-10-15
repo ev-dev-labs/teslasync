@@ -106,37 +106,51 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	packVoltage, _, ok := readSignal("PackVoltage")
+	packVoltage, hasPackVoltage, ok := readSignal("PackVoltage")
 	if !ok {
 		return
 	}
-	tempMax, _, ok := readSignal("ModuleTempMax")
+	tempMax, hasTempMax, ok := readSignal("ModuleTempMax")
 	if !ok {
 		return
 	}
-	tempMin, _, ok := readSignal("ModuleTempMin")
+	tempMin, hasTempMin, ok := readSignal("ModuleTempMin")
 	if !ok {
 		return
+	}
+
+	// Keep the existing numeric projections; presence is independent of value,
+	// and derived measurements require both source extrema.
+	availability := map[string]bool{
+		"min_voltage": hasBrickMin, "max_voltage": hasBrickMax,
+		"avg_voltage":     hasBrickMin && hasBrickMax,
+		"voltage_spread":  hasBrickMin && hasBrickMax,
+		"imbalance_mv":    hasBrickMin && hasBrickMax,
+		"pack_voltage":    hasPackVoltage,
+		"min_temperature": hasTempMin, "max_temperature": hasTempMax,
+		"avg_temperature": hasTempMin && hasTempMax,
+		"temp_spread":     hasTempMin && hasTempMax,
 	}
 
 	// No brick voltage data — return empty response with status indicator
 	if !hasBrickMax && !hasBrickMin {
 		log.Debug().Int64("vehicle_id", vehicleID).Msg("battery cells: no brick voltage data")
 		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
-			"status":          "no_data",
-			"total_cells":     0,
-			"avg_voltage":     0,
-			"min_voltage":     0,
-			"max_voltage":     0,
-			"voltage_spread":  0,
-			"imbalance_mv":    0,
-			"pack_voltage":    round2(packVoltage),
-			"avg_temperature": round2((tempMax + tempMin) / 2),
-			"min_temperature": round2(tempMin),
-			"max_temperature": round2(tempMax),
-			"temp_spread":     round2(tempMax - tempMin),
-			"cells":           []cellReading{},
-			"history":         []historyPoint{},
+			"signal_availability": availability,
+			"status":              "no_data",
+			"total_cells":         0,
+			"avg_voltage":         0,
+			"min_voltage":         0,
+			"max_voltage":         0,
+			"voltage_spread":      0,
+			"imbalance_mv":        0,
+			"pack_voltage":        round2(packVoltage),
+			"avg_temperature":     round2((tempMax + tempMin) / 2),
+			"min_temperature":     round2(tempMin),
+			"max_temperature":     round2(tempMax),
+			"temp_spread":         round2(tempMax - tempMin),
+			"cells":               []cellReading{},
+			"history":             []historyPoint{},
 		})
 		return
 	}
@@ -196,21 +210,22 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	history := h.getHistory(ctx, vehicleID)
 
 	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"total_cells":     totalCells,
-		"avg_voltage":     round4(avgVoltage),
-		"min_voltage":     round4(brickMin),
-		"max_voltage":     round4(brickMax),
-		"voltage_spread":  round2(voltageSpread),
-		"imbalance_mv":    round2(voltageSpread),
-		"pack_voltage":    round2(packVoltage),
-		"avg_temperature": round2(avgTemp),
-		"min_temperature": round2(tempMin),
-		"max_temperature": round2(tempMax),
-		"temp_spread":     round2(tempSpread),
-		"cells":           cells,
-		"history":         history,
-		"min_cell":        fmt.Sprintf("#%d", int(numMin)+1),
-		"max_cell":        fmt.Sprintf("#%d", int(numMax)+1),
+		"signal_availability": availability,
+		"total_cells":         totalCells,
+		"avg_voltage":         round4(avgVoltage),
+		"min_voltage":         round4(brickMin),
+		"max_voltage":         round4(brickMax),
+		"voltage_spread":      round2(voltageSpread),
+		"imbalance_mv":        round2(voltageSpread),
+		"pack_voltage":        round2(packVoltage),
+		"avg_temperature":     round2(avgTemp),
+		"min_temperature":     round2(tempMin),
+		"max_temperature":     round2(tempMax),
+		"temp_spread":         round2(tempSpread),
+		"cells":               cells,
+		"history":             history,
+		"min_cell":            fmt.Sprintf("#%d", int(numMin)+1),
+		"max_cell":            fmt.Sprintf("#%d", int(numMax)+1),
 	})
 }
 
@@ -239,7 +254,8 @@ func parseInt64(s string) (int64, error) {
 }
 
 func toFloatOk(v interface{}) (float64, bool) {
-	return signal.Float64(v)
+	value, ok := signal.Float64(v)
+	return value, ok && !math.IsNaN(value) && !math.IsInf(value, 0)
 }
 
 // getLatestSignal reads a fresh live signal first, falling back to the

@@ -43,7 +43,7 @@ export function RangeScenarios({ source, loading }: RangeSectionProps) {
                   <Caption>{speed == null ? '—' : formatSpeed(speed / 3.6)}</Caption>
                   <Caption>{formatTemperature(temperature)}</Caption>
                   <Caption>{efficiency == null ? '—' : `${fmtNumber(convertEfficiencyFromSI(efficiency, unitPrefs.distance))} ${efficiencyUnit}`}</Caption>
-                  {samples != null && samples > 0 && <Caption>{t('range.drivesCount', '{{count}} drives', { count: samples })}</Caption>}
+                  {samples != null && samples > 0 && <Caption>{t('range.drivesCount', '{{count}} drives', { count: samples, defaultValue_one: '{{count}} drive' })}</Caption>}
                 </div>
                 {extras.length > 0 && <div className="mt-2 flex flex-wrap gap-1">
                   {extras.map(extra => <Badge key={extra} variant="neutral" size="sm">{extra}</Badge>)}

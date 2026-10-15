@@ -19,9 +19,8 @@
  *   3. Error — a failed stats query with nothing cached renders a compact
  *      error with retry instead of zeros that would read as healthy. Cached
  *      stats still win over the error (stale-but-honest beats blank).
- *   4. Null safety — an undefined payload degrades every count to `0` and the
- *      ratio to `0/0` (never blank, never `NaN`), and individually-missing
- *      numeric fields fall back to `0` field-by-field.
+ *   4. Numeric integrity — missing values remain unknown, measured zeros
+ *      remain zero, and the shared count API rejects invalid counts/totals.
  *   5. Accessibility — the four lucide glyphs are decorative and hidden from
  *      assistive tech.
  *
@@ -176,25 +175,96 @@ describe('ChannelStatsBand — error', () => {
 });
 
 describe('ChannelStatsBand — null safety', () => {
-  it('degrades every count to 0 and the ratio to 0/0 for an undefined payload', () => {
-    render(<ChannelStatsBand stats={undefined} isLoading={false} />);
+  it('keeps all four missing metrics and their reasons for an undefined payload', () => {
+    const { container } = render(<ChannelStatsBand stats={undefined} isLoading={false} />);
 
-    // Not the skeleton (not loading) and not blank — three zeroed counts…
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
-    expect(screen.getAllByText('0')).toHaveLength(3);
-    // …plus the degraded ratio, and the labels still render.
-    expect(screen.getByText('0/0')).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(4);
+    expect(screen.getAllByText('—')).toHaveLength(4);
+    expect(screen.getAllByText('No measurement supplied')).toHaveLength(4);
+    expect(screen.queryByText('0/0')).not.toBeInTheDocument();
     expect(screen.getByText('Active channels')).toBeInTheDocument();
   });
 
-  it('falls back to 0 for individually-missing numeric fields', () => {
-    // Only `sent` is present; every other figure must independently degrade.
-    const partial = { sent: 9 } as unknown as NotificationStats;
-    render(<ChannelStatsBand stats={partial} isLoading={false} />);
+  it('keeps individually-missing numeric fields unknown while retaining valid siblings', () => {
+    const partial: NotificationStats = JSON.parse('{"sent":9}');
+    const { container } = render(<ChannelStatsBand stats={partial} isLoading={false} />);
 
-    expect(screen.getByText('9')).toBeInTheDocument(); // sent survives
-    expect(screen.getAllByText('0')).toHaveLength(2); // failed + pending
-    expect(screen.getByText('0/0')).toBeInTheDocument(); // enabled/total
+    expect(screen.getByText('9')).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(3);
+    expect(screen.queryByText('0')).not.toBeInTheDocument();
+  });
+
+  it('keeps explicit null inputs unknown rather than measured zero', () => {
+    const stats: NotificationStats = JSON.parse(
+      '{"sent":null,"failed":null,"pending":null,"enabled_channels":null,"total_channels":null}',
+    );
+    const { container } = render(<ChannelStatsBand stats={stats} isLoading={false} />);
+    expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
+    expect(screen.getAllByText('No measurement supplied')).toHaveLength(4);
+    expect(screen.queryByText('0')).not.toBeInTheDocument();
+  });
+
+  it('rejects numeric strings rather than coercing them into counts', () => {
+    const stats: NotificationStats = JSON.parse(
+      '{"sent":"12","failed":"0","pending":"3","enabled_channels":"5","total_channels":8}',
+    );
+    const { container } = render(<ChannelStatsBand stats={stats} isLoading={false} />);
+    expect(container.querySelectorAll('[data-value-state="invalid"]')).toHaveLength(4);
+    expect(screen.getAllByText('Expected a finite numeric measurement')).toHaveLength(4);
+  });
+
+  it.each(['enabled_channels', 'total_channels'] as const)('keeps the ratio unknown when %s is missing', field => {
+    const partial = { ...FULL };
+    Reflect.deleteProperty(partial, field);
+    const { container } = render(<ChannelStatsBand stats={partial} isLoading={false} />);
+    const active = container.querySelector('[data-operational-metric="channels-active"]');
+    expect(active).toHaveAttribute('data-value-state', 'missing');
+    expect(active).toHaveTextContent('No measurement supplied');
+    expect(active?.querySelector('[data-operational-value]')).toHaveTextContent('—');
+    expect(screen.getByText('42')).toBeInTheDocument();
+  });
+
+  it('preserves measured zero including a measured 0/0 ratio', () => {
+    const { container } = render(<ChannelStatsBand stats={{
+      total_sent: 0, sent: 0, failed: 0, pending: 0, enabled_channels: 0, total_channels: 0,
+    }} isLoading={false} />);
+    expect(container.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
+    expect(screen.getAllByText('0')).toHaveLength(3);
+    expect(screen.getByText('0/0')).toBeInTheDocument();
+    expect(screen.queryByText('No measurement supplied')).not.toBeInTheDocument();
+  });
+
+  it.each([NaN, Infinity, -Infinity, -1, 1.5, Number.MAX_SAFE_INTEGER + 1])(
+    'passes invalid count %s through shared validation without rounding or clamping', value => {
+      const { container } = render(<ChannelStatsBand stats={{
+        ...FULL, sent: value, failed: value, pending: value, enabled_channels: value,
+      }} isLoading={false} />);
+      expect(container.querySelectorAll('[data-value-state="invalid"]')).toHaveLength(4);
+      expect(screen.getAllByText('—')).toHaveLength(4);
+      expect(container.textContent).toContain(Number.isFinite(value)
+        ? 'Expected a non-negative safe integer count' : 'Expected a finite numeric measurement');
+    },
+  );
+
+  it.each([NaN, Infinity, -1, 1.5, Number.MAX_SAFE_INTEGER + 1])(
+    'rejects invalid ratio total %s while retaining delivery counts', total => {
+      const { container } = render(<ChannelStatsBand stats={{ ...FULL, total_channels: total }} isLoading={false} />);
+      const active = container.querySelector('[data-operational-metric="channels-active"]');
+      expect(active).toHaveAttribute('data-value-state', 'invalid');
+      expect(active).toHaveTextContent('Expected a non-negative safe integer total');
+      expect(screen.getByText('42')).toBeInTheDocument();
+    },
+  );
+
+  it('preserves valid explicitly positive counts and signed zero', () => {
+    const { container } = render(<ChannelStatsBand stats={{
+      ...FULL, sent: +12, failed: -0, pending: +3, enabled_channels: +5, total_channels: +8,
+    }} isLoading={false} />);
+    expect(container.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
+    expect(screen.getByText('12')).toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText('5/8')).toBeInTheDocument();
   });
 });
 

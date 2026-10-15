@@ -13,6 +13,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // RegenHandler handles regenerative braking analytics HTTP requests.
@@ -109,7 +110,7 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	driveRows, err := h.repo.DriveRegens(ctx, vehicleID, hasRange, startTime, endTime)
 	if err != nil {
 		span.RecordError(err)
-		log.Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).Int64("vehicle_id", vehicleID).Msg("regen: failed to get drive data")
+		log.Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).Msg("regen: failed to get drive data")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to get regen data")
 		return
 	}
@@ -118,7 +119,7 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	monthRows, err := h.repo.MonthlyRegens(ctx, vehicleID, hasRange, startTime, endTime)
 	if err != nil {
 		span.RecordError(err)
-		log.Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).Int64("vehicle_id", vehicleID).Msg("regen: failed to get monthly data")
+		log.Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).Msg("regen: failed to get monthly data")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to get regen data")
 		return
 	}
@@ -129,7 +130,7 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	totalRegenWh, totalDriveWh, err := h.repo.LifetimeEnergy(ctx, vehicleID, hasRange, startTime, endTime)
 	if err != nil {
 		span.RecordError(err)
-		log.Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).Int64("vehicle_id", vehicleID).Msg("regen: failed to get energy totals")
+		log.Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).Msg("regen: failed to get energy totals")
 		httpx.WriteJSON(w, http.StatusInternalServerError, map[string]interface{}{
 			"error":               "failed to get regen energy totals",
 			"vehicle_id":          vehicleID,
@@ -168,7 +169,9 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 func (h *RegenHandler) capacity(ctx context.Context, vehicleID int64) (float64, string) {
 	vin, model, err := h.repo.VehicleModel(ctx, vehicleID)
 	if err != nil {
-		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("regen: vehicle capacity lookup failed; using default estimate")
+		span := trace.SpanFromContext(ctx)
+		span.RecordError(err)
+		log.Warn().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).Msg("regen: vehicle capacity lookup failed; using default estimate")
 		return defaultCapacityWh, "default"
 	}
 	return estimateBatteryCapacityWh(vin, model)

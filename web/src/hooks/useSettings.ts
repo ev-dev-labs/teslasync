@@ -7,6 +7,11 @@ import { resolveLocale } from '../lib/locale'
 import { subscribe } from '../lib/broadcast'
 import { TOPICS } from '../lib/broadcastTopics'
 import { useDataState } from './useDataState'
+import { fmtNumber } from '@/lib/numberFormat'
+import {
+  formatDistance, formatSpeed, formatEnergy, formatPower,
+  type UnitPref,
+} from '@/lib/unitConversion'
 
 // Re-export per-channel notification sound preferences so callers can
 // import everything settings-related from `@/hooks/useSettings`. The
@@ -56,6 +61,40 @@ const defaults: AppSettings = {
   ai_features: {},
   ai_provider_config: {},
   ai_cost_cap_cents: 0,
+}
+
+const publicUnitPrefs: UnitPref = {
+  distance: 'km', speed: 'km/h', temperature: '°C', pressure: 'bar',
+  energy: 'kWh', duration: 'h', power: 'kW', locale: 'en-US', precision: 2,
+}
+
+/**
+ * Public reports use an explicit display context, not authenticated settings,
+ * formatter globals, broadcast subscriptions or persisted recipient preferences.
+ */
+export function usePublicDisplayFormatting(context: UnitPref = publicUnitPrefs) {
+  const { distance, speed, temperature, pressure, energy, duration, power, locale, precision, emptyDisplay } = context
+  return useMemo(() => {
+    const unitPrefs: UnitPref = {
+      distance, speed, temperature, pressure, energy, duration, power,
+      locale: resolveLocale(locale ?? publicUnitPrefs.locale),
+      precision: sanitizePrecision(precision),
+      emptyDisplay,
+    }
+    return {
+      unitPrefs,
+      fmtNumber: (value: unknown, decimals = unitPrefs.precision) =>
+        fmtNumber(value, decimals, unitPrefs.locale),
+      formatDistance: (value: number | null | undefined, options?: Parameters<typeof formatDistance>[2]) =>
+        formatDistance(value, unitPrefs, options),
+      formatSpeed: (value: number | null | undefined, options?: Parameters<typeof formatSpeed>[2]) =>
+        formatSpeed(value, unitPrefs, options),
+      formatEnergy: (value: number | null | undefined, options?: Parameters<typeof formatEnergy>[2]) =>
+        formatEnergy(value, unitPrefs, options),
+      formatPower: (value: number | null | undefined, options?: Parameters<typeof formatPower>[2]) =>
+        formatPower(value, unitPrefs, options),
+    }
+  }, [distance, speed, temperature, pressure, energy, duration, power, locale, precision, emptyDisplay])
 }
 
 /**

@@ -29,6 +29,15 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { act, render, screen, fireEvent, within } from '@testing-library/react';
 import './operationalbrief-all/metricPreferencesTestSetup';
+import { formatTime as formatTimeWithOptions } from '@/lib/dateFormat';
+
+const datePreferences = vi.hoisted(() => ({ locale: 'en-US', tz: 'UTC' }));
+vi.mock('@/hooks/useDateFormat', () => ({
+  useDateFormat: () => ({
+    formatTime: (value: string | Date | null | undefined) =>
+      formatTimeWithOptions(value, datePreferences),
+  }),
+}));
 
 // jsdom lacks matchMedia; framer-motion (<FadeIn> via useReducedMotion) reads
 // it during render. Install a benign stub before any module imports it.
@@ -105,6 +114,20 @@ beforeEach(() => {
   idSeq = 0;
   vi.clearAllMocks();
   window.localStorage.clear();
+  datePreferences.locale = 'en-US';
+  datePreferences.tz = 'UTC';
+});
+
+it('does not claim observation freshness from a recently received frame', () => {
+  renderTail({
+    showStats: false,
+    entries: [makeEntry({ timestamp: new Date().toISOString(), name: 'speed', value: '0' })],
+  });
+
+  expect(screen.getByText('speed')).toBeInTheDocument();
+  expect(screen.getByText('0')).toBeInTheDocument();
+  expect(screen.getByLabelText('No recent data')).toBeInTheDocument();
+  expect(screen.queryByLabelText(/Up to date/)).not.toBeInTheDocument();
 });
 
 describe('LiveSignalTail — stat band', () => {
@@ -166,7 +189,7 @@ describe('LiveSignalTail — signal rows', () => {
     expect(screen.getByText('boolean')).toBeInTheDocument();
   });
 
-  it('tints numeric / string / boolean values distinctly by type', () => {
+  it('keeps values neutral while retaining explicit type badges', () => {
     renderTail({
       entries: [
         makeEntry({ name: 'a', value: 'num', type: 'number' }),
@@ -175,9 +198,24 @@ describe('LiveSignalTail — signal rows', () => {
       ],
     });
 
-    expect(screen.getByText('num').className).toContain('text-cyan-300');
-    expect(screen.getByText('str').className).toContain('text-emerald-300');
-    expect(screen.getByText('bool').className).toContain('text-amber-300');
+    for (const value of ['num', 'str', 'bool']) {
+      expect(screen.getByText(value)).toHaveClass('whitespace-pre-wrap', 'break-words');
+      expect(screen.getByText(value).className).not.toMatch(/text-(cyan|emerald|amber)-300/);
+    }
+    for (const type of ['number', 'string', 'boolean']) {
+      expect(screen.getByText(type)).toBeInTheDocument();
+    }
+  });
+
+  it('reacts to timezone and locale changes without changing raw timestamps', () => {
+    const entry = makeEntry();
+    const { rerender, props } = renderTail({ entries: [entry], showStats: false });
+    expect(screen.getByText(formatTimeWithOptions(entry.timestamp, datePreferences))).toBeInTheDocument();
+    datePreferences.locale = 'de-DE';
+    datePreferences.tz = 'America/Los_Angeles';
+    rerender(<LiveSignalTail {...props} />);
+    expect(screen.getByText(formatTimeWithOptions(entry.timestamp, datePreferences))).toBeInTheDocument();
+    expect(entry.timestamp).toBe('2024-01-01T00:00:00.000Z');
   });
 });
 
@@ -302,6 +340,35 @@ describe('LiveSignalTail — optional slots + resilience', () => {
 });
 
 describe('LiveSignalTail — mobile full-row presentation', () => {
+  it('updates card and full-row time after preferences change', () => {
+    const observers: { element: Element; callback: ResizeObserverCallback }[] = [];
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(private callback: ResizeObserverCallback) {}
+      observe(element: Element) { observers.push({ element, callback: this.callback }); }
+      unobserve() {}
+      disconnect() {}
+    });
+    try {
+      const entry = makeEntry();
+      const { rerender, props } = renderTail({ entries: [entry], showStats: false });
+      act(() => observers.forEach(({ element, callback }) => callback(
+        [{ target: element, contentRect: { width: 375 } } as ResizeObserverEntry],
+        {} as ResizeObserver,
+      )));
+      expect(screen.getByText(formatTimeWithOptions(entry.timestamp, datePreferences))).toBeInTheDocument();
+      datePreferences.locale = 'de-DE';
+      datePreferences.tz = 'America/Los_Angeles';
+      rerender(<LiveSignalTail {...props} />);
+      const expected = formatTimeWithOptions(entry.timestamp, datePreferences);
+      expect(screen.getByText(expected)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Quick view' }));
+      expect(within(screen.getByRole('dialog')).getByText(expected)).toBeInTheDocument();
+      expect(entry.timestamp).toBe('2024-01-01T00:00:00.000Z');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('retains paused raw readings, all detail fields and unknown freshness in a narrow host', () => {
     const observers: { element: Element; callback: ResizeObserverCallback }[] = [];
     vi.stubGlobal('ResizeObserver', class {

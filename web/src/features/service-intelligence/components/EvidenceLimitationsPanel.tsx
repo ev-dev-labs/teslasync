@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { ExternalLink, FileSearch, Info } from 'lucide-react';
-import { Badge, Caption, Heading, Text } from '@/components/ui';
+import { Badge, BUTTON_BASE, BUTTON_VARIANTS, Caption, Heading, Text } from '@/components/ui';
+import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 import { LayoutCard } from '@/components/layout';
 import type { ServiceIntelligenceEvidenceBundle } from '@/api/hooks/useServiceIntelligence';
 import { PanelState } from './PanelState';
@@ -26,7 +28,7 @@ export function EvidenceLimitationsPanel({
 
   return (
     <LayoutCard title={t('serviceIntelligence.evidence.title', 'Evidence & limitations')}
-      actions={<FileSearch className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+      actions={<FileSearch className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />}>
       <PanelState
         selected={selected}
         loading={loading}
@@ -49,7 +51,7 @@ export function EvidenceLimitationsPanel({
           <div>
             <div className="mb-2 flex items-center justify-between gap-2">
               <Heading level="sub">{t('serviceIntelligence.evidence.inventory', 'Evidence inventory')}</Heading>
-              <Badge variant="info">
+              <Badge variant="neutral">
                 {t('serviceIntelligence.evidence.count', '{{count}} items', { count: items.length })}
               </Badge>
             </div>
@@ -77,7 +79,7 @@ export function EvidenceLimitationsPanel({
                       href={item.source_document_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="mt-2 inline-flex min-h-11 items-center gap-1 rounded text-sm font-medium text-cyan-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/40"
+                      className={cn(BUTTON_BASE, BUTTON_VARIANTS.ghost, typography.size.sm, 'mt-2 min-h-11 max-w-full justify-start whitespace-normal px-2 hover:underline')}
                     >
                       {t('serviceIntelligence.evidence.source', 'Open evidence source')}
                       <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
@@ -89,7 +91,7 @@ export function EvidenceLimitationsPanel({
           </div>
           <div className="border-t border-[var(--border-subtle)] pt-4">
             <Heading level="sub" className="mb-2 flex items-center gap-2">
-              <Info className="h-4 w-4 text-amber-300" aria-hidden="true" />
+              <Info className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
               {t('serviceIntelligence.limitations.title', 'Interpretation limits')}
             </Heading>
             <ul className="list-disc space-y-2 ps-5">

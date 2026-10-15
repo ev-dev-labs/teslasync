@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import type { DataStateSource } from '@/api/dataState'
 import { useTranslation } from 'react-i18next'
 import {
   Badge,
@@ -9,6 +10,7 @@ import {
 import { AlertBanner } from '@/components/feedback'
 import { LayoutCard } from '@/components/layout'
 import { useDateFormat } from '@/hooks/useDateFormat'
+import { useOperationalMode } from '@/hooks/useOperationalMode'
 import { Icons } from '@/lib/icons'
 import type { ManagementEndpointKind } from './managementJson'
 import { ManagementEndpointBody } from './ManagementEndpointBody'
@@ -22,6 +24,7 @@ interface ManagementEndpointCardProps {
   endpoint: string
   prerequisite: Prerequisite
   data: unknown
+  source?: DataStateSource<unknown>
   fetchedAt?: string | null
   loading?: boolean
   error?: unknown
@@ -62,6 +65,7 @@ export function ManagementEndpointCard({
   endpoint,
   prerequisite,
   data,
+  source,
   fetchedAt,
   loading = false,
   error,
@@ -78,6 +82,8 @@ export function ManagementEndpointCard({
 }: ManagementEndpointCardProps) {
   const { t } = useTranslation()
   const { formatDateTime } = useDateFormat()
+  const { canWrite, writeBlockReason } = useOperationalMode()
+  const liveActionBlocked = (kind === 'specs' || kind === 'payer') && !canWrite
   const prerequisiteLabel = {
     user: t('vehicleManagement.prerequisite.user', 'User access'),
     partner: t('vehicleManagement.prerequisite.partner', 'Partner token'),
@@ -93,7 +99,7 @@ export function ManagementEndpointCard({
         </Badge>
       }>
         <div className="flex min-w-0 items-start gap-3">
-          <div className="rounded-xl bg-cyan-500/10 p-2 text-cyan-300">
+          <div className="rounded-xl bg-[var(--surface-2)] p-2 text-[var(--text-secondary)]">
             <EndpointIcon className="h-4 w-4" aria-hidden="true" />
           </div>
           <div className="min-w-0 space-y-1">
@@ -105,6 +111,11 @@ export function ManagementEndpointCard({
         {endpoint}
       </Code>
       {warning}
+      {liveActionBlocked && (
+        <Text variant="helper" as="p" role="status">
+          {writeBlockReason}
+        </Text>
+      )}
       {operationSucceeded && !error && (
         <AlertBanner
           variant="success"
@@ -120,6 +131,7 @@ export function ManagementEndpointCard({
       <div className="flex-1">
         <ManagementEndpointBody
           data={data}
+          source={source}
           loading={loading}
           error={error}
           unavailable={unavailable}
@@ -144,7 +156,7 @@ export function ManagementEndpointCard({
             variant="secondary"
             size="sm"
             loading={refreshPending}
-            disabled={refreshDisabled || unavailable}
+            disabled={refreshDisabled || unavailable || liveActionBlocked}
             icon={<Icons.refresh className="h-4 w-4" aria-hidden="true" />}
             onClick={onRefresh}
             wrapLabel

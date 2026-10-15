@@ -114,20 +114,26 @@ function DecisionBody({
   onOpen: () => void;
 }) {
   const { fmtNumber } = useNumberFormatting();
-  const save = data.home_savings ?? 0;
-  const site = data.supercharger_site ?? '';
-  const waitAt = data.home_wait_start ? formatTime(data.home_wait_start) : '—';
-  const reason = t(`nextCharge.reason.${data.reason_key}`, data.reason, {
+  const unknown = t('common.unknown', 'Unknown');
+  const currencyOperand = (value: number | null | undefined) =>
+    value != null && Number.isFinite(value) ? formatCurrency(value) : unknown;
+  const numberOperand = (value: number) => Number.isFinite(value) ? fmtNumber(value) : unknown;
+  const site = data.supercharger_site?.trim() || unknown;
+  const hasWaitStart = !!data.home_wait_start && Number.isFinite(Date.parse(data.home_wait_start));
+  const waitAt = hasWaitStart && data.home_wait_start ? formatTime(data.home_wait_start) : unknown;
+  const sourceReason = data.reason?.trim() ||
+    t(`nextCharge.verdict.${data.verdict}`, verdictLabel(data.verdict));
+  const reason = t(`nextCharge.reason.${data.reason_key}`, sourceReason, {
     site,
-    save: formatCurrency(save),
+    save: currencyOperand(data.home_savings),
     time: waitAt,
-    home: formatCurrency(data.home_now_cost ?? 0),
-    sc: formatCurrency(data.supercharger_cost ?? 0),
-    soc: fmtNumber(data.current_soc),
-    target: fmtNumber(data.target_soc),
+    home: currencyOperand(data.home_now_cost),
+    sc: currencyOperand(data.supercharger_cost),
+    soc: numberOperand(data.current_soc),
+    target: numberOperand(data.target_soc),
   });
   const socLine = t('nextCharge.socLine', '{{soc}}% → {{target}}% · {{kwh}} kWh needed', {
-    soc: fmtNumber(data.current_soc), target: fmtNumber(data.target_soc), kwh: fmtNumber(data.kwh_needed),
+    soc: numberOperand(data.current_soc), target: numberOperand(data.target_soc), kwh: numberOperand(data.kwh_needed),
   });
   const currencyDisplay = (raw: number) => ({ value: formatCurrency(raw), unit: '' });
   const rawMetrics: readonly StatMetric[] = [
@@ -135,9 +141,9 @@ function DecisionBody({
       rawValue: data.home_now_cost, display: { formatter: currencyDisplay } },
     { metricId: 'currency', occurrenceId: 'wait-window', label: t('nextCharge.waitWindow', 'Wait window'),
       rawValue: data.home_wait_cost, display: { formatter: currencyDisplay },
-      context: data.home_wait_start ? waitAt : undefined },
+      context: hasWaitStart ? waitAt : undefined },
     { metricId: 'currency', occurrenceId: 'supercharger', label: t('nextCharge.supercharger', 'Supercharger'),
-      rawValue: data.supercharger_cost, display: { formatter: currencyDisplay }, context: site || undefined },
+      rawValue: data.supercharger_cost, display: { formatter: currencyDisplay }, context: data.supercharger_site || undefined },
   ];
   const metrics = useOperationalMetrics(rawMetrics);
 

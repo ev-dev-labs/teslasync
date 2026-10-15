@@ -2,7 +2,7 @@ import type { ScienceWindow } from '@/api/hooks/useScience';
 import {
   useScienceNotebook
 } from '@/api/hooks/useScience';
-import { EmptyState, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { DataSourceNotice, EmptyState, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { LayoutCard, SourceContent } from '@/components/layout';
 import {
   Accordion,
@@ -21,20 +21,21 @@ export function NotebookPanel({ window }: { window: ScienceWindow }) {
   const query = useScienceNotebook(window);
   const state = useDataState(query, { provenance: 'historical' });
   const data = state.data;
+  const initialPaused = !state.hasData && state.isRefreshBlocked && !state.fatalError;
 
   return (
     <section data-testid="science-notebook" className="min-w-0">
       <LayoutCard title={t('science.notebook.title', 'Lab notebook (method)')}>
       <StaleRefreshWarning state={state} />
       <SourceContent
-        state={state.status === 'initial' ? 'loading' : state.fatalError ? 'error' : !data ? 'empty' : 'ready'}
+        state={initialPaused ? 'empty' : state.status === 'initial' ? 'loading' : state.fatalError ? 'error' : !data ? 'empty' : 'ready'}
         label={t('science.notebook.title', 'Lab notebook (method)')}
         emptyMessage={t('science.empty', 'No fit inputs in this window.')}
         errorMessage={t('error.loadFailed', 'Failed to load data')}
         error={state.fatalError}
         errorRecovery={{ onRetry: () => { void query.refetch(); } }}
         loadingContent={<Skeleton className="h-32" />}
-        emptyContent={<EmptyState title={t('science.notebook.title', 'Lab notebook')} message={t('science.empty', 'No fit inputs in this window.')} action={{ label: t('common.retry', 'Retry'), onClick: () => { void query.refetch(); } }} />}
+        emptyContent={initialPaused ? <DataSourceNotice title={t('dataSources.status.paused', 'Refresh paused')} sources={[{ id: 'notebook', label: t('science.overview.notebook', 'Analysis records'), query }]} /> : <EmptyState title={t('science.notebook.title', 'Lab notebook')} message={t('science.empty', 'No fit inputs in this window.')} action={{ label: t('common.retry', 'Retry'), onClick: () => { void query.refetch(); } }} />}
       >
       {data && (
         <>

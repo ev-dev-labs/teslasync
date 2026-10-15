@@ -39,6 +39,13 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement, ReactNode } from 'react';
+import { cloneElement } from 'react';
+import type { ChartTooltipProps } from '@/components/charts/ChartTooltip';
+import { convertSpeedFromSI, convertEfficiencyFromSI } from '@/lib/unitConversion';
+import { fmtNumber, setGlobalLocale } from '@/lib/numberFormat';
+import { calendarRangeToInstants } from '@/lib/dateRange';
+import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
+import { axisTick } from '@/components/charts/chartUtils';
 import { Car, TrendingUp, Gauge } from 'lucide-react';
 
 // jsdom lacks matchMedia; framer-motion (<FadeIn>) + PageContainer read it at
@@ -68,6 +75,7 @@ const {
   unitsMock,
   selectedVehicleMock,
   rangeStateMock,
+  dateFormatMock,
   setRangeMock,
   captured,
   UNIT_PREFS_KM,
@@ -78,6 +86,7 @@ const {
   unitsMock: vi.fn(),
   selectedVehicleMock: vi.fn(),
   rangeStateMock: vi.fn(),
+  dateFormatMock: vi.fn(),
   setRangeMock: vi.fn(),
   captured: {} as Record<string, unknown>,
   UNIT_PREFS_KM: {
@@ -135,13 +144,14 @@ vi.mock('@/api/hooks/useDriving', async () => {
   return {
     ...actual,
     useSpeedProfile: (...args: unknown[]) => speedProfileMock(...args),
-    useDrives: (...args: unknown[]) => drivesMock(...args),
+    useDriveCalendarHistory: (...args: unknown[]) => drivesMock(...args),
   };
 });
 
 vi.mock('@/hooks/useUnits', () => ({ useUnits: () => unitsMock() }));
 vi.mock('@/hooks/useSelectedVehicle', () => ({ useSelectedVehicle: () => selectedVehicleMock() }));
-vi.mock('@/hooks/useRangeState', () => ({ useRangeState: () => rangeStateMock() }));
+vi.mock('@/hooks/useRangeState', () => ({ useRangeState: (...args: unknown[]) => rangeStateMock(...args) }));
+vi.mock('@/hooks/useDateFormat', () => ({ useDateFormat: () => dateFormatMock() }));
 
 // Stub the chart primitives: recharts needs a measured container jsdom can't
 // give it. BarChart + Scatter capture the exact derived `data`; LinearGauge
@@ -149,6 +159,8 @@ vi.mock('@/hooks/useRangeState', () => ({ useRangeState: () => rangeStateMock() 
 vi.mock('@/components/charts', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
   const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  const { ChartTooltip } = await import('@/components/charts/ChartTooltip');
+  const { axisTick } = await import('@/components/charts/chartUtils');
   const Null = () => null;
   const pass = (testid: string) =>
     function Pass({ children }: { children?: ReactNode }) {
@@ -156,14 +168,27 @@ vi.mock('@/components/charts', async () => {
     };
   return {
     ...chartTestDoubles,
-    EmbeddedChart: function EmbeddedChart({ title, data, dataColumns, children }: { title: string; data?: unknown; dataColumns?: unknown; children?: ReactNode }) {
+    axisTick,
+    EmbeddedChart: function EmbeddedChart({ title, ariaLabel, data, dataColumns, children }: { title: string; ariaLabel?: string; data?: unknown; dataColumns?: unknown; children?: ReactNode }) {
       captured[title] = { data, dataColumns };
+      captured[`${title}-aria`] = ariaLabel;
       return React.createElement('div', { 'data-testid': `embedded-${title}` }, children);
     },
-    ChartTooltip: Null,
-    Tooltip: Null,
-    XAxis: Null,
-    YAxis: Null,
+    ChartTooltip,
+    Tooltip: function Tooltip({ content }: { content?: ReactElement<ChartTooltipProps> }) {
+      captured.tooltip = content;
+      return null;
+    },
+    XAxis: function XAxis(props: { dataKey?: string; tickFormatter?: (value: number) => string; tick?: unknown }) {
+      captured[`axis-${props.dataKey}`] = props.tickFormatter;
+      captured[`x-tick-${props.dataKey}`] = props.tick;
+      return null;
+    },
+    YAxis: function YAxis(props: { dataKey?: string; tickFormatter?: (value: number) => string; tick?: unknown }) {
+      captured[`axis-${props.dataKey}`] = props.tickFormatter;
+      captured[`y-tick-${props.dataKey}`] = props.tick;
+      return null;
+    },
     CartesianGrid: Null,
     Cell: Null,
     ResponsiveContainer: pass('responsive'),
@@ -296,7 +321,14 @@ beforeEach(() => {
   drivesMock.mockReturnValue(makeQuery<Drive[]>({ data: DRIVES }));
   unitsMock.mockReturnValue({ unitPrefs: UNIT_PREFS_KM });
   selectedVehicleMock.mockReturnValue({ vehicleId: 42 });
-  rangeStateMock.mockReturnValue({ start: '2015-01-01', end: '2030-12-31', setRange: setRangeMock });
+  setGlobalLocale('en-US');
+  dateFormatMock.mockReturnValue({ tz: 'UTC', locale: 'en-US' });
+  rangeStateMock.mockReturnValue({
+    start: '2015-01-01', end: '2030-12-31',
+    startInstant: '2015-01-01T00:00:00.000Z',
+    endInstantExclusive: '2031-01-01T00:00:00.000Z',
+    timezone: 'UTC', setRange: setRangeMock,
+  });
 });
 
 /* ── Specs: pure helpers ──────────────────────────────────────────── */
@@ -352,6 +384,51 @@ describe('SpeedProfilePage helpers', () => {
 /* ── Specs: page render / orchestration ───────────────────────────── */
 
 describe('SpeedProfilePage', () => {
+  it('uses shared scalable typography on every axis without rewriting saved font preferences', () => {
+    const root = document.documentElement;
+    const originalStyle = root.getAttribute('style');
+    const savedScale = localStorage.getItem('teslasync-font-scale');
+    const savedFamily = localStorage.getItem('teslasync-font-family');
+    try {
+      localStorage.setItem('teslasync-font-scale', '1.35');
+      localStorage.setItem('teslasync-font-family', 'atkinson');
+      root.style.setProperty('--font-scale', '1.35');
+      root.style.setProperty('--font-sans', "'Atkinson Hyperlegible', sans-serif");
+      const { rerenderPage } = renderPage();
+      const assertTicks = () => {
+        for (const key of ['x-tick-range', 'y-tick-undefined', 'x-tick-speed', 'y-tick-efficiency']) {
+          expect(captured[key]).toEqual({
+            ...axisTick,
+            fontSize: getChartFontSize(),
+            fontFamily: getChartFontFamily(),
+          });
+        }
+      };
+      assertTicks();
+      expect(getChartFontSize()).toBe(15);
+      expect(getChartFontFamily()).toBe("'Atkinson Hyperlegible', sans-serif");
+
+      root.style.setProperty('--font-scale', '0.85');
+      root.style.setProperty('--font-sans', "'Source Sans 3', sans-serif");
+      rerenderPage();
+      assertTicks();
+      expect(getChartFontSize()).toBe(9);
+      expect(getChartFontFamily()).toBe("'Source Sans 3', sans-serif");
+      expect(localStorage.getItem('teslasync-font-scale')).toBe('1.35');
+      expect(localStorage.getItem('teslasync-font-family')).toBe('atkinson');
+      expect(captured.barChartData).toHaveLength(4);
+      expect(captured.scatterData).toHaveLength(3);
+      expect(screen.getByTestId('gauge-Avg Speed')).toHaveTextContent('90km/h');
+    } finally {
+      if (originalStyle == null) root.removeAttribute('style');
+      else root.setAttribute('style', originalStyle);
+      if (savedScale == null) localStorage.removeItem('teslasync-font-scale');
+      else localStorage.setItem('teslasync-font-scale', savedScale);
+      if (savedFamily == null) localStorage.removeItem('teslasync-font-family');
+      else localStorage.setItem('teslasync-font-family', savedFamily);
+    }
+  });
+
   it('renders the header + KPI band with SI→km/h converted values', () => {
     renderPage();
 
@@ -379,15 +456,15 @@ describe('SpeedProfilePage', () => {
     ]);
 
     // D_NULL (no avg speed) + D_ZERO (no distance) are filtered out; the rest
-    // carry rounded display speed, display efficiency, and a threshold colour.
+    // carry unrounded display speed, display efficiency, and a threshold colour.
     expect(captured.scatterData).toEqual([
-      { speed: 11, efficiency: 120, color: 'var(--semantic-success)' },
+      { speed: 10.8, efficiency: 120, color: 'var(--semantic-success)' },
       { speed: 36, efficiency: 150, color: 'var(--semantic-info)' },
-      { speed: 65, efficiency: 200, color: 'var(--semantic-warning)' },
+      { speed: 64.8, efficiency: 200, color: 'var(--semantic-warning)' },
     ]);
   });
 
-  it('renders per-bucket cards with time-share, readings and matched efficiency', () => {
+  it('renders per-bucket cards with drive count share, counts and matched efficiency', () => {
     renderPage();
 
     for (const range of ['0-15', '30-45', '60-75', '90+']) {
@@ -398,6 +475,33 @@ describe('SpeedProfilePage', () => {
     expect(screen.getByText('10.80 km/h')).toBeInTheDocument(); // 0-15 avg drive speed
     expect(screen.getByText('120.00')).toBeInTheDocument(); // 0-15 efficiency
     expect(screen.getByText('200.00')).toBeInTheDocument(); // 60-75 efficiency
+  });
+
+  it('uses the endpoint drive-count population rather than durations or the separate drive query', () => {
+    drivesMock.mockReturnValue(makeQuery<Drive[]>({
+      data: [
+        makeDrive({ id: 1, avgSpeedMps: 3, durationS: 60 }),
+        makeDrive({ id: 2, avgSpeedMps: 18, durationS: 36000 }),
+      ],
+    }));
+    renderPage();
+
+    expect(screen.getByText('Eligible drives')).toBeInTheDocument();
+    expect(screen.getByText('500')).toBeInTheDocument();
+    expect(screen.getAllByText('Drive count share')).toHaveLength(4);
+    expect(screen.getAllByText('Drive count')).toHaveLength(4);
+    expect(screen.getByText('20.00%')).toBeInTheDocument();
+    expect(screen.getByText('42.00%')).toBeInTheDocument();
+    expect(screen.getByText('32.00%')).toBeInTheDocument();
+    expect(screen.getByText('6.00%')).toBeInTheDocument();
+    expect(screen.getByText('Each count is one drive with a recorded average speed greater than zero in the selected vehicle and date range. Shares divide each bucket count by the total eligible-drive count, not by driving time or telemetry samples.')).toBeInTheDocument();
+    expect(screen.queryByText('Time share')).not.toBeInTheDocument();
+    expect(screen.queryByText('Readings')).not.toBeInTheDocument();
+    expect(captured['Speed Distribution-aria']).toBe('Eligible-drive counts by average-speed bucket bar chart');
+    expect(captured.barChartData).toEqual(PROFILE.distribution?.map(bucket => ({
+      range: bucket.speedBucket,
+      readings: bucket.readings,
+    })));
   });
 
   it('renders the efficiency insight at the optimal speed', () => {
@@ -411,12 +515,15 @@ describe('SpeedProfilePage', () => {
 
     expect(screen.getByText('55.92 mph')).toBeInTheDocument(); // 25 m/s → 56 mph
     expect(screen.getByTestId('gauge-Avg Speed')).toHaveTextContent('56mph');
-    // Efficiency unit label flips to Wh/mi (drive→bucket matching is unit-aware,
-    // so the exact matched-card count is display-unit dependent — assert ≥1).
+    // Display preferences change the units, not fixed source-band membership.
     expect(screen.getAllByText('Wh/mi').length).toBeGreaterThanOrEqual(1);
-    // Scatter efficiency is Wh/mi (120 · 1.609344 → 193) with its own colour band.
+    // Scatter efficiency retains the full Wh/mi conversion and source colour.
     const scatter = captured.scatterData as { speed: number; efficiency: number; color: string }[];
-    expect(scatter[0]).toEqual({ speed: 7, efficiency: 193, color: 'var(--semantic-success)' });
+    expect(scatter[0]).toEqual({
+      speed: convertSpeedFromSI(3, 'mph'),
+      efficiency: convertEfficiencyFromSI(120, 'mi'),
+      color: 'var(--semantic-success)',
+    });
   });
 
   it('surfaces speed-profile query errors with a working retry affordance', () => {
@@ -464,6 +571,124 @@ describe('SpeedProfilePage', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Speed Profile' })).toBeInTheDocument();
   });
 
+  it.each(['profile', 'drives'] as const)('keeps unresolved %s evidence initial, then paused, then authoritatively empty and recovered', source => {
+    const mock = source === 'profile' ? speedProfileMock : drivesMock;
+    const refetch = vi.fn();
+    const emptyProfile = { distribution: [], avgSpeedMps: 0, peakSpeedMps: 0, optimalSpeedMps: 0 };
+    const emptyMessage = source === 'profile'
+      ? 'No speed distribution available yet'
+      : 'Not enough drive data for the efficiency scatter yet';
+    const expectOutline = () => {
+      for (const title of ['Speed Distribution', 'Speed Envelope', 'Speed Buckets', 'Efficiency vs Speed', 'Efficiency Insight']) {
+        expect(screen.getByText(title)).toBeInTheDocument();
+      }
+    };
+    mock.mockReturnValue(makeQuery({ refetch }));
+    const view = renderPage();
+    expectOutline();
+    expect(screen.queryByText(emptyMessage)).not.toBeInTheDocument();
+    expect(screen.getAllByText('Loading source').length).toBeGreaterThan(0);
+    expect(screen.getByTestId(source === 'profile' ? 'scatter' : 'bar-chart')).toBeInTheDocument();
+
+    mock.mockReturnValue(makeQuery({ fetchStatus: 'paused', refetch }));
+    view.rerenderPage();
+    expectOutline();
+    expect(screen.queryByText(emptyMessage)).not.toBeInTheDocument();
+    expect(screen.getAllByText('Refresh paused').length).toBeGreaterThan(0);
+    expect(screen.getByText('The initial evidence query is paused; no empty result is inferred.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+
+    mock.mockReturnValue(makeQuery({ data: source === 'profile' ? emptyProfile : [] }));
+    view.rerenderPage();
+    expectOutline();
+    expect(screen.getByText(emptyMessage)).toBeInTheDocument();
+    expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+
+    mock.mockReturnValue(makeQuery({ data: source === 'profile' ? PROFILE : DRIVES }));
+    view.rerenderPage();
+    expectOutline();
+    expect(screen.queryByText(emptyMessage)).not.toBeInTheDocument();
+    expect(screen.getByTestId('bar-chart')).toBeInTheDocument();
+    expect(screen.getByTestId('scatter')).toBeInTheDocument();
+  });
+
+  it('prioritizes missing selection over cached evidence without removing section shells, then recovers', () => {
+    selectedVehicleMock.mockReturnValue({ vehicleId: null });
+    const view = renderPage();
+    for (const title of ['Speed Distribution', 'Speed Envelope', 'Speed Buckets', 'Efficiency vs Speed', 'Efficiency Insight']) {
+      expect(screen.getByText(title)).toBeInTheDocument();
+    }
+    expect(screen.getAllByText('Select a vehicle')).toHaveLength(6);
+    expect(screen.queryByText('Loading source')).not.toBeInTheDocument();
+    expect(screen.queryByText('0 drives analysed')).not.toBeInTheDocument();
+    expect(screen.queryByText('Source available')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('scatter')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('gauge-Avg Speed')).not.toBeInTheDocument();
+    selectedVehicleMock.mockReturnValue({ vehicleId: 42 });
+    view.rerenderPage();
+    expect(screen.queryByText('Select a vehicle')).not.toBeInTheDocument();
+    expect(screen.getByText('5 drives analysed')).toBeInTheDocument();
+    expect(screen.getByTestId('bar-chart')).toBeInTheDocument();
+    expect(screen.getByTestId('scatter')).toBeInTheDocument();
+  });
+
+  it('labels active profile loading separately from paused-without-data and successful zero evidence', () => {
+    const brief = () => within(screen.getByTestId('speed-profile-brief'));
+    speedProfileMock.mockReturnValue(makeQuery<SpeedProfileData>({ isLoading: true }));
+    const view = renderPage();
+    expect(brief().getByText('Loading source')).toBeInTheDocument();
+    expect(captured.scatterData).toHaveLength(3);
+
+    speedProfileMock.mockReturnValue(makeQuery<SpeedProfileData>({
+      isLoading: true, isFetching: false, fetchStatus: 'paused',
+    }));
+    view.rerenderPage();
+    expect(brief().getByText('Refresh paused')).toBeInTheDocument();
+    expect(brief().queryByText('Loading source')).not.toBeInTheDocument();
+    expect(brief().queryByText('Source available')).not.toBeInTheDocument();
+    expect(screen.queryByText('No speed distribution available yet')).not.toBeInTheDocument();
+    expect(screen.queryByText(/offline/i)).not.toBeInTheDocument();
+
+    speedProfileMock.mockReturnValue(makeQuery<SpeedProfileData>({
+      data: { distribution: [], avgSpeedMps: 0, peakSpeedMps: 0, optimalSpeedMps: 0 },
+    }));
+    view.rerenderPage();
+    expect(brief().getByText('Source available')).toBeInTheDocument();
+    expect(brief().getAllByText('0.00 km/h')).toHaveLength(3);
+    expect(brief().getByText('0')).toBeInTheDocument();
+    expect(screen.getByText('No speed distribution available yet')).toBeInTheDocument();
+    expect(screen.getByTestId('gauge-Avg Speed')).toHaveAttribute('data-reading', '0');
+  });
+
+  it.each(['failure', 'paused'] as const)('keeps profile refresh %s trust independent and clears it on recovery', posture => {
+    const brief = () => within(screen.getByTestId('speed-profile-brief'));
+    const refetch = vi.fn();
+    const view = renderPage();
+    speedProfileMock.mockReturnValue(makeQuery<SpeedProfileData>({
+      data: PROFILE, refetch,
+      ...(posture === 'failure' ? { error: new Error('profile refresh') } : { fetchStatus: 'paused' }),
+    }));
+    view.rerenderPage();
+    expect(brief().getByText(posture === 'failure' ? 'Retained source' : 'Refresh paused')).toBeInTheDocument();
+    expect(brief().getByText('90.00 km/h')).toBeInTheDocument();
+    expect(captured.barChartData).toHaveLength(4);
+    expect(captured.scatterData).toHaveLength(3);
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1);
+    expect(screen.queryByText(/offline/i)).not.toBeInTheDocument();
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+
+    speedProfileMock.mockReturnValue(makeQuery<SpeedProfileData>({ data: PROFILE }));
+    view.rerenderPage();
+    expect(brief().getByText('Source available')).toBeInTheDocument();
+    expect(brief().queryByText('Retained source')).not.toBeInTheDocument();
+    expect(brief().queryByText('Refresh paused')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+  });
+
   it('retains both source derivations during refresh failures', () => {
     const bytes = JSON.stringify(PROFILE);
     speedProfileMock.mockReturnValue(makeQuery<SpeedProfileData>({ data: PROFILE, error: new Error('profile refresh') }));
@@ -487,11 +712,61 @@ describe('SpeedProfilePage', () => {
   });
 
   it('sends the header-owned range to the profile query without a local picker', () => {
-    rangeStateMock.mockReturnValue({ start: '2024-02-01', end: '2024-02-28', setRange: setRangeMock });
+    const start = '2024-02-01T15:42:19.125Z';
+    const end = '2024-02-28T15:42:19.125Z';
+    rangeStateMock.mockReturnValue({
+      start: '2024-02-01', end: '2024-02-28',
+      startInstant: start, endInstantExclusive: end, setRange: setRangeMock,
+    });
     renderPage();
-    expect(speedProfileMock).toHaveBeenCalledWith('42', '2024-02-01', '2024-02-28');
+    expect(speedProfileMock).toHaveBeenCalledWith('42', start, end);
+    expect(drivesMock).toHaveBeenCalledWith('42', start, end);
+    expect(rangeStateMock).toHaveBeenCalledWith({ timezone: 'UTC' });
     expect(screen.queryByTestId('range-picker')).not.toBeInTheDocument();
     expect(setRangeMock).not.toHaveBeenCalled();
+    expect(screen.getByText('2024-02-01 — 2024-02-28')).toBeInTheDocument();
+  });
+
+  it('uses saved locale and timezone with inclusive lower and exclusive DST day boundaries', () => {
+    setGlobalLocale('de-DE');
+    dateFormatMock.mockReturnValue({ tz: 'America/Los_Angeles', locale: 'de-DE' });
+    const range = calendarRangeToInstants({
+      startDate: '2024-03-10', endDate: '2024-03-10', timezone: 'America/Los_Angeles',
+    });
+    rangeStateMock.mockReturnValue({
+      start: '2024-03-10', end: '2024-03-10', ...range, timezone: 'America/Los_Angeles',
+    });
+    drivesMock.mockReturnValue(makeQuery({
+      data: [
+        makeDrive({ ...D1, id: 1, startTs: '2024-03-10T07:59:59.999Z' }),
+        makeDrive({ ...D1, id: 2, startTs: range.startInstant }),
+        makeDrive({ ...D2, id: 3, startTs: '2024-03-11T06:59:59.999Z' }),
+        makeDrive({ ...D3, id: 4, startTs: range.endInstantExclusive }),
+        makeDrive({ ...D1, id: 5, startTs: 'invalid' }),
+        makeDrive({ ...D1, id: 6, startTs: '' }),
+      ],
+    }));
+    renderPage();
+    expect(rangeStateMock).toHaveBeenCalledWith({ timezone: 'America/Los_Angeles' });
+    expect(speedProfileMock).toHaveBeenCalledWith(
+      '42', '2024-03-10T08:00:00.000Z', '2024-03-11T07:00:00.000Z',
+    );
+    expect(captured.scatterData).toHaveLength(2);
+    const format = captured['axis-speed'] as (value: number) => string;
+    expect(format(12.5)).toContain('12,5');
+    setGlobalLocale('en-US');
+  });
+
+  it.each([
+    { startInstant: 'invalid', endInstantExclusive: '2024-03-11T07:00:00.000Z' },
+    { startInstant: undefined, endInstantExclusive: undefined },
+  ])('does not show unscoped drive evidence for invalid or missing instants', (range) => {
+    rangeStateMock.mockReturnValue({ ...range, timezone: 'UTC' });
+    renderPage();
+    expect(captured.scatterData ?? []).toEqual([]);
+    expect(speedProfileMock).toHaveBeenCalledWith(
+      '42', range.startInstant, range.endInstantExclusive,
+    );
   });
   it('supplies complete unit-labelled chart alternatives without color-only data', () => {
     renderPage();
@@ -499,7 +774,7 @@ describe('SpeedProfilePage', () => {
       data: captured.barChartData,
       dataColumns: [
         { key: 'range', label: 'Speed Buckets' },
-        { key: 'readings', label: 'Readings', kind: 'count' },
+        { key: 'readings', label: 'Drive count', kind: 'count' },
       ],
     });
     expect(captured['Efficiency vs Speed']).toEqual({
@@ -515,10 +790,66 @@ describe('SpeedProfilePage', () => {
     unitsMock.mockReturnValue({ unitPrefs: UNIT_PREFS_MI });
     renderPage();
     expect(captured.scatterData).toEqual([
-      { speed: 7, efficiency: 193, color: 'var(--semantic-success)' },
-      { speed: 22, efficiency: 241, color: 'var(--semantic-info)' },
-      { speed: 40, efficiency: 322, color: 'var(--semantic-warning)' },
+      { speed: convertSpeedFromSI(3, 'mph'), efficiency: convertEfficiencyFromSI(120, 'mi'), color: 'var(--semantic-success)' },
+      { speed: convertSpeedFromSI(10, 'mph'), efficiency: convertEfficiencyFromSI(150, 'mi'), color: 'var(--semantic-info)' },
+      { speed: convertSpeedFromSI(18, 'mph'), efficiency: convertEfficiencyFromSI(200, 'mi'), color: 'var(--semantic-warning)' },
     ]);
+  });
+
+  it.each([
+    ['km/h', 'km', UNIT_PREFS_KM],
+    ['mph', 'mi', UNIT_PREFS_MI],
+  ] as const)('preserves close fractional points and raw SI evidence with %s preferences', (speed, distance, prefs) => {
+    const source = [
+      makeDrive({ id: 10, avgSpeedMps: 3.001, distanceM: 1000, energyUsedWh: 120.123 }),
+      makeDrive({ id: 11, avgSpeedMps: 3.002, distanceM: 1000, energyUsedWh: 120.124 }),
+    ];
+    const bytes = JSON.stringify({ profile: PROFILE, drives: source });
+    drivesMock.mockReturnValue(makeQuery<Drive[]>({ data: source }));
+    unitsMock.mockReturnValue({ unitPrefs: prefs });
+    const view = renderPage();
+    const assertPoints = (speed: 'km/h' | 'mph', distance: 'km' | 'mi') => {
+      expect(captured.scatterData).toEqual(source.map(drive => ({
+        speed: convertSpeedFromSI(drive.avgSpeedMps!, speed),
+        efficiency: convertEfficiencyFromSI(drive.energyUsedWh!, distance),
+        color: 'var(--semantic-success)',
+      })));
+      expect(JSON.stringify({ profile: PROFILE, drives: source })).toBe(bytes);
+    };
+    assertPoints(speed, distance);
+    const points = captured.scatterData as { speed: number; efficiency: number }[];
+    expect(points[0].speed).not.toBe(points[1].speed);
+    expect(points[0].efficiency).not.toBe(points[1].efficiency);
+    const alternative = captured['Efficiency vs Speed'] as {
+      data: unknown;
+      dataColumns: { format: (value: number) => string }[];
+    };
+    expect(alternative.data).toBe(captured.scatterData);
+    for (const [index, key] of ['speed', 'efficiency'].entries()) {
+      const value = points[0][key as keyof typeof points[0]];
+      const formatted = alternative.dataColumns[index].format(value);
+      expect(formatted).toBe(fmtNumber(value));
+      expect((captured[`axis-${key}`] as (value: number) => string)(value)).toBe(formatted);
+    }
+    const tooltip = render(cloneElement(captured.tooltip as ReactElement<ChartTooltipProps>, {
+      active: true,
+      payload: [
+        { name: 'Speed', value: points[0].speed, unit: prefs.speed },
+        { name: 'Efficiency', value: points[0].efficiency, unit: prefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km' },
+      ],
+    }));
+    expect(within(screen.getByRole('tooltip')).getByText(alternative.dataColumns[0].format(points[0].speed))).toBeInTheDocument();
+    expect(within(screen.getByRole('tooltip')).getByText(alternative.dataColumns[1].format(points[0].efficiency))).toBeInTheDocument();
+    tooltip.unmount();
+    expect(screen.getByTestId('gauge-Avg Speed')).toHaveAttribute(
+      'data-reading', String(Math.round(convertSpeedFromSI(PROFILE.avgSpeedMps!, speed))),
+    );
+    unitsMock.mockReturnValue({ unitPrefs: UNIT_PREFS_MI });
+    view.rerenderPage();
+    assertPoints('mph', 'mi');
+    unitsMock.mockReturnValue({ unitPrefs: UNIT_PREFS_KM });
+    view.rerenderPage();
+    assertPoints('km/h', 'km');
   });
 
 });
@@ -560,12 +891,12 @@ describe('SpeedProfilePage source-unit and insight regressions', () => {
       expect(screen.queryByTestId('scatter')).not.toBeInTheDocument();
     });
 
-    it.each(['paused', 'idle'] as const)('shows unknown, not loading or zero, for %s drives without data', fetchStatus => {
+    it.each(['paused', 'idle'] as const)('distinguishes deferred and initial %s drives without data', fetchStatus => {
       drivesMock.mockReturnValue(makeQuery<Drive[]>({ fetchStatus }));
       renderPage();
       expectLabels();
-      expect(card().getAllByText('Unknown')).toHaveLength(2);
-      expect(card().queryByText('Loading source')).not.toBeInTheDocument();
+      expect(card().getAllByText(fetchStatus === 'paused' ? 'Refresh paused' : 'Loading source')).toHaveLength(2);
+      expect(card().queryByText('Unknown')).not.toBeInTheDocument();
       expect(card().queryByText('0.00')).not.toBeInTheDocument();
       expect(screen.queryByText('Not enough drive data for the efficiency scatter yet')).not.toBeInTheDocument();
     });
@@ -580,6 +911,34 @@ describe('SpeedProfilePage source-unit and insight regressions', () => {
       view.rerenderPage();
       expect(card().getAllByText('Unknown')).toHaveLength(2);
       expect(card().queryByText('0.00')).not.toBeInTheDocument();
+    });
+
+    it('does not infer authoritative no drives from returned rows that miss the exact window', () => {
+      rangeStateMock.mockReturnValue({
+        start: '2024-03-10', end: '2024-03-11',
+        startInstant: '2024-03-10T15:42:19.125Z',
+        endInstantExclusive: '2024-03-11T15:42:19.125Z',
+      });
+      drivesMock.mockReturnValue(makeQuery<Drive[]>({
+        data: [makeDrive({ ...D1, startTs: '2024-03-10T15:42:19.124Z' })],
+      }));
+      const view = renderPage();
+      expectLabels();
+      expect(drivesMock).toHaveBeenCalledWith(
+        '42', '2024-03-10T15:42:19.125Z', '2024-03-11T15:42:19.125Z',
+      );
+      expect(card().getAllByText('Unknown')).toHaveLength(2);
+      expect(card().queryByText('Unavailable')).not.toBeInTheDocument();
+      expect(screen.queryByText('0 drives analysed')).not.toBeInTheDocument();
+      expect(screen.getByText('Drive sample coverage is unavailable independently of the speed profile.')).toBeInTheDocument();
+      expect(screen.queryByTestId('scatter')).not.toBeInTheDocument();
+      expect(screen.queryByText('Not enough drive data for the efficiency scatter yet')).not.toBeInTheDocument();
+
+      drivesMock.mockReturnValue(makeQuery<Drive[]>({ data: [] }));
+      view.rerenderPage();
+      expect(card().getAllByText('Unavailable')).toHaveLength(2);
+      expect(screen.getByText('0 drives analysed')).toBeInTheDocument();
+      expect(screen.getByText('Not enough drive data for the efficiency scatter yet')).toBeInTheDocument();
     });
 
     it('renders measured zero speed and efficiency rather than a missing-value status', () => {
@@ -618,6 +977,7 @@ describe('SpeedProfilePage source-unit and insight regressions', () => {
       drivesMock.mockReturnValue(makeQuery<Drive[]>({ data: DRIVES }));
       view.rerenderPage();
       expectLabels();
+      expect(within(screen.getByTestId('speed-profile-brief')).getByText('Source available')).toBeInTheDocument();
       expect(card().getByText('10.80 km/h')).toBeInTheDocument();
       expect(card().getByText('120.00')).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();

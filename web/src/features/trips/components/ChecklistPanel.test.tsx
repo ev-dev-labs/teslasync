@@ -11,6 +11,17 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+import { formatDateTime } from '@/lib/dateFormat';
+
+const datePreferences = vi.hoisted(() => ({ locale: 'en-US', tz: 'UTC' }));
+vi.mock('@/hooks/useSettings', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useSettings')>();
+  return { ...actual, useSettings: () => ({ ...actual.useSettings(), locale: datePreferences.locale }) };
+});
+vi.mock('@/lib/timezone', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/timezone')>();
+  return { ...actual, useTimezone: () => datePreferences.tz };
+});
 
 // ── i18n stub ──
 vi.mock('react-i18next', () => {
@@ -100,12 +111,19 @@ function renderPanel() {
 }
 
 beforeEach(() => {
+  Object.assign(datePreferences, { locale: 'en-US', tz: 'UTC' });
   vi.clearAllMocks();
   mockRun.mockReturnValue(idle({ data: run }));
   mockRefresh.mockReturnValue({ mutate: vi.fn(), isPending: false });
 });
 
 describe('ChecklistPanel', () => {
+  it('formats the checked timestamp in the selected locale and timezone', () => {
+    Object.assign(datePreferences, { locale: 'de-DE', tz: 'America/Los_Angeles' });
+    renderPanel();
+    expect(screen.getByText(`Checked ${formatDateTime(run.run_at, datePreferences)}`)).toBeInTheDocument();
+  });
+
   it('renders items with localized labels and statuses', () => {
     renderPanel();
     expect(screen.getByText('Charge level')).toBeInTheDocument();

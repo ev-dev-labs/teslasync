@@ -8,8 +8,8 @@ import type {
   ScienceOCVPoint,
 } from '@/api/types';
 import { AreaChartWrapper } from '@/components/charts';
-import { EmptyState, Skeleton, StaleRefreshWarning } from '@/components/feedback';
-import { LayoutCard, SourceContent } from '@/components/layout';
+import { DataSourceNotice, EmptyState, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { SourceContent } from '@/components/layout';
 import {
   Caption,
   DataTable,
@@ -18,23 +18,32 @@ import {
   type Column
 } from '@/components/ui';
 import { useDataState } from '@/hooks/useDataState';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { useUnits } from '@/hooks/useUnits';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { isFiniteNumber } from '@/lib/numberFormat';
 
 import { formatTemperatureDelta } from '@/lib/unitConversion';
-import { asList, downsample, SCIENCE_ACCENT, unknown, useT } from './helpers';
+import { asList, downsample, unknown, useT } from './helpers';
 import { MissingBadges } from './MissingBadges';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import type { StatMetric } from '@/components/data-display/stat-reference/types';
 import { ScienceSummaryBrief } from './operationalbrief-all/ScienceSummaryBrief';
 
 export function ElectrochemPanel({ window }: { window: ScienceWindow }) {
+  const { formatDateTime } = useDateFormat();
+  const palette = useChartPalette();
   const { fmtNumber, fmtScientificNumber, fmtInt } = useNumberFormatting();
   const t = useT();
   const query = useScienceElectrochem(window);
   const state = useDataState(query, { provenance: 'historical' });
   const data = state.data;
+  const initialPaused = !state.hasData && state.isRefreshBlocked && !state.fatalError;
   const { formatDuration, formatEnergy, formatTemperature, unitPrefs } = useUnits();
+  const reportedInterval = (low: unknown, high: unknown, unit: string) =>
+    isFiniteNumber(low) && isFiniteNumber(high) && low <= high
+      ? `${t('science.electrochem.activationInterval', 'CI')}: ${fmtNumber(low)}…${fmtNumber(high)} ${unit}`
+      : t('science.brief.intervalUnknown', 'Confidence interval unknown');
   const evidenceMetrics: StatMetric[] = [
     {
       metricId: 'count', occurrenceId: 'rest-points',
@@ -65,9 +74,7 @@ export function ElectrochemPanel({ window }: { window: ScienceWindow }) {
       rawValue: data?.arrhenius?.ea_j_per_mol,
       description: data?.arrhenius?.honesty ?? t('science.unknown', 'unknown'),
       display: { formatter: (raw) => ({ value: fmtNumber(raw), unit: 'J/mol' }) },
-      context: data?.arrhenius?.ea_ci95_low != null && data?.arrhenius?.ea_ci95_high != null
-        ? `${t('science.electrochem.activationInterval', 'CI')}: ${fmtNumber(data.arrhenius.ea_ci95_low)}…${fmtNumber(data.arrhenius.ea_ci95_high)} J/mol`
-        : t('science.brief.intervalUnknown', 'Confidence interval unknown'),
+      context: reportedInterval(data?.arrhenius?.ea_ci95_low, data?.arrhenius?.ea_ci95_high, 'J/mol'),
     },
     {
       metricId: 'count', occurrenceId: 'temperature-bins',
@@ -106,8 +113,7 @@ export function ElectrochemPanel({ window }: { window: ScienceWindow }) {
       rawValue: data?.aging?.proxy_slope_wh_per_day,
       description: data?.aging?.honesty ?? t('science.unknown', 'unknown'),
       display: { formatter: (raw) => ({ value: fmtNumber(raw), unit: 'Wh/day' }) },
-      context: data?.aging?.proxy_slope_wh_per_day != null
-        ? `n=${fmtNumber(data.aging.proxy_n)}` : t('science.unknown', 'unknown'),
+      context: `n=${isFiniteNumber(data?.aging?.proxy_n) ? fmtNumber(data.aging.proxy_n) : unknown(t)} · ${reportedInterval(data?.aging?.proxy_ci95_low, data?.aging?.proxy_ci95_high, 'Wh/day')}`,
     },
     {
       metricId: 'energy', occurrenceId: 'capacity-proxy',
@@ -164,10 +170,20 @@ export function ElectrochemPanel({ window }: { window: ScienceWindow }) {
       key: 'dv', align: 'right', header: t('science.electrochem.deltaV', 'ΔV (V)'), render: (r) => (r.delta_v != null ? fmtScientificNumber(r.delta_v, 3) : unknown(t)),
     },
   ];
+  const irMobilePresentation = {
+    roles: { at: 'title', resistance: 'primary', current: 'meta' } as const,
+    displayValue: (r: ScienceIRPoint, key: string) => {
+      const values: Record<string, string> = {
+        at: formatDateTime(r.at),
+        resistance: `${fmtNumber(r.ir_pack_ohm * 1000)} mΩ`,
+        current: `${fmtNumber(r.delta_i_a)} A`,
+      };
+      return values[key];
+    },
+  };
 
   return (
-    <section data-testid="science-electrochem" className="min-w-0">
-      <LayoutCard title={t('science.electrochem.title', 'Battery electrochemistry (pack-equivalent)')}>
+    <section data-testid="science-electrochem" className="min-w-0 space-y-3">
       <StaleRefreshWarning state={state} />
       <ScienceSummaryBrief
         title={t('science.electrochem.title', 'Battery electrochemistry (pack-equivalent)')}
@@ -177,14 +193,14 @@ export function ElectrochemPanel({ window }: { window: ScienceWindow }) {
         testId="science-electrochem-brief"
       />
       <SourceContent
-        state={state.status === 'initial' ? 'loading' : state.fatalError ? 'error' : !data ? 'empty' : 'ready'}
+        state={initialPaused ? 'empty' : state.status === 'initial' ? 'loading' : state.fatalError ? 'error' : !data ? 'empty' : 'ready'}
         label={t('science.electrochem.title', 'Battery electrochemistry (pack-equivalent)')}
         emptyMessage={t('science.empty', 'No fit inputs in this window.')}
         errorMessage={t('error.loadFailed', 'Failed to load data')}
         error={state.fatalError}
         errorRecovery={{ onRetry: () => { void query.refetch(); } }}
         loadingContent={<Skeleton className="h-48" />}
-        emptyContent={<EmptyState title={t('science.electrochem.title', 'Battery electrochemistry')} message={t('science.empty', 'No fit inputs in this window.')} action={{ label: t('common.retry', 'Retry'), onClick: () => { void query.refetch(); } }} />}
+        emptyContent={initialPaused ? <DataSourceNotice title={t('dataSources.status.paused', 'Refresh paused')} sources={[{ id: 'electrochem', label: t('science.overview.battery', 'Battery evidence'), query }]} /> : <EmptyState title={t('science.electrochem.title', 'Battery electrochemistry')} message={t('science.empty', 'No fit inputs in this window.')} action={{ label: t('common.retry', 'Retry'), onClick: () => { void query.refetch(); } }} />}
       >
       {data && (
         <>
@@ -198,7 +214,7 @@ export function ElectrochemPanel({ window }: { window: ScienceWindow }) {
               <AreaChartWrapper
                 data={downsample(data.ocv_points, 400).map((point) => ({ at: point.at, pack_v: point.ocv_pack_v }))}
                 xKey="at"
-                series={[{ key: 'pack_v', label: t('science.electrochem.packVoltage', 'Pack voltage'), color: SCIENCE_ACCENT }]}
+                series={[{ key: 'pack_v', label: t('science.electrochem.packVoltage', 'Pack voltage'), color: palette[0] }]}
                 height={200}
                 xFormatter={(value) => formatDateTime(value)}
                 yFormatter={(value) => fmtNumber(value)}
@@ -213,6 +229,17 @@ export function ElectrochemPanel({ window }: { window: ScienceWindow }) {
               emptyMessage={t('science.electrochem.restEmpty', 'No qualified rest-voltage observations in this window.')}
               pagination={{ defaultPageSize: 10, pageSizeOptions: [10, 25, 50] }}
               mobileColumns={['at', 'soc', 'voltage']}
+              mobilePresentation={{
+                roles: { at: 'title', voltage: 'primary', soc: 'meta' },
+                displayValue: (r, key) => {
+                  const values: Record<string, string> = {
+                    at: formatDateTime(r.at),
+                    voltage: `${fmtNumber(r.ocv_pack_v)} V`,
+                    soc: `${fmtNumber(r.soc_pct)}%`,
+                  };
+                  return values[key];
+                },
+              }}
             />
           </div>
           <SectionTitle>{t('science.electrochem.irEvidence', 'Pack resistance evidence')}</SectionTitle>
@@ -220,7 +247,7 @@ export function ElectrochemPanel({ window }: { window: ScienceWindow }) {
             <AreaChartWrapper
               data={downsample(data.ir_points, 400).map((p) => ({ at: p.at, ir_mohm: p.ir_pack_ohm * 1000 }))}
               xKey="at"
-              series={[{ key: 'ir_mohm', label: t('science.electrochem.irMilliohm', 'Pack IR (mΩ)'), color: SCIENCE_ACCENT }]}
+              series={[{ key: 'ir_mohm', label: t('science.electrochem.irMilliohm', 'Pack IR (mΩ)'), color: palette[0] }]}
               height={200}
               xFormatter={(v) => formatDateTime(v)}
               yFormatter={(v) => fmtNumber(v)}
@@ -235,6 +262,7 @@ export function ElectrochemPanel({ window }: { window: ScienceWindow }) {
             emptyMessage={t('science.electrochem.irEmpty', 'No current steps qualified for DCIR in this window.')}
             pagination={{ defaultPageSize: 10, pageSizeOptions: [10, 25, 50] }}
             mobileColumns={['at', 'resistance', 'current']}
+            mobilePresentation={irMobilePresentation}
           />
           <Text as="p" size="sm" color="secondary">
             {t('science.electrochem.chargePulses', '{{count}} charging pulse steps recorded separately from drive current steps.', {
@@ -250,6 +278,7 @@ export function ElectrochemPanel({ window }: { window: ScienceWindow }) {
               emptyMessage={t('science.electrochem.irEmpty', 'No current steps qualified for DCIR in this window.')}
               pagination={{ defaultPageSize: 10, pageSizeOptions: [10, 25, 50] }}
               mobileColumns={['at', 'resistance', 'current']}
+              mobilePresentation={irMobilePresentation}
             />
           )}
           <ScienceSummaryBrief
@@ -267,6 +296,18 @@ export function ElectrochemPanel({ window }: { window: ScienceWindow }) {
             keyExtractor={(r) => `${r.soc_lo_pct}-${r.temp_lo_c}`}
             emptyMessage={t('science.empty', 'No fit inputs in this window.')}
             pagination={{ defaultPageSize: 10, pageSizeOptions: [10, 25, 50] }}
+            mobilePresentation={{
+              roles: { soc: 'title', ocv: 'primary', temp: 'meta', n: 'meta' },
+              displayValue: (r, key) => {
+                const values: Record<string, string> = {
+                  soc: `${fmtNumber(r.soc_lo_pct)}–${fmtNumber(r.soc_hi_pct)} %`,
+                  ocv: `${fmtNumber(r.mean_ocv_v)} V`,
+                  temp: `${formatTemperature(r.temp_lo_c)}…${formatTemperature(r.temp_hi_c)}`,
+                  n: fmtNumber(r.n),
+                };
+                return values[key];
+              },
+            }}
           />
           <DataTable
             tableId="science:hysteresis"
@@ -274,6 +315,19 @@ export function ElectrochemPanel({ window }: { window: ScienceWindow }) {
             data={asList(data.hysteresis)}
             keyExtractor={(r) => `${r.soc_lo_pct}-${r.temp_lo_c}`}
             emptyMessage={t('science.empty', 'No fit inputs in this window.')}
+            mobilePresentation={{
+              roles: { soc: 'title', dv: 'primary', temp: 'meta', nc: 'meta', nd: 'meta' },
+              displayValue: (r, key) => {
+                const values: Record<string, string> = {
+                  soc: `${fmtNumber(r.soc_lo_pct)}–${fmtNumber(r.soc_hi_pct)} %`,
+                  dv: r.delta_v != null ? `${fmtScientificNumber(r.delta_v, 3)} V` : unknown(t),
+                  temp: `${formatTemperature(r.temp_lo_c)}…${formatTemperature(r.temp_hi_c)}`,
+                  nc: fmtNumber(r.n_charge),
+                  nd: fmtNumber(r.n_discharge),
+                };
+                return values[key];
+              },
+            }}
           />
           <div className="space-y-1 border-t border-[var(--border-default)] pt-2">
             <Text as="p" size="sm" className="font-semibold">{t('science.electrochem.aging', 'Aging exposure and capacity-proxy trend')}</Text>
@@ -296,7 +350,6 @@ export function ElectrochemPanel({ window }: { window: ScienceWindow }) {
         </>
       )}
       </SourceContent>
-      </LayoutCard>
     </section>
   );
 }

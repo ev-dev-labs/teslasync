@@ -121,7 +121,7 @@ interface RawStatePosition {
   is_climate_on?: boolean
 }
 
-interface RawStateResponse {
+export interface RawStateResponse {
   state?: VehicleState
   live?: boolean
   observed_at?: string | null
@@ -199,6 +199,19 @@ function parseVerifiedFields(raw: string[] | null | undefined): VerifiedVehicleS
   ))]
 }
 
+/** Observation evidence is independent of the query's successful receive time. */
+export function getVehicleStateEvidence(
+  res: Pick<RawStateResponse, 'observed_at' | 'freshness' | 'verified_fields'> | null | undefined,
+  now = Date.now(),
+): Pick<MappedVehicleStateResponse, 'observedAt' | 'freshness' | 'verifiedFields'> {
+  const observedAt = parseObservedAt(res?.observed_at)
+  return {
+    observedAt,
+    freshness: resolveVehicleStateFreshness(res?.freshness, observedAt, now),
+    verifiedFields: parseVerifiedFields(res?.verified_fields),
+  }
+}
+
 /**
  * Normalises a `GET /vehicles/{id}/state` response into `{ state, live }`.
  * Shared by {@link useVehicleState} and {@link fetchVehicleState} so the
@@ -223,9 +236,7 @@ function mapVehicleStateResponse(
     }
   }
   const live = res.live ?? false
-  const observedAt = parseObservedAt(res.observed_at)
-  const freshness = resolveVehicleStateFreshness(res.freshness, observedAt)
-  const verifiedFields = parseVerifiedFields(res.verified_fields)
+  const { observedAt, freshness, verifiedFields } = getVehicleStateEvidence(res)
   if (res.state && typeof res.state === 'object' && 'vehicle_id' in res.state) {
     return { state: res.state, live, observedAt, freshness, verifiedFields }
   }
@@ -488,7 +499,7 @@ export function useMediaLatest(vehicleId: number, refetchInterval?: number) {
   });
 }
 
-export function useLocationSnapshotLatest(vehicleId: number, refetchInterval?: number) {
+export function useLocationSnapshotLatest(vehicleId: number, refetchInterval?: number | false) {
   return useQuery({
     queryKey: ['location-latest', vehicleId],
     queryFn: ({ signal }) => request<import('../types').LocationSnapshot | null>(`/location-snapshots/latest?vehicle_id=${vehicleId}`, { signal }),
@@ -1717,8 +1728,10 @@ export function useRefreshVehicleSpecs(vehicleId?: string) {
   const queryClient = useQueryClient();
   const { success, error } = useMutationToast();
   return useMutation({
+    networkMode: 'always',
     mutationFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/specs/refresh`, {
       method: 'POST',
+      requiresLiveMode: true,
       body: JSON.stringify({ confirmed: true }),
     }),
     onSuccess: () => {
@@ -1870,6 +1883,7 @@ export function useSetEnterprisePayer(vehicleId?: string) {
   const queryClient = useQueryClient();
   const { success, error } = useMutationToast();
   return useMutation({
+    networkMode: 'always',
     mutationFn: ({ payload, confirmed }: EnterprisePayerVariables) =>
       request<VehicleManagementResult>(
         `/vehicles/${vehicleId}/enterprise-payer`,

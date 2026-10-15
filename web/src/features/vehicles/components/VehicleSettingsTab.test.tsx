@@ -20,6 +20,7 @@ import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
+import userEvent from '@testing-library/user-event'
 
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client')
@@ -199,6 +200,41 @@ describe('VehicleSettingsTab — loading + error states', () => {
 })
 
 describe('VehicleSettingsTab — row rendering', () => {
+  it('keeps all six fields labelled, mobile-sized and reflowable without changing desktop sizes', async () => {
+    mockedRequest.mockResolvedValue(DEFAULT_PAYLOAD)
+    renderTab()
+    await screen.findByTestId('vehicle-settings-rows')
+    for (const key of ['nickname', 'mute_until', 'charge_cost_tariff_id', 'units_distance', 'units_temperature', 'units_energy']) {
+      const field = screen.getByTestId(`vehicle-settings-input-${key}`)
+      expect(field).toHaveClass('min-h-11', 'md:min-h-10')
+      expect(screen.getByLabelText(`vehicleSettings.keys.${key}.label`)).toBe(field)
+      for (const action of ['save', 'reset']) {
+        const button = screen.getByTestId(`vehicle-settings-${action}-${key}`)
+        expect(button).toHaveClass('min-h-11', 'md:min-h-9', 'h-auto', 'whitespace-normal')
+        expect(button.parentElement).toHaveClass('flex-wrap', 'min-w-0')
+      }
+    }
+    expect(screen.getByTestId('vehicle-settings-section')).toHaveClass('p-4', 'sm:p-6')
+  })
+
+  it('edits and saves a nickname using only the keyboard', async () => {
+    mockedRequest.mockResolvedValue(DEFAULT_PAYLOAD)
+    const user = userEvent.setup()
+    renderTab()
+    const input = await screen.findByTestId('vehicle-settings-input-nickname')
+    await user.tab()
+    expect(input).toHaveFocus()
+    await user.clear(input)
+    await user.type(input, 'Keyboard nickname')
+    await user.tab()
+    expect(screen.getByTestId('vehicle-settings-save-nickname')).toHaveFocus()
+    await user.keyboard('{Enter}')
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledWith(
+      '/vehicles/42/settings/nickname',
+      expect.objectContaining({ method: 'PUT', body: JSON.stringify({ value: 'Keyboard nickname' }) }),
+    ))
+  })
+
   it('renders all editable default rows after a successful empty response', async () => {
     mockedRequest.mockResolvedValue(makePayload([]))
     renderTab()

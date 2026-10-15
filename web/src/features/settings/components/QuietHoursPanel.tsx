@@ -203,12 +203,14 @@ export interface QuietHoursPanelProps {
 export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
   const { seedDraft, onSeedConsumed } = props
   const { t } = useTranslation('settings')
+  const { t: tCommon } = useTranslation()
   const windowsQuery = useQuietHours()
   const windowsState = deriveDataState(windowsQuery)
   const { data: rawWindows } = windowsQuery
   const save = useSaveQuietHours()
   const remove = useDeleteQuietHours()
   const { confirm: confirmDelete, dialogProps: deleteDialogProps } = useConfirm()
+  const { confirm: confirmReplace, dialogProps: replacementDialogProps } = useConfirm()
   const windows = useMemo(() => rawWindows ?? [], [rawWindows])
 
   const [draft, setDraft] = useState<DraftWindow | null>(null)
@@ -241,7 +243,8 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
 
   const startEdit = async (w: QuietHoursWindow) => {
     if (savingDraft.current || save.isPending) return
-    if (draftIsDirty && !await requestClose()) return
+    if (draftIsDirty && !await requestReplacement()) return
+    if (savingDraft.current || save.isPending) return
     const nextDraft = makeDraft(w)
     setEditingId(w.id)
     setCurrentDraft(nextDraft)
@@ -269,6 +272,16 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
   const draftIsDirty = draft != null
     && initialDraft != null
     && JSON.stringify(draft) !== JSON.stringify(initialDraft)
+  const requestReplacement = useCallback(async () => {
+    if (!draftIsDirty) return true
+    return confirmReplace({
+      title: tCommon('forms.unsavedTitle', 'Unsaved changes'),
+      message: t('quietHours.form.unsaved', 'You have unsaved quiet-hours changes. Discard them?'),
+      variant: 'warning',
+      confirmLabel: tCommon('forms.discard', 'Discard changes'),
+      cancelLabel: tCommon('forms.keepEditing', 'Keep editing'),
+    })
+  }, [confirmReplace, draftIsDirty, t, tCommon])
   const { requestClose, dialogProps: discardDialogProps } = useDiscardChangesGuard(
     draftIsDirty,
     discardDraft,
@@ -286,7 +299,7 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
     if (lastConsumedSeed.current === seedDraft) return
     lastConsumedSeed.current = seedDraft
     const applySeed = async () => {
-      if (draftIsDirty && !await requestClose()) {
+      if (draftIsDirty && !await requestReplacement()) {
         if (latestSeed.current === seedDraft) onSeedConsumed?.()
         return
       }
@@ -308,7 +321,7 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
       onSeedConsumed?.()
     }
     void applySeed()
-  }, [seedDraft, onSeedConsumed, saveInFlight, save.isPending, draftIsDirty, requestClose, setCurrentDraft])
+  }, [seedDraft, onSeedConsumed, saveInFlight, save.isPending, draftIsDirty, requestReplacement, setCurrentDraft])
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -717,6 +730,7 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
             </div>
           </form>
         )}
+        {replacementDialogProps && <ConfirmDialog {...replacementDialogProps} />}
         {discardDialogProps && <ConfirmDialog {...discardDialogProps} />}
         {deleteDialogProps && <ConfirmDialog {...deleteDialogProps} />}
       </GlassPanel>

@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { type StatMetric } from '@/components/data-display';
 import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
-import { useCardPlacement } from '@/components/layout/layout-reference';
+import { useCardPlacement } from '@/components/layout';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { PASCALS_PER_KPA, type UnitPref } from '@/lib/unitConversion';
 import type { PressureSummary as Summary } from './pressureData';

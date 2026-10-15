@@ -37,6 +37,7 @@ export interface VaultEvidenceSource {
   section: EvidenceSectionId;
   labelKey: string;
   label: string;
+  /** An unresolved first read; state.isRefreshBlocked distinguishes deferral. */
   loading: boolean;
   state: DataState<unknown>;
 }
@@ -68,19 +69,6 @@ export function useVaultEvidence(vehicleId: string | null, sensitive: SensitiveF
   const driveScoreQuery = useDriveScore(vehicleId ?? undefined);
   const chargingHistoryQuery = useChargingHistory(vehicleId ?? undefined);
   const guardEventsQuery = useGuardEvents(numericVehicleId);
-
-  const isLoading =
-    vehicleQuery.isLoading ||
-    passportQuery.isLoading ||
-    maintenanceQuery.isLoading ||
-    serviceRecordsQuery.isLoading ||
-    softwareUpdatesQuery.isLoading ||
-    warrantyQuery.isLoading ||
-    driveHistoryQuery.isLoading ||
-    drivingStatsQuery.isLoading ||
-    driveScoreQuery.isLoading ||
-    chargingHistoryQuery.isLoading ||
-    guardEventsQuery.isLoading;
 
   const hasPartialErrors =
     vehicleQuery.isError ||
@@ -141,11 +129,15 @@ export function useVaultEvidence(vehicleId: string | null, sensitive: SensitiveF
     labelKey: string;
     label: string;
     query: DataStateSource<unknown>;
-  }[]).map(({ query, ...source }) => ({
-    ...source,
-    loading: query.isLoading && query.data === undefined,
-    state: deriveDataState<unknown>(query),
-  }));
+  }[]).map(({ query, ...source }) => {
+    const state = deriveDataState<unknown>(query);
+    return {
+      ...source,
+      loading: state.status === 'initial',
+      state,
+    };
+  });
+  const isLoading = sources.some((source) => source.loading);
 
   return { evidence, isLoading, hasPartialErrors, sources };
 }

@@ -10,7 +10,7 @@ export function AutomationHistoryTable({ rows, onOpen }: {
   rows: AutomationHistory[];
   onOpen: (id: number) => void;
 }) {
-  const { formatDurationMs } = useNumberFormatting();
+  const { formatDurationMs, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const ruleName = (row: AutomationHistory) =>
     row.automation_name || t('automations.historyPage.ruleId', 'Rule #{{id}}', { id: row.automation_id });
@@ -24,10 +24,13 @@ export function AutomationHistoryTable({ rows, onOpen }: {
     { key: 'status', header: t('automations.historyPage.outcome', 'Outcome'), visibleOnMobile: true, render: (row) =>
       t(`automations.historyPage.status.${row.status}`, row.status) },
     { key: 'trigger', header: t('automations.historyPage.trigger', 'Trigger'), render: (row) => row.trigger_type || '—' },
-    { key: 'actions', header: t('automations.historyPage.actions', 'Actions'), align: 'right', render: (row) => `${row.actions_succeeded}/${row.actions_total}` },
+    { key: 'actions', header: t('automations.historyPage.actions', 'Actions'), align: 'right', render: (row) => {
+      const count = (value: number) => Number.isSafeInteger(value) && value >= 0 ? fmtInt(value) : '—';
+      return `${count(row.actions_succeeded)}/${count(row.actions_total)}`;
+    } },
     { key: 'duration', header: t('automations.historyPage.durationColumn', 'Duration'), align: 'right', render: (row) => row.duration_ms != null ? formatDurationMs(row.duration_ms) : '—' },
     { key: 'error', header: t('automations.historyPage.error', 'Error'), render: (row) => row.error || '—' },
-  ], [t, onOpen, formatDurationMs]);
+  ], [t, onOpen, formatDurationMs, fmtInt]);
   return (
     <DataTable
       tableId="automations:history"

@@ -7,16 +7,16 @@ import {
   useScienceWeather,
 } from '@/api/hooks/useScience';
 import { Badge } from '@/components/ui';
-import { LayoutCard } from '@/components/layout';
 import { useDataState } from '@/hooks/useDataState';
 import type { StatMetric } from '@/components/data-display/stat-reference/types';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { asList, useT } from './helpers';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { ScienceSummaryBrief } from './operationalbrief-all/ScienceSummaryBrief';
 
 export function ScienceEvidenceOverview({ window }: { window: ScienceWindow }) {
+  const { formatDateTime } = useDateFormat();
   const { fmtInt } = useNumberFormatting();
   const t = useT();
   const electrochemQuery = useScienceElectrochem(window);
@@ -100,10 +100,13 @@ export function ScienceEvidenceOverview({ window }: { window: ScienceWindow }) {
   ];
   const sourceMetrics: StatMetric[] = cards.map((card) => {
     const unavailable = card.state.fatalError != null;
-    const loading = card.state.status === 'initial' && !card.resolvedEmpty;
+    const initialPaused = !card.state.hasData && card.state.isRefreshBlocked && !unavailable;
+    const loading = card.state.status === 'initial' && !card.resolvedEmpty && !initialPaused;
     const stateLabel = unavailable
       ? t('science.overview.failed', 'Unavailable')
-      : loading
+      : initialPaused
+        ? t('dataSources.status.paused', 'Refresh paused')
+        : loading
         ? t('science.overview.loading', 'Loading')
         : card.state.refreshError
           ? t('science.overview.cached', 'Cached · refresh failed')
@@ -149,10 +152,6 @@ export function ScienceEvidenceOverview({ window }: { window: ScienceWindow }) {
 
   return (
     <section data-testid="science-overview" className="min-w-0">
-      <LayoutCard
-        title={t('science.overview.title', 'Evidence at a glance')}
-        description={t('science.overview.subtitle', 'What this vehicle actually contributed in the selected window. Counts are observations, not a health grade.')}
-      >
       <ScienceSummaryBrief
         title={t('science.overview.title', 'Evidence at a glance')}
         description={t('science.overview.subtitle', 'What this vehicle actually contributed in the selected window. Counts are observations, not a health grade.')}
@@ -162,7 +161,6 @@ export function ScienceEvidenceOverview({ window }: { window: ScienceWindow }) {
         limited={cards.some((card) => !card.hasEvidence)}
         testId="science-evidence-brief"
       />
-      </LayoutCard>
     </section>
   );
 }

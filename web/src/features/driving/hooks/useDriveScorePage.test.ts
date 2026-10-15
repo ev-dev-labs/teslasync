@@ -2,7 +2,8 @@ import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Drive, DriveScore } from '@/types/driving';
 import { Icons } from '@/lib/icons';
-import { typography } from '@/lib/tokens';
+import { chartTokens, gaugeTone, neonColorMap, typography } from '@/lib/tokens';
+import { gradeColor, gradeTextClass } from '../components/score-orchestrator/scoreDomain';
 import { useDriveScorePage } from './useDriveScorePage';
 
 const state = vi.hoisted(() => ({
@@ -160,5 +161,48 @@ describe('useDriveScorePage achievement cohort', () => {
     expect(result.current.unscoredDriveCount).toBe(0);
     expect(result.current.unlockedAchievements.map(({ id }) => id)).toEqual(identities);
     expect(result.current.unlockedAchievements.every(({ unlocked }) => unlocked)).toBe(true);
+  });
+
+  it('uses restrained roles without changing populated category values or histogram boundaries', () => {
+    state.drives = [makeDrive(1)];
+    const { result } = renderHook(() => useDriveScorePage());
+    expect(result.current.categoryBarData.map(({ value, max, fill }) => ({ value, max, fill })))
+      .toEqual([
+        { value: 40, max: 40, fill: chartTokens.series[1] },
+        { value: 30, max: 30, fill: chartTokens.series[0] },
+        { value: 30, max: 30, fill: chartTokens.series[4] },
+      ]);
+    expect(result.current.histogramData.map(({ min, max, count, color }) => ({ min, max, count, color })))
+      .toEqual([
+        { min: 0, max: 20, count: 0, color: gaugeTone.danger },
+        { min: 20, max: 40, count: 0, color: gaugeTone.danger },
+        { min: 40, max: 60, count: 0, color: gaugeTone.warning },
+        { min: 60, max: 80, count: 0, color: gaugeTone.info },
+        { min: 80, max: 101, count: 1, color: gaugeTone.success },
+      ]);
+  });
+
+  it.each([
+    ['up', neonColorMap.green.text],
+    ['down', neonColorMap.red.text],
+    ['flat', typography.color.secondary],
+  ] as const)('uses the existing semantic text role for a supplied %s trend', (trend, color) => {
+    state.score = { overall: 87, trend };
+    const { result } = renderHook(() => useDriveScorePage());
+    expect(result.current.overallReading).toBe(87);
+    expect(result.current.trendColor).toBe(color);
+  });
+
+  it.each([
+    ['A+', gaugeTone.success, neonColorMap.green.text],
+    ['A', gaugeTone.success, neonColorMap.green.text],
+    ['B', gaugeTone.info, neonColorMap.blue.text],
+    ['C', gaugeTone.warning, neonColorMap.amber.text],
+    ['D', gaugeTone.danger, neonColorMap.red.text],
+    ['F', gaugeTone.danger, neonColorMap.red.text],
+    ['unknown', gaugeTone.neutral, typography.color.secondary],
+  ])('uses existing mode-aware semantic grade roles for %s', (grade, fill, text) => {
+    expect(gradeColor(grade)).toBe(fill);
+    expect(gradeTextClass(grade)).toBe(text);
   });
 });

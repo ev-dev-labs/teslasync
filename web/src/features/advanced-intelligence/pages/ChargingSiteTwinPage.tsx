@@ -61,6 +61,9 @@ export default function ChargingSiteTwinPage() {
     });
   };
   const result = publication.result;
+  const submitted = publication.published?.inputs;
+  const hasUnsubmittedChanges = submitted != null
+    && (Object.keys(form) as (keyof SiteDraft)[]).some((field) => form[field] !== submitted[field]);
   const mitigations = result?.mitigations ?? [];
   const assumptions = result?.assumptions ?? [];
   const paused = publication.source.fetchStatus === 'paused';
@@ -248,6 +251,12 @@ export default function ChargingSiteTwinPage() {
             >
               {t('advancedIntelligence.site.form.run', 'Run confirmed site simulation')}
             </Button>
+            {hasUnsubmittedChanges && (
+              <Text as="p" variant="bodySm" role="status">
+                {t('forms.unsavedTitle', 'Unsaved changes')}{' — '}
+                {t('advancedIntelligence.site.brief.description', 'Planning outputs from the submitted site scenario, with unsupported queue estimates kept explicit.')}
+              </Text>
+            )}
           </form>
           <MutationError error={publication.error} />
         </InsightPanel>

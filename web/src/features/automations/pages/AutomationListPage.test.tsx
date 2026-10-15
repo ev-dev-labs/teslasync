@@ -10,8 +10,7 @@
  *   2. `filtered` derivation — status filter + case-insensitive name/description
  *      search, combined.
  *   3. `vehicleLookup` build with display-name-or-VIN fallback.
- *   4. Selection pruning — `effectiveSelected` drops keys no longer visible
- *      after a filter change, and drives the bulk toolbar count.
+ *   4. Selection retains loaded IDs across filters and reviews them before writes.
  *   5. `runBulk` — numeric-id mutation, clear-on-success, keep-on-failure
  *      (and no unhandled rejection when the mutation rejects).
  *   6. Confirm-gated delete, loading / error propagation, retry + navigation.
@@ -48,10 +47,20 @@ describe('automation inventory hook boundary', () => {
     expect(assertAutomationInventory([{ ...base, execution_count: 0, failure_count: 0 }])).toHaveLength(1);
   });
 
+  it('preserves nullable status and finite signed and fractional values at the hook boundary', () => {
+    const rows = [
+      { ...base, enabled: null, auto_disabled: null, execution_count: -2, failure_count: 0.25 },
+      { ...base, id: 2, enabled: undefined, execution_count: -0.5, failure_count: 0 },
+    ];
+    expect(assertAutomationInventory(rows)).toEqual(rows);
+    for (const row of rows) expect(automationStatus(row)).toBeNull();
+  });
+
   it.each([
     null, {}, { items: [] }, [null], [{ ...base, enabled: 'false' }],
     [{ ...base, name: 3 }], [{ ...base, vehicle_id: '1' }],
-    [{ ...base, execution_count: NaN }], [{ ...base, last_triggered_at: 'bad' }],
+    [{ ...base, execution_count: NaN }], [{ ...base, failure_count: Infinity }],
+    [{ ...base, execution_count: '0' }], [{ ...base, last_triggered_at: 'bad' }],
   ])('rejects malformed inventory %j', (payload) => {
     expect(() => assertAutomationInventory(payload)).toThrow('Invalid automation inventory response');
   });
@@ -65,11 +74,11 @@ describe('automation inventory hook boundary', () => {
     });
     await waitFor(() => expect(result.current.data).toEqual([base]));
     await act(async () => { await result.current.refetch(); });
-    expect(result.current.isError).toBe(true);
+    await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.data).toEqual([base]);
     await act(async () => { await result.current.refetch(); });
-    expect(result.current.isError).toBe(false);
-    expect(result.current.data).toEqual([]);
+    await waitFor(() => expect(result.current.isError).toBe(false));
+    await waitFor(() => expect(result.current.data).toEqual([]));
     unmount();
     client.clear();
   });
@@ -109,6 +118,26 @@ describe('AutomationListPage source recovery and partial bulk outcomes', () => {
     expect(captured.table.hasData).toBe(false);
     expect(captured.table.isLoading).toBe(false);
     expect(captured.status.stats).toMatchObject({ total: undefined });
+    expect(captured.table.dataState).toMatchObject({ hasData: false, isRefreshBlocked: true });
+    expect(captured.status.dataState).toMatchObject({ hasData: false, isRefreshBlocked: true });
+  });
+
+  it('explains paused vehicle names independently and restores their lookup after recovery', () => {
+    const refetch = vi.fn();
+    useVehiclesMock.mockReturnValue({ ...makeQuery(), fetchStatus: 'paused', refetch });
+    const view = renderPage();
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Vehicles' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(captured.table.isLoading).toBe(false);
+    useVehiclesMock.mockReturnValue(makeQuery({ data: VEHICLES }));
+    view.rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter><AutomationListPage /></MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
+    expect(captured.table.vehicleLookup.size).toBeGreaterThan(0);
   });
 
   it('distinguishes invalid inputs from measured zero, signed and fractional values', () => {
@@ -139,6 +168,7 @@ describe('AutomationListPage source recovery and partial bulk outcomes', () => {
     renderPage();
     selectRows([1, 2]);
     fireEvent.click(screen.getByRole('button', { name: 'Enable' }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Enable' }));
 
     await waitFor(() => expect(captured.table.selectedKeys).toEqual([2]));
     expect(mutateAsync).toHaveBeenNthCalledWith(1, { ids: [1, 2], op: 'enable' });
@@ -147,6 +177,7 @@ describe('AutomationListPage source recovery and partial bulk outcomes', () => {
     expect(ids(captured.table.automations)).toEqual([1, 2, 3, 4]);
 
     fireEvent.click(screen.getByRole('button', { name: 'Enable' }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Enable' }));
     await waitFor(() => expect(mutateAsync).toHaveBeenNthCalledWith(2, { ids: [2], op: 'enable' }));
     await waitFor(() => expect(captured.table.selectedKeys).toEqual([]));
     expect(screen.queryByText('Error')).not.toBeInTheDocument();
@@ -159,6 +190,7 @@ describe('AutomationListPage source recovery and partial bulk outcomes', () => {
     renderPage();
     selectRows([1]);
     fireEvent.click(screen.getByRole('button', { name: 'Enable' }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Enable' }));
     await waitFor(() => expect(mutateAsync).toHaveBeenCalledWith({ ids: [1], op: 'enable' }));
     selectRows([1, 3]);
 
@@ -233,6 +265,7 @@ const operationalMode = vi.hoisted(() => ({
   canWrite: true,
   writeBlockReason: null as string | null,
 }));
+const realTable = vi.hoisted(() => ({ enabled: false }));
 
 vi.mock('@/hooks/useOperationalMode', () => ({
   useOperationalMode: () => operationalMode,
@@ -305,9 +338,11 @@ vi.mock('react-router-dom', async () => {
 // KPI MetricCards and BulkActionToolbar so the page's real derivation logic runs.
 vi.mock('./AutomationListTable', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
+  const actual = await vi.importActual<typeof import('./AutomationListTable')>('./AutomationListTable');
   return {
-    AutomationListTable: function Stub(props: Record<string, unknown>) {
-      captured.table = props;
+    AutomationListTable: function Stub(props: React.ComponentProps<typeof actual.AutomationListTable>) {
+      captured.table = { ...props };
+      if (realTable.enabled) return React.createElement(actual.AutomationListTable, props);
       return React.createElement('div', { 'data-testid': 'stub-table' });
     },
   };
@@ -474,6 +509,8 @@ function selectRows(keys: number[]) {
 }
 
 beforeEach(() => {
+  realTable.enabled = false;
+  window.localStorage.clear();
   useAutomationsMock.mockReset();
   useBulkMock.mockReset();
   useVehiclesMock.mockReset();
@@ -491,6 +528,25 @@ beforeEach(() => {
 });
 
 describe('AutomationListPage', () => {
+  it('reviews every retained selection hidden by table value filters before disabling', async () => {
+    realTable.enabled = true;
+    renderPage();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Night Charge' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Runs filter' }));
+    const filter = screen.getByRole('dialog', { name: 'Runs filter' });
+    fireEvent.click(within(filter).getByRole('checkbox', { name: '50' }));
+    fireEvent.click(within(filter).getByRole('button', { name: 'Done' }));
+    expect(screen.queryByRole('link', { name: 'Night Charge' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all rows' }));
+    expect(captured.table.selectedKeys).toEqual([2, 1, 3, 4]);
+    fireEvent.click(screen.getByRole('button', { name: 'Disable' }));
+    const review = await screen.findByRole('dialog');
+    for (const row of AUTOMATIONS) expect(review).toHaveTextContent(`#${row.id}: ${row.name}`);
+    expect(useBulkMock().mutateAsync).not.toHaveBeenCalled();
+    fireEvent.click(within(review).getByRole('button', { name: 'Disable' }));
+    await waitFor(() => expect(useBulkMock().mutateAsync).toHaveBeenCalledWith({ ids: [2, 1, 3, 4], op: 'disable' }));
+  });
+
   it('reviews cumulative counters without claiming a known window or changing selected rules', () => {
     const mutation = vi.fn();
     useBulkMock.mockReturnValue({ mutateAsync: mutation });
@@ -504,17 +560,18 @@ describe('AutomationListPage', () => {
     expect(captured.table.selectedKeys).toEqual([2]);
     expect(mutation).not.toHaveBeenCalled();
   });
-  it('states loaded and filtered selection scope without treating a filter as select-all', async () => {
+  it('states unfiltered loaded selection scope without treating a filter as select-all', async () => {
     renderPage();
     selectRows([1, 2, 3]);
     fireEvent.change(screen.getByRole('combobox', { name: 'Filter automations by status' }), {
       target: { value: 'active' },
     });
     const toolbar = screen.getByRole('region', { name: /bulk actions/i });
-    expect(toolbar).toHaveAttribute('data-selection-scope', 'filtered');
-    expect(toolbar).toHaveTextContent('1 selected · 1 matching loaded rules · 4 loaded');
+    expect(toolbar).toHaveAttribute('data-selection-scope', 'loaded');
+    expect(toolbar).toHaveTextContent('3 selected · All loaded rules · unfiltered');
     fireEvent.click(within(toolbar).getByRole('button', { name: 'Enable' }));
-    await waitFor(() => expect(useBulkMock().mutateAsync).toHaveBeenCalledWith({ ids: [1], op: 'enable' }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Enable' }));
+    await waitFor(() => expect(useBulkMock().mutateAsync).toHaveBeenCalledWith({ ids: [1, 2, 3], op: 'enable' }));
   });
 
   it('retains the KPI, table, status and selected IDs during failed background recovery', () => {
@@ -715,7 +772,7 @@ describe('AutomationListPage', () => {
     expect(navigateMock).toHaveBeenCalledWith('/automations/new');
   });
 
-  it('drives the bulk toolbar from selection and prunes to visible rows on filter', async () => {
+  it('retains and reviews loaded selections hidden by header filters before enabling', async () => {
     renderPage();
 
     // No toolbar until something is selected.
@@ -727,13 +784,21 @@ describe('AutomationListPage', () => {
     expect(screen.getByText(/3 selected/i)).toBeInTheDocument();
     expect(captured.table.selectedKeys).toEqual([1, 2, 3]);
 
-    // Narrow to "active" (only #1 visible) — selection prunes to the visible id.
+    // Only #1 is visible, but the review still includes every selected loaded rule.
     fireEvent.change(screen.getByRole('combobox', { name: 'Filter automations by status' }), {
       target: { value: 'active' },
     });
 
-    await waitFor(() => expect(screen.getByText(/1 selected/i)).toBeInTheDocument());
-    expect(captured.table.selectedKeys).toEqual([1]);
+    expect(screen.getByText(/3 selected/i)).toBeInTheDocument();
+    expect(captured.table.selectedKeys).toEqual([1, 2, 3]);
+    fireEvent.click(screen.getByRole('button', { name: 'Enable' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('#1: Morning Precondition');
+    expect(dialog).toHaveTextContent('#2: Night Charge');
+    expect(dialog).toHaveTextContent('#3: Sentry Guard');
+    expect(useBulkMock().mutateAsync).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Enable' }));
+    await waitFor(() => expect(useBulkMock().mutateAsync).toHaveBeenCalledWith({ ids: [1, 2, 3], op: 'enable' }));
   });
 
   it('runs a bulk enable with numeric ids and clears the selection on success', async () => {
@@ -746,6 +811,7 @@ describe('AutomationListPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Enable' }));
 
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Enable' }));
     await waitFor(() =>
       expect(mutateAsync).toHaveBeenCalledWith({ ids: [1, 2], op: 'enable' }),
     );
@@ -804,6 +870,7 @@ describe('AutomationListPage', () => {
       selectRows([1, 2]);
       fireEvent.click(screen.getByRole('button', { name: 'Enable' }));
 
+      fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Enable' }));
       await waitFor(() =>
         expect(mutateAsync).toHaveBeenCalledWith({ ids: [1, 2], op: 'enable' }),
       );

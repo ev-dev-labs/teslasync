@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
 import { GlassPanel, Badge, DataTable, PanelTitle, Text, type Column } from '@/components/ui';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { DataSourceNotice, Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import type { DataState } from '@/api/dataState';
 import { Icons } from '@/lib/icons';
 import { formatRelative } from '@/lib/dateFormat';
 
@@ -22,7 +23,7 @@ interface AutomationListTableProps {
   automations: Automation[];
   /** vehicle_id → display name, for the Vehicle column. */
   vehicleLookup: Map<number, string>;
-  /** Controlled multi-selection (pruned to visible rows by the page). */
+  /** Loaded selections may be hidden by filters; the page reviews them before writes. */
   selectedKeys: RowKey[];
   onSelectionChange: (keys: RowKey[]) => void;
   isLoading: boolean;
@@ -31,6 +32,7 @@ interface AutomationListTableProps {
   /** Unfiltered total — distinguishes "no automations" from "no matches". */
   totalCount: number;
   hasData?: boolean;
+  dataState?: DataState<unknown>;
 }
 
 /**
@@ -46,12 +48,16 @@ export function AutomationListTable({
   vehicleLookup,
   selectedKeys,
   onSelectionChange,
-  isLoading,
-  error,
+  isLoading: loading,
+  error: sourceError,
   onRetry,
   totalCount,
-  hasData = true,
+  hasData: loaded = true,
+  dataState,
 }: AutomationListTableProps) {
+  const hasData = dataState?.hasData ?? loaded;
+  const isLoading = dataState ? !hasData && !dataState.isRefreshBlocked && !dataState.fatalError && loading : loading;
+  const error = dataState ? dataState.fatalError : sourceError;
   const { fmtNumber } = useNumberFormatting();
   const fmtInt = (value: unknown) => {
     const number = automationNumber(value);
@@ -126,7 +132,7 @@ export function AutomationListTable({
         render: (a) => (
           <Link
             to={`/automations/${a.id}/edit`}
-            className="font-medium text-[var(--text-primary)] underline-offset-2 hover:underline"
+            className="inline-flex min-h-11 items-center break-words font-medium text-[var(--text-primary)] underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
           >
             {a.name ?? t('automationList.unnamed', 'Untitled automation')}
           </Link>
@@ -137,7 +143,7 @@ export function AutomationListTable({
         header: t('automationList.col.desc', 'Description'),
         filterValue: (a) => a.description ?? null,
         render: (a) => (
-          <Text as="span" color="secondary" className="block max-w-[18rem] truncate">
+          <Text as="span" color="secondary" className="block whitespace-pre-wrap break-words">
             {a.description ?? '—'}
           </Text>
         ),
@@ -267,6 +273,12 @@ export function AutomationListTable({
           onRetry={onRetry}
           resourceName={t('automationList.resource', 'Automations')}
         />
+      ) : !hasData && dataState?.isRefreshBlocked ? (
+        <DataSourceNotice sources={[{
+          id: 'automation-inventory',
+          label: t('automationList.resource', 'Automations'),
+          query: { fetchStatus: 'paused', refetch: dataState.retry ?? onRetry },
+        }]} />
       ) : !hasData ? (
         <Text role="status" color="secondary">—</Text>
       ) : totalCount === 0 ? (
@@ -297,6 +309,35 @@ export function AutomationListTable({
           sortDir={sortDir}
           onSort={onSort}
           mobileColumns={['name', 'status']}
+          mobilePresentation={{
+            roles: {
+              name: 'title',
+              status: 'badge',
+              vehicle: 'meta',
+              runs: 'meta',
+              failures: 'meta',
+              description: 'hidden',
+              lastTriggered: 'hidden',
+            },
+            displayValue: (a, key) => {
+              switch (key) {
+                case 'name': return a.name ?? t('automationList.unnamed', 'Untitled automation');
+                case 'description': return a.description;
+                case 'vehicle': return a.vehicle_id != null
+                  ? lookup.get(a.vehicle_id) ?? t('automationList.vehicleUnknown', 'Vehicle #{{id}}', { id: a.vehicle_id })
+                  : t('automationList.allVehicles', 'All vehicles');
+                case 'runs': return fmtInt(a.execution_count);
+                case 'failures': return fmtInt(a.failure_count);
+                case 'lastTriggered': return automationTimestamp(a.last_triggered_at)
+                  ? formatRelative(a.last_triggered_at!) : null;
+                case 'status': return automationStatus(a) === 'auto-disabled'
+                  ? t('automationList.status.autoDisabled', 'Auto-disabled')
+                  : automationStatus(a) == null ? null : a.enabled
+                    ? t('common.enabled', 'Enabled') : t('common.disabled', 'Disabled');
+                default: return null;
+              }
+            },
+          }}
           pagination
           exportable
           exportFilename="automations"
@@ -308,9 +349,10 @@ export function AutomationListTable({
               a.vehicle_id != null
                 ? lookup.get(a.vehicle_id) ?? `#${a.vehicle_id}`
                 : t('automationList.allVehicles', 'All vehicles'),
-            execution_count: automationNumber(a.execution_count) ?? '',
-            failure_count: automationNumber(a.failure_count) ?? '',
-            last_triggered_at: automationTimestamp(a.last_triggered_at) ?? '',
+            runs: automationNumber(a.execution_count),
+            failures: automationNumber(a.failure_count),
+            lastTriggered: automationTimestamp(a.last_triggered_at),
+            status: automationStatus(a),
             enabled: typeof a.enabled === 'boolean' ? a.enabled : '',
             auto_disabled: typeof a.auto_disabled === 'boolean' ? a.auto_disabled : '',
           })}

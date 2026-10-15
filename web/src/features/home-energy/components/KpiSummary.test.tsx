@@ -1,9 +1,10 @@
 import type { ComponentProps } from 'react';
-import { cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OperationalBrief } from '@/components/data-display';
 import { KpiSummary } from './KpiSummary';
 import type { OrchestrationResult } from '../lib/types';
+import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 
 const preferences = vi.hoisted(() => ({
   locale: 'en-GB',
@@ -68,13 +69,20 @@ function briefProps() {
   return calls[calls.length - 1][0];
 }
 
+const originalNumberPreferences = getFormatterPreferences();
 beforeEach(() => {
+  setGlobalLocale('en-GB');
+  setGlobalPrecision(2);
   preferences.locale = 'en-GB';
   preferences.settings.locale = 'en-GB';
   preferences.settings.tz_display_default = 'user';
   vi.mocked(OperationalBrief).mockClear();
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  setGlobalLocale(originalNumberPreferences.locale);
+  setGlobalPrecision(originalNumberPreferences.precision);
+});
 
 describe('KpiSummary planning horizon dates', () => {
   it('localizes both bounds in UTC and retains an exact 24-hour horizon across daylight saving time', () => {
@@ -82,8 +90,56 @@ describe('KpiSummary planning horizon dates', () => {
     const scope = 'Planning horizon: 8 Mar 2026, 00:30 — 9 Mar 2026, 00:30 (end exclusive)';
     expect(briefProps().scope).toBe(scope);
     expect(screen.getByTestId('home-energy-outcomes')).toHaveTextContent(scope);
-    expect(screen.getByText('15-minute modeled slots · UTC · source coverage not established')).toBeVisible();
+    expect(screen.getByText('15.00-minute modeled slots · UTC · source coverage not established')).toBeVisible();
     expect(screen.queryByText(/2026-03-08T00:30:00Z/)).not.toBeInTheDocument();
+  });
+
+  describe('KpiSummary subscribed numeric labels', () => {
+    it('updates score, percentage and interval labels on preference changes without altering measurements or physical units', () => {
+      const plan = { ...result, scores: { ...result.scores, overall: 1234.6, selfConsumption: 37.256 } };
+      const original = JSON.stringify(plan);
+      render(<KpiSummary {...props} result={plan} slotMinutes={15.25} />);
+      expect(screen.getByText('1,235')).toBeVisible();
+      expect(screen.getByText('37.26%')).toBeVisible();
+      expect(screen.getByText('1 / 2')).toBeVisible();
+      expect(briefProps().freshness).toContain('15.25-minute');
+      act(() => {
+        setGlobalLocale('de-DE');
+        setGlobalPrecision(3);
+      });
+      expect(screen.getByText('1.235')).toBeVisible();
+      expect(screen.getByText('37,256%')).toBeVisible();
+      expect(briefProps().freshness).toContain('15,250-minute');
+      expect(briefProps().metrics.map(metric => metric.rawValue)).toEqual([1234.6, 3.25, 37.256, 7200, 1, 2500]);
+      expect(JSON.stringify(plan)).toBe(original);
+    });
+
+    it.each([0, -12.75, 0.125])('preserves measured zero, signed and fractional values: %s', value => {
+      const plan = { ...result, vehicles: [], scores: { ...result.scores, overall: value, selfConsumption: value } };
+      render(<KpiSummary {...props} result={plan} slotMinutes={value} />);
+      const metrics = briefProps().metrics;
+      expect(metrics[0].valueState).toBe('value');
+      expect(metrics[0].rawValue).toBe(value);
+      expect(metrics[0].value).toBe(value.toLocaleString('en-GB', { maximumFractionDigits: 0 }));
+      expect(metrics[2].value).toBe(`${value.toLocaleString('en-GB', {
+        minimumFractionDigits: 2, maximumFractionDigits: 2,
+      })}%`);
+      expect(metrics[4].value).toBe('0 / 0');
+      expect(metrics[5].rawValue).toBe(0);
+    });
+
+    it.each([NaN, Infinity, -Infinity])('keeps invalid values distinct from measured zero: %s', value => {
+      const plan = { ...result, scores: { ...result.scores, overall: value, selfConsumption: value } };
+      render(<KpiSummary {...props} result={plan} slotMinutes={value} />);
+      expect(briefProps().metrics[0].valueState).toBe('invalid');
+      expect(briefProps().metrics[2].valueState).toBe('invalid');
+      expect(briefProps().freshness).toContain('—-minute');
+    });
+
+    it.each([{ loading: true }, { unavailable: true }])('keeps missing input separate from zero: %j', state => {
+      render(<KpiSummary {...props} {...state} />);
+      expect(briefProps().metrics.every(metric => metric.rawValue === null && metric.valueState === 'missing')).toBe(true);
+    });
   });
 
   it('reacts to locale changes without changing UTC business timestamps or populated metrics', () => {

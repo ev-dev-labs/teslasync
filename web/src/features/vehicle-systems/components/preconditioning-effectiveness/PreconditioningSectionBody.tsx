@@ -85,7 +85,7 @@ export function PreconditioningSectionBody({
       </div>
     );
   }
-  if (sources.some((source) => source.isPaused)) {
+  if (sources.some((source) => source.isPaused && !source.hasData)) {
     return (
       <PassiveState
         className={className}

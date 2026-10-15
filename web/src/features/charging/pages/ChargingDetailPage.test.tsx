@@ -46,8 +46,17 @@ import { ApiError } from '@/lib/resilience';
 import { fmtNumber } from '@/lib/numberFormat';
 import type { ChargingSession, ChargeTelemetryReading, ChargingTelemetry } from '@/api/types';
 
+vi.mock('@/lib/csvExport', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/lib/csvExport')>(),
+  downloadCSV: vi.fn(),
+}));
+
+import { downloadCSV } from '@/lib/csvExport';
+
 // ── i18n stub: resolve a string fallback (or the options-bag defaultValue) and
 //    interpolate {{var}} placeholders so assertions read on human copy. ────────
+const translations = vi.hoisted(() => new Map<string, string>());
+
 vi.mock('react-i18next', () => {
   const interpolate = (str: string, vars?: Record<string, unknown> | null): string => {
     if (!vars) return str;
@@ -58,6 +67,12 @@ vi.mock('react-i18next', () => {
     return s;
   };
   const t = (key: string, second?: unknown, third?: unknown): string => {
+    const translation = translations.get(key);
+    if (translation != null) {
+      return interpolate(translation, (
+        typeof second === 'object' ? second : third
+      ) as Record<string, unknown> | undefined);
+    }
     if (typeof second === 'string') {
       return interpolate(second, third as Record<string, unknown> | undefined);
     }
@@ -200,6 +215,16 @@ vi.mock('@/api/hooks/useVehicles', () => ({
   useVehicle: vi.fn(),
   useChargingTelemetryLatest: vi.fn(),
 }));
+vi.mock('@/api/hooks/useAnnotations', () => ({
+  useChartAnnotations: () => ({
+    data: [],
+    isLoading: false,
+    isError: false,
+    error: null,
+  }),
+  useCreateAnnotation: () => ({ mutate: vi.fn(), isPending: false }),
+  useDeleteAnnotation: () => ({ mutate: vi.fn(), isPending: false }),
+}));
 vi.mock('@/hooks/useUnits', () => ({ useUnits: vi.fn() }));
 vi.mock('@/hooks/useFormatting', () => ({ useFormatting: vi.fn() }));
 vi.mock('@/hooks/useChartPalette', () => ({
@@ -210,8 +235,12 @@ import { useChargingSessionDetail, useChargeTelemetry } from '@/api/hooks/useCha
 import { useVehicle, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
+import * as settingsHooks from '@/hooks/useSettings';
+import { formatDate, formatDateTime, formatTime } from '@/lib/dateFormat';
 import ChargingDetailPage from './ChargingDetailPage';
 
+const defaultSettingsResult = settingsHooks.useSettings();
+const mockSettings = vi.spyOn(settingsHooks, 'useSettings');
 const mockSession = useChargingSessionDetail as unknown as ReturnType<typeof vi.fn>;
 const mockTelemetry = useChargeTelemetry as unknown as ReturnType<typeof vi.fn>;
 const mockVehicle = useVehicle as unknown as ReturnType<typeof vi.fn>;
@@ -408,6 +437,8 @@ function gauge(label: string): HTMLElement {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  translations.clear();
+  mockSettings.mockReturnValue(defaultSettingsResult);
   // Default happy-path wiring: a completed DC session with telemetry + live.
   mockUnits.mockReturnValue(unitReturn('km'));
   mockFormatting.mockReturnValue(formattingReturn());
@@ -415,6 +446,77 @@ beforeEach(() => {
   mockTelemetry.mockReturnValue(makeQuery({ data: TELEMETRY }));
   mockVehicle.mockReturnValue(makeQuery({ data: VEHICLE }));
   mockLive.mockReturnValue(makeQuery({ data: makeLive() }));
+});
+
+describe('ChargingDetailPage — record-owned dates', () => {
+  it('keeps dates and chart times in the record vehicle zone despite saved user preferences', () => {
+    const locale = 'de-DE';
+    const tz = 'America/Los_Angeles';
+    const started_at = '2024-03-10T07:55:00Z';
+    const ended_at = '2024-03-10T10:05:00Z';
+    mockSettings.mockReturnValue({
+      ...defaultSettingsResult,
+      locale,
+      settings: {
+        ...defaultSettingsResult.settings,
+        locale,
+        tz_display_default: 'user',
+        timezone_user: 'Asia/Tokyo',
+      },
+    });
+    mockVehicle.mockReturnValue(makeQuery({ data: { ...VEHICLE, timezone: tz } }));
+    mockSession.mockReturnValue(makeQuery({ data: makeSession({ started_at, ended_at }) }));
+    mockTelemetry.mockReturnValue(makeQuery({
+      data: [makeReading({ created_at: started_at })],
+    }));
+    renderPage();
+
+    const started = screen.getByTitle(new Date(started_at).toISOString());
+    const ended = screen.getByTitle(new Date(ended_at).toISOString());
+    expect(started).toHaveTextContent(`${formatDateTime(started_at, { locale, tz })} (${tz})`);
+    expect(ended).toHaveTextContent(`${formatDateTime(ended_at, { locale, tz })} (${tz})`);
+    expect(screen.getAllByText((_, node) =>
+      node?.textContent === formatTime(started_at, { locale, tz }),
+    ).length).toBeGreaterThan(0);
+    expect(screen.getByText((_, node) =>
+      node?.tagName === 'P' && !!node.textContent?.startsWith(formatDate(started_at, { locale, tz })),
+    )).toBeInTheDocument();
+    expect(screen.queryByText(/Source timezone unresolved/)).not.toBeInTheDocument();
+    expect(mockVehicle).toHaveBeenCalledWith('7');
+  });
+
+  it.each([
+    ['missing', { ...VEHICLE }],
+    ['invalid', { ...VEHICLE, timezone: 'Invalid/Zone' }],
+    ['another vehicle', { ...VEHICLE, id: 8, timezone: 'Asia/Tokyo' }],
+    ['unavailable', undefined],
+  ])('discloses %s source timezone and retains UTC instants', (_, vehicle) => {
+    mockVehicle.mockReturnValue(makeQuery({ data: vehicle }));
+    renderPage();
+    expect(screen.getByText('Source timezone unresolved; timestamps are shown in UTC.')).toBeInTheDocument();
+    expect(screen.getByTitle('2024-03-10T08:00:00.000Z')).toHaveTextContent(
+      `${formatDateTime('2024-03-10T08:00:00Z', { locale: 'en-US', tz: 'UTC' })} (UTC)`,
+    );
+  });
+
+  it('treats an explicitly reported UTC vehicle timezone as resolved', () => {
+    mockVehicle.mockReturnValue(makeQuery({ data: { ...VEHICLE, timezone: 'UTC' } }));
+    renderPage();
+    expect(screen.queryByText(/Source timezone unresolved/)).not.toBeInTheDocument();
+    expect(screen.getByTitle('2024-03-10T08:00:00.000Z')).toHaveTextContent('(UTC)');
+  });
+
+  it.each(['not-a-date', ''])('renders placeholders without UTC hover values for %s dates', (started_at) => {
+    mockVehicle.mockReturnValue(makeQuery({ data: { ...VEHICLE, timezone: 'Europe/Berlin' } }));
+    mockSession.mockReturnValue(makeQuery({ data: makeSession({ started_at, ended_at: null }) }));
+    renderPage();
+    for (const label of ['Started', 'Ended']) {
+      const timestamp = screen.getByText(label).nextElementSibling;
+      expect(timestamp).toHaveTextContent('—');
+      expect(timestamp?.querySelector('[title]')).toBeNull();
+    }
+    expect(screen.queryByText(/Invalid Date/)).not.toBeInTheDocument();
+  });
 });
 
 describe('ChargingDetailPage — loading', () => {
@@ -490,9 +592,9 @@ describe('ChargingDetailPage — populated DC session', () => {
     expect(cardValue(kpi, 'Duration')).toBe('60.00 min');
     expect(cardValue(kpi, 'Peak Power')).toBe('150.00 kW');
     expect(cardValue(kpi, 'SoC Range')).toBe('20.00–80.00%');
-    expect(cardValue(kpi, 'Total Cost')).toBe('$12.50');
+    expect(cardValue(kpi, 'Total Cost')).toBe('12.50 USD');
     // 12.5 / (50000 Wh / 1000) = $0.25 per kWh.
-    expect(cardValue(kpi, 'Per kWh')).toBe('$0.25/kWh');
+    expect(cardValue(kpi, 'Per kWh')).toBe('0.25 USD/kWh');
     // 50 kWh over 60 min → 50 kWh/h.
     expect(cardValue(kpi, 'kWh/h Avg')).toBe('50.00 kWh/h');
     // No odometer delta on this session → em-dash, never NaN.
@@ -517,11 +619,43 @@ describe('ChargingDetailPage — populated DC session', () => {
     const kpi = kpiRegion();
 
     expect(cardValue(kpi, 'Energy')).toBe('44.49 kWh');
-    expect(cardValue(kpi, 'Total Cost')).toBe('$21.80');
-    expect(cardValue(kpi, 'Per kWh')).toBe('$0.49/kWh');
+    expect(cardValue(kpi, 'Total Cost')).toBe('21.80 USD');
+    expect(cardValue(kpi, 'Per kWh')).toBe('0.49 USD/kWh');
     expect(within(kpi).getByText('Vehicle measured 42.62 kWh')).toBeInTheDocument();
     // Charge-summary restates vehicle energy, not the Supercharger bill.
     expect(within(namedCard('Battery Progress')).getByText('42.62 kWh')).toBeInTheDocument();
+  });
+
+  it.each([
+    { name: 'session currency', overrides: { cost_currency: 'CAD' }, cost: '12.50 CAD', rate: '0.25 CAD/kWh' },
+    { name: 'invoice currency', overrides: { billed_cost_decimal: 20, billed_currency: 'EUR' }, cost: '20.00 EUR', rate: '0.40 EUR/kWh' },
+    { name: 'unknown session currency', overrides: { cost_currency: null }, cost: '12.50 —', rate: '0.25 —/kWh' },
+    { name: 'unknown invoice currency', overrides: { billed_cost_decimal: 20, billed_currency: null }, cost: '20.00 —', rate: '0.40 —/kWh' },
+    { name: 'zero invoice', overrides: { billed_cost_decimal: 0, billed_currency: 'CAD' }, cost: '0.00 CAD', rate: '0.00 CAD/kWh' },
+    { name: 'refund', overrides: { cost_decimal: -12.5, cost_currency: 'CAD' }, cost: '-12.50 CAD', rate: '-0.25 CAD/kWh' },
+  ])('retains $name without applying the configured symbol or exchange conversion', ({ overrides, cost, rate }) => {
+    mockSession.mockReturnValue(makeQuery({ data: makeSession(overrides) }));
+    mockFormatting.mockReturnValue({
+      ...formattingReturn(),
+      currencySymbol: 'kr',
+      formatCurrency: (amount: number) => `kr${Number(amount).toFixed(2)}`,
+    });
+    renderPage();
+
+    expect(cardValue(kpiRegion(), 'Total Cost')).toBe(cost);
+    expect(cardValue(kpiRegion(), 'Per kWh')).toBe(rate);
+  });
+
+  it('retains the invoice denomination for a recorded standalone rate', () => {
+    mockSession.mockReturnValue(makeQuery({
+      data: makeSession({ cost_decimal: null, billed_rate_per_kwh: 0.49, billed_currency: 'CAD' }),
+    }));
+    renderPage();
+
+    expect(cardValue(kpiRegion(), 'Per kWh')).toBe('0.49 CAD/kWh');
+    expect(within(kpiRegion()).queryByText('from settings')).toBeNull();
+    expect(cardValue(kpiRegion(), 'Est. Cost')).toBe('$6.00');
+    expect(within(kpiRegion()).getByText('at $0.12/kWh')).toBeInTheDocument();
   });
 
   it('renders the five live gauges with SI-converted values and the DC 250 kW ceiling', () => {
@@ -682,8 +816,8 @@ describe('ChargingDetailPage — AC session without telemetry', () => {
   it('shows a per-panel empty state for each time-axis chart that has no data', () => {
     renderPage();
     expect(
-      screen.getByText('No battery level, energy, or range samples were recorded for this session.'),
-    ).toBeInTheDocument();
+      screen.getAllByText('No battery level, energy, or range samples were recorded for this session.'),
+    ).toHaveLength(2);
     expect(
       screen.getByText('No battery, cabin, or ambient temperature samples were recorded for this session.'),
     ).toBeInTheDocument();
@@ -706,12 +840,98 @@ describe('ChargingDetailPage — telemetry error isolation', () => {
 
     // The KPI band still renders from the (independent) session query.
     expect(cardValue(kpiRegion(), 'Energy')).toBe('50.00 kWh');
-    // Each of the three time-axis panels shows its own server-error banner.
+    // The curve and all three time-axis panels expose the telemetry failure.
     const serverErrors = screen.getAllByText('Server error');
-    expect(serverErrors.length).toBe(3);
+    expect(serverErrors.length).toBe(4);
     // Retrying one panel calls the telemetry refetch.
     fireEvent.click(screen.getAllByRole('button', { name: 'Retry' })[0]);
     expect(refetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('ChargingDetailPage — curve provenance and specialist export', () => {
+  it.each([
+    { name: 'loading', query: { isLoading: true, isPending: true }, status: 'initial', provenance: 'unknown' },
+    { name: 'failed', query: { error: new ApiError('down', 500), isError: true }, status: 'initialFailure', provenance: 'unknown' },
+    { name: 'empty', query: { data: [] }, status: 'unavailable', provenance: 'historical' },
+    { name: 'failed empty refresh', query: { data: [], error: new ApiError('down', 500), isError: true }, status: 'stale', provenance: 'historical' },
+  ])('retains the labeled model while exporting the $name telemetry outcome and historical inputs', ({ query, status, provenance }) => {
+    mockTelemetry.mockReturnValue(makeQuery(query));
+    renderPage();
+
+    const curveRegion = screen.getByRole('region', { name: 'Charge Curve' });
+    expect(curveRegion).toHaveAttribute('data-curve-provenance', 'inferred');
+    expect(curveRegion).toHaveAttribute('data-telemetry-status', status);
+    expect(curveRegion).toHaveAttribute('data-telemetry-provenance', provenance);
+    const curve = within(curveRegion);
+    expect(curve.getByText('(estimated)')).toBeInTheDocument();
+    expect(within(curve.getByTestId('charge-curve-inputs')).getByLabelText('Historical'))
+      .toHaveAttribute('data-data-status', 'ok');
+    expect(curve.getByRole('table', { name: 'Charge Curve — data table' }))
+      .toBeInTheDocument();
+    if (status === 'initialFailure') {
+      expect(curve.getByText('Server error')).toBeInTheDocument();
+    } else if (status === 'unavailable') {
+      expect(curve.getByText('No battery level, energy, or range samples were recorded for this session.'))
+        .toBeInTheDocument();
+    } else if (status === 'stale') {
+      expect(curve.getByText('Charge Curve may be out of date')).toBeInTheDocument();
+      expect(curve.queryByText('No battery level, energy, or range samples were recorded for this session.'))
+        .toBeNull();
+    }
+
+    fireEvent.click(curve.getByRole('button', { name: 'Export chart' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download data as CSV' }));
+    const csv = vi.mocked(downloadCSV).mock.lastCall?.[1];
+    expect(csv).toContain('provenance,telemetry_status,telemetry_provenance,telemetry_sample_count,input_provenance,input_status');
+    expect(csv).toContain(`inferred,${status},${provenance},0,historical,ok,20,80,150000,DC`);
+  });
+
+  it('exports retained measured samples as stale historical data after refresh failure, never as modeled', () => {
+    mockTelemetry.mockReturnValue(makeQuery({ data: TELEMETRY, error: new ApiError('down', 500), isError: true }));
+    renderPage();
+    const curve = within(screen.getByRole('region', { name: 'Charge Curve' }));
+    expect(curve.queryByText('(estimated)')).toBeNull();
+    expect(curve.getByLabelText('Historical')).toHaveAttribute('data-data-status', 'stale');
+    fireEvent.click(curve.getByRole('button', { name: 'Export chart' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download data as CSV' }));
+    const csv = vi.mocked(downloadCSV).mock.lastCall?.[1];
+    expect(csv).toContain('30,150,kW,historical,stale,historical,3,historical,stale');
+    expect(csv).not.toContain('inferred');
+    expect(csv).not.toContain('peak_power_w');
+  });
+
+  it('carries stale historical model inputs separately from unavailable telemetry', () => {
+    mockSession.mockReturnValue(makeQuery({
+      data: makeSession(),
+      error: new ApiError('session refresh failed', 500),
+      isError: true,
+    }));
+    mockTelemetry.mockReturnValue(makeQuery({ data: [] }));
+    renderPage();
+
+    const curve = within(screen.getByRole('region', { name: 'Charge Curve' }));
+    expect(curve.getByText('(estimated)')).toBeInTheDocument();
+    expect(curve.getByLabelText('Estimated')).toHaveAttribute('data-data-status', 'stale');
+    expect(within(curve.getByTestId('charge-curve-inputs')).getByLabelText('Historical'))
+      .toHaveAttribute('data-data-status', 'stale');
+    fireEvent.click(curve.getByRole('button', { name: 'Export chart' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download data as CSV' }));
+    expect(vi.mocked(downloadCSV).mock.lastCall?.[1])
+      .toContain('inferred,unavailable,historical,0,historical,stale,20,80,150000,DC');
+  });
+
+  it('keeps populated measured exports historical with no modeled inputs', () => {
+    renderPage();
+    const curve = within(screen.getByRole('region', { name: 'Charge Curve' }));
+    expect(curve.queryByText('(estimated)')).toBeNull();
+    expect(curve.getByLabelText('Historical')).toHaveAttribute('data-data-status', 'ok');
+    fireEvent.click(curve.getByRole('button', { name: 'Export chart' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download data as CSV' }));
+    const csv = vi.mocked(downloadCSV).mock.lastCall?.[1];
+    expect(csv).toContain('30,150,kW,historical,ok,historical,3,historical,ok');
+    expect(csv).not.toContain('peak_power_w');
+    expect(csv).not.toContain('inferred');
   });
 });
 
@@ -801,6 +1021,21 @@ describe('ChargingDetailPage — ongoing session', () => {
     expect(kvValue('Vehicle')).toBe('ID 7');
     // Placeless session → location empty state.
     expect(screen.getByText('No location recorded for this session.')).toBeInTheDocument();
+  });
+});
+
+describe('ChargingDetailPage — localized identifier and duration', () => {
+  it.each([false, true])('reuses existing translations with a populated vehicle: %s', populated => {
+    translations.set('admin.vehicleCost.rowId', 'Kennung {{id}}');
+    translations.set('common.min', 'Minuten');
+    if (!populated) mockVehicle.mockReturnValue(makeQuery({ data: undefined }));
+    renderPage();
+
+    expect(kvValue('Vehicle')).toBe(populated ? VEHICLE.display_name : 'Kennung 7');
+    expect(gauge('Duration')).toHaveAttribute('data-unit', 'Minuten');
+    expect(gauge('Duration')).toHaveAttribute('data-value', '60');
+    expect(cardValue(kpiRegion(), 'Duration')).toBe('60.00 min');
+    expect(cardValue(kpiRegion(), 'Energy')).toBe('50.00 kWh');
   });
 });
 

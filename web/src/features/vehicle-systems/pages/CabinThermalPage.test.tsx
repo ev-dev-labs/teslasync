@@ -10,6 +10,10 @@ const h = vi.hoisted(() => ({
   vehicleId: 7 as number | null,
   history: undefined as unknown,
   historyHook: vi.fn(),
+  range: {
+    startInstant: '2026-08-01T07:00:00.000Z',
+    endInstantExclusive: '2026-08-09T07:00:00.000Z',
+  },
   temperatureUnit: '°C' as '°C' | '°F',
 }));
 const refetch = vi.fn();
@@ -30,9 +34,13 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
+vi.mock('@/hooks/useRangeState', () => ({
+  useRangeState: () => h.range,
+}));
+
 vi.mock('@/api/hooks/useVehicleSystems', () => ({
-  useClimateHistory: (vehicleId: string) => {
-    h.historyHook(vehicleId);
+  useClimateHistory: (vehicleId: string, range?: { start?: string; end?: string }) => {
+    h.historyHook(vehicleId, range);
     return h.history;
   },
 }));
@@ -196,10 +204,30 @@ beforeEach(() => {
   vi.clearAllMocks();
   h.vehicleId = 7;
   h.temperatureUnit = '°C';
+  h.range = {
+    startInstant: '2026-08-01T07:00:00.000Z',
+    endInstantExclusive: '2026-08-09T07:00:00.000Z',
+  };
   h.history = query({ data: soak() });
 });
 
 describe('CabinThermalPage', () => {
+  it('forwards changed rolling and custom instants without filtering returned evidence', () => {
+    const view = renderPage();
+    h.range = {
+      startInstant: '2026-10-13T21:39:59.000Z',
+      endInstantExclusive: '2026-10-14T21:39:59.000Z',
+    };
+    view.rerender(<MemoryRouter initialEntries={['/cabin-thermal']}><CabinThermalPage /></MemoryRouter>);
+    expect(h.historyHook).toHaveBeenLastCalledWith('7', {
+      start: h.range.startInstant, end: h.range.endInstantExclusive,
+    });
+    expectEverySection();
+    expect(screen.getByText('Passive-soak curve')).toBeInTheDocument();
+    expect(screen.queryByText(/seven-day endpoint/)).toBeNull();
+    expect(screen.getByText(/both start and end bounds applied by the server/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /view settings|date range/i })).toBeNull();
+  });
   it('renders all fourteen persistent analytical shells with accepted evidence', () => {
     renderPage();
 
@@ -208,7 +236,9 @@ describe('CabinThermalPage', () => {
       name: 'Cabin thermal model',
     })).toBeInTheDocument();
     expectEverySection();
-    expect(h.historyHook).toHaveBeenLastCalledWith('7');
+    expect(h.historyHook).toHaveBeenLastCalledWith('7', {
+      start: h.range.startInstant, end: h.range.endInstantExclusive,
+    });
     expect(screen.getByRole('img', {
       name: 'Line chart of the accepted-fit worked cabin scenario approaching ambient temperature',
     })).toBeInTheDocument();
@@ -225,7 +255,9 @@ describe('CabinThermalPage', () => {
 
     expectEverySection();
     expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
-    expect(h.historyHook).toHaveBeenLastCalledWith('');
+    expect(h.historyHook).toHaveBeenLastCalledWith('', {
+      start: h.range.startInstant, end: h.range.endInstantExclusive,
+    });
     expect(screen.getByText(
       'Select a vehicle to analyze its returned climate history.',
     )).toBeInTheDocument();

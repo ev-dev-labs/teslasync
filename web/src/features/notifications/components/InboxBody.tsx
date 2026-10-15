@@ -76,7 +76,7 @@ import {
 } from '@/api/hooks/useNotifications';
 import type { NotificationLog, AlertRule, Vehicle, Alert } from '@/api/types';
 import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough';
-import { NotificationFilterBar } from './NotificationFilterBar';
+import { NotificationFilterBar, presentationSeverity } from './NotificationFilterBar';
 import { AIInboxAutoCategorization } from '@/components/ai';
 import { NotificationGroupRow } from './NotificationGroupRow';
 import { AlertDetailDrawer } from './AlertDetailDrawer';
@@ -95,6 +95,15 @@ type ReadValue = (typeof READ_VALUES)[number];
 const VIEW_VALUES = ['grouped', 'flat'] as const;
 type ViewValue = (typeof VIEW_VALUES)[number];
 const INBOX_PAGE_SIZE = 50;
+
+function parseFilterIds(values: string[]): number[] {
+  // Ignore malformed URL entries without coercing hex/exponents or rounding
+  // unsafe IDs into another record. Keep valid IDs even if not in loaded options.
+  return values
+    .filter(value => /^\d+$/.test(value))
+    .map(Number)
+    .filter(id => Number.isSafeInteger(id) && id > 0);
+}
 
 function notificationExportRow(log: NotificationLog): Record<string, unknown> {
   return {
@@ -170,16 +179,14 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     () => severityRaw.filter((s): s is SeverityValue => SEVERITY_VALUES.some(value => value === s)),
     [severityRaw],
   );
-  const vehicleIds = useMemo<number[]>(() => {
-    return vehicleIdsRaw
-      .map(v => Number(v))
-      .filter(n => Number.isFinite(n) && n > 0);
-  }, [vehicleIdsRaw]);
-  const ruleIds = useMemo<number[]>(() => {
-    return ruleIdsRaw
-      .map(v => Number(v))
-      .filter(n => Number.isFinite(n) && n > 0);
-  }, [ruleIdsRaw]);
+  const presentationSeverities = useMemo<SeverityValue[]>(
+    () => severityRaw
+      .map(presentationSeverity)
+      .filter((value): value is SeverityValue => SEVERITY_VALUES.some(severity => severity === value)),
+    [severityRaw],
+  );
+  const vehicleIds = useMemo(() => parseFilterIds(vehicleIdsRaw), [vehicleIdsRaw]);
+  const ruleIds = useMemo(() => parseFilterIds(ruleIdsRaw), [ruleIdsRaw]);
 
   const filters = useMemo<NotificationFilters>(() => ({
     archived,
@@ -195,6 +202,11 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     offset: (page - 1) * pageSize,
   }), [archived, severity, vehicleIds, ruleIds, source, search, startInstant, endInstantExclusive, readState, page, pageSize]);
 
+  const presentationFilters = useMemo<NotificationFilters>(() => ({
+    ...filters,
+    severity: presentationSeverities.length ? presentationSeverities : undefined,
+  }), [filters, presentationSeverities]);
+
   const severityKey = severityRaw.join(',');
   const vehicleKey = vehicleIdsRaw.join(',');
   const ruleKey = ruleIdsRaw.join(',');
@@ -208,8 +220,22 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     // updates whenever a saved view applied multi-key filters.
     const readValue =
       next.read === undefined ? null : next.read ? 'read' : 'unread';
+    // Presentation aliases must not rewrite source spellings or unrelated
+    // unknown URL members when another filter is edited.
+    const nextSeverity = next.severity === presentationFilters.severity
+      ? severityRaw
+      : next.severity === undefined
+        ? []
+        : [
+            ...severityRaw.filter(value => {
+              const displayValue = presentationSeverity(value);
+              return !SEVERITY_VALUES.some(severity => severity === displayValue)
+                || next.severity?.some(severity => severity === displayValue);
+            }),
+            ...next.severity.filter(value => !presentationSeverities.includes(value)),
+          ];
     const urlUpdates = {
-      severity: (next.severity ?? []).join(',') || null,
+      severity: nextSeverity.join(',') || null,
       vehicle_id: (next.vehicle_id ?? []).map(String).join(',') || null,
       rule_id: (next.rule_id ?? []).map(String).join(',') || null,
       source: next.source ?? null,
@@ -217,7 +243,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
       read: readValue,
     };
     setFiltersBatch(urlUpdates);
-  }, [setFiltersBatch]);
+  }, [setFiltersBatch, presentationFilters.severity, severityRaw, presentationSeverities]);
 
   // Inbox auto-categorization apply callback.
   // The AI panel's "Apply categories as filter" button passes a
@@ -649,7 +675,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
         onChange={event => {
           const value = event.target.value;
           if (value === 'all' || value === 'read' || value === 'unread') {
-            handleFiltersChange({ ...filters, read: value === 'all' ? undefined : value === 'read' });
+            handleFiltersChange({ ...presentationFilters, read: value === 'all' ? undefined : value === 'read' });
           }
         }}
         aria-label={t('notifications.inbox.filter.readState', 'Filter by read state')}
@@ -733,7 +759,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
       {isGrouped && <FadeIn>
         <div data-tour="alerts-filters" className="mb-3 min-w-0 w-full max-w-full border-b border-[var(--border-subtle)] pb-3">
         <NotificationFilterBar
-          filters={filters}
+          filters={presentationFilters}
           onChange={handleFiltersChange}
           vehicles={vehicles}
           rules={rules}
@@ -780,7 +806,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
             controls={{
               search: {
                 value: search,
-                onChange: (q) => handleFiltersChange({ ...filters, q: q || undefined }),
+                onChange: (q) => handleFiltersChange({ ...presentationFilters, q: q || undefined }),
                 placeholder: t('notifications.inbox.filter.searchPlaceholder', 'Search messages…'),
                 historyScope: archived ? 'notifications:archived' : 'notifications:inbox',
               },
@@ -793,7 +819,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
                 testId: 'notification-export',
               },
             }}
-            filters={filters}
+            filters={presentationFilters}
             onFiltersChange={handleFiltersChange}
             paginationControls={countData ? {
               page,

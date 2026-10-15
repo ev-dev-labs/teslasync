@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Zap, Home } from 'lucide-react';
-import { LayoutCard } from '@/components/layout/layout-reference';
+import { LayoutCard } from '@/components/layout';
 import { StatusPill, Caption, Text } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError, DataSourceNotice, type DataSourceDescriptor } from '@/components/feedback';

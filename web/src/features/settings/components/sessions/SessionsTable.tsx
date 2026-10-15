@@ -105,6 +105,7 @@ export function SessionsTable({
             <Button
               variant="ghost"
               size="sm"
+              className="min-h-11 min-w-11 md:min-h-9"
               onClick={() => onRevoke(row)}
               disabled={revokingId === row.id}
               icon={<LogOut className="h-4 w-4" aria-hidden="true" />}
@@ -139,7 +140,7 @@ export function SessionsTable({
           <DataTable<ActiveSession>
             tableId="settings:active-sessions"
             columns={columns}
-            mobileColumns={['device', 'last_seen_at', 'actions']}
+            name={t('account.sessions.tableAria', 'Active devices')}
             data={sessions ?? []}
             enableValueFilters
             keyExtractor={keyExtractor}

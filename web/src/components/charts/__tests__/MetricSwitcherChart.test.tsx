@@ -14,7 +14,8 @@ import { MetricSwitcherChart, type MetricSwitcherMetric } from '../MetricSwitche
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (_key: string, fallback: string) => fallback,
+    t: (_key: string, fallback: string, options?: { title?: string }) =>
+      fallback.replace('{{title}}', options?.title ?? '{{title}}'),
   }),
   Trans: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
   initReactI18next: { type: '3rdParty', init: () => undefined },
@@ -115,6 +116,7 @@ describe('MetricSwitcherChart', () => {
     );
 
     expect(screen.getByText('Drives over time')).toBeInTheDocument();
+    expect(screen.getByRole('tablist', { name: 'Drives over time metric' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Drives' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Distance' })).toBeInTheDocument();
   });

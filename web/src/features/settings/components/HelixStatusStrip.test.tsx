@@ -12,6 +12,7 @@
  *   3. The spend tile reads `/ai/usage/today` and converts micro-cents →
  *      dollars before currency formatting (1 dollar = 1_000_000 micro-cents),
  *      staying at the em-dash while loading, on error, and when Helix is off.
+ *      Non-zero sub-cent costs retain six decimals, including signed values.
  *   4. When Helix is off the usage fetch is skipped entirely.
  *   5. A non-finite feature count is invalid, distinct from a measured zero.
  *
@@ -144,6 +145,46 @@ describe('HelixStatusStrip', () => {
     expect(tileValue('Provider')).toBe('Ollama')
     // A resolved all-zeros payload formats as currency, not the placeholder.
     await waitFor(() => expect(tileValue('Spend today')).toBe('$0.00'))
+    expect(screen.getByText('Spend today').closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'value')
+  })
+
+  it.each([
+    [1, '$0.000001'],
+    [1_234.5, '$0.001235'],
+    [9_999, '$0.009999'],
+    [-1, '$-0.000001'],
+    [-1_234.5, '$-0.001235'],
+    [-9_999, '$-0.009999'],
+    [10_000, '$0.01'],
+    [-10_000, '$-0.01'],
+    [12_345_678, '$12.35'],
+    [-12_345_678, '$-12.35'],
+  ])('preserves specialist precision for %s micro-cents in the strip and Review drawer', async (cost, expected) => {
+    requestMock.mockResolvedValue(makeUsage({ cost_micro_cents: cost }))
+    renderStrip({ mode: 'cloud', enabledCount: 1, providerName: 'openai' })
+
+    await waitFor(() => expect(tileValue('Spend today')).toBe(expected))
+    expect(screen.getByText('Spend today').closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'value')
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }))
+    expect(within(screen.getByRole('dialog')).getByText(expected)).toBeInTheDocument()
+  })
+
+  it.each([
+    ['undefined', undefined, 'missing'],
+    ['null', null, 'missing'],
+    ['NaN', Number.NaN, 'invalid'],
+    ['positive infinity', Number.POSITIVE_INFINITY, 'invalid'],
+    ['negative infinity', Number.NEGATIVE_INFINITY, 'invalid'],
+    ['numeric string', '1000', 'invalid'],
+    ['empty string', '', 'invalid'],
+    ['boolean', false, 'invalid'],
+  ])('keeps %s cost distinct from measured zero', async (_name, cost, state) => {
+    requestMock.mockResolvedValue({ ...makeUsage(), cost_micro_cents: cost })
+    renderStrip({ mode: 'cloud', enabledCount: 1, providerName: 'openai' })
+
+    await waitFor(() => expect(screen.getByText('Source available')).toBeInTheDocument())
+    expect(tileValue('Spend today')).toBe(EM_DASH)
+    expect(screen.getByText('Spend today').closest('[data-operational-metric]')).toHaveAttribute('data-value-state', state)
   })
 
   it('falls back to the raw provider key when it is not in the label map', () => {

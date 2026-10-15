@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"sync"
 	"testing"
 	"time"
@@ -11,6 +12,35 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database/achievement"
 	"github.com/jackc/pgx/v5"
 )
+
+func TestLifetimeSavingsGasUnit(t *testing.T) {
+	for _, tt := range []struct {
+		name         string
+		unit         string
+		price        float64
+		distanceKm   float64
+		chargingCost float64
+		wantGasCost  float64
+		wantSavings  float64
+	}{
+		{"populated gallon", "gallon", 3.50, 160.934, 5, 14, 9},
+		{"equivalent liter price", "liter", 3.50 / 3.785411784, 160.934, 5, 14, 9},
+		{"price per liter", "liter", 1.50, 160.934, 5, 22.712470704, 17.712470704},
+		{"normalized liter", " LITER ", 1.50, 160.934, 5, 22.712470704, 17.712470704},
+		{"missing unit keeps gallon default", "", 3.50, 160.934, 5, 14, 9},
+		{"gallon savings floor", "gallon", 3.50, 160.934, 20, 14, 0},
+		{"liter savings floor", "liter", 1.50, 160.934, 30, 22.712470704, 0},
+		{"no driving keeps zero savings", "liter", 1.50, 0, 5, 0, 0},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			cost, savings := lifetimeSavings(tt.distanceKm, tt.chargingCost, tt.price, 25, tt.unit)
+			if math.Abs(cost-tt.wantGasCost) > 1e-9 || math.Abs(savings-tt.wantSavings) > 1e-9 {
+				t.Fatalf("gas cost/savings = %.12f/%.12f, want %.12f/%.12f",
+					cost, savings, tt.wantGasCost, tt.wantSavings)
+			}
+		})
+	}
+}
 
 type activeHourRow struct {
 	hour  *int

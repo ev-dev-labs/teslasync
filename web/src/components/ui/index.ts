@@ -5,6 +5,7 @@ export { Checkbox, type CheckboxProps, type CheckboxSize } from './Checkbox';
 export { RadioCard, type RadioCardProps } from './RadioCard';
 export { Input, type InputProps } from './Input';
 export { Modal, type ModalProps } from './Modal';
+export { default as SignalConfigModal } from './SignalConfigModal';
 export { Popover, type PopoverProps, type PopoverAlign, type PopoverSide } from './Popover';
 export { Select, type SelectProps, type SelectOption } from './Select';
 export { Tabs, type TabsProps, type TabItem } from './Tabs';

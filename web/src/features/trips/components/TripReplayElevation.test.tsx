@@ -3,18 +3,29 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { TripReplayElevation, type TripReplayElevationPoint } from './TripReplayElevation';
 import type { ChartCardProps } from '@/components/layout';
+import english from '@/i18n/en.json';
 
 const captured = vi.hoisted(() => ({
+  palette: ['#91b4d2', '#c0a384'],
+  stroke: undefined as string | undefined,
+  gradient: undefined as { id: string; color: string; opacity: number } | undefined,
   points: [] as TripReplayElevationPoint[],
   onClick: undefined as ((state: { activeTooltipIndex?: number } | null) => void) | undefined,
   connectNulls: undefined as boolean | undefined,
   cursor: undefined as number | undefined,
+  useCatalog: false,
 }));
+
+vi.mock('@/hooks/useChartPalette', () => ({ useChartPalette: () => captured.palette }));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, fallback?: string, values?: Record<string, string>) =>
-      (fallback ?? key).replace(/\{\{(\w+)\}\}/g, (_, name: string) => values?.[name] ?? name),
+    t: (key: string, fallback?: string, values?: Record<string, string>) => {
+      const catalogValue = captured.useCatalog && key.startsWith('replay.elevation.')
+        ? english.replay.elevation[key.slice('replay.elevation.'.length) as keyof typeof english.replay.elevation]
+        : undefined;
+      return (catalogValue ?? fallback ?? key).replace(/\{\{(\w+)\}\}/g, (_, name: string) => values?.[name] ?? name);
+    },
   }),
 }));
 vi.mock('@/hooks/useNumberFormatting', () => ({
@@ -24,8 +35,8 @@ vi.mock('@/components/feedback', () => ({
   EmptyState: ({ message }: { message: string }) => <div>{message}</div>,
 }));
 vi.mock('@/components/layout', () => ({
-  ChartCard: ({ title, subtitle, children, data, dataColumns }: ChartCardProps) =>
-    <div>
+  ChartCard: ({ title, subtitle, ariaLabel, children, data, dataColumns }: ChartCardProps) =>
+    <div role="region" aria-label={ariaLabel}>
       {title}{subtitle && <div>{subtitle}</div>}{children}
       <div aria-label="Chart sample alternative">
         {dataColumns?.map(column => <span key={column.key}>{column.label}</span>)}
@@ -58,8 +69,9 @@ vi.mock('@/components/charts', () => {
       captured.onClick = onClick;
       return <div>{children}</div>;
     },
-    Area: ({ connectNulls }: { connectNulls?: boolean }) => {
+    Area: ({ connectNulls, stroke }: { connectNulls?: boolean; stroke?: string }) => {
       captured.connectNulls = connectNulls;
+      captured.stroke = stroke;
       return null;
     },
     ReferenceLine: ({ x }: { x: number }) => {
@@ -67,7 +79,11 @@ vi.mock('@/components/charts', () => {
       return null;
     },
     XAxis: inert, YAxis: inert, CartesianGrid: inert, Tooltip: inert, ChartTooltip: inert,
-    chartGrid: {}, axisTick: {}, AREA_DEFAULTS: {}, areaGradient: inert,
+    chartGrid: {}, axisTick: {}, AREA_DEFAULTS: {},
+    areaGradient: (id: string, color: string, opacity: number) => {
+      captured.gradient = { id, color, opacity };
+      return null;
+    },
   };
 });
 
@@ -76,14 +92,53 @@ function point(index: number, elevation: number | null): TripReplayElevationPoin
 }
 
 beforeEach(() => {
+  captured.palette = ['#91b4d2', '#c0a384'];
+  captured.stroke = undefined;
+  captured.gradient = undefined;
   captured.points = [];
   captured.onClick = undefined;
   captured.cursor = undefined;
   captured.connectNulls = undefined;
+  captured.useCatalog = false;
 });
 afterEach(cleanup);
 
 describe('TripReplayElevation', () => {
+  it('uses a state-neutral translated name for populated, missing-altitude and empty profiles', () => {
+    captured.useCatalog = true;
+    const onClickIndex = vi.fn();
+    const { rerender } = render(
+      <TripReplayElevation data={[point(0, 0), point(1, 5)]} currentIndex={0} onClickIndex={onClickIndex} distanceUnit="km" />,
+    );
+    const name = english.replay.elevation.title;
+    expect(screen.getByRole('region', { name })).toBeInTheDocument();
+    expect(captured.points).toEqual([point(0, 0), point(1, 5)]);
+    captured.onClick?.({ activeTooltipIndex: 1 });
+    expect(onClickIndex).toHaveBeenCalledWith(1);
+
+    for (const data of [[point(0, null), point(1, null)], []]) {
+      rerender(<TripReplayElevation data={data} currentIndex={0} onClickIndex={onClickIndex} distanceUnit="km" />);
+      expect(screen.getByRole('region', { name })).toBeInTheDocument();
+      expect(screen.getByText('No elevation data available')).toBeInTheDocument();
+    }
+    expect(screen.queryByRole('region', { name: english.replay.elevation.aria })).not.toBeInTheDocument();
+  });
+
+  it('reacts to the shared palette without changing samples, gaps, cursor or seeking', () => {
+    const data = [point(4, 100), point(9, null), point(15, 120)];
+    const onClickIndex = vi.fn();
+    const { rerender } = render(<TripReplayElevation data={data} currentIndex={9} onClickIndex={onClickIndex} distanceUnit="mi" />);
+    expect(captured.gradient).toEqual({ id: 'replayElevationGrad', color: captured.palette[0], opacity: 0.08 });
+    captured.palette = ['#385e7e', '#625077'];
+    rerender(<TripReplayElevation data={data} currentIndex={9} onClickIndex={onClickIndex} distanceUnit="mi" />);
+    expect(captured.stroke).toBe(captured.palette[0]);
+    expect(captured.gradient?.color).toBe(captured.palette[0]);
+    expect(captured.points).toEqual(data);
+    expect(captured.cursor).toBe(18);
+    expect(captured.connectNulls).toBe(false);
+    expect(onClickIndex).not.toHaveBeenCalled();
+  });
+
   it('provides every sample to the chart alternative with original indices, units, and altitude gaps', () => {
     const data = [point(4, 0), point(9, null), point(15, 310)];
     render(<TripReplayElevation data={data} currentIndex={9} onClickIndex={vi.fn()} distanceUnit="mi" />);

@@ -49,6 +49,7 @@ import { FsdSectionBody } from './FsdSectionBody';
 import type { FsdSectionState } from './types';
 import { useClientPagination } from './useClientPagination';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { isFiniteNumber } from '@/lib/numberFormat';
 
 interface FsdDriveAnalyticsPanelsProps {
   insights: FsdInsights | undefined;
@@ -144,14 +145,14 @@ function ComparisonPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
     { metricId: 'distance', occurrenceId: 'period-fsd-distance', rawValue: insights?.totals.fsd_distance_m,
       label: t('fsd.comparison.distance', 'Reported FSD distance'),
       display: { formatter: raw => ({ value: formatDistance(raw), unit: '' }) },
-      context: comparison?.fsd_distance_change_m == null
+      context: !isFiniteNumber(comparison?.fsd_distance_change_m)
         ? t('fsd.comparison.noDistanceBaseline', 'Periods lack comparable trusted coverage')
         : t('fsd.comparison.distanceDelta', '{{delta}} vs previous', {
           delta: `${comparison.fsd_distance_change_m >= 0 ? '+' : ''}${formatDistance(comparison.fsd_distance_change_m)}`,
         }) },
     { metricId: 'percent', occurrenceId: 'period-fsd-share', rawValue: insights?.totals.fsd_share_pct,
       label: t('fsd.comparison.share', 'Share of observed driving'),
-      context: comparison?.fsd_share_change_pct_points == null
+      context: !isFiniteNumber(comparison?.fsd_share_change_pct_points)
         ? t('fsd.comparison.noShareBaseline', 'Share periods lack comparable trusted coverage')
         : t('fsd.comparison.shareDelta', '{{delta}} percentage points', {
           delta: `${comparison.fsd_share_change_pct_points >= 0 ? '+' : ''}${fmtNumber(comparison.fsd_share_change_pct_points)}`,
@@ -376,9 +377,10 @@ function ContributingDrivesPanel({ insights, state }: FsdDriveAnalyticsPanelsPro
             {formatDateTime(row.started_at)}
           </Link>
           <Text as="div" size="xs" color="muted" className="whitespace-normal break-words">
-            {row.start_place ?? t('fsd.drives.unknownStart', 'Unknown start')}
-            {' to '}
-            {row.end_place ?? t('fsd.drives.unknownEnd', 'Unknown end')}
+            {t('fsd.analytics.routePlaces', '{{start}} to {{end}}', {
+              start: row.start_place ?? t('fsd.drives.unknownStart', 'Unknown start'),
+              end: row.end_place ?? t('fsd.drives.unknownEnd', 'Unknown end'),
+            })}
           </Text>
         </div>
       ),
@@ -400,11 +402,11 @@ function ContributingDrivesPanel({ insights, state }: FsdDriveAnalyticsPanelsPro
       key: 'fsd_share_pct',
       align: 'right',
       filterValue: (row) => row.fsd_share_pct ?? null,
-      filterValueLabel: (_, row) => row.fsd_share_pct == null ? '-' : `${row.confidence === 'high' ? '' : '~'}${fmtNumber(row.fsd_share_pct)}%`,
+      filterValueLabel: (_, row) => !isFiniteNumber(row.fsd_share_pct) ? '-' : t('fsd.analytics.share', '{{approximate}}{{value}}%', { approximate: row.confidence === 'high' ? '' : '~', value: fmtNumber(row.fsd_share_pct) }),
       header: t('fsd.drives.share', 'Drive share'),
-      render: (row) => row.fsd_share_pct == null
+      render: (row) => !isFiniteNumber(row.fsd_share_pct)
         ? '-'
-        : `${row.confidence === 'high' ? '' : '~'}${fmtNumber(row.fsd_share_pct)}%`,
+        : t('fsd.analytics.share', '{{approximate}}{{value}}%', { approximate: row.confidence === 'high' ? '' : '~', value: fmtNumber(row.fsd_share_pct) }),
     },
     {
       key: 'confidence',
@@ -497,7 +499,7 @@ function GroupTable({
   tableId: string;
   rows: GroupedFsdInsight[];
 }) {
-  const { fmtNumber } = useNumberFormatting();
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
   const columns = useMemo<Column<GroupedFsdInsight>[]>(() => [
@@ -510,7 +512,7 @@ function GroupTable({
       key: 'drive_count',
       align: 'right',
       header: t('fsd.groups.drives', 'Drives'),
-      render: (row) => <span className="tabular-nums">{row.drive_count}</span>,
+      render: (row) => <span className="tabular-nums">{isFiniteNumber(row.drive_count) ? fmtInt(row.drive_count) : t('fsd.notMeasured', 'Not measured')}</span>,
     },
     {
       key: 'fsd_distance_m',
@@ -526,11 +528,11 @@ function GroupTable({
       align: 'right',
       render: (row) => (
         <span className="tabular-nums">
-          {row.fsd_share_pct == null ? '-' : `${fmtNumber(row.fsd_share_pct)}%`}
+          {!isFiniteNumber(row.fsd_share_pct) ? '-' : t('fsd.analytics.share', '{{approximate}}{{value}}%', { approximate: '', value: fmtNumber(row.fsd_share_pct) })}
         </span>
       ),
     },
-  ], [formatDistance, t, fmtNumber]);
+  ], [formatDistance, t, fmtNumber, fmtInt]);
 
   return (
     <div className="min-w-0">
@@ -589,7 +591,7 @@ function ComparisonGroupsPanel({ insights, state }: FsdDriveAnalyticsPanelsProps
 }
 
 function FirmwareSpotlightPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
-  const { fmtNumber } = useNumberFormatting();
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const spotlight = insights?.drive_analytics?.firmware_spotlight;
   const rows = spotlight?.routes ?? [];
@@ -602,25 +604,33 @@ function FirmwareSpotlightPanel({ insights, state }: FsdDriveAnalyticsPanelsProp
     {
       key: 'before_fsd_share_pct',
       header: t('fsd.firmwareSpotlight.before', 'Before'),
-      render: (row) => row.before_fsd_share_pct == null
-        ? '-'
-        : `${fmtNumber(row.before_fsd_share_pct)}% · ${row.before_drive_count}`,
+      render: (row) => t('fsd.analytics.sharePopulation', '{{share}} · {{drives}}', {
+        share: isFiniteNumber(row.before_fsd_share_pct)
+          ? t('fsd.analytics.share', '{{approximate}}{{value}}%', { approximate: '', value: fmtNumber(row.before_fsd_share_pct) })
+          : t('fsd.notMeasured', 'Not measured'),
+        drives: isFiniteNumber(row.before_drive_count) ? fmtInt(row.before_drive_count) : t('fsd.notMeasured', 'Not measured'),
+      }),
     },
     {
       key: 'after_fsd_share_pct',
       header: t('fsd.firmwareSpotlight.after', 'After'),
-      render: (row) => row.after_fsd_share_pct == null
-        ? '-'
-        : `${fmtNumber(row.after_fsd_share_pct)}% · ${row.after_drive_count}`,
+      render: (row) => t('fsd.analytics.sharePopulation', '{{share}} · {{drives}}', {
+        share: isFiniteNumber(row.after_fsd_share_pct)
+          ? t('fsd.analytics.share', '{{approximate}}{{value}}%', { approximate: '', value: fmtNumber(row.after_fsd_share_pct) })
+          : t('fsd.notMeasured', 'Not measured'),
+        drives: isFiniteNumber(row.after_drive_count) ? fmtInt(row.after_drive_count) : t('fsd.notMeasured', 'Not measured'),
+      }),
     },
     {
       key: 'share_change_pct_points',
       header: t('fsd.firmwareSpotlight.change', 'Share change'),
-      render: (row) => row.share_change_pct_points == null
+      render: (row) => !isFiniteNumber(row.share_change_pct_points)
         ? '-'
-        : `${row.share_change_pct_points >= 0 ? '+' : ''}${fmtNumber(row.share_change_pct_points)} pts`,
+        : t('fsd.analytics.shareChangePoints', '{{delta}} pts', {
+          delta: `${row.share_change_pct_points >= 0 ? '+' : ''}${fmtNumber(row.share_change_pct_points)}`,
+        }),
     },
-  ], [t, fmtNumber]);
+  ], [t, fmtNumber, fmtInt]);
 
   const hasFirmwarePair = Boolean(spotlight?.from_version && spotlight?.to_version);
 
@@ -671,7 +681,7 @@ function FirmwareSpotlightPanel({ insights, state }: FsdDriveAnalyticsPanelsProp
 }
 
 function EfficiencyPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
-  const { fmtNumber } = useNumberFormatting();
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const rows = insights?.drive_analytics?.route_efficiency ?? [];
@@ -679,7 +689,10 @@ function EfficiencyPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
   const columns = useMemo<Column<FsdRouteEfficiencyComparison>[]>(() => {
     const formatEfficiency = (value: number | null | undefined) =>
       value != null && Number.isFinite(value)
-        ? `${fmtNumber(convertEfficiencyFromSI(value, unitPrefs.distance), unitPrefs.precision, unitPrefs.locale)} ${efficiencyUnit}`
+        ? t('fsd.analytics.efficiencyValue', '{{value}} {{unit}}', {
+          value: fmtNumber(convertEfficiencyFromSI(value, unitPrefs.distance), unitPrefs.precision, unitPrefs.locale),
+          unit: efficiencyUnit,
+        })
         : t('fsd.notMeasured', 'Not measured');
     return [
       {
@@ -690,22 +703,31 @@ function EfficiencyPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
       {
         key: 'fsd_heavy_drive_count',
         header: t('fsd.efficiency.heavy', 'FSD-heavy'),
-        render: (row) => `${row.fsd_heavy_drive_count} / ${formatEfficiency(row.fsd_heavy_efficiency_wh_per_km)}`,
+        render: (row) => t('fsd.analytics.efficiencyPopulation', '{{drives}} / {{efficiency}}', {
+          drives: isFiniteNumber(row.fsd_heavy_drive_count) ? fmtInt(row.fsd_heavy_drive_count, unitPrefs.locale) : t('fsd.notMeasured', 'Not measured'),
+          efficiency: formatEfficiency(row.fsd_heavy_efficiency_wh_per_km),
+        }),
       },
       {
         key: 'low_fsd_drive_count',
         header: t('fsd.efficiency.low', 'Low-FSD'),
-        render: (row) => `${row.low_fsd_drive_count} / ${formatEfficiency(row.low_fsd_efficiency_wh_per_km)}`,
+        render: (row) => t('fsd.analytics.efficiencyPopulation', '{{drives}} / {{efficiency}}', {
+          drives: isFiniteNumber(row.low_fsd_drive_count) ? fmtInt(row.low_fsd_drive_count, unitPrefs.locale) : t('fsd.notMeasured', 'Not measured'),
+          efficiency: formatEfficiency(row.low_fsd_efficiency_wh_per_km),
+        }),
       },
       {
         key: 'difference_pct',
         header: t('fsd.efficiency.difference', 'Difference'),
         render: (row) => row.difference_pct != null && Number.isFinite(row.difference_pct)
-          ? `${row.difference_pct >= 0 ? '+' : ''}${fmtNumber(row.difference_pct, unitPrefs.precision, unitPrefs.locale)}%`
+          ? t('fsd.analytics.share', '{{approximate}}{{value}}%', {
+            approximate: row.difference_pct >= 0 ? '+' : '',
+            value: fmtNumber(row.difference_pct, unitPrefs.precision, unitPrefs.locale),
+          })
           : t('fsd.notMeasured', 'Not measured'),
       },
     ];
-  }, [unitPrefs, efficiencyUnit, t, fmtNumber]);
+  }, [unitPrefs, efficiencyUnit, t, fmtNumber, fmtInt]);
 
   return (
     <GlassPanel className="min-w-0 p-4 sm:p-5" data-testid="fsd-route-efficiency">
@@ -743,7 +765,7 @@ function EfficiencyPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
 }
 
 function CommuteIdentityPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
-  const { fmtNumber } = useNumberFormatting();
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = insights?.drive_analytics?.commute_identities ?? [];
   const columns: Column<FsdCommuteIdentity>[] = useMemo(() => [
@@ -760,30 +782,32 @@ function CommuteIdentityPanel({ insights, state }: FsdDriveAnalyticsPanelsProps)
     {
       key: 'this_month',
       header: t('fsd.commute.thisMonth', 'This month'),
-      render: (row) => row.this_month.fsd_share_pct == null
+      render: (row) => !isFiniteNumber(row.this_month.fsd_share_pct)
         ? t('fsd.commute.unknown', 'Unknown')
-        : `${fmtNumber(row.this_month.fsd_share_pct)}%`,
+        : t('fsd.analytics.share', '{{approximate}}{{value}}%', { approximate: '', value: fmtNumber(row.this_month.fsd_share_pct) }),
     },
     {
       key: 'last_month',
       header: t('fsd.commute.lastMonth', 'Last month'),
-      render: (row) => row.last_month.fsd_share_pct == null
+      render: (row) => !isFiniteNumber(row.last_month.fsd_share_pct)
         ? t('fsd.commute.unknown', 'Unknown')
-        : `${fmtNumber(row.last_month.fsd_share_pct)}%`,
+        : t('fsd.analytics.share', '{{approximate}}{{value}}%', { approximate: '', value: fmtNumber(row.last_month.fsd_share_pct) }),
     },
     {
       key: 'share_change_pct_points',
       header: t('fsd.commute.change', 'Change'),
-      render: (row) => row.share_change_pct_points == null
+      render: (row) => !isFiniteNumber(row.share_change_pct_points)
         ? '—'
-        : `${row.share_change_pct_points >= 0 ? '+' : ''}${fmtNumber(row.share_change_pct_points)} pt`,
+        : t('fsd.analytics.shareChangePoint', '{{delta}} pt', {
+          delta: `${row.share_change_pct_points >= 0 ? '+' : ''}${fmtNumber(row.share_change_pct_points)}`,
+        }),
     },
     {
       key: 'unknown_days',
       header: t('fsd.commute.unknownDays', 'Unknown days'),
-      render: (row) => String(row.this_month.unknown_days),
+      render: (row) => isFiniteNumber(row.this_month.unknown_days) ? fmtInt(row.this_month.unknown_days) : t('fsd.commute.unknown', 'Unknown'),
     },
-  ], [t, fmtNumber]);
+  ], [t, fmtNumber, fmtInt]);
 
   return (
     <GlassPanel className="min-w-0 p-4 sm:p-5" data-testid="fsd-commute-identity">

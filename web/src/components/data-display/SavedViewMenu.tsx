@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Bookmark,
@@ -11,8 +11,19 @@ import {
   Plus,
   X,
 } from 'lucide-react';
-import { Button, Input, Modal, Badge, ConfirmDialog, Checkbox, Tooltip, Popover } from '@/components/ui';
-import { EmptyState } from '@/components/feedback';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Modal } from '@/components/ui/Modal';
+import { Badge } from '@/components/ui/Badge';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Checkbox } from '@/components/ui/Checkbox';
+import { Tooltip } from '@/components/ui/Tooltip';
+import { Popover } from '@/components/ui/Popover';
+import { EmptyState } from '@/components/feedback/EmptyState';
+import { ErrorDisplay } from '@/components/feedback/ErrorDisplay';
+import { StaleRefreshWarning } from '@/components/feedback/StaleRefreshWarning';
+import { DataStateNotice } from '@/components/feedback/DataStateNotice';
+import { useDataState } from '@/hooks/useDataState';
 import { cn } from '@/lib/cn';
 import { useAnnouncer } from '@/hooks/useAnnouncer';
 import {
@@ -87,7 +98,9 @@ export function SavedViewMenu({
   iconOnly = true,
 }: SavedViewMenuProps) {
   const { t } = useTranslation();
-  const { data: viewsRaw, isLoading, isError } = useSavedViews(route);
+  const viewsQuery = useSavedViews(route);
+  const viewsState = useDataState(viewsQuery);
+  const viewsRaw = viewsState.data;
   const createMut = useCreateSavedView();
   const updateMut = useUpdateSavedView();
   const deleteMut = useDeleteSavedView();
@@ -166,6 +179,28 @@ export function SavedViewMenu({
     ? `${t('savedViews.title', 'Saved views')}: ${triggerLabel}`
     : triggerLabel;
 
+  const queryNotice = <StaleRefreshWarning state={viewsState} label={t('savedViews.title', 'Saved views')} />;
+  const unresolvedContent = viewsState.fatalError ? (
+    <ErrorDisplay
+      error={viewsState.fatalError}
+      message={t('savedViews.error', 'Unable to load saved views')}
+      compact
+      onRetry={viewsState.retry ?? undefined}
+    />
+  ) : viewsState.isRefreshBlocked ? (
+    <DataStateNotice state="stale" role="status" title={t('dataSources.status.paused', 'Refresh paused')}>
+      {viewsState.retry && (
+        <Button type="button" variant="secondary" size="sm" onClick={viewsState.retry}>
+          {t('error.retry', 'Retry')}
+        </Button>
+      )}
+    </DataStateNotice>
+  ) : (
+    <div role="status" className="px-1 py-6 text-center text-sm text-[var(--text-muted)]">
+      {t('savedViews.loading', 'Loading saved views…')}
+    </div>
+  );
+
   const trigger = (
     <Button
       ref={triggerRef}
@@ -217,25 +252,15 @@ export function SavedViewMenu({
                     setOpen(false);
                     setManageOpen(true);
                   }}
-                  className="h-auto px-1 py-1 text-2xs font-medium text-cyan-300 hover:text-cyan-200"
+                  className="h-auto px-1 py-1 text-2xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                 >
                   {t('savedViews.manage', 'Manage views')}
                 </Button>
               )}
             </div>
 
-            {isError ? (
-              <div
-                role="alert"
-                className="px-1 py-6 text-center text-sm text-[var(--text-secondary)]"
-              >
-                {t('savedViews.error', 'Unable to load saved views')}
-              </div>
-            ) : isLoading && views.length === 0 ? (
-              <div className="px-1 py-6 text-center text-sm text-[var(--text-muted)]">
-                {t('savedViews.loading', 'Loading saved views…')}
-              </div>
-            ) : views.length === 0 ? (
+            {queryNotice}
+            {!viewsState.hasData ? unresolvedContent : views.length === 0 ? (
               <div className="py-3">
                 <EmptyState
                   message={t('savedViews.empty', 'No saved views yet')}
@@ -257,8 +282,8 @@ export function SavedViewMenu({
                       <div
                         className={cn(
                           'group flex flex-wrap items-center gap-1 rounded px-2 py-1.5',
-                          'hover:bg-white/[0.04]',
-                          isActive && 'bg-white/[0.06]',
+                          'hover:bg-[var(--surface-3)]',
+                          isActive && 'bg-[var(--surface-2)]',
                         )}
                       >
                         <Button
@@ -276,7 +301,7 @@ export function SavedViewMenu({
                         >
                           {v.is_default && (
                             <Star
-                              className="mr-1 inline h-3 w-3 text-amber-300"
+                              className="mr-1 inline h-3 w-3 text-[var(--text-secondary)]"
                               aria-label={t('savedViews.defaultBadge', 'Default')}
                             />
                           )}
@@ -287,21 +312,21 @@ export function SavedViewMenu({
                           variant="ghost"
                           size="sm"
                           onClick={() => handleToggleDefault(v)}
-                          className={cn(viewActionClass, 'hover:text-amber-300')}
+                          className={cn(viewActionClass, 'hover:text-[var(--text-primary)]')}
                           aria-label={
                             v.is_default
                               ? t('savedViews.unsetDefault', 'Clear default')
                               : t('savedViews.setDefault', 'Set as default')
                           }
                         >
-                          <Star className={cn('h-3.5 w-3.5', v.is_default && 'fill-amber-300 text-amber-300')} />
+                          <Star className={cn('h-3.5 w-3.5', v.is_default && 'fill-current text-[var(--text-secondary)]')} />
                         </Button>
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
                           onClick={() => handleTogglePin(v)}
-                          className={cn(viewActionClass, 'hover:text-cyan-300')}
+                          className={cn(viewActionClass, 'hover:text-[var(--text-primary)]')}
                           aria-label={v.is_pinned ? t('savedViews.unpin', 'Unpin') : t('savedViews.pin', 'Pin')}
                         >
                           {v.is_pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
@@ -327,7 +352,7 @@ export function SavedViewMenu({
                             setDeleteTarget(v);
                             setOpen(false);
                           }}
-                          className={cn(viewActionClass, 'hover:text-rose-300')}
+                          className={cn(viewActionClass, 'hover:text-[var(--semantic-danger)]')}
                           aria-label={t('common.delete', 'Delete')}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -339,7 +364,7 @@ export function SavedViewMenu({
               </ul>
             )}
 
-            <div className="mt-2 flex items-center justify-between border-t border-white/[0.06] pt-2">
+            <div className="mt-2 flex items-center justify-between border-t border-[var(--border-subtle)] pt-2">
               <Button
                 type="button"
                 variant="ghost"
@@ -348,7 +373,7 @@ export function SavedViewMenu({
                   setOpen(false);
                   setSaveOpen(true);
                 }}
-                className="h-8 gap-1 rounded px-1.5 py-1 text-xs text-cyan-300 hover:text-cyan-200"
+                className="h-8 gap-1 rounded px-1.5 py-1 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
               >
                 <Plus className="h-3.5 w-3.5" />
                 {t('savedViews.saveCurrent', 'Save current view…')}
@@ -431,6 +456,8 @@ export function SavedViewMenu({
         open={manageOpen}
         onClose={() => setManageOpen(false)}
         views={views}
+        queryNotice={queryNotice}
+        unresolvedContent={!viewsState.hasData ? unresolvedContent : null}
         onApply={(v) => {
           handleApply(v);
           setManageOpen(false);
@@ -573,6 +600,8 @@ interface SavedViewManageDialogProps {
   open: boolean;
   onClose: () => void;
   views: SavedView[];
+  queryNotice: ReactNode;
+  unresolvedContent: ReactNode;
   currentQuery: string;
   onApply: (view: SavedView) => void;
   onTogglePin: (view: SavedView) => void;
@@ -585,6 +614,8 @@ function SavedViewManageDialog({
   open,
   onClose,
   views,
+  queryNotice,
+  unresolvedContent,
   currentQuery,
   onApply,
   onTogglePin,
@@ -601,7 +632,8 @@ function SavedViewManageDialog({
       title={t('savedViews.manage', 'Manage views')}
       size="md"
     >
-      {views.length === 0 ? (
+      {queryNotice}
+      {unresolvedContent ?? (views.length === 0 ? (
         <EmptyState message={t('savedViews.empty', 'No saved views yet')} />
       ) : (
         <ul className="max-h-[60vh] space-y-1 overflow-y-auto">
@@ -611,8 +643,8 @@ function SavedViewManageDialog({
               <li
                 key={v.id}
                 className={cn(
-                  'flex flex-wrap items-center gap-2 rounded border border-white/[0.06] bg-white/[0.02] px-3 py-2',
-                  isActive && 'border-cyan-400/30 bg-cyan-500/5',
+                  'flex flex-wrap items-center gap-2 rounded border border-[var(--border-subtle)] bg-[var(--surface-1)] px-3 py-2',
+                  isActive && 'border-[var(--border-strong)] bg-[var(--surface-2)]',
                 )}
               >
                 <Button
@@ -620,11 +652,11 @@ function SavedViewManageDialog({
                   variant="ghost"
                   size="sm"
                   onClick={() => onApply(v)}
-                  className="block h-auto min-w-0 flex-1 basis-full truncate px-0 py-0 text-left text-sm text-[var(--text-primary)] hover:text-cyan-300 sm:basis-0 [@media(hover:none)]:basis-full"
+                  className="block h-auto min-w-0 flex-1 basis-full truncate px-0 py-0 text-left text-sm text-[var(--text-primary)] sm:basis-0 [@media(hover:none)]:basis-full"
                   title={v.query || t('savedViews.emptyQuery', 'No filters')}
                 >
                   {v.is_default && (
-                    <Star className="mr-1 inline h-3 w-3 text-amber-300" aria-hidden="true" />
+                    <Star className="mr-1 inline h-3 w-3 text-[var(--text-secondary)]" aria-hidden="true" />
                   )}
                   {v.name}
                 </Button>
@@ -633,21 +665,21 @@ function SavedViewManageDialog({
                   variant="ghost"
                   size="sm"
                   onClick={() => onToggleDefault(v)}
-                  className={cn(manageActionClass, 'hover:text-amber-300')}
+                  className={cn(manageActionClass, 'hover:text-[var(--text-primary)]')}
                   aria-label={
                     v.is_default
                       ? t('savedViews.unsetDefault', 'Clear default')
                       : t('savedViews.setDefault', 'Set as default')
                   }
                 >
-                  <Star className={cn('h-4 w-4', v.is_default && 'fill-amber-300 text-amber-300')} />
+                  <Star className={cn('h-4 w-4', v.is_default && 'fill-current text-[var(--text-secondary)]')} />
                 </Button>
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   onClick={() => onTogglePin(v)}
-                  className={cn(manageActionClass, 'hover:text-cyan-300')}
+                  className={cn(manageActionClass, 'hover:text-[var(--text-primary)]')}
                   aria-label={v.is_pinned ? t('savedViews.unpin', 'Unpin') : t('savedViews.pin', 'Pin')}
                 >
                   {v.is_pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
@@ -667,7 +699,7 @@ function SavedViewManageDialog({
                   variant="ghost"
                   size="sm"
                   onClick={() => onDelete(v)}
-                  className={cn(manageActionClass, 'hover:text-rose-300')}
+                  className={cn(manageActionClass, 'hover:text-[var(--semantic-danger)]')}
                   aria-label={t('common.delete', 'Delete')}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -676,7 +708,7 @@ function SavedViewManageDialog({
             );
           })}
         </ul>
-      )}
+      ))}
       <div className="flex justify-end pt-3">
         <Button variant="secondary" size="sm" onClick={onClose}>
           {t('common.close', 'Close')}

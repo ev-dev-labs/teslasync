@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { PlugZap } from 'lucide-react';
-import { LayoutCard } from '@/components/layout/layout-reference';
+import { LayoutCard } from '@/components/layout';
 import { Text, Badge, Caption } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { useDateFormat } from '@/hooks/useDateFormat';
@@ -86,11 +86,18 @@ export function ChargePointsCard() {
             {sessions.map(session => (
               <li key={session.transaction_id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[var(--surface-2)] px-3 py-2">
                 <Caption className="min-w-0 break-words">{session.charge_point_id} · #{session.transaction_id}</Caption>
-                <Text variant="bodySm" className="tabular-nums">
-                  {session.energy_delivered_wh != null && Number.isFinite(session.energy_delivered_wh)
-                    ? formatEnergy(session.energy_delivered_wh)
-                    : t('ocpp.inProgress', 'in progress')}
-                </Text>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Text variant="bodySm" className="tabular-nums" aria-label={t('common.energy', 'Energy')}>
+                    {session.energy_delivered_wh != null && Number.isFinite(session.energy_delivered_wh)
+                      ? formatEnergy(session.energy_delivered_wh)
+                      : t('common.unknown', 'Unknown')}
+                  </Text>
+                  <Badge variant="neutral" size="sm">
+                    {session.ended_at != null
+                      ? t('charging.preview.completed', 'Completed')
+                      : t('ocpp.inProgress', 'in progress')}
+                  </Badge>
+                </div>
               </li>
             ))}
           </ul>

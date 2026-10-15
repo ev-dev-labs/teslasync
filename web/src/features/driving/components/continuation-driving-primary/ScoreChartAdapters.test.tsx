@@ -5,6 +5,8 @@ import type { ChartCardProps } from '@/components/layout';
 import { ScoreTrendChart } from './ScoreTrendChart';
 import { ScoreCategoryChart } from './ScoreCategoryChart';
 import { ScoreDistributionChart } from './ScoreDistributionChart';
+import { chartTokens } from '@/lib/tokens';
+import { CATEGORY_COLORS } from '../score-orchestrator/scoreDomain';
 
 const frame = vi.hoisted(() => {
   const value: { props: ChartCardProps | null } = { props: null };
@@ -27,12 +29,13 @@ vi.mock('@/components/layout', async (importOriginal) => {
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
   const Host = ({ children }: { children?: ReactNode }) => <div>{children}</div>;
-  const Series = ({ dataKey, name }: { dataKey: string; name?: string }) =>
-    <span data-testid={`series-${dataKey}`}>{name}</span>;
+  const Series = ({ dataKey, name, fill, children }: {
+    dataKey: string; name?: string; fill?: string; children?: ReactNode;
+  }) => <span data-testid={`series-${dataKey}`} data-fill={fill}>{name}{children}</span>;
   return {
     ...actual,
     ResponsiveContainer: Host, LineChart: Host, BarChart: Host,
-    Line: Series, Bar: Series, Cell: () => null,
+    Line: Series, Bar: Series, Cell: ({ fill }: { fill: string }) => <span data-testid="category-fill" data-fill={fill} />,
     XAxis: () => null, YAxis: () => null, CartesianGrid: () => null, Tooltip: () => null,
     ChartLegend: () => null, ReferenceLine: () => null, renderAnnotationLines: () => null,
   };
@@ -43,7 +46,8 @@ beforeEach(() => { frame.props = null; });
 describe('score chart adapters preserve canonical capabilities', () => {
   it('forwards every prepared trend row, all four series and the persisted annotation/legend identity', () => {
     const data = Array.from({ length: 21 }, (_, index) => ({
-      date: `Day ${index}`, score: index, efficiency: index, smoothness: index, speed: index,
+      date: new Date(Date.UTC(2026, 0, index + 1)).toISOString(), driveId: index + 1,
+      score: index, efficiency: index, smoothness: index, speed: index,
     }));
     render(<ScoreTrendChart data={data} vehicleId={7} scoreColor="var(--theme-primary)"
       colors={{ efficiency: 'green', smoothness: 'cyan', speed: 'purple' }} />);
@@ -84,5 +88,18 @@ describe('score chart adapters preserve canonical capabilities', () => {
     expect(frame.props?.dataColumns?.map((column) => column.key)).toEqual(['range', 'count']);
     expect(frame.props).toMatchObject({ height: 240, size: 'standard', toolbar: true, exportable: true });
     expect(screen.getByTestId('series-count')).toBeInTheDocument();
+  });
+
+  it('uses restrained category identities and a theme-aware capacity backdrop without changing populated values', () => {
+    const data = [
+      { name: 'Efficiency', value: 35, max: 40, fill: CATEGORY_COLORS.efficiency },
+      { name: 'Smoothness', value: 25, max: 30, fill: CATEGORY_COLORS.smoothness },
+      { name: 'Speed Discipline', value: 30, max: 30, fill: CATEGORY_COLORS.speed },
+    ];
+    render(<ScoreCategoryChart data={data} />);
+    expect(screen.getAllByTestId('category-fill').map((cell) => cell.getAttribute('data-fill')))
+      .toEqual([chartTokens.series[1], chartTokens.series[0], chartTokens.series[4]]);
+    expect(screen.getByTestId('series-max')).toHaveAttribute('data-fill', chartTokens.gridStroke);
+    expect(frame.props?.data).toEqual(data.map(({ name, value, max }) => ({ name, value, max })));
   });
 });

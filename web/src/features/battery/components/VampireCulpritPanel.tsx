@@ -106,7 +106,12 @@ export function VampireCulpritPanel({ vehicleId }: { vehicleId: string | undefin
               {t('vampireDrain.culprit.tonight', 'Tonight: {{id}}', { id: report.tonight.replace(/_/g, ' ') })}
             </Badge>
           </div>
-          <Text as="p" variant="caption">{report.honesty}</Text>
+          <Text as="p" variant="caption">
+            {[...report.externalHonesty, t(report.honesty.key, {
+              defaultValue: 'Sentry, cabin overheat, and preconditioning only count after confirmed Park. Drain percentages are parked windows, not invented watt-hours.',
+              ...report.honesty.args,
+            })].join(' ')}
+          </Text>
         </>
       )}
     </GlassPanel>

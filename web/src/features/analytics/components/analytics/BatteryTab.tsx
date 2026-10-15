@@ -5,7 +5,7 @@ import type { StatMetric } from '@/components/data-display';
 import {
   ChartTooltip, ChartGradient,
   ChartLegend,
-  chartGrid, axisTick, axisTickSm, chartMarginLabeled, chartAnimation, safe, CHART_COLORS,
+  chartGrid, axisTick, axisTickSm, chartMarginLabeled, chartAnimation, CHART_COLORS,
   LineChart, Line, AreaChart, Area, ComposedChart,
   XAxis, YAxis, Tooltip, ResponsiveContainer,
   AREA_DEFAULTS,
@@ -18,13 +18,15 @@ import { AnalyticsChartPanel } from './AnalyticsChartPanel';
 import { FleetSectionBrief } from '../operationalbrief-a-m/FleetSectionBrief';
 import type { FleetAnalyticsQuery } from './constants';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { Text } from '@/components/ui';
 
 export function BatteryTab({ query }: { query: FleetAnalyticsQuery }) {
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs, formatEnergy } = useUnits();
   const distanceUnit = unitPrefs.distance;
-  // backend `range_km` is SI km; convert via meter-floored helper. Stable per
+  // Backend `range_km` is reported range, not an SOC-derived nominal range.
+  // Convert via the meter-based helper. Stable per
   // distance unit so the memoised chart data below only recomputes on unit change.
   const fromKm = useCallback(
     (km: number) => convertDistanceFromSI(km * 1000, distanceUnit),
@@ -36,7 +38,10 @@ export function BatteryTab({ query }: { query: FleetAnalyticsQuery }) {
 
   const trend = data?.battery_trend ?? [];
   const latest = trend.length > 0 ? trend[trend.length - 1] : null;
-  const isEmpty = trend.length === 0;
+  const healthEmpty = !trend.some(d => d.health_score != null);
+  const capacityEmpty = !trend.some(d => d.capacity_wh != null);
+  const rangeEmpty = !trend.some(d => d.range_km != null);
+  const degradationEmpty = !trend.some(d => d.degradation_pct != null || d.cycle_count != null);
   const metrics: StatMetric[] = [
     { metricId: 'percent', occurrenceId: 'battery-health', rawValue: latest?.health_score,
       label: t('analytics.battery.healthScore', 'Health score'),
@@ -61,8 +66,8 @@ export function BatteryTab({ query }: { query: FleetAnalyticsQuery }) {
     () =>
       trend.map((d) => ({
         ...d,
-        capacity: convertEnergyFromSI(safe(d.capacity_wh), unitPrefs.energy),
-        range: fromKm(safe(d.range_km)),
+        capacity: d.capacity_wh == null ? null : convertEnergyFromSI(d.capacity_wh, unitPrefs.energy),
+        range: d.range_km == null ? null : fromKm(d.range_km),
       })),
     [trend, fromKm, unitPrefs.energy],
   );
@@ -75,6 +80,16 @@ export function BatteryTab({ query }: { query: FleetAnalyticsQuery }) {
         description={t('analytics.brief.batteryDescription', 'Measurements describe the last returned battery-trend row, not an inferred current vehicle state.')}
         scope={latest ? t('analytics.brief.batteryScope', 'Returned battery-trend date: {{date}}. Continuous recording coverage is unknown.', { date: latest.date })
           : t('analytics.brief.batteryNoRow', 'No battery-trend row was returned for the selected range.')} />
+      {latest?.soc_pct != null && (
+        <Text variant="bodySm">
+          {t('charging.detail.soc', 'SoC')}: {fmtNumber(latest.soc_pct)}%
+          {' · '}{latest.coverage_start ?? latest.as_of ?? latest.date}
+          {latest.coverage_end ? ` – ${latest.coverage_end}` : ''}
+          {' · '}{latest.source === 'state'
+            ? t('analytics.brief.sectionProvenance', 'The fleet response does not supply an observation timestamp for these aggregates.')
+            : t('analytics.brief.sectionScope', 'Returned aggregates for the selected fleet range; exact recording coverage is unknown.')}
+        </Text>
+      )}
 
       <section
         aria-label={t('analytics.tabs.battery', 'Battery')}
@@ -88,7 +103,7 @@ export function BatteryTab({ query }: { query: FleetAnalyticsQuery }) {
           loading={isLoading}
           error={err}
           onRetry={refetch}
-          isEmpty={isEmpty}
+          isEmpty={healthEmpty}
           emptyMessage={t('analytics.battery.noData', 'No battery trend data available')}
           ariaLabel={t('analytics.battery.healthChartAria', 'Battery health score trend over time')}
           size="detail"
@@ -120,7 +135,7 @@ export function BatteryTab({ query }: { query: FleetAnalyticsQuery }) {
           loading={isLoading}
           error={err}
           onRetry={refetch}
-          isEmpty={isEmpty}
+          isEmpty={capacityEmpty}
           emptyMessage={t('analytics.battery.noData', 'No battery trend data available')}
           ariaLabel={t('analytics.battery.capacityChartAria', 'Battery capacity trend over time')}
           size="standard"
@@ -152,7 +167,7 @@ export function BatteryTab({ query }: { query: FleetAnalyticsQuery }) {
           loading={isLoading}
           error={err}
           onRetry={refetch}
-          isEmpty={isEmpty}
+          isEmpty={rangeEmpty}
           emptyMessage={t('analytics.battery.noData', 'No battery trend data available')}
           ariaLabel={`${t('analytics.battery.rangeChartAria', 'Battery range trend over time')} (${distanceUnit})`}
           size="standard"
@@ -189,7 +204,7 @@ export function BatteryTab({ query }: { query: FleetAnalyticsQuery }) {
           loading={isLoading}
           error={err}
           onRetry={refetch}
-          isEmpty={isEmpty}
+          isEmpty={degradationEmpty}
           emptyMessage={t('analytics.battery.noData', 'No battery trend data available')}
           ariaLabel={t('analytics.battery.degradationChartAria', 'Battery degradation and charge cycle count over time')}
           size="standard"

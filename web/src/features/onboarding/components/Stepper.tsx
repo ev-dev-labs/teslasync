@@ -176,6 +176,7 @@ export function Stepper({ steps, renderCta }: StepperProps) {
                       variant="primary"
                       size="sm"
                       wrapLabel
+                      className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
                       onClick={step.cta?.onClick}
                       disabled={step.cta?.disabled}
                       icon={<ArrowRight className="h-4 w-4" />}

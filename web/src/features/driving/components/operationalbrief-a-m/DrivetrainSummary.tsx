@@ -10,6 +10,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import type { HealthSummary } from '../drivetrain-health-modernization/HealthSummary';
 import { SourceBoundary } from '../drivetrain-health-modernization/SourceBoundary';
+import { useDrivetrainStatisticsCopy } from '../drivetrain-health-modernization/MethodologyPanel';
 import { finite, healthScore, healthStatus, statsSI, temperatureBand } from '../drivetrain-health-modernization/model';
 import { DrivingSummaryBrief } from './DrivingSummaryBrief';
 
@@ -19,6 +20,7 @@ export function DrivetrainSummary(props: Props) {
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const { fmtNumber, fmtInt } = useNumberFormatting();
+  const statisticsCopy = useDrivetrainStatisticsCopy();
   const { health, stats, sensors, power, healthState, statsState, drivesState, healthLoading, statsLoading } = props;
   const score = healthScore(health);
   const status = healthStatus(health);
@@ -118,9 +120,9 @@ export function DrivetrainSummary(props: Props) {
       </LayoutCard> },
       { id: 'drive-statistics', size: 'third', content: <LayoutCard title={t('drivetrain.driveStats', 'Drive Statistics')}>
         <DrivingSummaryBrief metrics={statistics} title={t('drivetrain.modernization.allReturnedStats', 'Vehicle drive statistics')}
-          description={t('drivetrain.modernization.statsScope', 'Unbounded vehicle statistics; independent of the chart date filter.')}
-          scope={t('drivetrain.modernization.allReturnedStats', 'Vehicle drive statistics')}
-          provenance={t('drivetrain.modernization.statsScope', 'Unbounded vehicle statistics; independent of the chart date filter.')}
+          description={statisticsCopy.provenance}
+          scope={statisticsCopy.scope}
+          provenance={statisticsCopy.provenance}
           preferences={preferences} loading={statsLoading && !statsState.hasData} showError={false}
           error={statsState.fatalError} retained={statsState.status === 'stale' || statsState.refreshError != null}
           onRetry={() => { statsState.retry?.(); }} />

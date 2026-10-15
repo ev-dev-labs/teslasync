@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { BookOpen, ExternalLink } from 'lucide-react';
-import { Badge, Caption, Heading, Text } from '@/components/ui';
+import { Badge, Button, BUTTON_BASE, BUTTON_VARIANTS, Caption, Heading, Text } from '@/components/ui';
+import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 import { LayoutCard } from '@/components/layout';
 import { AlertBanner, EmptyState } from '@/components/feedback';
 import { DateTime } from '@/components/data-display';
@@ -30,10 +32,12 @@ export function CommunicationsPanel({
   const { t } = useTranslation();
   const unavailable = source?.status === 'unavailable';
   const stale = source?.status === 'stale';
+  const available = source?.status === 'available';
+  const unknown = !available && !unavailable && !stale;
 
   return (
     <LayoutCard title={t('serviceIntelligence.communications.title', 'Manufacturer communications & TSBs')}
-      actions={<BookOpen className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+      actions={<BookOpen className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />}>
       <PanelState
         selected={selected}
         loading={loading}
@@ -49,32 +53,42 @@ export function CommunicationsPanel({
         emptyMessage=""
         onRetry={onRetry}
       >
-        {unavailable ? (
-          <AlertBanner
-            variant="warning"
-            title={t('serviceIntelligence.communications.unavailableTitle', 'Typed TSB source unavailable')}
-          >
-            <Text as="p" variant="bodySm">
-              {source?.detail ??
-                t(
-                  'serviceIntelligence.communications.unavailable',
-                  'NHTSA does not currently document a stable vehicle-scoped JSON API for manufacturer communications. TeslaSync does not fabricate records.',
-                )}
-            </Text>
-            {source?.source_url && (
-              <a
-                href={source.source_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 inline-flex min-h-11 items-center gap-1 rounded font-medium text-amber-200 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/40"
-              >
-                {t('serviceIntelligence.communications.docs', 'Review NHTSA datasets')}
-                <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-              </a>
-            )}
-          </AlertBanner>
-        ) : (
           <div className="space-y-3">
+            {unknown && (
+              <div role="status" className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+                <Text as="p" variant="bodySm" color="secondary">
+                  {t('provenance.unknown', 'Unknown source')}
+                </Text>
+                <Button type="button" variant="secondary" className="mt-2" onClick={onRetry}>
+                  {t('common.retry', 'Retry')}
+                </Button>
+              </div>
+            )}
+            {unavailable && (
+              <AlertBanner
+                variant="warning"
+                title={t('serviceIntelligence.communications.unavailableTitle', 'Typed TSB source unavailable')}
+              >
+                <Text as="p" variant="bodySm">
+                  {source?.detail ??
+                    t(
+                      'serviceIntelligence.communications.unavailable',
+                      'NHTSA does not currently document a stable vehicle-scoped JSON API for manufacturer communications. TeslaSync does not fabricate records.',
+                    )}
+                </Text>
+                {source?.source_url && (
+                  <a
+                    href={source.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(BUTTON_BASE, BUTTON_VARIANTS.ghost, typography.size.sm, 'mt-2 min-h-11 max-w-full justify-start whitespace-normal px-2 hover:underline')}
+                  >
+                    {t('serviceIntelligence.communications.docs', 'Review NHTSA datasets')}
+                    <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                  </a>
+                )}
+              </AlertBanner>
+            )}
             {stale && (
               <AlertBanner
                 variant="warning"
@@ -89,7 +103,7 @@ export function CommunicationsPanel({
                 </Text>
               </AlertBanner>
             )}
-            {communications.length === 0 ? (
+            {communications.length === 0 && available ? (
               <EmptyState
                 /* no-action: the configured authoritative source returned a valid empty inventory. */
                 icon={<BookOpen className="h-9 w-9" />}
@@ -99,7 +113,7 @@ export function CommunicationsPanel({
                   'The normalized official NHTSA index returned no manufacturer communications for this model year.',
                 )}
               />
-            ) : (
+            ) : communications.length > 0 ? (
               <ol className="space-y-3">
                 {communications.map((communication) => (
                   <li
@@ -111,18 +125,18 @@ export function CommunicationsPanel({
                         <Heading level="panel">{communication.communication_number}</Heading>
                         <Caption className="mt-1 block">
                           {communication.component || '—'} ·{' '}
-                          <DateTime value={communication.published_at} variant="date" />
+                          <DateTime value={communication.published_at} variant="day" />
                         </Caption>
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        <Badge variant="warning">
+                        <Badge variant={communication.applicability === 'potentially_applicable' ? 'warning' : communication.applicability === 'needs_review' ? 'info' : 'neutral'}>
                           {communication.applicability === 'potentially_applicable'
                             ? t('serviceIntelligence.applicability.potential', 'Potentially applicable')
                             : communication.applicability === 'needs_review'
                               ? t('serviceIntelligence.applicability.review', 'Needs review')
                               : t('serviceIntelligence.applicability.unlikely', 'Unlikely')}
                         </Badge>
-                        <Badge variant="info">
+                        <Badge variant="neutral">
                           {t('serviceIntelligence.confidence.value', '{{value}}% confidence', {
                             value: Math.round(communication.confidence * 100),
                           })}
@@ -134,7 +148,7 @@ export function CommunicationsPanel({
                         t('serviceIntelligence.communications.typeUnknown', 'Communication type unavailable')}
                     </Caption>
                     <Text as="p" variant="bodySm" className="mt-2">{communication.summary}</Text>
-                    <div className="mt-3 rounded-lg border border-cyan-400/15 bg-cyan-400/5 p-3">
+                    <div className="mt-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
                       <Caption className="mb-1 block">
                         {t('serviceIntelligence.communications.hypothesis', 'Applicability hypothesis')}
                       </Caption>
@@ -153,7 +167,7 @@ export function CommunicationsPanel({
                       href={communication.source_document_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="mt-2 inline-flex min-h-11 items-center gap-1 rounded text-sm font-medium text-cyan-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/40"
+                      className={cn(BUTTON_BASE, BUTTON_VARIANTS.ghost, typography.size.sm, 'mt-2 min-h-11 max-w-full justify-start whitespace-normal px-2 hover:underline')}
                     >
                       {t('serviceIntelligence.communications.source', 'Open official NHTSA document')}
                       <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
@@ -161,9 +175,8 @@ export function CommunicationsPanel({
                   </li>
                 ))}
               </ol>
-            )}
+            ) : null}
           </div>
-        )}
       </PanelState>
     </LayoutCard>
   );

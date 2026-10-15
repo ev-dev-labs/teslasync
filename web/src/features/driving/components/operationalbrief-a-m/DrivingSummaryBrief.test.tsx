@@ -193,13 +193,28 @@ describe('DrivingSummaryBrief — real OperationalBrief and numerical bridge', (
 
   it('keeps retained evidence and real drawer context after a refresh failure', () => {
     render(summary({ retained: true }));
-    expect(screen.getByText('Retained evidence')).toBeVisible();
+    expect(screen.getByText('Retained source')).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog', { name: 'Observed drive evidence details' });
     expect(within(drawer).getByText('Returned drive totals, not lifetime travel.')).toBeVisible();
     expect(within(drawer).getByText('Vehicle 42; selected window.')).toBeVisible();
     expect(within(drawer).getByText('Recorded drives; coverage unknown.')).toBeVisible();
     expect(within(drawer).queryByText(/100% confidence/i)).toBeNull();
+  });
+
+  it('uses the canonical retained fallback without changing warning semantics or populated evidence', () => {
+    const view = render(summary({ retained: true }));
+    expect(screen.getByText('Retained source')).toHaveClass('text-[var(--semantic-warning)]');
+    expect(screen.queryByText('Retained evidence')).toBeNull();
+    expect(screen.getByText('1.00 km', { selector: '[data-operational-value]' })).toBeVisible();
+
+    view.rerender(summary({ retained: true, statusLabel: 'Caller source status' }));
+    expect(screen.getByText('Caller source status')).toHaveClass('text-[var(--semantic-warning)]');
+    expect(screen.queryByText('Retained source')).toBeNull();
+
+    view.rerender(summary());
+    expect(screen.getByText('Returned evidence')).not.toHaveClass('text-[var(--semantic-warning)]');
+    expect(screen.getByText('1.00 km', { selector: '[data-operational-value]' })).toBeVisible();
   });
 
   it('keeps an actionable fatal source error beside the metric shell', () => {

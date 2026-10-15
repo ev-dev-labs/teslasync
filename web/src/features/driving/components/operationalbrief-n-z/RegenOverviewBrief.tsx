@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { CHART_COLORS, LinearGauge } from '@/components/charts';
-import type { StatMetric } from '@/components/data-display/stat-reference';
+import type { StatMetric } from '@/components/data-display';
 import { AlertBanner, EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { LayoutCard } from '@/components/layout';
 import { Subhead, Text } from '@/components/ui';
@@ -31,22 +31,26 @@ export function RegenOverviewBrief({ aggregate, model, aggregateState, detailSta
       ? t('regen.overview.capacityModel', 'Model-based estimate')
       : aggregate?.capacitySource === 'default'
         ? t('regen.overview.capacityDefault', 'Platform default estimate') : null;
-  const aggregateReady = aggregateState.isResolved && !aggregateState.error;
-  const detailReady = detailState.isResolved && !detailState.error && model.accounting.eligibleCount > 0;
+  const aggregateSourceReady = aggregateState.isResolved && !aggregateState.isLoading
+    && !aggregateState.error && aggregate != null;
+  const detailReady = detailState.isResolved && !detailState.isLoading
+    && !detailState.error && model.accounting.eligibleCount > 0;
   const totalsUnavailable = aggregate != null && aggregate.totalRegenWh === 0 && aggregate.totalDriveWh === 0
-    && detailState.isResolved && model.totalMeasuredDriveEnergyWh > 0;
+    && detailReady && model.totalMeasuredDriveEnergyWh > 0;
   const hasDenominator = isKnownNumber(aggregate?.totalDriveWh) && aggregate.totalDriveWh > 0;
+  const aggregateReady = aggregateSourceReady && !totalsUnavailable && hasDenominator
+    && isKnownNumber(aggregate.regenRatio);
   const metrics: readonly StatMetric[] = [
     {
       metricId: 'energy', occurrenceId: 'regen-capacity-basis',
-      rawValue: aggregateReady ? aggregate?.batteryCapacityWh : null,
+      rawValue: aggregateSourceReady ? aggregate.batteryCapacityWh : null,
       label: t('regen.overview.capacityBasis', 'Estimated usable pack basis'),
       description: t('regen.method.capacity', 'Equivalent full-pack cycles use an estimated usable battery capacity reported by the aggregate endpoint. The estimate is provenance context, not a measured capacity test.'),
       display: { formatter: (raw) => ({ value: formatEnergy(raw), unit: '' }) },
     },
     {
       metricId: 'status', occurrenceId: 'regen-capacity-source',
-      rawValue: aggregateReady ? capacitySource : null,
+      rawValue: aggregateSourceReady ? capacitySource : null,
       label: t('regen.overview.capacitySource', 'Capacity source'),
     },
     {
@@ -94,7 +98,7 @@ export function RegenOverviewBrief({ aggregate, model, aggregateState, detailSta
           <Text as="p" variant="caption">{t('regen.overview.aggregateScope', 'All aggregate energy in the selected date window; not limited by the detailed row cap.')}</Text>
           {aggregateState.isLoading ? <Skeleton height={220} />
             : aggregateState.error ? <QueryError error={aggregateState.error} onRetry={aggregateState.onRetry} />
-            : aggregate == null ? <EmptyState
+            : !aggregateSourceReady ? <EmptyState
               action={aggregateState.isResolved ? { label: t('common.retry', 'Retry'), onClick: aggregateState.onRetry } : undefined}
               message={t('regen.overview.aggregateEmpty', 'No aggregate recovery response is available for this window.')} />
             : totalsUnavailable ? <AlertBanner variant="warning" title={t('regen.overview.aggregateUnavailableTitle', 'Aggregate totals unavailable')}>
@@ -102,6 +106,7 @@ export function RegenOverviewBrief({ aggregate, model, aggregateState, detailSta
             </AlertBanner>
             : hasDenominator ? <div className="flex flex-col items-center gap-3">
               {isKnownNumber(aggregate.regenRatio) ? <LinearGauge
+                preserveReadingAndScale
                 value={aggregate.regenRatio} max={100}
                 label={t('regen.overview.aggregateGauge', 'Aggregate recovery share')}
                 unit="%" color={CHART_COLORS[1]} size={168}

@@ -22,15 +22,19 @@ import {
   convertDistanceFromSI,
   convertSpeedFromSI,
   convertTempFromSI,
+  convertPowerFromSI,
+  formatPower,
 } from '@/lib/unitConversion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useTripReplay } from '@/hooks/useTripReplay';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { haversineDistance } from '@/lib/geo';
 import { formatDate } from '@/lib/dateFormat';
+import { fmtInt as formatInt } from '@/lib/numberFormat';
+import { asFiniteNumber } from '@/lib/typeGuards';
 
 import { cn } from '@/lib/cn';
-import { chartTokens, neonColorMap } from '@/lib/tokens';
+import { chartTokens } from '@/lib/tokens';
 import {
   computeReplayMarkers,
   nearestMarker,
@@ -47,35 +51,40 @@ import {
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { TripReplaySummaryBrief } from '../components/operationalbrief-all/TripReplaySummaryBrief';
 
+type ReplayQuantity = 'speed' | 'power' | 'batteryLevel' | 'elevation' | 'ratedRange' | 'outsideTemp';
+type ReplayPosition = DrivePosition & {
+  sourceTimestamps: Record<ReplayQuantity, number | null>;
+  sourceOrigins: Record<ReplayQuantity, 'position' | 'telemetry' | 'unknown'>;
+};
+
 /* ================================================================== */
 /*  Helpers                                                            */
 /* ================================================================== */
 
-/** Format ms duration as "HH:MM:SS" or "MM:SS". Non-finite/negative input
+/** Format ms duration as "H:MM:SS" or "MM:SS" with locale-aware digits. Non-finite/negative input
  *  collapses to "00:00" so an upstream data bug surfaces as a sane
  *  placeholder instead of "NaN:NaN" leaking into the UI. */
-export function fmtDuration(ms: number): string {
-  if (!Number.isFinite(ms) || ms <= 0) return '00:00';
-  const totalSec = Math.floor(ms / 1000);
+export function fmtDuration(ms: number, locale?: string): string {
+  const totalSec = Number.isFinite(ms) && ms > 0 ? Math.floor(ms / 1000) : 0;
   const h = Math.floor(totalSec / 3600);
   const m = Math.floor((totalSec % 3600) / 60);
   const s = totalSec % 60;
-  const mm = String(m).padStart(2, '0');
-  const ss = String(s).padStart(2, '0');
-  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+  const zero = formatInt(0, locale);
+  const mm = formatInt(m, locale).padStart(2, zero);
+  const ss = formatInt(s, locale).padStart(2, zero);
+  return h > 0 ? `${formatInt(h, locale)}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
-/** Format drive duration in minutes as "Xh Ym". Rounds to whole minutes
+/** Format drive duration in minutes as "Xh Ym" with locale-aware digits. Rounds to whole minutes
  *  first so a fractional input (e.g. 59.6 from `durationS / 60`) rolls over
  *  correctly to "1h 0m" instead of rendering the impossible "60m". Non-finite
  *  or non-positive input collapses to "0m" so a bad `durationS` can't leak a
  *  "NaNm" placeholder into the summary band. */
-export function fmtDriveTime(min: number): string {
-  if (!Number.isFinite(min) || min <= 0) return '0m';
-  const totalMin = Math.round(min);
+export function fmtDriveTime(min: number, locale?: string): string {
+  const totalMin = Number.isFinite(min) && min > 0 ? Math.round(min) : 0;
   const h = Math.floor(totalMin / 60);
   const m = totalMin % 60;
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  return h > 0 ? `${formatInt(h, locale)}h ${formatInt(m, locale)}m` : `${formatInt(m, locale)}m`;
 }
 
 /* ================================================================== */
@@ -107,14 +116,19 @@ export function fmtDriveTime(min: number): string {
  *   replay-specific display formatting at render time.
  */
 export default function TripReplayPage() {
-  const { fmtNumber, fmtInt } = useNumberFormatting();
+  const { fmtNumber, fmtInt, locale } = useNumberFormatting();
+  const formatDriveTime = useCallback((min: number) => fmtDriveTime(min, locale), [locale]);
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
   usePageTitle(t('replay.title', 'Trip Replay'));
 
   const driveQuery = useDrive(id ?? '');
   const { data: drive } = driveQuery;
-  const driveState = deriveDataState(driveQuery, { provenance: 'historical' });
+  // `live` describes summary enrichment, not the source of replay samples.
+  const summaryProvenance = drive?.live === true
+    ? 'live'
+    : drive?.endTs != null || drive?.live === false ? 'historical' : 'unknown';
+  const driveState = deriveDataState(driveQuery, { provenance: summaryProvenance });
   const { reduce } = useMotionPreference();
 
   // Display preferences for position-derived SI fields.
@@ -143,7 +157,7 @@ export default function TripReplayPage() {
   }, [drive]);
 
   const nearestTelemetry = useCallback(
-    (positionTs: number): Record<string, unknown> | null => {
+    (positionTs: number): { ts: number; row: Record<string, unknown> } | null => {
       if (telemetryByTs.length === 0 || !Number.isFinite(positionTs)) return null;
       let lo = 0;
       let hi = telemetryByTs.length - 1;
@@ -154,14 +168,14 @@ export default function TripReplayPage() {
       }
       // lo is now the first index with ts >= positionTs; check predecessor too.
       if (lo > 0 && Math.abs(telemetryByTs[lo - 1].ts - positionTs) < Math.abs(telemetryByTs[lo].ts - positionTs)) {
-        return telemetryByTs[lo - 1].row;
+        return telemetryByTs[lo - 1];
       }
-      return telemetryByTs[lo].row;
+      return telemetryByTs[lo];
     },
     [telemetryByTs],
   );
 
-  const positions: DrivePosition[] = useMemo(() => {
+  const positions: ReplayPosition[] = useMemo(() => {
     if (!drive) return [];
     const pos = drive.positions ?? [];
     return pos
@@ -178,7 +192,22 @@ export default function TripReplayPage() {
         const tsStr = (p.timestamp as string) ?? (p.created_at as string) ?? (p.createdAt as string) ?? '';
         const positionTs = tsStr ? new Date(tsStr).getTime() : NaN;
         // Merge nearest telemetry row to fill power/battery/elevation/etc.
-        const t = nearestTelemetry(positionTs) ?? {};
+        const telemetry = nearestTelemetry(positionTs);
+        const t = telemetry?.row ?? {};
+        const sourceOrigins: ReplayPosition['sourceOrigins'] = {
+          speed: 'unknown', power: 'unknown', batteryLevel: 'unknown',
+          elevation: 'unknown', ratedRange: 'unknown', outsideTemp: 'unknown',
+        };
+        const sourceTimestamp = (k: ReplayQuantity, snake?: string): number | null => {
+          const fromPos = p[k] ?? (snake ? p[snake] : undefined);
+          const value = fromPos ?? t[k] ?? (snake ? t[snake] : undefined);
+          sourceOrigins[k] = typeof value === 'number' && Number.isFinite(value)
+            ? fromPos != null ? 'position' : 'telemetry'
+            : 'unknown';
+          if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+          const ts = fromPos != null ? positionTs : telemetry?.ts;
+          return ts != null && Number.isFinite(ts) ? ts : null;
+        };
         const pick = <V,>(k: string, snake?: string): V | null => {
           const fromPos = (p[k] as V | null | undefined) ?? (snake ? (p[snake] as V | null | undefined) : undefined);
           if (fromPos !== undefined && fromPos !== null) return fromPos as V;
@@ -188,21 +217,30 @@ export default function TripReplayPage() {
         return {
           latitude: p.latitude as number,
           longitude: p.longitude as number,
-          speed: (p.speed as number | null) ?? (t.speed as number | null) ?? null,
-          power: pick<number>('power'),
+          speed: asFiniteNumber(pick<number>('speed')),
+          power: asFiniteNumber(pick<number>('power')),
           // DrivePosition requires a number; NaN keeps an unobserved SOC
           // distinct from a measured 0 without changing the wire contract.
-          batteryLevel: pick<number>('batteryLevel', 'battery_level') ?? Number.NaN,
+          batteryLevel: asFiniteNumber(pick<number>('batteryLevel', 'battery_level')) ?? Number.NaN,
           timestamp: tsStr,
-          elevation: pick<number>('elevation'),
-          insideTemp: pick<number>('insideTemp', 'inside_temp'),
-          outsideTemp: pick<number>('outsideTemp', 'outside_temp'),
-          idealRange: pick<number>('idealRange', 'ideal_range'),
-          ratedRange: pick<number>('ratedRange', 'rated_range'),
+          sourceTimestamps: {
+            speed: sourceTimestamp('speed'),
+            power: sourceTimestamp('power'),
+            batteryLevel: sourceTimestamp('batteryLevel', 'battery_level'),
+            elevation: sourceTimestamp('elevation'),
+            ratedRange: sourceTimestamp('ratedRange', 'rated_range'),
+            outsideTemp: sourceTimestamp('outsideTemp', 'outside_temp'),
+          },
+          sourceOrigins,
+          elevation: asFiniteNumber(pick<number>('elevation')),
+          insideTemp: asFiniteNumber(pick<number>('insideTemp', 'inside_temp')),
+          outsideTemp: asFiniteNumber(pick<number>('outsideTemp', 'outside_temp')),
+          idealRange: asFiniteNumber(pick<number>('idealRange', 'ideal_range')),
+          ratedRange: asFiniteNumber(pick<number>('ratedRange', 'rated_range')),
           odometer: pick<number>('odometer'),
           fanStatus: pick<number>('fanStatus', 'fan_status'),
           isClimateOn: (p.isClimateOn ?? p.is_climate_on ?? t.isClimateOn ?? t.is_climate_on) as DrivePosition['isClimateOn'],
-        } as DrivePosition;
+        } as ReplayPosition;
       });
   }, [drive, nearestTelemetry]);
 
@@ -315,25 +353,23 @@ export default function TripReplayPage() {
   /* ---- Speed + Power timeline data (shared with TripReplayCharts) ---- */
   const timelineData: TripReplayChartPoint[] = useMemo(() => {
     if (positions.length === 0) return [];
-    const t0 = positions
-      .map((p) => new Date(p.timestamp).getTime())
-      .find((ts) => Number.isFinite(ts)) ?? 0;
     return positions.map((p, i) => {
-      const ts = new Date(p.timestamp).getTime();
-      const elapsedMin = Number.isFinite(ts) ? (ts - t0) / 60_000 : 0;
+      const offset = replay.timeline[i];
+      // Keep the sample index without inventing a time for an unknown timestamp.
+      const elapsedMin = offset != null ? offset / 60_000 : Number.NaN;
       return {
         index: i,
         time: Number(elapsedMin.toFixed(3)),
         speed: p.speed != null ? convertSpeedFromSI(p.speed, unitPrefs.speed) : null,
-        power: p.power,
+        power: p.power != null ? convertPowerFromSI(p.power, unitPrefs.power) : null,
       };
     });
-  }, [positions, unitPrefs.speed]);
+  }, [positions, replay.timeline, unitPrefs.speed, unitPrefs.power]);
 
   /* ---- Hover preview sampler for the scrubber ---- */
   const getPreviewAt = useCallback(
     (normalized: number): TimelinePreviewPoint | null => {
-      if (positions.length === 0 || replay.totalTime <= 0) return null;
+      if (!replay.canPlay) return null;
       const t0 = new Date(positions[0].timestamp).getTime();
       const targetMs = Math.max(0, Math.min(1, normalized)) * replay.totalTime;
       // Binary search for closest position.
@@ -352,12 +388,12 @@ export default function TripReplayPage() {
         speed: p.speed != null
           ? `${fmtNumber(convertSpeedFromSI(p.speed, unitPrefs.speed))} ${unitPrefs.speed}`
           : undefined,
-        power: p.power != null ? `${fmtNumber(p.power)} kW` : undefined,
+        power: p.power != null ? formatPower(p.power, unitPrefs) : undefined,
         soc: Number.isFinite(p.batteryLevel) ? `${fmtInt(p.batteryLevel)}%` : undefined,
         elevation: p.elevation != null ? `${fmtInt(p.elevation)} m` : undefined,
       };
     },
-    [positions, replay.totalTime, unitPrefs.speed, fmtNumber, fmtInt],
+    [positions, replay.canPlay, replay.totalTime, unitPrefs, fmtNumber, fmtInt],
   );
 
   /* ---- Speed sparkline behind the scrubber ---- */
@@ -389,7 +425,7 @@ export default function TripReplayPage() {
     (kinds: ReplayMarker['kind'][]): string | undefined => {
       if (!activeMarker) return undefined;
       return kinds.includes(activeMarker.kind)
-        ? cn('rounded-md ring-1 ring-offset-1 ring-offset-[var(--panel-bg)]', neonColorMap.cyan.ring)
+        ? 'rounded-md ring-1 ring-[var(--focus-ring)] ring-offset-1 ring-offset-[var(--panel-bg)]'
         : undefined;
     },
     [activeMarker],
@@ -397,6 +433,14 @@ export default function TripReplayPage() {
 
   /* ---- Current stat values ---- */
   const cp = replay.currentPosition;
+  const quantitySources = [
+    ['speed', t('replay.stat.speed', 'Speed')],
+    ['power', t('replay.stat.power', 'Power')],
+    ['batteryLevel', t('replay.stat.battery', 'Battery')],
+    ['elevation', t('replay.stat.elevation', 'Elevation')],
+    ['ratedRange', t('replay.stat.range', 'Range')],
+    ['outsideTemp', t('replay.stat.temp', 'Temperature')],
+  ] as const;
 
   /* ---- Elevation gain / loss for the summary band ---- */
   // Elevation is SI metres on every position; sum positive/negative deltas so
@@ -463,21 +507,35 @@ export default function TripReplayPage() {
       {/*  they render even when a drive has no position coordinates.        */}
       {/* ================================================================ */}
       <FadeIn>
-        <TripReplaySummaryBrief drive={drive} source={driveState} elevation={elevStats} formatDriveTime={fmtDriveTime} />
+        <TripReplaySummaryBrief drive={drive} source={driveState} elevation={elevStats} formatDriveTime={formatDriveTime} />
+        <dl className="flex flex-wrap gap-x-4 gap-y-2 pt-2" aria-label={t('calculationDetails.sources', 'Data sources')}>
+          <div data-testid="replay-summary-source" data-provenance={summaryProvenance}>
+            <Text as="dt" variant="caption">{t('replay.summary.title', 'Drive Summary')}</Text>
+            <Text as="dd" variant="caption">{summaryProvenance === 'live'
+              ? t('provenance.live', 'Live')
+              : summaryProvenance === 'historical'
+                ? t('provenance.historical', 'Historical')
+                : t('provenance.unknown', 'Unknown source')}</Text>
+          </div>
+          <div data-testid="replay-route-source" data-provenance={positions.length > 0 ? 'historical' : 'unknown'}>
+            <Text as="dt" variant="caption">{t('replay.map.ariaLabel', 'Trip route map')}</Text>
+            <Text as="dd" variant="caption">{positions.length > 0
+              ? t('provenance.historical', 'Historical')
+              : t('provenance.unknown', 'Unknown source')}</Text>
+          </div>
+          <div data-testid="replay-derived-source" data-provenance="inferred">
+            <Text as="dt" variant="caption">
+              {t('replay.summary.efficiency', 'Efficiency')}{' · '}
+              {t('replay.summary.elevGain', 'Elevation Gain')}{' · '}
+              {t('replay.summary.elevLoss', 'Elevation Loss')}{' · '}
+              {t('replay.elevation.title', 'Elevation profile')}{' · '}
+              {t('replay.overview.label', 'Event overview')}
+            </Text>
+            <Text as="dd" variant="caption">{t('provenance.inferred', 'Estimated')}</Text>
+          </div>
+        </dl>
       </FadeIn>
 
-      {positions.length === 0 ? (
-        /* No GPS trail — keep the section as a visible panel (never hide it).
-           The KPI band above still shows the drive's summary stats. */
-        <FadeIn delay={0.05}>
-          <GlassPanel className="p-6 sm:p-8">
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-              icon={<MapPin className="h-10 w-10" />}
-              message={t('replay.noGps', 'No GPS data available for this drive. Trip replay requires valid position coordinates from Fleet Telemetry.')}
-            />
-          </GlassPanel>
-        </FadeIn>
-      ) : (
         <>
           {/* ============================================================ */}
           {/*  Section 2 — Replay hero: route map + live position stats     */}
@@ -491,23 +549,35 @@ export default function TripReplayPage() {
             >
               <div className="contents lg:order-first lg:grid lg:min-w-0 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
               <div className="order-first min-w-0 h-[320px] sm:h-[380px] lg:order-none lg:h-[440px]">
-                <TripReplayMap
+                {positions.length > 0 ? <TripReplayMap
                   positions={positions}
                   currentIndex={replay.currentIndex}
                   onSeekToIndex={handleSeekToIndex}
                   reduceMotion={reduce}
                   height="100%"
                   embedded
-                />
+                /> : (
+                  <div className="flex h-full items-center justify-center p-6">
+                    <EmptyState /* no-action: GPS samples are unavailable; refresh is provided in the page header */
+                      icon={<MapPin className="h-10 w-10" />}
+                      message={t('replay.noGps', 'No GPS data available for this drive. Trip replay requires valid position coordinates from Fleet Telemetry.')}
+                    />
+                  </div>
+                )}
               </div>
               <div className="order-last flex min-w-0 flex-col border-t border-[var(--border-subtle)] p-3 lg:order-none lg:border-t-0 lg:border-s sm:p-4" data-testid="replay-current-stats">
                 <PanelTitle className="px-3 pb-2 sm:px-4">
                   {t('replay.currentStats', 'Current Position Stats')}
                 </PanelTitle>
+                <Text variant="caption" className="px-3 pb-2 sm:px-4 [overflow-wrap:anywhere]">
+                  {t('common.timestamp', 'Timestamp')}: {cp && Number.isFinite(new Date(cp.timestamp).getTime())
+                    ? <time dateTime={cp.timestamp}>{new Date(cp.timestamp).toISOString()}</time>
+                    : t('common.unknown', 'Unknown')}
+                </Text>
                 <div className="grid flex-1 grid-cols-2 sm:grid-cols-3 lg:grid-cols-2">
                   <TripReplayReadout
                     label={t('replay.stat.speed', 'Speed')}
-                    value={cp?.speed != null
+                    value={cp?.speed != null && Number.isFinite(cp.speed)
                       ? `${fmtNumber(convertSpeedFromSI(cp.speed, unitPrefs.speed))} ${unitPrefs.speed}`
                       : '—'}
                     icon={<Gauge className="h-4 w-4" />}
@@ -515,7 +585,7 @@ export default function TripReplayPage() {
                   />
                   <TripReplayReadout
                     label={t('replay.stat.power', 'Power')}
-                    value={cp?.power != null ? `${fmtNumber(cp.power)} kW` : '—'}
+                    value={formatPower(cp?.power, unitPrefs)}
                     icon={<Zap className="h-4 w-4" />}
                     className={cn(cardHighlight(['regen-peak', 'charge-start', 'charge-stop']))}
                     help={{
@@ -537,12 +607,12 @@ export default function TripReplayPage() {
                   />
                   <TripReplayReadout
                     label={t('replay.stat.elevation', 'Elevation')}
-                    value={cp?.elevation != null ? `${fmtInt(cp.elevation)} m` : '—'}
+                    value={cp?.elevation != null && Number.isFinite(cp.elevation) ? `${fmtInt(cp.elevation)} m` : '—'}
                     icon={<Mountain className="h-4 w-4" />}
                   />
                   <TripReplayReadout
                     label={t('replay.stat.range', 'Range')}
-                    value={cp?.ratedRange != null
+                    value={cp?.ratedRange != null && Number.isFinite(cp.ratedRange)
                       ? `${fmtNumber(convertDistanceFromSI(cp.ratedRange, unitPrefs.distance))} ${unitPrefs.distance}`
                       : '—'}
                     icon={<Navigation className="h-4 w-4" />}
@@ -554,12 +624,52 @@ export default function TripReplayPage() {
                   />
                   <TripReplayReadout
                     label={t('replay.stat.temp', 'Temperature')}
-                    value={cp?.outsideTemp != null
+                    value={cp?.outsideTemp != null && Number.isFinite(cp.outsideTemp)
                       ? `${fmtNumber(convertTempFromSI(cp.outsideTemp, unitPrefs.temperature))} ${unitPrefs.temperature}`
                       : '—'}
                     icon={<Thermometer className="h-4 w-4" />}
                   />
                 </div>
+                <dl className="grid gap-2 border-t border-[var(--border-subtle)] px-3 pt-3 sm:px-4">
+                  {quantitySources.map(([quantity, label]) => {
+                    const sourceTs = positions[replay.currentIndex]?.sourceTimestamps[quantity] ?? null;
+                    const origin = positions[replay.currentIndex]?.sourceOrigins[quantity] ?? 'unknown';
+                    // Telemetry power is projected from pack voltage × current.
+                    const provenance = origin === 'unknown' ? 'unknown'
+                      : origin === 'telemetry' && quantity === 'power' ? 'inferred' : 'historical';
+                    const positionTs = cp ? new Date(cp.timestamp).getTime() : Number.NaN;
+                    const known = cp != null && Number.isFinite(cp[quantity]);
+                    // Signed age is relative to the GPS frame. Nearest alignment
+                    // can select a future row, which must not appear age zero.
+                    const age = sourceTs != null && Number.isFinite(positionTs)
+                      ? `${fmtNumber((positionTs - sourceTs) / 1000)} s`
+                      : t('common.unknown', 'Unknown');
+                    return (
+                      <div key={quantity} className="min-w-0" data-testid={`replay-source-${quantity}`}
+                        data-source={origin} data-provenance={provenance}>
+                        <Text as="dt" variant="caption">{label}{!known && ` · ${t('common.unknown', 'Unknown')}`}</Text>
+                        <Text as="dd" variant="caption">
+                          {t('calculationDetails.source', 'Source')}: {origin === 'position'
+                            ? t('dashboard.grid.positionHeading', 'Position')
+                            : origin === 'telemetry'
+                              ? t('driveDetail.report.telemetry', 'Telemetry')
+                              : t('common.unknown', 'Unknown')}
+                          {' · '}{provenance === 'historical'
+                            ? t('provenance.historical', 'Historical')
+                            : provenance === 'inferred'
+                              ? t('provenance.inferred', 'Estimated')
+                              : t('provenance.unknown', 'Unknown source')}
+                        </Text>
+                        <Text as="dd" variant="caption" className="[overflow-wrap:anywhere]">
+                          {t('common.timestamp', 'Timestamp')}: {sourceTs != null
+                            ? <time dateTime={new Date(sourceTs).toISOString()}>{new Date(sourceTs).toISOString()}</time>
+                            : t('common.unknown', 'Unknown')}
+                          {' · '}{t('statistics.age', 'Age')}: {age}
+                        </Text>
+                      </div>
+                    );
+                  })}
+                </dl>
               </div>
               </div>
 
@@ -567,14 +677,14 @@ export default function TripReplayPage() {
           {/*  Section 3 — Playback transport stays attached to the map     */}
           {/* ============================================================ */}
             <div className="border-t border-[var(--border-subtle)]" data-tour="drive-replay-scrubber">
-              <PlaybackControls
+              {replay.canPlay ? <PlaybackControls
                 framed={false}
                 className="p-3 sm:p-4"
                 isPlaying={replay.isPlaying}
                 speed={replay.speed}
                 progress={replay.progress}
-                elapsed={fmtDuration(replay.elapsedTime)}
-                total={fmtDuration(replay.totalTime)}
+                elapsed={fmtDuration(replay.elapsedTime, locale)}
+                total={fmtDuration(replay.totalTime, locale)}
                 onPlay={controls.play}
                 onPause={controls.pause}
                 onRestart={() => controls.seekToProgress(0)}
@@ -593,7 +703,19 @@ export default function TripReplayPage() {
                     <Sparkline data={speedSparkData} color={chartTokens.series[0]} height={24} width={400} />
                   ) : undefined
                 }
-              />
+              /> : (
+                <div className="flex flex-wrap items-center gap-3 p-3 sm:p-4">
+                  <Button disabled variant="secondary">
+                    {t('replay.controls.play', 'Play')}
+                  </Button>
+                  <Text variant="bodySm">
+                    {t('replay.controls.progress', 'Playback progress')}: {t('common.unavailable', 'Unavailable')}
+                    {' · '}{positions.length === 0
+                      ? t('replay.map.noPositions', 'No position data available for this drive')
+                      : `${t('common.timestamp', 'Timestamp')} / ${t('common.duration', 'Duration')}: ${t('common.unavailable', 'Unavailable')}`}
+                  </Text>
+                </div>
+              )}
             </div>
             </GlassPanel>
           </FadeIn>
@@ -619,13 +741,13 @@ export default function TripReplayPage() {
                 data={timelineData}
                 currentIndex={replay.currentIndex}
                 speedUnit={unitPrefs.speed}
+                powerUnit={unitPrefs.power}
                 onSeekToIndex={handleSeekToIndex}
                 height={220}
               />
             </section>
           </FadeIn>
         </>
-      )}
     </PageLayout>
   );
 }

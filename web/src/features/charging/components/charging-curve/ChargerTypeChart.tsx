@@ -22,7 +22,8 @@ import {
   Cell,
 } from '@/components/charts';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
-import { avg, durationMinutes, getChargerLabel } from './helpers';
+import { avg, durationMinutes, getChargerCategoryId, getChargerCategoryLabel } from './helpers';
+import type { ChargerCategoryId } from './helpers';
 import type { ChargerTypeStats } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -35,25 +36,26 @@ export default function ChargerTypeChart({ sessions }: ChargerTypeChartProps) {
   const { t } = useTranslation();
   const hidden = useHiddenSeries('charger-type-chart');
 
-  const chargerTypeStats = useMemo((): ChargerTypeStats[] => {
+  const chargerTypeStats = useMemo((): (ChargerTypeStats & { categoryId: ChargerCategoryId })[] => {
     const list = sessions ?? [];
     if (!list.length) return [];
-    const groups = new Map<string, ChargingSession[]>();
+    const groups = new Map<ChargerCategoryId, ChargingSession[]>();
     list.forEach((s) => {
-      const label = getChargerLabel(s);
-      if (!groups.has(label)) groups.set(label, []);
-      groups.get(label)!.push(s);
+      const categoryId = getChargerCategoryId(s);
+      if (!groups.has(categoryId)) groups.set(categoryId, []);
+      groups.get(categoryId)!.push(s);
     });
     return Array.from(groups.entries()).map(
-      ([label, items]): ChargerTypeStats => ({
-        label,
+      ([categoryId, items]) => ({
+        categoryId,
+        label: getChargerCategoryLabel(categoryId, t),
         count: items.length,
         avgKw: avg(items.map((s) => (s.peak_power_w ?? 0) / 1000)),
         avgKwh: avg(items.map((s) => (s.total_energy_added_wh ?? 0) / 1000)),
         avgDuration: avg(items.map((s) => durationMinutes(s.started_at, s.ended_at))),
       }),
     );
-  }, [sessions]);
+  }, [sessions, t]);
 
   const isEmpty = chargerTypeStats.length === 0;
 
@@ -124,8 +126,8 @@ export default function ChargerTypeChart({ sessions }: ChargerTypeChartProps) {
           >
             {chargerTypeStats.map((entry) => (
               <Cell
-                key={entry.label}
-                fill={CHARGER_COLORS[entry.label] ?? CHART_COLORS[3]}
+                key={entry.categoryId}
+                fill={CHARGER_COLORS[entry.categoryId] ?? CHART_COLORS[3]}
               />
             ))}
           </Bar>
@@ -141,8 +143,8 @@ export default function ChargerTypeChart({ sessions }: ChargerTypeChartProps) {
           >
             {chargerTypeStats.map((entry) => (
               <Cell
-                key={entry.label}
-                fill={CHARGER_COLORS[entry.label] ?? CHART_COLORS[4]}
+                key={entry.categoryId}
+                fill={CHARGER_COLORS[entry.categoryId] ?? CHART_COLORS[4]}
               />
             ))}
           </Bar>
@@ -151,13 +153,13 @@ export default function ChargerTypeChart({ sessions }: ChargerTypeChartProps) {
       <div className="mt-3 space-y-1 px-2">
         {chargerTypeStats.map((ct) => (
           <div
-            key={ct.label}
+            key={ct.categoryId}
             className="flex items-center justify-between"
           >
             <div className="flex items-center gap-1.5">
               <span
                 className="inline-block h-2 w-2 rounded-full"
-                style={{ backgroundColor: CHARGER_COLORS[ct.label] ?? CHART_COLORS[3] }}
+                style={{ backgroundColor: CHARGER_COLORS[ct.categoryId] ?? CHART_COLORS[3] }}
               />
               <Text variant="bodySm">{ct.label}</Text>
             </div>

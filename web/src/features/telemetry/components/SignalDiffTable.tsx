@@ -103,6 +103,7 @@ export function SignalDiffTable({
             itemId={`signal:${row.name}`}
             context={`signal-diff:vehicle:${vehicleId}`}
             size="sm"
+            className="min-h-11 min-w-11 md:min-h-0 md:min-w-0"
           />
         ),
       },
@@ -111,7 +112,7 @@ export function SignalDiffTable({
         header: t('signalDiff.signal', 'Signal'),
         sortable: true,
         render: (row) => (
-          <Code className="whitespace-nowrap">{row.name}</Code>
+          <Code className="break-all">{row.name}</Code>
         ),
       },
       {
@@ -120,7 +121,7 @@ export function SignalDiffTable({
         header: t('signalDiff.valueA', 'Window A'),
         className: 'text-right',
         render: (row) => (
-          <Text mono size="xs" color="secondary" className="whitespace-nowrap">
+          <Text mono size="xs" color="secondary" className="whitespace-pre-wrap break-all">
             {formatRaw(row.value_a)}
           </Text>
         ),
@@ -131,7 +132,7 @@ export function SignalDiffTable({
         header: t('signalDiff.valueB', 'Window B'),
         className: 'text-right',
         render: (row) => (
-          <Text mono size="xs" color="primary" className="whitespace-nowrap">
+          <Text mono size="xs" color="primary" className="whitespace-pre-wrap break-all">
             {formatRaw(row.value_b)}
           </Text>
         ),
@@ -148,7 +149,7 @@ export function SignalDiffTable({
             return <Caption>—</Caption>;
           }
           if (lbl.kind === 'change') {
-            return <Caption className="text-amber-300">{t('signalDiff.deltaChanged', 'changed')}</Caption>;
+            return <Caption className="text-[var(--semantic-warning)]">{t('signalDiff.deltaChanged', 'changed')}</Caption>;
           }
           const positive = (lbl.delta ?? 0) > 0;
           const negative = (lbl.delta ?? 0) < 0;
@@ -157,8 +158,8 @@ export function SignalDiffTable({
               mono
               size="xs"
               className={cn(
-                positive && 'text-emerald-300',
-                negative && 'text-rose-300',
+                positive && 'text-[var(--semantic-success)]',
+                negative && 'text-[var(--semantic-danger)]',
                 !positive && !negative && 'text-[var(--text-muted)]',
               )}
             >
@@ -212,7 +213,7 @@ export function SignalDiffTable({
       {/* Legend explaining the technical columns. `Column.header` in the
           shared `<DataTable>` is `string`-only (cannot embed React nodes),
           so the per-column tooltips live here above the header row. */}
-      <div className="mb-2 flex min-w-0 flex-wrap items-center gap-3 px-1">
+      <div className="mb-2 flex min-w-0 flex-wrap items-center gap-3 px-1 [&_button]:min-h-11 [&_button]:min-w-11 md:[&_button]:min-h-0 md:[&_button]:min-w-0">
         <span className="inline-flex items-center gap-1">
           <Text mono variant="caption">{t('signalDiff.legend.delta', 'Δ')}</Text>
           <HelpTooltip
@@ -238,6 +239,34 @@ export function SignalDiffTable({
         tableId="signal-diff-table"
         columns={columns}
         mobileColumns={['name', 'delta', 'value_b']}
+        mobilePresentation={{
+          roles: { name: 'title', value_b: 'primary', value_a: 'meta', delta: 'meta', source_a: 'meta' },
+          displayValue: (row, key) => {
+            if (key === 'name') return row.name;
+            if (key === 'value_a') return formatRaw(row.value_a);
+            if (key === 'value_b') return formatRaw(row.value_b);
+            if (key === 'source_a') return row.source_a ?? '—';
+            if (key === 'source_b') return row.source_b ?? '—';
+            if (key === 'delta') {
+              const label = deltaLabel(row.value_a, row.value_b);
+              if (label.kind === 'none') return '—';
+              if (label.kind === 'change') return t('signalDiff.deltaChanged', 'changed');
+              return `${(label.delta ?? 0) > 0 ? '+' : ''}${fmtNumber(label.delta ?? 0)}${
+                label.pct == null ? '' : ` (${label.pct >= 0 ? '+' : ''}${fmtNumber(label.pct)}%)`
+              }`;
+            }
+            return null;
+          },
+          inlineActions: (row) => (
+            <PinButton
+              itemType="widget"
+              itemId={`signal:${row.name}`}
+              context={`signal-diff:vehicle:${vehicleId}`}
+              size="sm"
+              className="min-h-11 min-w-11"
+            />
+          ),
+        }}
         data={sortedRows}
         keyExtractor={(row) => row.name}
         emptyMessage={emptyMessage}

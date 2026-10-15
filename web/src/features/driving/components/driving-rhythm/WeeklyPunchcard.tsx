@@ -1,10 +1,10 @@
-import { Fragment } from 'react';
 import { CalendarClock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/feedback';
-import { GlassPanel, HelpTooltip, PanelTitle, Text } from '@/components/ui';
+import { GlassPanel, HelpTooltip, PanelTitle, Table, Text } from '@/components/ui';
 import { useChartPalette } from '@/hooks/useChartPalette';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
 
@@ -36,11 +36,12 @@ export function WeeklyPunchcard({
 }: WeeklyPunchcardProps) {
   const { t } = useTranslation();
   const palette = useChartPalette();
+  const { locale, fmtInt } = useNumberFormatting();
   const dayLabel = useRhythmDayLabel();
+  const hourLabel = (hour: number) =>
+    new Intl.NumberFormat(locale, { minimumIntegerDigits: 2 }).format(hour);
   const favoriteLabel = summary.favorite
-    ? `${dayLabel(summary.favorite.day)} ${String(
-        summary.favorite.hour,
-      ).padStart(2, '0')}:00`
+    ? `${dayLabel(summary.favorite.day)} ${hourLabel(summary.favorite.hour)}:${hourLabel(0)}`
     : '—';
 
   return (
@@ -87,53 +88,68 @@ export function WeeklyPunchcard({
           />
         ) : (
           <div
-            className="overflow-x-auto"
-            role="img"
+            className="max-w-full overflow-x-auto overscroll-x-contain rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
+            role="region"
+            tabIndex={0}
             aria-label={t(
-              'rhythm.weeklyPunchcard.aria',
-              'Drive starts by local weekday and hour; strongest slot {{slot}}',
-              { slot: favoriteLabel },
+              'rhythm.weeklyPunchcard.scroll',
+              'Weekly drive-start counts; scroll to see all hours',
             )}
           >
-            <div className="grid min-w-[560px] grid-cols-[2.5rem_repeat(24,1fr)] gap-0.5">
-              <div aria-hidden="true" />
-              {Array.from({ length: 24 }, (_, hour) => (
-                <Text
-                  key={hour}
-                  variant="caption"
-                  className="text-center tabular-nums"
-                >
-                  {hour % 3 === 0 ? hour : ''}
-                </Text>
-              ))}
-              {DAY_ORDER.map((day) => (
-                <Fragment key={day}>
-                  <Text variant="caption" className="self-center">
-                    {dayLabel(day)}
+            <div className="min-w-[800px]">
+              <Table variant="embedded" className="w-full table-fixed">
+                <caption className="pb-3 text-start">
+                  <Text variant="caption">
+                    {t(
+                      'rhythm.weeklyPunchcard.aria',
+                      'Drive starts by local weekday and hour; strongest slot {{slot}}',
+                      { slot: favoriteLabel },
+                    )}
                   </Text>
-                  {Array.from({ length: 24 }, (_, hour) => {
-                    const count = summary.matrix[day]![hour]!;
-                    return (
-                      <div
-                        key={hour}
-                        title={t(
-                          'rhythm.weeklyPunchcard.cell',
-                          '{{day}} {{hour}}:00 · {{count}} drives',
-                          {
-                            day: dayLabel(day),
-                            hour: String(hour).padStart(2, '0'),
-                            count,
-                          },
-                        )}
-                        className="aspect-square rounded-sm border border-[var(--border-subtle)] bg-[var(--surface-2)]"
-                        style={{
-                          backgroundColor: cellColor(count, summary.maxCount, palette[0]!),
-                        }}
-                      />
-                    );
-                  })}
-                </Fragment>
-              ))}
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col" className="w-12">
+                      <Text variant="caption">{t('rhythm.weeklyPunchcard.day', 'Day')}</Text>
+                    </th>
+                    {Array.from({ length: 24 }, (_, hour) => (
+                      <th key={hour} scope="col">
+                        <Text variant="caption" className="text-center tabular-nums">
+                          {hourLabel(hour)}
+                        </Text>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {DAY_ORDER.map((day) => (
+                    <tr key={day}>
+                      <th scope="row">
+                        <Text variant="caption">{dayLabel(day)}</Text>
+                      </th>
+                      {Array.from({ length: 24 }, (_, hour) => {
+                        const count = summary.matrix[day]![hour]!;
+                        return (
+                          <td
+                            key={hour}
+                            aria-label={t(
+                              'rhythm.weeklyPunchcard.cell',
+                              '{{day}} {{hour}} · {{count}} drives',
+                              { day: dayLabel(day), hour: `${hourLabel(hour)}:${hourLabel(0)}`, count: fmtInt(count) },
+                            )}
+                            className="border border-[var(--border-subtle)] bg-[var(--surface-2)] py-3 text-center"
+                            style={{
+                              backgroundColor: cellColor(count, summary.maxCount, palette[0]!),
+                            }}
+                          >
+                            <Text variant="caption" className="tabular-nums">{fmtInt(count)}</Text>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
             </div>
           </div>
         )}

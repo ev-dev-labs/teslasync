@@ -150,7 +150,7 @@ export function RecentWeekScorecard(
       data-testid="efficiency-target-scorecard"
     >
       <PanelTitle className="flex items-center gap-2">
-        <ListOrdered className="h-4 w-4 text-purple-300" aria-hidden="true" />
+        <ListOrdered className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
         {t('effTarget.score.title', 'Recent completed-week scorecard')}
       </PanelTitle>
       <Text as="p" variant="caption" className="mt-1">
@@ -176,7 +176,30 @@ export function RecentWeekScorecard(
             columns={columns}
             data={rows}
             keyExtractor={(row) => row.weekStart}
+            rowLabel={(row) => row.week}
             mobileColumns={['rank', 'week', 'consumption', 'status']}
+            mobilePresentation={{
+              roles: {
+                week: 'title',
+                consumption: 'primary',
+                rank: 'meta',
+                status: 'badge',
+              },
+              displayValue: (row, key) => {
+                const values: Record<string, string | number | null> = {
+                  rank: row.rank != null
+                    ? t('effTarget.score.rankValue', '#{{rank}}', { rank: row.rank })
+                    : null,
+                  week: row.week,
+                  consumption: row.consumption,
+                  gap: row.gap,
+                  distance: row.distance,
+                  drives: row.drives,
+                  status: row.status,
+                };
+                return values[key];
+              },
+            }}
             density="compact"
             maxHeight={360}
             emptyMessage={t(

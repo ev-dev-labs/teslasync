@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import english from '@/i18n/en.json';
 import { summarizeExplorer } from '../../lib/explorer';
 import type { ExplorerSectionState } from './types';
 import { MonthlyExplorationChart } from './MonthlyExplorationChart';
@@ -143,6 +144,16 @@ describe('MonthlyExplorationChart', () => {
     render(<MonthlyExplorationChart summary={summary} state={state} />);
     expect(latestSeries().map((series) => [series.dataKey, series.hide])).toEqual([
       ['newPlaces', false], ['repeatArrivals', true], ['cumulativePlaces', false],
+    ]);
+  });
+
+  it('matches canonical English title and series fallbacks without translations', () => {
+    render(<MonthlyExplorationChart summary={summary} state={state} />);
+    expect(probes.frame.mock.lastCall?.[0].title).toBe(english.explorer.discoveries);
+    expect(latestSeries().map((series) => series.name)).toEqual([
+      english.explorer.newPlaces,
+      english.explorer.monthly.repeatSeries,
+      english.explorer.monthly.cumulativeSeries,
     ]);
   });
 

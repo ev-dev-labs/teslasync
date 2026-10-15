@@ -1,6 +1,8 @@
 export interface ArrivalReliabilityQueryState {
   vehicleSelected: boolean;
   isLoading: boolean;
+  fetchStatus: 'fetching' | 'paused' | 'idle';
+  isRefreshBlocked: boolean;
   isResolved: boolean;
   error: unknown;
   refreshError: unknown;

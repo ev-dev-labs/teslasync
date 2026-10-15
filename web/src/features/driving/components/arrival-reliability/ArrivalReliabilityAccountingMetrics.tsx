@@ -10,10 +10,12 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ArrivalReliabilityAccountingMetricsProps {
   analysis: ArrivalReliabilityResult;
+  retained?: boolean;
 }
 
 export function ArrivalReliabilityAccountingMetrics({
   analysis,
+  retained = false,
 }: ArrivalReliabilityAccountingMetricsProps) {
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
@@ -82,6 +84,7 @@ export function ArrivalReliabilityAccountingMetrics({
       )}
       metrics={metrics}
       testId="arrival-row-accounting-brief"
+      retained={retained}
     />
   );
 }

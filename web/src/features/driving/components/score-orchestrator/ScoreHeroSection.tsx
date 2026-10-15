@@ -6,7 +6,7 @@ import { knownNumber } from '@/api/dataState';
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
 import { Icons } from '@/lib/icons';
-import { gradeColor, gradeVariant } from './scoreDomain';
+import { gradeColor, gradeVariant, localScoreExplanation } from './scoreDomain';
 import type { ScoreSectionProps } from './scoreSectionTypes';
 
 type ScoreHeroSectionProps = ScoreSectionProps<
@@ -47,13 +47,23 @@ export function ScoreHeroSection({ model, scoreState }: ScoreHeroSectionProps) {
                 <HelpTooltip
                   className="ms-1.5"
                   size="sm"
-                  i18nKey="help.driveScore.body"
-                  defaultValue="0–100 score derived from smoothness of acceleration, braking, and cornering combined with energy efficiency. Tunable in Settings → Driving."
+                  text={knownNumber(apiScore?.overall) != null
+                    ? t('help.driveScore.body', {
+                      defaultValue: '0–100 score derived from smoothness of acceleration, braking, and cornering combined with energy efficiency. Tunable in Settings → Driving.',
+                    })
+                    : localScoreExplanation(t)}
                   ariaLabel={t('help.driveScore.iconLabel', {
                     defaultValue: 'More info about Drive Score',
                   })}
                 />
               </div>
+              <Caption className="mt-2">
+                {knownNumber(apiScore?.overall) != null
+                  ? t('driveScore.serverExplanationDistinct', {
+                    defaultValue: 'Overall score supplied by the server. Local history heuristics below are independent and do not explain the server model.',
+                  })
+                  : localScoreExplanation(t)}
+              </Caption>
               <div className={cn('mt-2 flex items-center gap-2', trendColor)}>
                 <TrendIcon className="h-4 w-4" aria-hidden="true" />
                 <Text variant="body" className={typography.weight.medium}>

@@ -326,7 +326,7 @@ describe('ElevationChart — populated trace', () => {
     const line = screen.getByTestId('line');
     expect(line).toHaveAttribute('data-key', 'speed');
     expect(line).toHaveAttribute('data-yaxis', 'speed');
-    expect(line).toHaveAttribute('data-stroke', chartTokens.series[4]);
+    expect(line).toHaveAttribute('data-stroke', chartTokens.series[0]);
   });
 
   it('uses the restrained elevation series fill at no more than eight percent opacity', () => {

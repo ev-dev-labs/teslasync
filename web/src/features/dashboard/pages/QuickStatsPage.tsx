@@ -9,7 +9,7 @@ import {
 import { PageLayout, Section } from '@/components/layout';
 import { GlassPanel, Button, Caption } from '@/components/ui';
 import type { StatMetric } from '@/components/data-display/stat-reference/types';
-import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import { useDataState } from '@/hooks/useDataState';
 import { FadeIn } from '@/components/motion';
@@ -19,6 +19,7 @@ import { FleetComparisonPanel } from '@/features/dashboard/components/FleetCompa
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { useAnalyticsSummary } from '@/api/hooks/useAnalytics';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useAsOfDate } from '@/hooks/useAsOfDate';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -91,7 +92,13 @@ export default function QuickStatsPage() {
   const vehiclesState = useDataState(vehiclesQuery);
   const stateQuery = useVehicleState(vehicleId ?? 0);
   const { data: stateData, refetch: refetchState } = stateQuery;
+  const { asOf } = useAsOfDate();
+  const stateTrust = useDataState(stateQuery, {
+    provenance: asOf ? 'historical' : stateData?.live === true ? 'live' : 'unknown',
+    unavailable: stateData != null && stateData.state == null,
+  });
   const hasSelectedVehicle = vehicleId != null && vehicleId > 0;
+  const heroOwnsStateNotice = !!vehicle && !vehiclesState.fatalError;
   const dataSources = useMemo(
     () => [
       {
@@ -108,10 +115,10 @@ export default function QuickStatsPage() {
         id: 'live-vehicle-state',
         label: t('dataSources.labels.liveVehicleState', 'Live vehicle state'),
         query: stateQuery,
-        enabled: hasSelectedVehicle,
+        enabled: hasSelectedVehicle && !heroOwnsStateNotice,
       },
     ],
-    [analyticsQuery, hasSelectedVehicle, stateQuery, t, vehiclesQuery],
+    [analyticsQuery, hasSelectedVehicle, heroOwnsStateNotice, stateQuery, t, vehiclesQuery],
   );
 
   const actions = (
@@ -140,8 +147,6 @@ export default function QuickStatsPage() {
       query={hasSelectedVehicle ? [analyticsQuery, vehiclesQuery, stateQuery] : [analyticsQuery, vehiclesQuery]}
       dataSources={dataSources}
     >
-      <StaleRefreshWarning state={analyticsState} label={t('dataSources.labels.fleetAnalytics', 'Fleet analytics')} />
-      <StaleRefreshWarning state={vehiclesState} label={t('dataSources.labels.vehicleRegistry', 'Vehicle registry')} />
       {/* 1 — Fleet KPI band: full-width responsive metric grid */}
       <FadeIn>
         <Section id="quick-stats-metrics" title={t('quickStats.kpis', 'Fleet metrics')}>
@@ -202,6 +207,11 @@ export default function QuickStatsPage() {
                   state: vehicle.state,
                 }}
                 vehicleState={stateData?.state ?? null}
+                dataState={stateTrust}
+                observation={{
+                  observedAt: stateData?.observedAt ?? null,
+                  freshness: stateData?.freshness ?? 'unknown',
+                }}
               />
             )}
           </div>

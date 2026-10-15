@@ -14,7 +14,6 @@ import {
 } from '@/lib/vehicleColors';
 import { buildCompositorUrl, COMPOSITOR_METRICS } from '@/lib/teslaCompositor';
 import { useVehiclePaint } from '@/hooks/useVehiclePaint';
-import { ambientFrames, ambientLoop } from '@/components/motion/ambient';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -223,7 +222,7 @@ const C = {
   headlightBeam: 'rgba(255,255,220,0.08)',
   headlightGlow: 'var(--semantic-info-border)',
   taillightBase: 'rgba(239,68,68,0.45)',
-  amber: 'rgba(251,191,36,0.78)',
+  amber: 'var(--semantic-warning)',
   amberFill: 'var(--semantic-warning-bg)',
   chargeGreen: 'var(--semantic-info)',
   chargeGreenFill: 'var(--semantic-info-bg)',
@@ -926,11 +925,13 @@ function HeadlightGlows({
   hazards,
   turnSignal,
   photo,
+  reduce,
 }: {
   on: boolean | null;
   hazards: boolean | null;
   turnSignal: TurnSignalState;
   photo?: boolean;
+  reduce: boolean;
 }) {
   const { ids } = useTwinCtx();
   const flashing = hazards === true || turnSignal === 'left' || turnSignal === 'both';
@@ -981,8 +982,8 @@ function HeadlightGlows({
           rx={6}
           ry={3.5}
           fill={C.amber}
-          animate={ambientFrames({ opacity: [1, 0.15, 1] })}
-          transition={ambientLoop({ duration: 0.8, repeat: Infinity })}
+          animate={{ opacity: reduce ? 1 : [1, 0.15, 1] }}
+          transition={reduce ? { duration: 0, repeat: 0 } : { duration: 0.8, repeat: Infinity }}
         />
       )}
     </g>
@@ -993,10 +994,12 @@ function TaillightGlows({
   hazards,
   turnSignal,
   photo,
+  reduce,
 }: {
   hazards: boolean | null;
   turnSignal: TurnSignalState;
   photo?: boolean;
+  reduce: boolean;
 }) {
   const { ids } = useTwinCtx();
   const flashing = hazards === true || turnSignal === 'right' || turnSignal === 'both';
@@ -1028,8 +1031,8 @@ function TaillightGlows({
           stroke={C.amber}
           strokeWidth={2}
           strokeLinecap="round"
-          animate={ambientFrames({ opacity: [1, 0.15, 1] })}
-          transition={ambientLoop({ duration: 0.8, repeat: Infinity })}
+          animate={{ opacity: reduce ? 1 : [1, 0.15, 1] }}
+          transition={reduce ? { duration: 0, repeat: 0 } : { duration: 0.8, repeat: Infinity }}
         />
       )}
     </g>
@@ -1396,13 +1399,7 @@ export function VehicleTwin({
     [t('digitalTwin.driving'), '', toggle(isDriving)],
   ].map(([name, kind, state]) => ({ name: [name, kind].filter(Boolean).join(' '), state }));
   const summary = inspection.map(({ name, state }) => `${name}: ${state}`).join('. ');
-  // A11Y-08 (WCAG 2.2.2). Every looping layer below is wrapped in
-  // `ambientLoop` / `ambientFrames`, which read the preference
-  // synchronously at render time. Subscribing to it once here is what
-  // makes a mid-session OS toggle take effect: the hook re-renders this
-  // subtree, and each helper re-evaluates on the way down. Without this
-  // call the scene would keep animating until some unrelated state
-  // change happened to repaint it.
+  // Share the derived OS/low-bandwidth preference with every feedback loop.
   const { reduce } = useMotionPreference();
   const animateDriving = isDriving === true && !reduce;
   const animateEntry = driveIn && !reduce;
@@ -1580,8 +1577,8 @@ export function VehicleTwin({
               interactive={interactive}
               photo={photoOn}
             />
-            <HeadlightGlows on={headlights} hazards={hazards} turnSignal={turnSignal} photo={photoOn} />
-            <TaillightGlows hazards={hazards} turnSignal={turnSignal} photo={photoOn} />
+            <HeadlightGlows on={headlights} hazards={hazards} turnSignal={turnSignal} photo={photoOn} reduce={reduce} />
+            <TaillightGlows hazards={hazards} turnSignal={turnSignal} photo={photoOn} reduce={reduce} />
           </g>
           {!photoOn && (
             <g id="wheels">

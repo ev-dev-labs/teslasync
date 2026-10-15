@@ -8,6 +8,8 @@ import {
   revokeSigningKey,
   rotateSigningKey,
   __resetKeyRepositoryForTests,
+  subscribeSigningKeys,
+  getSigningKeysSnapshot,
 } from './signingKeyRepository';
 import { installFakeIndexedDb, uninstallFakeIndexedDb } from './fakeIndexedDb';
 import { openVaultDb, STORE_SIGNING_KEYS, STORE_KEY_REGISTRY } from './vaultDb';
@@ -73,6 +75,41 @@ describe('signingKeyRepository — no IndexedDB (secure-session-only fallback)',
 
   it('getPrivateKeyHandle returns null for an unknown key id (e.g. lost session-only key after reload)', async () => {
     expect(await getPrivateKeyHandle('key_does_not_exist')).toBeNull();
+  });
+
+  it('publishes automatic generation and revocation without requiring a refresh', async () => {
+    const listener = vi.fn();
+    const unsubscribe = subscribeSigningKeys(listener);
+    try {
+      const record = await generateSigningKey();
+      expect(getSigningKeysSnapshot()).toEqual([record]);
+      expect(listener).toHaveBeenCalledOnce();
+      const revoked = await revokeSigningKey(record.key_id, 'manual');
+      expect(getSigningKeysSnapshot()).toEqual([revoked]);
+      expect(listener).toHaveBeenCalledTimes(2);
+      unsubscribe();
+      await generateSigningKey();
+      expect(listener).toHaveBeenCalledTimes(2);
+    } finally {
+      unsubscribe();
+    }
+  });
+
+  it('publishes a partially applied rotation while preserving its generation rejection', async () => {
+    const original = await generateSigningKey();
+    const listener = vi.fn();
+    const unsubscribe = subscribeSigningKeys(listener);
+    const generate = vi.spyOn(crypto.subtle, 'generateKey').mockRejectedValueOnce(new Error('Generation denied'));
+    try {
+      await expect(rotateSigningKey()).rejects.toThrow('Generation denied');
+      expect(listener).toHaveBeenCalledOnce();
+      expect(getSigningKeysSnapshot()[0]?.revoked_reason).toBe('rotated');
+      expect(getSigningKeysSnapshot()[0]?.key_id).toBe(original.key_id);
+      expect(await getActiveSigningKeyRecord()).toBeNull();
+    } finally {
+      generate.mockRestore();
+      unsubscribe();
+    }
   });
 });
 

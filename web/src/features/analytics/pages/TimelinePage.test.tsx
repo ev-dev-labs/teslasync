@@ -43,6 +43,9 @@ import { setGlobalLocale } from '@/lib/numberFormat'
 
 const timezoneFixture = vi.hoisted(() => ({ value: 'UTC' }))
 
+// Exercise ChartContainer's current query contract rather than the global legacy stub.
+vi.unmock('@/api/hooks/useAnnotations')
+
 vi.mock('@/lib/timezone', async () => {
   const actual = await vi.importActual<typeof import('@/lib/timezone')>('@/lib/timezone')
   return { ...actual, useTimezone: () => timezoneFixture.value }
@@ -827,7 +830,7 @@ describe('TimelinePage', () => {
     expect(within(drawer).getByRole('link', { name: 'Telemetry evidence' }))
       .toHaveAttribute(
         'href',
-        '/signals?from=2025-03-01&to=2025-03-01&signals=shift_state',
+        '/signals?vehicle_id=1&from=2025-03-01&to=2025-03-01&signals=shift_state',
       )
 
     fireEvent.click(within(drawer).getByText('Close'))
@@ -961,8 +964,8 @@ describe('TimelinePage', () => {
     renderPage('/timeline?from=2025-03-08&to=2025-03-09')
     fireEvent.click(await screen.findByRole('button', { name: 'Inspect transition offline to driving' }))
     const drawer = screen.getByRole('dialog', { name: 'offline → driving' })
-    expect(within(drawer).getByRole('link', { name: 'Drive history' })).toHaveAttribute('href', '/drives?from=2025-03-08&to=2025-03-08')
-    expect(within(drawer).getByRole('link', { name: 'Telemetry evidence' })).toHaveAttribute('href', '/signals?from=2025-03-08&to=2025-03-08&signals=shift_state')
+    expect(within(drawer).getByRole('link', { name: 'Drive history' })).toHaveAttribute('href', '/drives?vehicle_id=1&from=2025-03-08&to=2025-03-08')
+    expect(within(drawer).getByRole('link', { name: 'Telemetry evidence' })).toHaveAttribute('href', '/signals?vehicle_id=1&from=2025-03-08&to=2025-03-08&signals=shift_state')
     expect(within(drawer).getByText(`Recorded ${formatDateTime('2025-03-09T07:30:00Z', { tz: 'America/Los_Angeles' })}`)).toBeInTheDocument()
     expect(within(drawer).getByText('3h')).toBeInTheDocument()
     fireEvent.click(within(drawer).getByText('Close'))
@@ -977,5 +980,30 @@ describe('TimelinePage', () => {
       expect(params.get('end')).toBe('2025-03-10T07:00:00.000Z')
     }
     expect(rangeCalls).toHaveLength(2)
+  })
+
+  it.each([1, 2])('serializes originating vehicle %s only through supported destination contracts', async vehicleId => {
+    renderPage(`/timeline?vehicle_id=${vehicleId}&from=2025-03-01&to=2025-03-02`)
+    fireEvent.click(await screen.findByRole('button', { name: 'Inspect transition asleep to driving' }))
+    const drawer = screen.getByRole('dialog', { name: 'asleep → driving' })
+    expect(within(drawer).getByRole('link', { name: 'Vehicle' }))
+      .toHaveAttribute('href', `/vehicles/${vehicleId}`)
+    for (const [label, path] of [
+      ['Drive history', '/drives'],
+      ['Charging sessions', '/charging'],
+      ['Visited locations', '/locations'],
+      ['Alerts', '/notifications/inbox'],
+      ['Telemetry evidence', '/signals'],
+      ['Service history', '/maintenance'],
+    ]) {
+      const link = within(drawer).getByRole('link', { name: label })
+      const url = new URL(link.getAttribute('href')!, 'http://localhost')
+      expect(url.pathname).toBe(path)
+      expect(url.searchParams.get('vehicle_id')).toBe(String(vehicleId))
+      expect(url.searchParams.get('from')).toBe(path === '/maintenance' ? null : '2025-03-01')
+      expect(url.searchParams.get('to')).toBe(path === '/maintenance' ? null : '2025-03-01')
+      expect(url.searchParams.get('signals')).toBe(path === '/signals' ? 'shift_state' : null)
+    }
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
   })
 })

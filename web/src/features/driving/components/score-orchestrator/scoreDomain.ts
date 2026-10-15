@@ -1,6 +1,41 @@
 import type { Drive } from '@/types/driving';
-import { getEnergyIntensityWhPerKm } from '@/lib/drivesAggregation';
-import { typography } from '@/lib/tokens';
+import { MIN_EFFICIENCY_DISTANCE_M } from '@/lib/drivesAggregation';
+import { chartTokens, gaugeTone, neonColorMap, typography } from '@/lib/tokens';
+import type { TFunction } from 'i18next';
+
+export function localScoreExplanation(t: TFunction): string {
+  return t('driveScore.localHeuristicInputs', {
+    defaultValue: 'Local heuristic: efficiency uses recorded energy divided by distance; smoothness uses average power, not acceleration or braking events; speed uses maximum speed, not speed-limit compliance. These inputs do not establish causes or driving safety.',
+  });
+}
+
+export function localScoreInsight(
+  t: TFunction,
+  kind: 'best' | 'worst',
+  score: ComputedScore | undefined,
+): string {
+  if (!score) return '';
+  if (kind === 'best') {
+    if (score.efficiency >= 35) return t('driveScore.heuristicBestEfficiency', {
+      defaultValue: 'Local heuristic: low recorded energy per distance contributes to the efficiency score.',
+    });
+    if (score.smoothness >= 25) return t('driveScore.heuristicBestPower', {
+      defaultValue: 'Local heuristic: low average power contributes to the smoothness score; acceleration and braking were not assessed.',
+    });
+    return t('driveScore.heuristicBestSpeed', {
+      defaultValue: 'Local heuristic: maximum speed contributes to the speed score; speed-limit compliance was not assessed.',
+    });
+  }
+  if (score.efficiency < 15) return t('driveScore.heuristicWorstEfficiency', {
+    defaultValue: 'Local heuristic: high recorded energy per distance lowers the efficiency score; the cause is not established.',
+  });
+  if (score.smoothness < 10) return t('driveScore.heuristicWorstPower', {
+    defaultValue: 'Local heuristic: high average power lowers the smoothness score; aggressive acceleration or braking was not detected.',
+  });
+  return t('driveScore.heuristicWorstSpeed', {
+    defaultValue: 'Local heuristic: the speed component uses maximum speed, with a penalty above 40.2336 m/s; it does not establish unsafe driving.',
+  });
+}
 
 /** Per-drive heuristic computed only when all required evidence is measured. */
 export interface ComputedScore {
@@ -37,35 +72,56 @@ export interface HistoryRow {
  * `color` props to LinearGauge / recharts fills — never used as body text.
  */
 const GRADE_COLORS: Record<string, string> = {
-  'A+': '#39ff14',
-  A: '#4ade80',
-  B: '#22d3ee',
-  C: '#fbbf24',
-  D: '#fb923c',
-  F: '#f87171',
+  'A+': gaugeTone.success,
+  A: gaugeTone.success,
+  B: gaugeTone.info,
+  C: gaugeTone.warning,
+  D: gaugeTone.danger,
+  F: gaugeTone.danger,
 };
 
 /** Category accent colors for gauges + chart series (dynamic fills only). */
 export const CATEGORY_COLORS = {
-  efficiency: '#4ade80',
-  smoothness: '#22d3ee',
-  speed: '#a78bfa',
+  efficiency: chartTokens.series[1],
+  smoothness: chartTokens.series[0],
+  speed: chartTokens.series[4],
 };
 
-export function scoreDrive(drive: Drive): ComputedScore | null {
-  const whPerKm = getEnergyIntensityWhPerKm(drive.distanceM, drive.energyUsedWh);
-  if (
-    whPerKm == null
-    || drive.avgPowerW == null
-    || !Number.isFinite(drive.avgPowerW)
-    || drive.avgPowerW < 0
-    || drive.maxSpeedMps == null
-    || !Number.isFinite(drive.maxSpeedMps)
-    || drive.maxSpeedMps < 0
-  ) {
-    return null;
-  }
+export type ScoreAdmissionReason = 'missing' | 'invalid' | 'shortDistance';
 
+type ScoreInputs = Pick<Drive, 'distanceM' | 'energyUsedWh' | 'avgPowerW' | 'maxSpeedMps'>;
+
+export function scoreAdmissionReasons(drive: ScoreInputs): ScoreAdmissionReason[] {
+  const reasons: ScoreAdmissionReason[] = [];
+  const inputs = [drive.distanceM, drive.energyUsedWh, drive.avgPowerW, drive.maxSpeedMps];
+  if (inputs.some((value) => value == null)) reasons.push('missing');
+  if (
+    inputs.some((value) => value != null && !Number.isFinite(value))
+    || (Number.isFinite(drive.distanceM) && drive.distanceM < 0)
+    || (drive.maxSpeedMps != null && Number.isFinite(drive.maxSpeedMps) && drive.maxSpeedMps < 0)
+  ) reasons.push('invalid');
+  if (Number.isFinite(drive.distanceM) && drive.distanceM >= 0
+    && drive.distanceM < MIN_EFFICIENCY_DISTANCE_M) reasons.push('shortDistance');
+  return reasons;
+}
+
+export function summarizeScoreAdmission(drives: readonly ScoreInputs[]) {
+  const counts: Record<ScoreAdmissionReason, number> = { missing: 0, invalid: 0, shortDistance: 0 };
+  let excluded = 0;
+  for (const drive of drives) {
+    const reasons = scoreAdmissionReasons(drive);
+    if (reasons.length > 0) excluded++;
+    for (const reason of reasons) counts[reason]++;
+  }
+  return { excluded, counts };
+}
+
+export function scoreDrive(drive: Drive): ComputedScore | null {
+  if (scoreAdmissionReasons(drive).length > 0
+    || drive.energyUsedWh == null || drive.avgPowerW == null || drive.maxSpeedMps == null) return null;
+
+  // Net energy and power can be zero or negative during regenerative driving.
+  const whPerKm = drive.energyUsedWh / (drive.distanceM / 1_000);
   const effScore = Math.max(0, Math.min(40, 40 - (whPerKm - 130) / 3));
   const smoothScore = Math.max(0, Math.min(30, 30 - drive.avgPowerW / 3_000));
   const highSpeedExcessMps = Math.max(0, drive.maxSpeedMps - 40.2336);
@@ -120,17 +176,17 @@ export function gradeVariant(grade: string): 'success' | 'info' | 'warning' | 'd
 }
 
 export function gradeColor(grade: string): string {
-  return GRADE_COLORS[grade] ?? '#94a3b8';
+  return GRADE_COLORS[grade] ?? gaugeTone.neutral;
 }
 
-/** Toned body-text color per grade (300-level shades, never neon). */
+/** Mode-aware semantic text roles, matching the grade's status variant. */
 const GRADE_TEXT_CLASS: Record<string, string> = {
-  'A+': 'text-emerald-300',
-  A: 'text-emerald-300',
-  B: 'text-cyan-300',
-  C: 'text-amber-300',
-  D: 'text-orange-300',
-  F: 'text-rose-300',
+  'A+': neonColorMap.green.text,
+  A: neonColorMap.green.text,
+  B: neonColorMap.blue.text,
+  C: neonColorMap.amber.text,
+  D: neonColorMap.red.text,
+  F: neonColorMap.red.text,
 };
 
 export function gradeTextClass(grade: string): string {

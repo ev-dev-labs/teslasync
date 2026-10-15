@@ -25,6 +25,8 @@ import { UtilizationSectionBody } from './UtilizationSectionBody';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import type { DataStatus } from '@/api/dataState';
 import { VehicleEvidenceBrief } from '../operationalbrief-n-z/VehicleEvidenceBrief';
+import { cn } from '@/lib/cn';
+import { neonColorMap } from '@/lib/tokens';
 
 interface UtilizationMethodologyProps {
   summary: UtilizationSummary;
@@ -160,7 +162,7 @@ export function UtilizationMethodology({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
           <Database
-            className="h-4 w-4 text-cyan-300"
+            className={cn('h-4 w-4', neonColorMap.neutral.text)}
             aria-hidden="true"
           />
           {t(
@@ -297,7 +299,12 @@ export function UtilizationMethodology({
               </>
             )}
 
-            <div className="mt-3 rounded-xl border border-amber-400/20 bg-amber-400/[0.04] p-3">
+            <div className={cn(
+              'mt-3 rounded-xl border p-3',
+              accounting.historyCapReached
+                ? [neonColorMap.amber.border, neonColorMap.amber.bg]
+                : [neonColorMap.neutral.border, neonColorMap.neutral.bg],
+            )}>
               <Text as="p" variant="caption">
                 {accounting.historyCapReached
                   ? t(
@@ -323,7 +330,7 @@ export function UtilizationMethodology({
                 key={method.text}
                 className="flex items-start gap-2"
               >
-                <span className="mt-0.5 shrink-0 text-cyan-300">
+                <span className={cn('mt-0.5 shrink-0', neonColorMap.neutral.text)}>
                   {method.icon}
                 </span>
                 <Text as="span" variant="bodySm">

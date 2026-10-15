@@ -29,10 +29,10 @@ import { Button, Code, ConfirmDialog, DataTable, Icon, Input, Select, Text, Togg
 import type { Column } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
 import { useChartPalette } from '@/hooks/useChartPalette';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
-import { formatDate } from '@/lib/dateFormat';
 import { cn } from '@/lib/cn';
 import { glassCardClasses, neonColorMap, typography } from '@/lib/tokens';
 
@@ -74,6 +74,7 @@ const WINDOW_OPTIONS = [30, 90, 180, 365];
 export default function InsuranceTelematicsPage() {
   const { fmtScientificNumber, fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
+  const { formatDate, formatDateTime, tz } = useDateFormat();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
   const [windowDays, setWindowDays] = useState(90);
@@ -161,7 +162,7 @@ export default function InsuranceTelematicsPage() {
         ...point,
         label: formatDate(point.bucket_start),
       })),
-    [data?.trend],
+    [data?.trend, formatDate],
   );
 
   const closeEditor = () => {
@@ -260,9 +261,12 @@ export default function InsuranceTelematicsPage() {
       header: t('ownership.insurance.factor.score', 'Score'),
       render: (row) => (
         <span
-          className={cn('tabular-nums', row.score >= 60 ? neonColorMap.red.text : row.score >= 35 ? neonColorMap.amber.text : neonColorMap.green.text)}
+          className={cn('tabular-nums',
+            typeof row.score !== 'number' || !Number.isFinite(row.score) || row.score === 0
+              ? neonColorMap.neutral.text
+              : row.score > 0 ? neonColorMap.amber.text : neonColorMap.green.text)}
         >
-          {fmtNumber(row.score)}
+          {fmtScientificNumber(row.score, 3)}
         </span>
       ),
       sortable: true,
@@ -373,9 +377,10 @@ export default function InsuranceTelematicsPage() {
     },
     {
       key: 'confidence',
+      exportValue: (row) => row.confidence,
       align: 'right',
       header: t('ownership.insurance.lever.confidence', 'Confidence'),
-      render: (row) => <span className="tabular-nums">{formatPct(row.confidence)}</span>,
+      render: (row) => <span className="tabular-nums">{formatPct(row.confidence * 100)}</span>,
     },
   ];
 
@@ -433,7 +438,7 @@ export default function InsuranceTelematicsPage() {
           <OwnershipBrief
             title={t('ownership.insurance.brief.title', 'Modelled underwriting indices')}
             description={t('ownership.insurance.summary.subtitle', 'Exposure-normalised risk over the selected window.')}
-            scope={t('ownership.brief.window', 'Selected vehicle · {{count}}-day analysis window; coverage is described below', { count: windowDays })}
+            scope={<>{t('ownership.brief.window', 'Selected vehicle · {{count}}-day analysis window; coverage is described below', { count: windowDays })}{' · '}{tz}</>}
             source={riskQuery} enabled={vehicleId != null}
             window={data?.window}
             metrics={[
@@ -481,7 +486,7 @@ export default function InsuranceTelematicsPage() {
             <OwnershipBrief
               title={t('ownership.insurance.exposureBrief.title', 'Recorded driving exposure')}
               description={t('ownership.insurance.summary.subtitle', 'Exposure-normalised risk over the selected window.')}
-              scope={t('ownership.brief.window', 'Selected vehicle · {{count}}-day analysis window; coverage is described below', { count: windowDays })}
+              scope={<>{t('ownership.brief.window', 'Selected vehicle · {{count}}-day analysis window; coverage is described below', { count: windowDays })}{' · '}{tz}</>}
               source={riskQuery} enabled={vehicleId != null}
               window={data?.window}
               metrics={[
@@ -502,13 +507,18 @@ export default function InsuranceTelematicsPage() {
                 },
                 {
                   occurrenceId: 'night', metricId: 'distance',
-                  label: t('ownership.insurance.stat.night', 'Night distance'),
+                  label: t('ownership.insurance.stat.overnightTripDistance', 'Distance of trips starting overnight (UTC)'),
                   rawValue: data?.night_distance_m,
                   display: specialistDisplay(units.formatDistance),
-                  context:
-                    data && data.exposure_distance_m > 0
-                      ? formatPct((data.night_distance_m / data.exposure_distance_m) * 100)
-                      : undefined,
+                  context: (
+                    <>
+                      {t('ownership.insurance.stat.overnightTripDistanceHint',
+                        'Trip-start proxy: full distance of completed trips starting at or after 22:00 or before 05:00 UTC. Includes distance outside the band on qualifying trips and excludes distance inside the band on other trips; neither an upper nor a lower bound on actual night distance. Actual night-distance measurement requires owned model support for distance within time bands.')}
+                      {data && data.exposure_distance_m > 0
+                        ? <> · {formatPct((data.night_distance_m / data.exposure_distance_m) * 100)}</>
+                        : null}
+                    </>
+                  ),
                 },
                 {
                   occurrenceId: 'percentile', metricId: 'percent',
@@ -550,7 +560,7 @@ export default function InsuranceTelematicsPage() {
           <OwnershipBrief
             title={t('ownership.insurance.premiumBrief.title', 'Policy-based premium model')}
             description={t('ownership.insurance.notice.body', 'The premium simulation applies your policy’s own stated maximum telematics discount to a loss-cost index derived from measured exposure. It is an internal negotiation aid, never an insurer quote.')}
-            scope={t('ownership.insurance.premiumBrief.scope', 'Stored policy and selected risk window; annual amounts retain the recorded currency')}
+            scope={<>{t('ownership.insurance.premiumBrief.scope', 'Stored policy and selected risk window; annual amounts retain the recorded currency')}{' · '}{tz}</>}
             source={riskQuery} enabled={vehicleId != null}
             window={data?.window}
             metrics={[
@@ -591,7 +601,7 @@ export default function InsuranceTelematicsPage() {
             <OwnershipBrief
               title={t('ownership.insurance.costBrief.title', 'Policy loss and distance costs')}
               description={t('ownership.insurance.costBrief.description', 'Expected loss is modelled; deductible and cost per 1000 m retain the policy denomination and fixed distance basis.')}
-              scope={t('ownership.insurance.premiumBrief.scope', 'Stored policy and selected risk window; annual amounts retain the recorded currency')}
+              scope={<>{t('ownership.insurance.premiumBrief.scope', 'Stored policy and selected risk window; annual amounts retain the recorded currency')}{' · '}{tz}</>}
               source={riskQuery} enabled={vehicleId != null}
               window={data?.window}
               metrics={[
@@ -628,7 +638,7 @@ export default function InsuranceTelematicsPage() {
                     to: policy.coverage_end
                       ? formatDate(policy.coverage_end)
                       : t('ownership.insurance.policy.openEnded', 'open-ended'),
-                  })}
+                  })}{' · '}{tz}
                 </Text>
               </div>
               <Button
@@ -809,6 +819,11 @@ export default function InsuranceTelematicsPage() {
           <ChartContainer
             height={280}
             title={t('ownership.insurance.trend.chart', 'Rolling risk score')}
+            metadata={{
+              rangeLabel: data?.window
+                ? `${formatDateTime(data.window.from)} → ${formatDateTime(data.window.to)} · ${tz}`
+                : tz,
+            }}
             ariaLabel={t(
               'ownership.insurance.trend.chartAria',
               'Area chart of rolling insurance risk score over the analysis window',
@@ -913,22 +928,22 @@ export default function InsuranceTelematicsPage() {
 
       <FadeIn delay={0.25}>
         <OwnershipPanel
-          title={t('ownership.insurance.packet.title', 'Insurer evidence packet')}
+          title={t('ownership.insurance.checksum.title', 'Risk-summary checksum')}
           source={riskQuery}
           sourceEnabled={vehicleId != null}
           description={t(
-            'ownership.insurance.packet.subtitle',
-            'A stable content hash over the exposure, factors, and window. Quote it when disputing a rating so both sides know they are looking at the same dataset.',
+            'ownership.insurance.checksum.subtitle',
+            'A limited SHA-256 checksum of the vehicle ID, window bounds, risk score, frequency, severity and loss-cost indices, and ordered factor codes and observed rates at fixed precision. It does not verify identity or hash the complete evidence packet: raw exposure, other factor details, policy, premium, trend and evidence are not included. Matching checksums do not establish that the complete datasets are identical.',
           )}
           empty={!data?.evidence_packet_hash}
           emptyMessage={t(
-            'ownership.insurance.packet.empty',
-            'A packet hash is produced once a profile has been computed.',
+            'ownership.insurance.checksum.empty',
+            'A risk-summary checksum is produced once a profile has been computed.',
           )}
         >
           <div className={glassCardClasses.md}>
             <Text as="p" variant="caption">
-              {t('ownership.insurance.packet.hash', 'SHA-256 content digest')}
+              {t('ownership.insurance.checksum.hash', 'Limited risk-summary checksum (SHA-256)')}
             </Text>
             <Code as="p" className="mt-1 break-all">
               {data?.evidence_packet_hash}

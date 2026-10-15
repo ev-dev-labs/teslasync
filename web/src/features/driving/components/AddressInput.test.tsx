@@ -38,6 +38,7 @@ import {
   cleanup,
 } from '@testing-library/react';
 import { useState, type ReactNode } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import type { GeocodeResult, TripLocation } from '@/types/driving';
 
 // i18n stub: return the fallback string and interpolate {{tokens}} so the
@@ -86,8 +87,9 @@ const mockGeocode = vi.mocked(useGeocodeSearch);
 function geocodeState(
   data: GeocodeResult[] | undefined,
   isLoading = false,
+  overrides: Partial<ReturnType<typeof useGeocodeSearch>> = {},
 ): ReturnType<typeof useGeocodeSearch> {
-  return { data, isLoading } as unknown as ReturnType<typeof useGeocodeSearch>;
+  return { data, isLoading, ...overrides } as unknown as ReturnType<typeof useGeocodeSearch>;
 }
 
 /** Controlled wrapper mirroring the trip-planner parent (owns `value`). */
@@ -123,6 +125,77 @@ afterEach(() => {
 });
 
 describe('AddressInput', () => {
+  it('shows initial source failure and retries instead of silently treating it as success', () => {
+    vi.useFakeTimers();
+    try {
+      const refetch = vi.fn();
+      mockGeocode.mockReturnValue(geocodeState(undefined, false, {
+        error: new Error('Geocoder unavailable'), isError: true, refetch,
+      }));
+      render(<MemoryRouter><AddressInput value="Main" onChange={vi.fn()} onSelect={vi.fn()} /></MemoryRouter>);
+      act(() => { vi.advanceTimersByTime(400); });
+      expect(screen.getByRole('alert')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      expect(refetch).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each(['failed', 'paused'] as const)('retains selectable geocoded suggestions during a %s refresh', (refresh) => {
+    vi.useFakeTimers();
+    try {
+      const suggestion = { display_name: '123 Main Street', lat: 40.1, lng: -74.2 };
+      const onSelect = vi.fn();
+      mockGeocode.mockReturnValue(geocodeState([suggestion], false, refresh === 'failed'
+        ? { error: new Error('Refresh failed'), isError: true }
+        : { fetchStatus: 'paused' }));
+      render(<ControlledAddressInput initial="Main" onSelect={onSelect} />);
+      act(() => { vi.advanceTimersByTime(400); });
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+      fireEvent.focus(screen.getByRole('combobox'));
+      fireEvent.keyDown(screen.getByRole('combobox'), { key: 'ArrowDown' });
+      fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter' });
+      expect(onSelect).toHaveBeenCalledWith({ lat: 40.1, lng: -74.2, name: '123 Main Street' });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('shows unavailable feedback without an endless spinner for a paused first search', () => {
+    vi.useFakeTimers();
+    try {
+      mockGeocode.mockReturnValue(geocodeState(undefined, true, { fetchStatus: 'paused' }));
+      render(<AddressInput value="Main" onChange={vi.fn()} onSelect={vi.fn()} />);
+      act(() => { vi.advanceTimersByTime(400); });
+      expect(screen.getByText('Service unavailable')).toBeInTheDocument();
+      expect(screen.queryByLabelText('Loading')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('cancels superseded debounce timers and pending work on unmount', () => {
+    vi.useFakeTimers();
+    try {
+      const props = { onChange: vi.fn(), onSelect: vi.fn() };
+      const view = render(<AddressInput {...props} value="Main" />);
+      act(() => { vi.advanceTimersByTime(200); });
+      view.rerender(<AddressInput {...props} value="Market" />);
+      act(() => { vi.advanceTimersByTime(200); });
+      expect(mockGeocode).not.toHaveBeenCalledWith('Main');
+      act(() => { vi.advanceTimersByTime(200); });
+      expect(mockGeocode).toHaveBeenLastCalledWith('Market');
+      view.rerender(<AddressInput {...props} value="Broadway" />);
+      view.unmount();
+      const calls = mockGeocode.mock.calls.length;
+      act(() => { vi.advanceTimersByTime(400); });
+      expect(mockGeocode).toHaveBeenCalledTimes(calls);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('renders a combobox with the default hidden "Address" label and the given placeholder', () => {
     render(
       <AddressInput

@@ -52,12 +52,21 @@ export function DepartureForecastMethodology({
       icon: <FlaskConical className="h-5 w-5" aria-hidden="true" />,
       title: t('departure.method.modelTitle', 'Model and shrinkage'),
       body: t(
-        'departure.method.modelBody',
-        'Each local weekday-hour is a Poisson event cell with a Gamma prior (α {{alpha}}, β {{beta}}). Outputs are modeled likelihood estimates, not calibrated probabilities.',
+        'departure.method.calendarModelBody',
+        'Each local weekday-hour is a Poisson event cell with a Gamma prior (α {{alpha}}, β {{beta}}). The rate is (recorded departures + α) / (model-assumed calendar opportunities + β), and likelihood is 1 − exp(−rate). Outputs are modeled estimates, not calibrated probabilities.',
         {
           alpha: fmtNumber(forecast.config.priorAlpha, undefined, locale),
           beta: fmtNumber(forecast.config.priorBeta, undefined, locale),
         },
+      ),
+    },
+    {
+      key: 'opportunity',
+      icon: <CalendarRange className="h-5 w-5" aria-hidden="true" />,
+      title: t('departure.method.opportunityTitle', 'Model-assumed calendar opportunity'),
+      body: t(
+        'departure.method.opportunityBody',
+        'The denominator counts matching local-hour boundaries from the hour containing the earliest included returned drive start through the fixed model anchor, including elapsed gaps. Span days and weeks measure elapsed time, not observed recording coverage. Zero-event weeks mean no included returned starts; they do not prove inactivity. No telemetry uptime, completeness, or monitoring coverage metadata is available to this model.',
       ),
     },
     {
@@ -68,8 +77,8 @@ export function DepartureForecastMethodology({
         'departure.method.windowBody',
         'The model filters the newest rows returned by /drives to an absolute {{days}}-day lookback. A {{limit}}-row response can be capped and is not guaranteed lifetime history.',
         {
-          days: fmtInt(forecast.config.windowDays),
-          limit: fmtInt(forecast.config.historyLimit),
+          days: fmtInt(forecast.config.windowDays, locale),
+          limit: fmtInt(forecast.config.historyLimit, locale),
         },
       ),
     },

@@ -37,7 +37,12 @@ export function CalendarSummaryCards({
         : t('driveCalendar.currentStreak', 'Current streak'),
       rawValue: known ? calendar.currentStreak * 86400 : null,
       display: {
-        formatter: raw => ({ value: t('driveCalendar.days', '{{count}} days', { count: raw / 86400 }), unit: '' }),
+        formatter: raw => ({
+          value: t('driveCalendar.days', '{{count}} days', {
+            count: raw / 86400, defaultValue_one: '{{count}} day', defaultValue_other: '{{count}} days',
+          }),
+          unit: '',
+        }),
       },
       context: known ? t('driveCalendar.longest', 'longest: {{count}}', { count: calendar.longestStreak }) : undefined,
     },
@@ -46,7 +51,9 @@ export function CalendarSummaryCards({
       label: t('driveCalendar.distance', 'Distance'),
       rawValue: known ? calendar.totalDistanceM : null,
       display: { formatter: raw => ({ value: formatDistance(raw), unit: '' }) },
-      context: known ? t('driveCalendar.driveCount', '{{count}} drives', { count: calendar.totalDrives }) : undefined,
+      context: known ? t('driveCalendar.driveCount', '{{count}} drives', {
+        count: calendar.totalDrives, defaultValue_one: '{{count}} drive', defaultValue_other: '{{count}} drives',
+      }) : undefined,
     },
     {
       metricId: 'distance', occurrenceId: 'calendar-busiest-day',

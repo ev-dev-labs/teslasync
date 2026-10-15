@@ -8,6 +8,9 @@ import type { DataStateSource } from '@/api/dataState';
 import type { useVehicleState } from '@/api/hooks/useVehicles';
 import type { Geofence } from '@/types/location';
 import { ApiError } from '@/lib/resilience';
+import { formatDateTime } from '@/lib/dateFormat';
+import type { AppSettings } from '@/api/types';
+import { chartTokens } from '@/lib/tokens';
 
 type HookStateResponse = NonNullable<ReturnType<typeof useVehicleState>['data']>;
 // Mock sparse/malformed snapshots without changing the read-only production DTO.
@@ -17,6 +20,9 @@ type StateResponse = Omit<HookStateResponse, 'state'> & {
 type Source<T> = DataStateSource<T> & { refetch: ReturnType<typeof vi.fn> };
 const H = vi.hoisted(() => ({
   vehicleId: 42,
+  datePreferences: { locale: 'en-US', tz: 'UTC' },
+  unitSettings: { unit_of_length: 'km', locale: 'en-US', decimal_precision: 2 } as Partial<AppSettings>,
+  formatDateTime: vi.fn(),
   config: {} as Source<GuardConfig | null>,
   events: {} as Source<GuardEvent[]>,
   state: {} as Source<StateResponse>,
@@ -63,6 +69,17 @@ vi.mock('@/api/hooks/useVehicles', async importOriginal => {
   return { ...actual, useVehicleState: () => H.state };
 });
 vi.mock('@/api/hooks/useLocations', () => ({ useGeofences: () => H.geofences }));
+vi.mock('@/hooks/useSettings', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/hooks/useSettings')>();
+  return { ...actual, useSettings: () => ({ settings: H.unitSettings }) };
+});
+vi.mock('@/hooks/useDateFormat', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/hooks/useDateFormat')>();
+  return { ...actual, useDateFormat: () => ({
+    ...actual.useDateFormat(),
+    formatDateTime: H.formatDateTime,
+  }) };
+});
 // Keep the remaining motion exports: PageContainer/overlays may consume them.
 vi.mock('@/components/motion', async importOriginal => {
   const actual = await importOriginal<typeof import('@/components/motion')>();
@@ -73,7 +90,14 @@ vi.mock('@/components/maps', () => ({
     <div data-testid="guard-map" data-latitude={center[0]} data-longitude={center[1]}>{children}</div>,
   Marker: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   Popup: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  Circle: ({ radius }: { radius: number }) => <div data-testid="geofence-circle" data-radius={radius} />,
+  Circle: ({ radius, center, pathOptions }: {
+    radius: number;
+    center: [number, number];
+    pathOptions: { color: string; fillColor: string; fillOpacity: number; weight: number };
+  }) => <div data-testid="geofence-circle" data-radius={radius}
+    data-latitude={center[0]} data-longitude={center[1]}
+    data-color={pathOptions.color} data-fill-color={pathOptions.fillColor}
+    data-fill-opacity={pathOptions.fillOpacity} data-weight={pathOptions.weight} />,
   Polyline: () => <div data-testid="event-trail" />,
   MapTileLayer: () => null,
   MapInvalidator: () => null,
@@ -143,6 +167,9 @@ beforeEach(() => {
   cleanup();
   vi.clearAllMocks();
   H.vehicleId = 42;
+  H.datePreferences = { locale: 'en-US', tz: 'UTC' };
+  H.unitSettings = { unit_of_length: 'km', locale: 'en-US', decimal_precision: 2 };
+  H.formatDateTime.mockImplementation((value: string) => formatDateTime(value, H.datePreferences));
   H.config = query(config());
   H.events = query([]);
   H.state = query(state());
@@ -154,6 +181,249 @@ beforeEach(() => {
 });
 
 describe('guard live modernization preservation', () => {
+  it.each([100, 0])('uses the existing restrained map palette without changing a %s-meter geofence', radius => {
+    H.geofences = query([{ ...geofence, latitude: 38.25, longitude: -122.75, radius }]);
+    H.events = query([event(), event({ id: 8, event_type: 'sentry_mode' })]);
+    renderPage();
+    const circle = screen.getByTestId('geofence-circle');
+    expect(circle).toHaveAttribute('data-color', chartTokens.series[0]);
+    expect(circle).toHaveAttribute('data-fill-color', chartTokens.series[0]);
+    expect(circle).toHaveAttribute('data-fill-opacity', '0.08');
+    expect(circle).toHaveAttribute('data-weight', '2');
+    expect(circle).toHaveAttribute('data-radius', String(radius));
+    expect(circle).toHaveAttribute('data-latitude', '38.25');
+    expect(circle).toHaveAttribute('data-longitude', '-122.75');
+    expect(screen.getByTestId('guard-map')).toHaveAttribute('data-latitude', '37.5');
+    expect(screen.getByTestId('guard-map')).toHaveAttribute('data-longitude', '-121.9');
+    expect(screen.getByText('Test vehicle')).toBeInTheDocument();
+    expect(screen.queryByTestId('event-trail')).not.toBeInTheDocument();
+    expect(H.setConfig.mutate).not.toHaveBeenCalled();
+  });
+
+  it('formats the existing movement thresholds with current units without changing saved policy operands', () => {
+    H.config = query(config({ sensitivity: 'medium' }));
+    const { result, rerender } = renderHook(() => useGuardPageModel());
+    expect(result.current.sensitivityOptions).toEqual([
+      { value: 'low', label: 'Low — > 1.00 km' },
+      { value: 'medium', label: 'Medium — > 0.20 km' },
+      { value: 'high', label: 'High — any movement' },
+    ]);
+    H.unitSettings = { unit_of_length: 'mi', locale: 'en-US', decimal_precision: 3 };
+    rerender();
+    expect(result.current.sensitivityOptions).toEqual([
+      { value: 'low', label: 'Low — > 0.621 mi' },
+      { value: 'medium', label: 'Medium — > 0.124 mi' },
+      { value: 'high', label: 'High — any movement' },
+    ]);
+    expect(result.current.effectiveSensitivity).toBe('medium');
+    expect(H.setConfig.mutate).not.toHaveBeenCalled();
+    act(() => result.current.handleSaveSettings());
+    expect(H.setConfig.mutate).toHaveBeenLastCalledWith({
+      vehicleId: 42, enabled: true, home_geofence_id: 5, sensitivity: 'medium', auto_panic: true,
+    });
+    H.config = query(null);
+    rerender();
+    expect(result.current.effectiveSensitivity).toBe('medium');
+    expect(result.current.policyEnabled).toBeNull();
+    expect(result.current.policyLabel).toBe('Saved policy unavailable');
+  });
+
+  it('keeps the saved-policy and automatic-monitoring caveats alongside unit-aware settings', () => {
+    H.unitSettings = { unit_of_length: 'mi', locale: 'en-US', decimal_precision: 2 };
+    H.config = query(config({ sensitivity: 'low' }));
+    renderPage();
+    expect(section('settings').getByRole('combobox', { name: 'Sensitivity' })).toHaveTextContent('Low — > 0.62 mi');
+    expect(section('settings').getByText('Saved movement threshold policy; automatic detection is not established.')).toBeInTheDocument();
+    expect(section('settings').getByText('Automatic guard monitoring, theft detection, and auto-panic are not established by the current service. These settings persist policy; verify vehicle security using current lock and Sentry readings.')).toBeInTheDocument();
+    expect(H.setConfig.mutate).not.toHaveBeenCalled();
+  });
+
+  it.each(['config', 'events', 'geofences'] as const)(
+    'discloses active loading and paused %s overlays without blocking the current marker', source => {
+      H[source] = query(undefined, { isLoading: true, isFetching: true, fetchStatus: 'fetching', dataUpdatedAt: 0 });
+      const view = renderPage();
+      expect(section('map').getByText('Loading')).toBeInTheDocument();
+      expect(screen.getByTestId('guard-map')).toBeInTheDocument();
+      expect(screen.queryByTestId('event-trail')).not.toBeInTheDocument();
+      const label = source === 'config' ? 'Guard settings' : source === 'events' ? 'Event timeline' : 'Home geofence';
+      const loadingRow = section('map').getByText(label).closest('li');
+      expect(loadingRow).toHaveTextContent('Loading');
+      H[source] = query(undefined, { isPending: true, fetchStatus: 'paused', dataUpdatedAt: 0 });
+      view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}><GuardModePage /></QueryClientProvider></MemoryRouter>);
+      expect(section('map').getByText(label).closest('li')).toHaveTextContent('Refresh paused');
+      expect(screen.getByTestId('guard-map')).toBeInTheDocument();
+      fireEvent.click(section('map').getByRole('button', { name: `Retry unavailable sources: ${label}` }));
+      expect(H[source].refetch).toHaveBeenCalledOnce();
+      expect(H.state.refetch).not.toHaveBeenCalled();
+      if (source === 'config') H.config = query(config());
+      else if (source === 'events') H.events = query([]);
+      else H.geofences = query([geofence]);
+      view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}><GuardModePage /></QueryClientProvider></MemoryRouter>);
+      expect(section('map').queryByText('Refresh paused')).not.toBeInTheDocument();
+      expect(screen.getByTestId('guard-map')).toBeInTheDocument();
+      expect(screen.getByTestId('geofence-circle')).toHaveAttribute('data-radius', '100');
+      expect(H.setConfig.mutate).not.toHaveBeenCalled();
+    },
+  );
+
+  it('accepts successful empty overlays and zero coordinates without fabricating a circle or event trail', () => {
+    H.config = query(config({ home_geofence_id: null }));
+    H.geofences = query([]);
+    H.events = query([]);
+    H.state = query(state({ state: { latitude: 0, longitude: 0 } }));
+    renderPage();
+    expect(screen.getByTestId('guard-map')).toHaveAttribute('data-latitude', '0');
+    expect(screen.getByTestId('guard-map')).toHaveAttribute('data-longitude', '0');
+    expect(screen.queryByTestId('geofence-circle')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('event-trail')).not.toBeInTheDocument();
+    expect(section('map').queryByRole('button', { name: 'Retry unavailable sources' })).not.toBeInTheDocument();
+    expect(metric('Total events')).toHaveTextContent('0');
+  });
+
+  it('preserves a confirmed zero-radius geofence rather than treating zero as missing', () => {
+    H.geofences = query([{ ...geofence, radius: 0, latitude: 0, longitude: 0 }]);
+    renderPage();
+    expect(screen.getByTestId('guard-map')).toBeInTheDocument();
+    expect(screen.getByTestId('geofence-circle')).toHaveAttribute('data-radius', '0');
+  });
+
+  it.each(['config', 'events', 'geofences'] as const)(
+    'keeps initial %s overlay failure and retry local to the map', source => {
+      H[source] = query(undefined, { isError: true, error: new Error('Overlay unavailable'), dataUpdatedAt: 0 });
+      renderPage();
+      const label = source === 'config' ? 'Guard settings' : source === 'events' ? 'Event timeline' : 'Home geofence';
+      expect(section('map').getByText(label).closest('li')).toHaveTextContent('Failed');
+      expect(screen.getByTestId('guard-map')).toBeInTheDocument();
+      fireEvent.click(section('map').getByRole('button', { name: `Retry unavailable sources: ${label}` }));
+      expect(H[source].refetch).toHaveBeenCalledOnce();
+      expect(H.state.refetch).not.toHaveBeenCalled();
+      expect(H.setConfig.mutate).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['config', 'events', 'geofences'] as const)(
+    'retains the circle and marker through %s refresh failure and independent recovery', source => {
+      const view = renderPage();
+      const marker = screen.getByTestId('guard-map');
+      const circle = screen.getByTestId('geofence-circle');
+      Object.assign(H[source], { isError: true, error: new Error('Overlay refresh failed') });
+      view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}><GuardModePage /></QueryClientProvider></MemoryRouter>);
+      const label = source === 'config' ? 'Guard settings' : source === 'events' ? 'Event timeline' : 'Home geofence';
+      expect(section('map').getByText(label).closest('li')).toHaveTextContent('Cached · refresh failed');
+      expect(screen.getByTestId('guard-map')).toBe(marker);
+      expect(screen.getByTestId('geofence-circle')).toBe(circle);
+      fireEvent.click(section('map').getByRole('button', { name: `Retry unavailable sources: ${label}` }));
+      expect(H[source].refetch).toHaveBeenCalledOnce();
+      expect(H.state.refetch).not.toHaveBeenCalled();
+      Object.assign(H[source], { isError: false, error: null, dataUpdatedAt: Date.now() });
+      view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}><GuardModePage /></QueryClientProvider></MemoryRouter>);
+      expect(section('map').queryByText('Cached · refresh failed')).not.toBeInTheDocument();
+      expect(screen.getByTestId('geofence-circle')).toBe(circle);
+      expect(H.setConfig.mutate).not.toHaveBeenCalled();
+      expect(H.panic.mutate).not.toHaveBeenCalled();
+      expect(H.ack.mutate).not.toHaveBeenCalled();
+    },
+  );
+
+  it('uses current date preferences for the policy and preserves the raw observed instant', () => {
+    const updatedAt = '2026-06-01T10:00:00+02:00';
+    const observedAt = Date.parse('2026-06-01T08:30:00Z');
+    H.datePreferences = { locale: 'de-DE', tz: 'Europe/Berlin' };
+    H.config = query(config({ updated_at: updatedAt }));
+    H.state = query(state({ observedAt }));
+    const view = renderPage();
+    const initialLabel = `Policy updated ${formatDateTime(updatedAt, H.datePreferences)}`;
+    expect(section('status').getByText(initialLabel)).toBeInTheDocument();
+    expect(H.formatDateTime).toHaveBeenCalledWith(updatedAt);
+    expect(section('status').getByText(String(observedAt))).toHaveAttribute('dateTime', String(observedAt));
+    expect(section('status').getByText('Vehicle locked')).toBeInTheDocument();
+    expect(section('status').getByText('Sentry mode active')).toBeInTheDocument();
+    expect(section('status').getByText('No active alerts')).toBeInTheDocument();
+
+    H.datePreferences = { locale: 'en-US', tz: 'America/Los_Angeles' };
+    view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}><GuardModePage /></QueryClientProvider></MemoryRouter>);
+    const updatedLabel = `Policy updated ${formatDateTime(updatedAt, H.datePreferences)}`;
+    expect(updatedLabel).not.toBe(initialLabel);
+    expect(section('status').getByText(updatedLabel)).toBeInTheDocument();
+    expect(section('status').queryByText(initialLabel)).not.toBeInTheDocument();
+    expect(section('status').getByText(String(observedAt))).toHaveAttribute('dateTime', String(observedAt));
+    expect(H.config.data?.updated_at).toBe(updatedAt);
+    expect(H.state.data?.observedAt).toBe(observedAt);
+  });
+
+  it.each(['paused', 'idle'] as const)('explains %s initial sources locally, preserves unknowns and recovers without commands', fetchStatus => {
+    const deferred = { isPending: true, fetchStatus, dataUpdatedAt: 0 };
+    H.config = query(undefined, deferred);
+    H.events = query(undefined, deferred);
+    H.state = query(undefined, deferred);
+    H.geofences = query(undefined, deferred);
+    const view = renderPage();
+    const reason = fetchStatus === 'paused' ? 'paused' : 'pending';
+    for (const name of ['events', 'map', 'arming', 'settings']) {
+      const panel = document.querySelector(`[data-guard-section="${name}"]`);
+      expect(panel?.querySelector(`[data-initial-deferred="${reason}"]`)).toBeInTheDocument();
+    }
+    expect(section('settings').getAllByRole('status')).toHaveLength(2);
+    expect(section('events').queryByText('No guard events yet')).not.toBeInTheDocument();
+    expect(metric('Guard state')).toHaveAttribute('data-value-state', 'missing');
+    expect(metric('Total events')).toHaveAttribute('data-value-state', 'missing');
+    expect(metric('Lock state')).toHaveAttribute('data-value-state', 'missing');
+    expect(section('settings').getByRole('button', { name: 'Save settings' })).toBeDisabled();
+    expect(screen.queryByTestId('guard-map')).not.toBeInTheDocument();
+    fireEvent.click(section('events').getByRole('button', { name: 'Refresh' }));
+    expect(H.events.refetch).toHaveBeenCalledOnce();
+    expect(H.config.refetch).not.toHaveBeenCalled();
+    expect(H.state.refetch).not.toHaveBeenCalled();
+    fireEvent.click(section('map').getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(section('arming').getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(section('settings').getByRole('button', { name: 'Refresh: Guard settings' }));
+    fireEvent.click(section('settings').getByRole('button', { name: 'Refresh: Home geofence' }));
+    expect(H.state.refetch).toHaveBeenCalledOnce();
+    expect(H.config.refetch).toHaveBeenCalledTimes(2);
+    expect(H.geofences.refetch).toHaveBeenCalledOnce();
+    H.config = query(config());
+    H.events = query([event()]);
+    H.state = query(state());
+    H.geofences = query([geofence]);
+    view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}><GuardModePage /></QueryClientProvider></MemoryRouter>);
+    expect(document.querySelector('[data-initial-deferred]')).not.toBeInTheDocument();
+    expect(section('events').getByText('false → true')).toBeInTheDocument();
+    expect(screen.getByTestId('guard-map')).toBeInTheDocument();
+    expect(screen.getByTestId('geofence-circle')).toHaveAttribute('data-radius', '100');
+    expect(section('settings').getByRole('button', { name: 'Save settings' })).not.toBeDisabled();
+    expect(H.setConfig.mutate).not.toHaveBeenCalled();
+    expect(H.panic.mutate).not.toHaveBeenCalled();
+    expect(H.ack.mutate).not.toHaveBeenCalled();
+  });
+
+  it('does not classify retained paused sources as deferred initial loads', () => {
+    H.config = query(config(), { fetchStatus: 'paused' });
+    H.events = query([event()], { fetchStatus: 'paused' });
+    H.state = query(state(), { fetchStatus: 'paused' });
+    H.geofences = query([geofence], { fetchStatus: 'paused' });
+    renderPage();
+    expect(document.querySelector('[data-initial-deferred]')).not.toBeInTheDocument();
+    expect(section('events').getByText('false → true')).toBeInTheDocument();
+    expect(screen.getByTestId('guard-map')).toBeInTheDocument();
+    expect(section('settings').getByRole('combobox', { name: 'Home geofence' })).toHaveValue('5');
+    expect(section('settings').getByRole('button', { name: 'Save settings' })).not.toBeDisabled();
+  });
+
+  it('keeps deferred geofence recovery independent of loaded policy and location', () => {
+    H.geofences = query(undefined, { isPending: true, fetchStatus: 'paused', dataUpdatedAt: 0 });
+    renderPage();
+    expect(section('settings').getByRole('status')).toHaveTextContent('Home geofence: Refresh paused');
+    expect(section('settings').getByRole('combobox', { name: 'Home geofence' })).toBeDisabled();
+    expect(section('settings').getByRole('combobox', { name: 'Sensitivity' })).not.toBeDisabled();
+    expect(screen.getByTestId('guard-map')).toBeInTheDocument();
+    expect(screen.queryByTestId('geofence-circle')).not.toBeInTheDocument();
+    fireEvent.click(section('settings').getByRole('button', { name: 'Refresh: Home geofence' }));
+    expect(H.geofences.refetch).toHaveBeenCalledOnce();
+    expect(H.config.refetch).not.toHaveBeenCalled();
+    expect(H.state.refetch).not.toHaveBeenCalled();
+    expect(H.setConfig.mutate).not.toHaveBeenCalled();
+  });
+
   it('keeps named canonical form groups and pending command protection without issuing commands on mount', () => {
     H.setConfig.isPending = true;
     renderPage();
@@ -206,6 +476,7 @@ describe('guard live modernization preservation', () => {
     expect(screen.getByTestId('guard-map')).toBeInTheDocument();
     expect(metric('Lock state')).toHaveTextContent('Locked');
     expect(metric('Total events')).toHaveAttribute('data-value-state', 'missing');
+    expect(document.querySelector('[data-initial-deferred]')).not.toBeInTheDocument();
     expect(H.setConfig.mutate).not.toHaveBeenCalled();
     expect(H.panic.mutate).not.toHaveBeenCalled();
     expect(H.ack.mutate).not.toHaveBeenCalled();
@@ -272,6 +543,63 @@ describe('guard live modernization preservation', () => {
     expect(metric('Guard state')).toHaveTextContent('Updating…');
     expect(metric('Lock state')).toHaveTextContent('Locked');
     expect(section('events').queryByText('No guard events yet')).not.toBeInTheDocument();
+    expect(document.querySelector('[data-initial-deferred]')).not.toBeInTheDocument();
+  });
+
+  it('marks the overview busy only until the first independent metric source returns', () => {
+    const pending = { isLoading: true, isFetching: true, dataUpdatedAt: 0 };
+    H.config = query(undefined, pending);
+    H.events = query(undefined, pending);
+    H.state = query(undefined, pending);
+    const view = renderPage();
+    const overview = () => screen.getByRole('region', { name: 'Guard status overview' });
+    expect(overview()).toHaveAttribute('aria-busy', 'true');
+    expect(within(overview()).getByText('Loading source')).toBeInTheDocument();
+    expect(overview().querySelectorAll('[data-operational-value]')).toHaveLength(0);
+
+    H.events = query([]);
+    view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}><GuardModePage /></QueryClientProvider></MemoryRouter>);
+    expect(overview()).not.toHaveAttribute('aria-busy');
+    expect(within(overview()).getByText('Returned evidence')).toBeInTheDocument();
+    expect(metric('Total events')).toHaveTextContent('0');
+    expect(metric('Unacknowledged')).toHaveAttribute('data-value-state', 'value');
+    expect(metric('Guard state')).toHaveTextContent('Updating…');
+    expect(metric('Lock state')).toHaveTextContent('Updating…');
+  });
+
+  it.each(['config', 'events', 'state'] as const)(
+    'preserves successful metrics while the %s source initially loads', source => {
+      H.config = query(config({ enabled: false }));
+      H.state = query(state({ state: { vehicle_id: 42, is_locked: false, sentry_mode: false } }));
+      H[source] = query(undefined, { isLoading: true, isFetching: true, dataUpdatedAt: 0 });
+      renderPage();
+      const overview = screen.getByRole('region', { name: 'Guard status overview' });
+      expect(overview).not.toHaveAttribute('aria-busy');
+      expect(within(overview).getByText('Returned evidence')).toBeInTheDocument();
+      if (source !== 'config') {
+        expect(metric('Guard state')).toHaveTextContent('Disarmed');
+        expect(metric('Sensitivity')).toHaveTextContent('High');
+      }
+      if (source !== 'events') {
+        expect(metric('Total events')).toHaveTextContent('0');
+        expect(metric('Unacknowledged')).toHaveTextContent('0');
+      }
+      if (source !== 'state') {
+        expect(metric('Lock state')).toHaveTextContent('Unlocked');
+        expect(metric('Sentry mode')).toHaveTextContent('Off');
+      }
+    },
+  );
+
+  it('does not treat retained unsaved policy or unknown vehicle fields as initial loading', () => {
+    H.config = query(null, { isFetching: true });
+    H.state = query(state({ verifiedFields: [] }), { isFetching: true });
+    renderPage();
+    const overview = screen.getByRole('region', { name: 'Guard status overview' });
+    expect(overview).not.toHaveAttribute('aria-busy');
+    expect(metric('Guard state')).toHaveTextContent('No saved guard policy yet');
+    expect(metric('Lock state')).toHaveTextContent('Lock state unavailable');
+    expect(metric('Total events')).toHaveTextContent('0');
   });
 
   it('retains independent geofence recovery while config is unavailable', () => {

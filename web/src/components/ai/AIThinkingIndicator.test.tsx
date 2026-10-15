@@ -3,14 +3,14 @@
 // The module exports two presentational surfaces plus one prop type:
 //
 //   • AIThinkingIndicator — the full streaming-but-empty placeholder
-//     (a labelled polite status region + bouncing dots + three shimmer
+//     (a labelled polite status region + static dots + three static
 //     skeleton lines). Covered: the default Helix label, a caller
 //     override, the empty/whitespace fallback (a status live region must
 //     never announce blank), the decorative-visuals-are-aria-hidden a11y
 //     contract, the exact skeleton/dot geometry, and the displayName.
 //
 //   • AIThinkingDots — the compact in-button variant (caller label plus
-//     three aria-hidden bouncing dots). Covered: label rendering, the
+//     three aria-hidden static dots). Covered: label rendering, the
 //     dots-are-decorative contract, dot geometry, and the displayName.
 //
 // The translation stub defaults to English fallbacks and can supply
@@ -24,8 +24,13 @@ import type { AIThinkingIndicatorProps } from './AIThinkingIndicator'
 
 const DEFAULT_LABEL = 'Helix is thinking'
 
-const { translate } = vi.hoisted(() => ({
+const { translate, motionPreference } = vi.hoisted(() => ({
   translate: vi.fn((_key: string, fallback: string) => fallback),
+  motionPreference: vi.fn(() => ({ reduce: false, durationMs: 250 })),
+}))
+
+vi.mock('@/hooks/useMotionPreference', () => ({
+  useMotionPreference: motionPreference,
 }))
 
 vi.mock('react-i18next', () => ({
@@ -33,6 +38,8 @@ vi.mock('react-i18next', () => ({
 }))
 
 beforeEach(() => {
+  motionPreference.mockReset()
+  motionPreference.mockReturnValue({ reduce: false, durationMs: 250 })
   translate.mockReset()
   translate.mockImplementation((_key: string, fallback: string) => fallback)
 })
@@ -97,10 +104,10 @@ describe('AIThinkingIndicator — accessibility + geometry', () => {
     expect(screen.getByRole('status').textContent).toBe('Helix is working')
   })
 
-  it('renders three shimmer skeleton lines and three bouncing dots', () => {
+  it('renders three static skeleton lines and three static dots', () => {
     const { container } = render(<AIThinkingIndicator />)
 
-    // Skeleton lines use rounded-md; the bouncing dots use rounded-full.
+    // Skeleton lines use rounded-md; the dots use rounded-full.
     expect(container.querySelectorAll('.rounded-md')).toHaveLength(3)
     expect(container.querySelectorAll('.rounded-full')).toHaveLength(3)
   })
@@ -121,32 +128,28 @@ describe('AIThinkingIndicator — accessibility + geometry', () => {
     }
     for (const line of lines) {
       expect(line).toHaveClass(
-        'bg-[linear-gradient(90deg,var(--skeleton-bg)_0%,var(--border-strong)_50%,var(--skeleton-bg)_100%)]',
+        'bg-[var(--skeleton-bg)]',
       )
       expect(line.parentElement).toHaveAttribute('aria-hidden', 'true')
     }
     expect(container.innerHTML).not.toMatch(/(?:text|bg)-(?:cyan|white|neon)|rgba?\(|#[\da-f]{3,8}/i)
   })
 
-  it('preserves skeleton geometry, shimmer timing and OS motion-safe decoration', () => {
+  it('preserves skeleton and dot geometry without decorative loops or bloom', () => {
     const { container } = render(<AIThinkingIndicator />)
     const lines = container.querySelectorAll('.rounded-md')
     const dots = container.querySelectorAll('.rounded-full')
     const widths = ['w-full', 'w-11/12', 'w-9/12']
 
-    expect(container.querySelector('svg')).toHaveClass('h-4', 'w-4', 'motion-safe:animate-pulse')
+    expect(container.querySelector('svg')).toHaveClass('h-4', 'w-4')
     lines.forEach((line, index) => {
-      expect(line).toHaveClass('h-3', widths[index], 'rounded-md', 'motion-safe:animate-shimmer', 'bg-[length:200%_100%]')
+      expect(line).toHaveClass('h-3', widths[index], 'rounded-md', 'bg-[var(--skeleton-bg)]')
     })
-    expect(lines[1]).toHaveClass('[animation-delay:0.3s]')
-    expect(lines[2]).toHaveClass('[animation-delay:0.6s]')
     dots.forEach((dot) => {
-      expect(dot).toHaveClass('h-1', 'w-1', 'rounded-full', 'motion-safe:animate-bounce')
+      expect(dot).toHaveClass('h-1', 'w-1', 'rounded-full')
     })
-    expect(dots[0]).toHaveClass('motion-safe:[animation-delay:-0.3s]')
-    expect(dots[1]).toHaveClass('motion-safe:[animation-delay:-0.15s]')
     for (const element of container.querySelectorAll('[class]')) {
-      expect(element.getAttribute('class')).not.toMatch(/(?:^|\s)animate-/)
+      expect(element.getAttribute('class')).not.toMatch(/animate-|animation-delay|gradient|glow|shadow|blur/)
     }
   })
 })
@@ -164,7 +167,7 @@ describe('AIThinkingDots', () => {
     expect(container.textContent).toBe('A complete long localized thinking label')
   })
 
-  it('renders the caller label followed by three decorative bouncing dots', () => {
+  it('renders the caller label followed by three decorative static dots', () => {
     const { container } = render(<AIThinkingDots label="Generating coaching" />)
 
     expect(screen.getByText('Generating coaching')).toBeInTheDocument()
@@ -180,18 +183,53 @@ describe('AIThinkingDots', () => {
     expect(container.textContent).toBe('Summarising')
   })
 
-  it('preserves compact dots inheriting the caller foreground and OS motion-safe timing', () => {
+  it('preserves static compact dots inheriting the caller foreground', () => {
     const { container } = render(<AIThinkingDots label="Helix denkt nach" />)
     const dots = container.querySelectorAll('.rounded-full')
 
     expect(dots).toHaveLength(3)
     dots.forEach((dot) => {
-      expect(dot).toHaveClass('h-1', 'w-1', 'bg-current', 'motion-safe:animate-bounce')
+      expect(dot).toHaveClass('h-1', 'w-1', 'bg-current')
       expect(dot.parentElement).toHaveAttribute('aria-hidden', 'true')
     })
-    expect(dots[0]).toHaveClass('motion-safe:[animation-delay:-0.3s]')
-    expect(dots[1]).toHaveClass('motion-safe:[animation-delay:-0.15s]')
+    expect(container.innerHTML).not.toMatch(/animate-|animation-delay|gradient|glow|shadow|blur/)
     expect(container.textContent).toBe('Helix denkt nach')
+  })
+})
+
+describe('shared motion preference', () => {
+  it.each([
+    { mode: 'normal', reduce: false },
+    { mode: 'OS reduced motion', reduce: true },
+    { mode: 'low bandwidth', reduce: true },
+  ])('retains static busy feedback in $mode mode and reacts to preference changes', ({ reduce }) => {
+    motionPreference.mockReturnValue({ reduce, durationMs: reduce ? 0 : 250 })
+    const { container, rerender } = render(
+      <>
+        <AIThinkingIndicator label="Working" />
+        <AIThinkingDots label="Summarising" />
+      </>,
+    )
+
+    const assertStaticFeedback = (reduced: boolean) => {
+      expect(motionPreference).toHaveBeenCalled()
+      expect(screen.getByRole('status')).toHaveTextContent('Working')
+      expect(screen.getByText('Summarising')).toBeVisible()
+      expect(container.querySelectorAll('.rounded-md')).toHaveLength(3)
+      expect(container.querySelectorAll('.rounded-full')).toHaveLength(6)
+      expect(container.querySelectorAll('.animate-none')).toHaveLength(reduced ? 2 : 0)
+      expect(container.innerHTML).not.toMatch(/animate-(?!none)|animation-delay|gradient|glow|shadow|blur/)
+    }
+    assertStaticFeedback(reduce)
+
+    motionPreference.mockReturnValue({ reduce: !reduce, durationMs: reduce ? 250 : 0 })
+    rerender(
+      <>
+        <AIThinkingIndicator label="Working" />
+        <AIThinkingDots label="Summarising" />
+      </>,
+    )
+    assertStaticFeedback(!reduce)
   })
 })
 

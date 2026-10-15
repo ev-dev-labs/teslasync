@@ -21,6 +21,22 @@ type rangeStatsReader struct {
 	err       error
 }
 
+func TestDriveListRejectsInvalidHistoryBoundsBeforeRepositoryRead(t *testing.T) {
+	for _, query := range []string{
+		"start=invalid", "end=invalid",
+		"start=2026-06-03T12:00:00Z&end=2026-06-02T12:00:00Z",
+	} {
+		t.Run(query, func(t *testing.T) {
+			h := &DriveHandler{}
+			rec := httptest.NewRecorder()
+			h.ListByVehicle(rec, httptest.NewRequest(http.MethodGet, "/drives?vehicle_id=42&"+query, nil))
+			if rec.Code != http.StatusBadRequest {
+				t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+			}
+		})
+	}
+}
+
 func (f *rangeStatsReader) GetStatsInRange(ctx context.Context, vehicleID int64, start, end time.Time) (drivedb.DrivingStats, error) {
 	f.calls++
 	f.vehicleID, f.start, f.end = vehicleID, start, end

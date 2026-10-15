@@ -98,8 +98,9 @@ export function TripCopilotCard({ currentSoc, minArrivalSoc }: TripCopilotCardPr
       </div>
 
       <div className="flex flex-wrap items-end gap-3">
-        <div className="min-w-40 flex-1">
+        <div className="min-w-0 basis-full md:basis-40 flex-1">
           <Input
+            className="min-h-11 md:min-h-10"
             label={t('tripPlanner.copilot.remainingKm', 'Remaining (km)')}
             type="number"
             min={1}
@@ -107,7 +108,13 @@ export function TripCopilotCard({ currentSoc, minArrivalSoc }: TripCopilotCardPr
             onChange={(e) => setRemainingKm(e.target.value)}
           />
         </div>
-        <Button onClick={handleCheck} disabled={!canCheck} loading={checking}>
+        <Button
+          wrapLabel
+          className="min-h-11 min-w-11 w-full md:min-h-10 md:min-w-0 md:w-auto"
+          onClick={handleCheck}
+          disabled={!canCheck}
+          loading={checking}
+        >
           {t('tripPlanner.copilot.check', 'Will I make it?')}
         </Button>
       </div>

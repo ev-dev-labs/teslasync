@@ -2,12 +2,19 @@
  * RoutineWizard — place picker gates install; install posts template + place.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, renderHook, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render as renderView, renderHook, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { request } from '@/api/client';
 import type { ReactNode } from 'react';
 
 import type { RoutineTemplate } from '@/api/types';
+
+function render(ui: ReactNode) {
+  return renderView(ui, {
+    wrapper: ({ children }) => <MemoryRouter>{children}</MemoryRouter>,
+  });
+}
 
 vi.mock('@/api/client', () => ({ request: vi.fn() }));
 
@@ -64,9 +71,47 @@ beforeEach(() => {
 });
 
 describe('RoutineWizard', () => {
+  it('keeps complete routine copy and a mobile-sized install target', () => {
+    const name = 'Arrival routine with a complete long name';
+    const description = 'Full routine instructions '.repeat(20);
+    mockTemplates.mockReturnValue({
+      data: [{ ...routines[0], name, description }],
+      isLoading: false, isError: false, error: null, refetch: vi.fn(),
+    });
+    render(<RoutineWizard />);
+    expect(screen.getByRole('heading', { name })).not.toHaveClass('truncate');
+    expect(screen.getByText(description.trim())).not.toHaveClass('line-clamp-2');
+    expect(screen.getByRole('button', { name: `Install ${name}` })).toHaveClass('min-h-11');
+  });
+
+  it('keeps paused places unknown rather than reporting an empty place inventory', () => {
+    mockGeofences.mockReturnValue({ data: undefined, isLoading: false, isPending: true, fetchStatus: 'paused' });
+    render(<RoutineWizard />);
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.queryByText('Create a geofence place first to install routines.')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Install Arrive Home' })).toBeDisabled();
+  });
+
+  it('retains a selected place on refresh failure and permits installation after recovery', () => {
+    const data = [{ id: 7, name: 'Home', enabled: true, archived_at: null }];
+    const { rerender } = render(<RoutineWizard />);
+    fireEvent.change(screen.getByLabelText('Place'), { target: { value: '7' } });
+    mockGeofences.mockReturnValue({ data, isError: true, error: new Error('Refresh failed') });
+    rerender(<RoutineWizard />);
+    expect(screen.getByLabelText('Place')).toHaveValue('7');
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Install Arrive Home' })).toBeDisabled();
+    mockGeofences.mockReturnValue({ data, isError: false, error: null });
+    rerender(<RoutineWizard />);
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Install Arrive Home' })).toBeEnabled();
+  });
+
   it('shows active loading instead of an empty catalogue', () => {
     mockTemplates.mockReturnValue({ data: undefined, isLoading: true, isPending: true, fetchStatus: 'fetching' });
     const { container } = render(<RoutineWizard />);
+    expect(screen.getByRole('heading', { name: 'Geofence routines' })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
     expect(container.querySelector('[aria-hidden="true"]')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Install Arrive Home' })).not.toBeInTheDocument();
   });
@@ -80,11 +125,11 @@ describe('RoutineWizard', () => {
     });
     await waitFor(() => expect(result.current.data).toEqual(routines));
     await act(async () => { await result.current.refetch(); });
-    expect(result.current.isError).toBe(true);
+    await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.data).toEqual(routines);
     await act(async () => { await result.current.refetch(); });
-    expect(result.current.isError).toBe(false);
-    expect(result.current.data).toEqual([]);
+    await waitFor(() => expect(result.current.isError).toBe(false));
+    await waitFor(() => expect(result.current.data).toEqual([]));
     unmount();
     client.clear();
   });
@@ -92,8 +137,8 @@ describe('RoutineWizard', () => {
   it('keeps a paused catalogue unknown without claiming successful empty data', () => {
     mockTemplates.mockReturnValue({ data: undefined, isLoading: false, isPending: true, fetchStatus: 'paused' });
     render(<RoutineWizard />);
-    expect(screen.getByText('Geofence routines')).toBeInTheDocument();
-    expect(screen.getByRole('status')).toHaveTextContent('—');
+    expect(screen.getByRole('heading', { name: 'Geofence routines' })).toBeInTheDocument();
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Install Arrive Home' })).not.toBeInTheDocument();
   });
 
@@ -105,10 +150,13 @@ describe('RoutineWizard', () => {
     const { rerender } = render(<RoutineWizard />);
     expect(screen.getByText('Arrive Home')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Place'), { target: { value: '7' } });
+    expect(screen.getByRole('button', { name: 'Install Arrive Home' })).toBeDisabled();
     mockTemplates.mockReturnValue({ data: routines, isLoading: false, isError: false, error: null });
     rerender(<RoutineWizard />);
     expect(screen.getByText('Arrive Home')).toBeInTheDocument();
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Install Arrive Home' })).toBeEnabled();
   });
 
   it('validates supported template rows and rejects invalid envelopes and actions', async () => {
@@ -125,7 +173,36 @@ describe('RoutineWizard', () => {
   it('keeps the routine band visible when its catalogue is empty', () => {
     mockTemplates.mockReturnValue({ data: [], isLoading: false, isError: false, error: null, refetch: vi.fn() });
     render(<RoutineWizard />);
-    expect(screen.getByText('Geofence routines')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Geofence routines' })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Geofence routines');
+  });
+  it('keeps both initial failures independently retryable under the routine heading', () => {
+    const templatesRetry = vi.fn();
+    const placesRetry = vi.fn();
+    mockTemplates.mockReturnValue({ error: new Error('Templates failed'), refetch: templatesRetry });
+    mockGeofences.mockReturnValue({ error: new Error('Places failed'), refetch: placesRetry });
+    render(<RoutineWizard />);
+    expect(screen.getByRole('heading', { name: 'Geofence routines' })).toBeInTheDocument();
+    const retries = screen.getAllByRole('button', { name: 'Retry' });
+    fireEvent.click(retries[0]);
+    expect(placesRetry).toHaveBeenCalledTimes(1);
+    expect(templatesRetry).not.toHaveBeenCalled();
+    fireEvent.click(retries[1]);
+    expect(templatesRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries a paused catalogue independently and recovers to successful empty', () => {
+    const refetch = vi.fn();
+    mockTemplates.mockReturnValue({ fetchStatus: 'paused', isLoading: true, refetch });
+    const { rerender } = render(<RoutineWizard />);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Geofence routines' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('Loading...')).not.toBeInTheDocument();
+    mockTemplates.mockReturnValue({ data: [], isSuccess: true });
+    rerender(<RoutineWizard />);
+    expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Geofence routines');
+    expect(screen.getByLabelText('Place')).toBeInTheDocument();
   });
   it('disables install until a place is chosen, then posts template + place', () => {
     const mutate = vi.fn();

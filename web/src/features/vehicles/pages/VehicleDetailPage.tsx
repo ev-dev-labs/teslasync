@@ -1,17 +1,24 @@
+import { useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { AlertCircle } from 'lucide-react'
 
 import { PageLayout, Section } from '@/components/layout'
-import { GlassPanel } from '@/components/ui'
+import { Caption, GlassPanel } from '@/components/ui'
 import { DataProvenanceBadge } from '@/components/data-display'
 import { LiveStaleDataBanner, SectionErrorBoundary, EmptyState, QueryError, StaleRefreshWarning, useToast } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useDataState } from '@/hooks/useDataState'
+import { useOperationalMode } from '@/hooks/useOperationalMode'
+import { useOnlineStatus } from '@/hooks/useOnlineStatus'
+import { useTelemetryClock } from '@/hooks/useTelemetryFreshness'
+import { formatObservationAge } from '@/lib/observationAge'
+import { getVehicleStateEvidence, vehicleKeys, type RawStateResponse } from '@/api/hooks/useVehicles'
 import { request } from '@/api/client'
+import { VEHICLE_STATUSES } from '@/api/types'
 import type {
   Vehicle,
   VehicleStatus,
@@ -25,7 +32,7 @@ import type {
   VehicleConfigSnapshot,
 } from '@/api/types'
 
-import { deriveStatus, type StateResponse } from '../components/vehicle-detail/helpers'
+import { deriveStatus } from '../components/vehicle-detail/helpers'
 import {
   VehicleHeader,
   VehicleConfigSection,
@@ -69,13 +76,22 @@ export default function VehicleDetailPage() {
       : vehicle?.display_name
 
   const stateQuery = useQuery({
-    queryKey: ['vehicle-state', vehicleId],
-    queryFn: ({ signal }) => request<StateResponse>(`/vehicles/${vehicleId}/state`, { signal }),
+    queryKey: vehicleKeys.state(vehicleId),
+    queryFn: ({ signal }) => request<RawStateResponse | null>(`/vehicles/${vehicleId}/state`, { signal }),
     enabled: vehicleId > 0,
     refetchInterval: 30_000,
   })
   const { data: stateData, refetch: refetchState } = stateQuery
-  const stateDataState = useDataState(stateQuery, { provenance: stateData?.live === true ? 'live' : 'unknown' })
+  useTelemetryClock()
+  const stateEvidence = getVehicleStateEvidence(stateData)
+  const stateDataState = useDataState(stateQuery, {
+    provenance: stateData?.live === true ? 'live' : 'unknown',
+    partial: stateEvidence.freshness === 'unknown' || stateEvidence.verifiedFields.length === 0,
+  })
+  const stateTrustStatus = (stateDataState.status === 'ok' || stateDataState.status === 'partial') && stateEvidence.freshness === 'stale'
+    ? 'stale'
+    : stateDataState.status
+  const observationAge = formatObservationAge(stateEvidence.observedAt, t)
 
   const motorQuery = useQuery({
     queryKey: ['motor-latest', vehicleId],
@@ -134,8 +150,20 @@ export default function VehicleDetailPage() {
   const { data: vehicleConfig } = vehicleConfigQuery
 
   const toast = useToast()
+  const operationalMode = useOperationalMode()
+  const online = useOnlineStatus()
+  const wakeInFlight = useRef(false)
+  const wakeBlockReason = !operationalMode.canWrite
+    ? operationalMode.writeBlockReason ?? t('operationalMode.writeBlocked', 'Return to live mode before making operational changes.')
+    : !online
+      ? t('operationalMode.cached.writeBlocked', 'Reconnect before making operational changes.')
+      : null
   const wakeMutation = useMutation({
-    mutationFn: () => request<{ status: string }>(`/vehicles/${vehicleId}/wake`, { method: 'POST' }),
+    networkMode: 'always',
+    mutationFn: () => {
+      if (wakeBlockReason) throw new Error(wakeBlockReason)
+      return request<{ status: string }>(`/vehicles/${vehicleId}/wake`, { method: 'POST' })
+    },
     onSuccess: () => {
       toast.success(t('vehicles.detail.wakeSuccess', 'Wake command sent'))
       setTimeout(() => { refetchState() }, 5000)
@@ -143,13 +171,28 @@ export default function VehicleDetailPage() {
     onError: (err: Error) => {
       toast.error(err.message || t('vehicles.detail.wakeFailed', 'Failed to wake vehicle'))
     },
+    onSettled: () => { wakeInFlight.current = false },
   })
+  const handleWake = () => {
+    if (wakeInFlight.current || wakeMutation.isPending) return
+    if (wakeBlockReason) {
+      toast.error(wakeBlockReason)
+      return
+    }
+    wakeInFlight.current = true
+    wakeMutation.mutate()
+  }
 
   /* ─── Derived state ─── */
 
   const state = stateData?.state
-  // Keep either source's known status when the independent read is unavailable.
-  const status: VehicleStatus = deriveStatus(state ?? vehicle)
+  // A partial state object must not mask a known vehicle-record status.
+  const stateHasStatus = state != null && (
+    state.is_charging === true ||
+    (typeof state.speed === 'number' && Number.isFinite(state.speed) && state.speed > 0) ||
+    VEHICLE_STATUSES.some(status => status === state.state?.toLowerCase())
+  )
+  const status: VehicleStatus = deriveStatus(stateHasStatus ? state : vehicle)
 
   // Model + trim badge shown under the (nickname) title for quick identification.
   const subtitle = vehicle
@@ -192,24 +235,35 @@ export default function VehicleDetailPage() {
         '/vehicles/:id': effectiveName ?? t('vehicles.detail.vehicleNumber', 'Vehicle #{{id}}', { id }),
       }}
       metadataActions={
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
           <DataProvenanceBadge
             provenance={stateDataState.provenance}
-            status={stateDataState.status}
-            updatedAt={stateDataState.updatedAt}
+            status={stateTrustStatus}
           />
+          <Caption className="min-w-0 break-words" title={stateData?.observed_at ?? undefined}>
+            {observationAge
+              ? t('dashboard.fleetPosture.scope.observed', 'Last real observation {{age}}', { age: observationAge })
+              : t('dashboard.fleetPosture.scope.noObservation', 'No verified observation time for this vehicle')}
+          </Caption>
         </div>
       }
       contextActions={
         <SectionErrorBoundary name="vehicle-detail:header" fallbackTitle={t('vehicles.detail.section.headerFailed', 'Vehicle header failed to load')}>
           <FadeIn>
-            <div data-tour="vehicle-detail-tabs">
-              <VehicleHeader
-                vehicle={vehicle}
-                status={status}
-                onWake={() => wakeMutation.mutate()}
-                waking={wakeMutation.isPending}
-              />
+            <div className="min-w-0 max-w-full" data-tour="vehicle-detail-tabs">
+              <fieldset
+                disabled={wakeBlockReason != null || wakeMutation.isPending}
+                aria-describedby={wakeBlockReason ? 'vehicle-wake-blocked' : undefined}
+                className="m-0 min-w-0 border-0 p-0"
+              >
+                <VehicleHeader
+                  vehicle={vehicle}
+                  status={status}
+                  onWake={handleWake}
+                  waking={wakeMutation.isPending}
+                />
+              </fieldset>
+              {wakeBlockReason && <Caption className="break-words" id="vehicle-wake-blocked">{wakeBlockReason}</Caption>}
             </div>
           </FadeIn>
         </SectionErrorBoundary>

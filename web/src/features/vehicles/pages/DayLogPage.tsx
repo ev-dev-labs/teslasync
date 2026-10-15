@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { PageLayout } from '@/components/layout';
-import { Text } from '@/components/ui';
+import { Button, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { StaleRefreshWarning } from '@/components/feedback';
 import { useDayLog } from '@/api/hooks/useDayLog';
@@ -67,7 +67,8 @@ export default function DayLogPage() {
   }
 
   const data = state.data ?? null;
-  const isLoading = dayLogQuery.isPending;
+  const initialDeferred = !state.hasData && state.isRefreshBlocked && !state.fatalError;
+  const isLoading = !state.hasData && !state.isRefreshBlocked && dayLogQuery.isLoading;
   const fatalError = state.fatalError;
 
   return (
@@ -94,33 +95,55 @@ export default function DayLogPage() {
             : t('dayLog.brief.status.partial', 'Some sources unavailable')
           : undefined}
       />
-      <FadeIn delay={0.05}>
-        <DayLogOperationalSummary
-          data={data}
-          date={date}
-          timezone={timezone}
-          isLoading={isLoading}
-          error={fatalError}
-          status={state.status}
-          onRetry={retry}
-        />
-      </FadeIn>
+      {initialDeferred ? (
+        [
+          { id: 'daylog-summary', title: t('dayLog.summary.title', 'Day summary') },
+          { id: 'daylog-timeline', title: t('dayLog.timeline.title', 'Timeline') },
+          { id: 'daylog-sources', title: t('dayLog.sources.title', 'Sources') },
+        ].map((section) => (
+          <GlassPanel key={section.id} className="min-w-0 space-y-3 p-6" data-testid={section.id}>
+            <PanelTitle>{section.title}</PanelTitle>
+            <Text as="p" variant="bodySm" color="secondary" role="status">
+              {t('fleetOps.brief.refreshBlocked', 'Refresh paused')}
+              {' · '}
+              {t('system.outage.awaitingSource', 'This source has not resolved yet; missing evidence is not a confirmed empty result.')}
+            </Text>
+            <Button variant="secondary" onClick={retry}>
+              {t('error.retry', 'Retry')}
+            </Button>
+          </GlassPanel>
+        ))
+      ) : (
+        <>
+          <FadeIn delay={0.05}>
+            <DayLogOperationalSummary
+              data={data}
+              date={date}
+              timezone={timezone}
+              isLoading={isLoading}
+              error={fatalError}
+              status={state.status}
+              onRetry={retry}
+            />
+          </FadeIn>
 
-      <FadeIn delay={0.1}>
-        <DayLogTimeline
-          events={data?.events ?? null}
-          timezone={data?.timezone ?? timezone}
-          vehicleId={vehicleId}
-          truncated={data?.truncated ?? false}
-          isLoading={isLoading}
-          error={fatalError}
-          onRetry={retry}
-        />
-      </FadeIn>
+          <FadeIn delay={0.1}>
+            <DayLogTimeline
+              events={data?.events ?? null}
+              timezone={data?.timezone ?? timezone}
+              vehicleId={vehicleId}
+              truncated={data?.truncated ?? false}
+              isLoading={isLoading}
+              error={fatalError}
+              onRetry={retry}
+            />
+          </FadeIn>
 
-      <FadeIn delay={0.15}>
-        <DayLogSources sources={data?.sources ?? null} isLoading={isLoading} error={fatalError} onRetry={retry} />
-      </FadeIn>
+          <FadeIn delay={0.15}>
+            <DayLogSources sources={data?.sources ?? null} isLoading={isLoading} error={fatalError} onRetry={retry} />
+          </FadeIn>
+        </>
+      )}
     </PageLayout>
   );
 }

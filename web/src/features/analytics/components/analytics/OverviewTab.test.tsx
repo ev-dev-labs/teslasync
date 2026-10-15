@@ -19,7 +19,7 @@
  *   3. EMPTY       — each own panel shows its bespoke empty copy (never the
  *                    generic blank) when the payload carries no rows.
  *   4. READY/km    — the Distance chart receives the km-converted series keyed
- *                    by vehicle name; the DOW + Monthly charts receive their
+ *                    by vehicle ID with display names; the DOW + Monthly charts receive their
  *                    payloads verbatim with the right series wiring.
  *   5. READY/mi    — the same payload is re-expressed in miles (genuine
  *                    conversion via the real lib) and the bar's unit name flips.
@@ -53,8 +53,12 @@ import { ToastProvider } from '@/components/feedback';
 import type { ReactNode } from 'react';
 import type { FleetAnalytics } from '@/api/types';
 import type { FleetAnalyticsQuery } from './constants';
+import type { ChartTooltipProps } from '@/components/charts/ChartTooltip';
 
-const { mockUseSettings } = vi.hoisted(() => ({ mockUseSettings: vi.fn() }));
+const { mockUseSettings, captureTooltip } = vi.hoisted(() => ({
+  mockUseSettings: vi.fn(),
+  captureTooltip: vi.fn(),
+}));
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
@@ -72,6 +76,10 @@ vi.mock('@/hooks/useSettings', async () => {
   return { ...actual, useSettings: mockUseSettings };
 });
 
+vi.mock('@/hooks/useSelectedVehicle', () => ({
+  useSelectedVehicle: () => ({ vehicle: null }),
+}));
+
 // Charts: surface each chart's derived `data` + series props for inspection.
 // Keep the real, non-rendering utilities (safe / CHART_COLORS / margins) so the
 // component's math + palette stay genuine; replace only the pixel-pushing
@@ -82,7 +90,10 @@ vi.mock('@/components/charts', async () => {
   return {
     ...actual,
     chartGrid: null,
-    ChartTooltip: () => null,
+    ChartTooltip: (props: ChartTooltipProps) => {
+      captureTooltip(props);
+      return null;
+    },
     ResponsiveContainer: ({ children }: { children?: ReactNode }) => (
       <div data-testid="responsive-container">{children}</div>
     ),
@@ -102,7 +113,7 @@ vi.mock('@/components/charts', async () => {
       <div data-testid="x-axis" data-key={String(dataKey)} />
     ),
     YAxis: () => null,
-    Tooltip: () => null,
+    Tooltip: ({ content }: { content?: ReactNode }) => <>{content}</>,
     Legend: () => null,
   };
 });
@@ -125,6 +136,7 @@ import { OverviewTab } from './OverviewTab';
 /** Minimal settings bag — the real `useUnits()` only reads these fields. */
 function settingsFor(length: 'km' | 'mi') {
   return {
+    locale: 'en-US',
     settings: {
       unit_of_length: length,
       unit_of_temp: 'C',
@@ -276,15 +288,28 @@ describe('OverviewTab — empty state', () => {
 });
 
 describe('OverviewTab — ready state (metric)', () => {
-  it('feeds the Distance chart the km-converted series keyed by vehicle name with the unit-named bar', () => {
+  it('retains distinct vehicle IDs and distance values when display names match', () => {
+    renderTab(makeQuery({ data: fleetData({
+      vehicle_comparison: [
+        vehicle({ id: 11, name: 'Shared', distance: 100 }),
+        vehicle({ id: 12, name: 'Shared', distance: 50 }),
+      ],
+    }) }));
+    expect(seriesOf(panelByTitle(/Distance by vehicle/i), 'bar-chart')).toEqual([
+      { id: 11, name: 'Shared', distance: 100 },
+      { id: 12, name: 'Shared', distance: 50 },
+    ]);
+  });
+
+  it('feeds the Distance chart ID-backed km-converted rows with display names and the unit-named bar', () => {
     renderTab(makeQuery({ data: fleetData(FULL) }));
 
     const panel = panelByTitle(/Distance by vehicle/i);
     const data = seriesOf(panel, 'bar-chart');
     // km path: SI-km value passes straight through (× 1000 m ÷ 1000 = km).
     expect(data).toEqual([
-      { name: 'Model 3', distance: 100 },
-      { name: 'Model Y', distance: 50 },
+      { id: 1, name: 'Model 3', distance: 100 },
+      { id: 2, name: 'Model Y', distance: 50 },
     ]);
 
     // Category axis + the single value bar, whose name is the display unit.
@@ -298,9 +323,9 @@ describe('OverviewTab — ready state (metric)', () => {
     renderTab(makeQuery({ data: fleetData(FULL) }));
 
     const panel = panelByTitle(/Day of week pattern/i);
-    expect(seriesOf(panel, 'composed-chart')).toEqual(FULL.day_of_week);
+    expect(seriesOf(panel, 'composed-chart')).toEqual(FULL.day_of_week.map(row => ({ ...row, day_label: row.day })));
 
-    expect(within(panel).getByTestId('x-axis')).toHaveAttribute('data-key', 'day');
+    expect(within(panel).getByTestId('x-axis')).toHaveAttribute('data-key', 'day_label');
     expect(within(panel).getByTestId('bar')).toHaveAttribute('data-key', 'drives');
     expect(within(panel).getByTestId('line')).toHaveAttribute('data-key', 'avg_distance');
   });
@@ -316,6 +341,40 @@ describe('OverviewTab — ready state (metric)', () => {
     expect(bars).toEqual(['cost', 'gas_cost']);
     expect(within(panel).getByTestId('line')).toHaveAttribute('data-key', 'savings');
   });
+});
+
+describe('OverviewTab — localized weekday identities', () => {
+  it.each(['America/Los_Angeles', 'Pacific/Kiritimati'])(
+    'uses the saved locale without shifting calendar buckets in %s',
+    (timezone) => {
+      const saved = settingsFor('km');
+      mockUseSettings.mockReturnValue({
+        ...saved, locale: 'de-DE',
+        settings: { ...saved.settings, locale: 'de-DE', timezone_user: timezone, tz_display_default: 'user' },
+      });
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const rows = days.map((day, i) => ({ day, drives: i, distance: i * 10, avg_distance: i }));
+      renderTab(makeQuery({ data: fleetData({ day_of_week: rows }) }));
+      const result = seriesOf(panelByTitle(/Day of week pattern/i), 'composed-chart');
+      expect(result.map(row => row.day)).toEqual(days);
+      expect(result.map(row => row.day_label)).toEqual(['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']);
+      expect(result.map(({ day_label: _label, ...row }) => row)).toEqual(rows);
+      expect(rows.map(row => row.day)).toEqual(days);
+    },
+  );
+
+  it.each([undefined, null, '', 'not-a-date', '2026-02-30', '2026-10-14T00:00:00Z', '2026-10-14T23:59:59Z'])(
+    'does not parse or invent a weekday for a missing or invalid identity %s',
+    (day) => {
+      const row = Object.assign({}, FULL.day_of_week[0], { day });
+      const data = Object.assign(fleetData(), { drive_analytics: { day_of_week: [row] } });
+      renderTab(makeQuery({ data }));
+      const result = seriesOf(panelByTitle(/Day of week pattern/i), 'composed-chart')[0];
+      expect(result.day).toBe(day);
+      expect(result.day_label).toBe(day || DASH);
+      expect(result.drives).toBe(row.drives);
+    },
+  );
 });
 
 describe('OverviewTab — ready state (imperial)', () => {
@@ -335,6 +394,32 @@ describe('OverviewTab — ready state (imperial)', () => {
 });
 
 describe('OverviewTab — null safety', () => {
+  it.each([0, 2.75, -2.25, 0.125, -0.125])('preserves signed monthly savings %s in chart and tooltip', (savings) => {
+    renderTab(makeQuery({ data: fleetData({
+      monthly_trend: [{ ...FULL.monthly_trend[0], savings }],
+    }) }));
+    expect(seriesOf(panelByTitle(/Monthly cost comparison/i), 'composed-chart')[0].savings).toBe(savings);
+    const props: ChartTooltipProps = captureTooltip.mock.calls.at(-1)?.[0];
+    const formatted = props.formatter?.(savings, 'Savings', { value: savings, dataKey: 'savings' }, 0, []);
+    expect(formatted).toEqual([
+      `$${savings.toFixed(2)}${savings < 0 ? ' (Additional spending)' : ''}`,
+      'Savings',
+    ]);
+  });
+
+  it.each([undefined, null, NaN, Infinity, -Infinity, '0'])(
+    'keeps missing/invalid monthly savings %s unknown instead of measured zero',
+    (savings) => {
+      const row = Object.assign({}, FULL.monthly_trend[0], { savings });
+      const data = Object.assign(fleetData(), { charging_analytics: { monthly_trend: [row] } });
+      renderTab(makeQuery({ data }));
+      expect(seriesOf(panelByTitle(/Monthly cost comparison/i), 'composed-chart')[0].savings).toBeNull();
+      const props: ChartTooltipProps = captureTooltip.mock.calls.at(-1)?.[0];
+      expect(props.formatter?.(savings, 'Savings', { value: savings, dataKey: 'savings' }, 0, []))
+        .toEqual([DASH, 'Savings']);
+    },
+  );
+
   it('degrades a vehicle missing its name/distance to an em-dash label and a safe 0 (not undefined/NaN), still rendering the chart', () => {
     const query = makeQuery({
       data: fleetData({ vehicle_comparison: [{ id: 9, energy: 1, efficiency: 1, drives: 1 }] }),
@@ -343,7 +428,7 @@ describe('OverviewTab — null safety', () => {
 
     const panel = panelByTitle(/Distance by vehicle/i);
     const data = seriesOf(panel, 'bar-chart');
-    expect(data).toEqual([{ name: DASH, distance: 0 }]);
+    expect(data).toEqual([{ id: 9, name: DASH, distance: 0 }]);
     // The value is a real 0, never a NaN sentinel.
     expect(Number.isNaN(data[0].distance)).toBe(false);
 

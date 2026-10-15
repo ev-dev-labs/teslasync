@@ -14,6 +14,8 @@ export function GuardControls({ model: m }: { model: GuardPageModel }) {
   const StateIcon = m.policyEnabled == null ? Info : m.policyEnabled ? ShieldCheck : ShieldOff;
   // An unsaved policy is a legitimate editable state, not a failed config read.
   const configReady = m.configQuery.data !== undefined;
+  const initialDeferred = !m.noVehicle && !m.configState.hasData &&
+    !m.configState.fatalError && !m.configQuery.isLoading;
   return (
     <section aria-label={t('guard.controlSection', 'Guard control and live location')}
       className={cn('flex min-w-0 flex-col gap-4', placement?.className)}>
@@ -28,6 +30,20 @@ export function GuardControls({ model: m }: { model: GuardPageModel }) {
         <HelperText>{t('guard.modernization.policyOnly', 'Saved policy only; not confirmation of active monitoring or successful arming.')}</HelperText>
         <HelperText>{t('guard.modernization.armingEffect', 'Enabling saves policy and requests door locking, then Sentry on. Disabling saves policy only; it does not unlock doors or turn Sentry off.')}</HelperText>
         <StaleRefreshWarning state={m.configState} label={t('guard.settings', 'Guard settings')} />
+        {initialDeferred && (
+          <div className="min-w-0 space-y-2">
+            <HelperText role="status" data-initial-deferred={m.configState.isRefreshBlocked ? 'paused' : 'pending'}>
+              {m.configState.isRefreshBlocked
+                ? t('dataSources.status.paused', 'Refresh paused')
+                : t('dataSources.status.pending', 'Pending')}
+            </HelperText>
+            {m.configState.retry && (
+              <Button variant="secondary" size="sm" onClick={m.configState.retry}>
+                {t('common.refresh', 'Refresh')}
+              </Button>
+            )}
+          </div>
+        )}
         {m.configState.fatalError && <QueryError error={m.configState.fatalError} onRetry={m.configState.retry ?? undefined} />}
         {m.configQuery.isLoading && !configReady && <Skeleton height={44} />}
         {(configReady || m.noVehicle) && (

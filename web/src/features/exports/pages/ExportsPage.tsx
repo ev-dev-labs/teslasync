@@ -102,6 +102,7 @@ export default function ExportsPage() {
           'Selected jobs and their downloadable artifacts will be permanently removed.',
         ),
         confirmLabel: t('common.delete', 'Delete'),
+        cancelLabel: t('common.cancel', 'Cancel'),
         variant: 'danger',
       });
       if (!ok) return;
@@ -301,6 +302,7 @@ export default function ExportsPage() {
               ) : (
                 <DataTable
                   tableId="exports:jobs"
+                  variant="embedded"
                   caption={t('exportsList.jobs.title', 'Export jobs')}
                   columns={columns}
                   data={sortedJobs}

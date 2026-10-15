@@ -125,6 +125,16 @@ describe('RecentPagesPanel — defensive count clamping', () => {
 })
 
 describe('RecentPagesPanel — accessibility', () => {
+  it.each([0, 3])('keeps the clear action touch-sized and wrapping with %i entries, restoring desktop sizing', (count) => {
+    renderPanel(count)
+
+    const button = screen.getByTestId('privacy-clear-recent-pages')
+    expect(button).toHaveClass('h-auto', 'min-h-11', 'md:min-h-10', 'whitespace-normal', 'max-w-full')
+    expect(screen.getByText('Clear recent pages')).toHaveClass('min-w-0', 'break-words')
+    expect(button).not.toHaveClass('h-10')
+    expect(button.querySelector('svg')?.parentElement).toHaveClass('shrink-0')
+  })
+
   it('exposes the counter as a polite live region', () => {
     renderPanel(7)
     const status = screen.getByRole('status')

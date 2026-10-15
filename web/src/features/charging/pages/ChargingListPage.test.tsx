@@ -560,6 +560,34 @@ describe('ChargingListPage — responsive evidence adoption', () => {
     expect(screen.getByRole('button', { name: 'Reset filters' })).toBeInTheDocument();
   });
 
+  it.each([false, true])('distinguishes filtered no-match and restores populated history on reset (desktop=%s)', async (desktop) => {
+    mediaState.desktop = desktop;
+    renderPage(['/charging?from=2000-01-01&to=2100-01-01&q=nonexistent-charge-location']);
+    const list = screen.getByRole('region', { name: 'All charging sessions' });
+    expect(await within(list).findByText('No charging sessions in this view')).toBeInTheDocument();
+    expect(within(list).getByText('Try switching to a different collection or clearing your filters.')).toBeInTheDocument();
+    expect(within(list).queryByText('No charging sessions yet')).not.toBeInTheDocument();
+    expect(within(list).queryByText('Charging data will appear here once your vehicle records sessions.')).not.toBeInTheDocument();
+
+    fireEvent.click(within(list).getByRole('button', { name: 'Reset filters' }));
+    await waitFor(() => {
+      expect(new URLSearchParams(screen.getByTestId('pagination-location').textContent ?? '').get('q')).toBeNull();
+      expect(document.querySelector('a[href="/charging/1"]')).toBeInTheDocument();
+    });
+    expect(within(list).queryByText('No charging sessions in this view')).not.toBeInTheDocument();
+  });
+
+  it.each([
+    'coll=tagged',
+    `grid_values=${encodeURIComponent(JSON.stringify({ cost: ['999'] }))}`,
+  ])('uses filtered no-match copy for %s', async (filter) => {
+    renderPage([`/charging?from=2000-01-01&to=2100-01-01&${filter}`]);
+    const list = screen.getByRole('region', { name: 'All charging sessions' });
+    expect(await within(list).findByText('No charging sessions in this view')).toBeInTheDocument();
+    expect(within(list).queryByText('No charging sessions yet')).not.toBeInTheDocument();
+    expect(within(list).getByRole('button', { name: 'Reset filters' })).toBeInTheDocument();
+  });
+
   it('does not describe unknown battery state as zero-percent departure readiness', () => {
     mockVehicleState.mockReturnValue(qr({ data: { state: { ...LIVE_STATE, battery_level: null } } }));
     renderPage();
@@ -759,6 +787,8 @@ describe('ChargingListPage — pagination', () => {
       expect(urlParams().get('page')).toBe(page === 1 ? null : String(page));
       expect(urlParams().get('size')).toBe(pageSize === 50 ? null : String(pageSize));
     });
+    expect(screen.queryByText('No charging sessions yet')).not.toBeInTheDocument();
+    expect(screen.queryByText('No charging sessions in this view')).not.toBeInTheDocument();
   });
 
   it('preserves a requested page while loading and clamps only after results arrive', async () => {
@@ -1154,6 +1184,20 @@ describe('ChargingListPage — distance conversion (SI regression guard)', () =>
 });
 
 describe('ChargingListPage — non-happy states', () => {
+  it.each(['pending', 'failed'])('does not claim a filtered no-match while history is %s', (state) => {
+    mockSessions.mockReturnValue(state === 'pending'
+      ? qr({ fetchStatus: 'paused' })
+      : qr({ isError: true, error: new Error('History failed') }));
+    renderPage(['/charging?from=2000-01-01&to=2100-01-01&q=nonexistent-charge-location&page=3&size=2']);
+    const list = screen.getByRole('region', { name: 'All charging sessions' });
+    expect(within(list).queryByText('No charging sessions in this view')).not.toBeInTheDocument();
+    expect(within(list).queryByText('No charging sessions yet')).not.toBeInTheDocument();
+    expect(new URLSearchParams(screen.getByTestId('pagination-location').textContent ?? '').get('page')).toBe('3');
+    if (state === 'failed') {
+      expect(within(list).getByRole('button', { name: /retry/i })).toBeInTheDocument();
+    }
+  });
+
   it('renders both the range and list empty states when there are no sessions', async () => {
     mockSessions.mockReturnValue(qr({ data: [] }));
     renderPage();

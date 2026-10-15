@@ -15,6 +15,28 @@ import {
 
 const NOW_MS = Date.parse('2026-08-08T12:00:00.000Z');
 
+describe('certificate timestamp evidence', () => {
+  it('keeps UTC hash days and trend dates independent of display day boundaries', () => {
+    const source = passport({
+      issued_at: '2026-08-08T00:30:00Z',
+      first_observed_at: '2024-01-02T23:30:00-08:00',
+    });
+    const result = analyzeBatteryPassport(source, NOW_MS);
+    expect(result.hashFacts.issuedAtDay).toBe('2026-08-08');
+    expect(result.hashFacts.firstObservedDay).toBe('2024-01-03');
+    expect(result.trend.points.map(point => point.date)).toEqual(['2026-05-01', '2026-08-01']);
+    expect(toBatteryPassportCertificate(source).issued_at).toBe(source.issued_at);
+  });
+
+  it.each(['not-a-date', ''])('does not manufacture hash days from unavailable timestamps: %s', value => {
+    const source = passport({ issued_at: value, first_observed_at: value });
+    const result = analyzeBatteryPassport(source, NOW_MS);
+    expect(result.hashFacts.issuedAtDay).toBeNull();
+    expect(result.hashFacts.firstObservedDay).toBeNull();
+    expect(toBatteryPassportCertificate(source).issued_at).toBe(value);
+  });
+});
+
 function passport(
   overrides: Partial<BatteryPassport> = {},
 ): BatteryPassport {

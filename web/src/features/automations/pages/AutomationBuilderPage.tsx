@@ -85,6 +85,7 @@ import type {
 } from '../components/stepInputTypes';
 import { VisuallyHidden } from '@/components/a11y';
 import { neonColorMap, typography } from '@/lib/tokens';
+import { BOOL_FIELD_KEYS } from '@/lib/signals';
 
 interface FormState {
   name: string;
@@ -262,7 +263,44 @@ export function triggerNeedsPlace(trigger: AutomationTriggerStepInput): boolean 
 }
 
 export function conditionNeedsPlace(condition: AutomationConditionStepInput): boolean {
-  return condition.kind === 'condition_geofence' && condition.place_id <= 0;
+  return condition.kind === 'condition_geofence'
+    && (!Number.isSafeInteger(condition.place_id) || condition.place_id <= 0);
+}
+
+export function conditionIsIncomplete(condition: AutomationConditionStepInput): boolean {
+  const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
+  switch (condition.kind) {
+    case 'condition_geofence':
+      return conditionNeedsPlace(condition) || !['inside', 'outside', 'dwell'].includes(condition.state);
+    case 'condition_other_automation':
+      return !Number.isSafeInteger(condition.other_automation_id) || condition.other_automation_id <= 0
+        || !['enabled', 'disabled', 'recently_triggered'].includes(condition.state);
+    case 'condition_time_window':
+      return !/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(condition.start_time)
+        || !/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(condition.end_time)
+        || !condition.timezone?.trim()
+        || !Array.isArray(condition.days_of_week)
+        || condition.days_of_week.some((day) => !Number.isInteger(day) || day < 0 || day > 6);
+    case 'condition_signal':
+      if (!condition.signal?.trim() || !['=', '!=', '<', '<=', '>', '>=', 'between', 'in'].includes(condition.op)) return true;
+      if (condition.op === 'between') {
+        return !finite(condition.value_min) || !finite(condition.value_max)
+          || condition.value_min > condition.value_max;
+      }
+      if (condition.op === 'in') {
+        const values = condition.value_text?.split(',').map((value) => value.trim()) ?? [];
+        return values.length === 0 || values.some((value) => value === ''
+          || (BOOL_FIELD_KEYS.has(condition.signal) ? !['true', 'false'].includes(value)
+            : condition.signal !== 'state' && !finite(Number(value))));
+      }
+      if (BOOL_FIELD_KEYS.has(condition.signal)) {
+        return !['=', '!='].includes(condition.op) || typeof condition.value_bool !== 'boolean';
+      }
+      if (condition.signal === 'state') {
+        return !['=', '!='].includes(condition.op) || !condition.value_text?.trim();
+      }
+      return !finite(condition.value_num);
+  }
 }
 
 export function actionIsIncomplete(action: AutomationActionStepInput): boolean {
@@ -544,7 +582,19 @@ export default function AutomationBuilderPage() {
   const nameReady = form.name.trim() !== '';
   const triggerReady = form.triggers.length > 0 && !form.triggers.some(triggerNeedsPlace);
   const actionsReady = form.actions.length > 0 && !form.actions.some(actionIsIncomplete);
-  const conditionsReady = !form.conditions.some(conditionNeedsPlace);
+  const incompleteCondition = form.conditions.find(conditionIsIncomplete);
+  const conditionsReady = !incompleteCondition;
+  const conditionError = incompleteCondition
+    ? conditionNeedsPlace(incompleteCondition)
+      ? t('automations.builder.errorConditionPlace', 'Select a geofence for each geofence condition')
+      : `${t('automations.builder.summaryConditions', 'Conditions')}: ${t(
+        incompleteCondition.kind === 'condition_signal' ? 'automations.conditions.signal'
+          : incompleteCondition.kind === 'condition_time_window' ? 'automations.conditions.timeWindow'
+            : incompleteCondition.kind === 'condition_other_automation' ? 'automations.conditions.otherAutomation'
+              : 'automations.conditions.geofence',
+      )} — ${t('automations.builder.readyPending', 'incomplete')}`
+    : null;
+  const conditionErrorId = `${saveErrorId}-conditions`;
   const allReady = nameReady
     && triggerReady
     && actionsReady
@@ -575,14 +625,24 @@ export default function AutomationBuilderPage() {
     setDirty(true);
   }, [setFormValue]);
 
+  const updateSelectedTrigger = useCallback(
+    (trigger: AutomationTriggerStepInput | null) => {
+      setFormValue((previous) => ({
+        ...previous,
+        triggers: trigger
+          ? [trigger, ...previous.triggers.slice(1)]
+          : previous.triggers.slice(1),
+      }));
+      setDirty(true);
+    },
+    [setFormValue],
+  );
+
   const handleTriggerKindChange = useCallback(
     (nextKind: string) => {
-      update(
-        'triggers',
-        nextKind ? [createDefaultTrigger(nextKind as AutomationTriggerKind)] : [],
-      );
+      updateSelectedTrigger(nextKind ? createDefaultTrigger(nextKind as AutomationTriggerKind) : null);
     },
-    [update],
+    [updateSelectedTrigger],
   );
 
   const validate = useCallback((): string | null => {
@@ -595,9 +655,7 @@ export default function AutomationBuilderPage() {
     if (form.triggers.some(triggerNeedsPlace)) {
       return t('automations.builder.errorTriggerPlace', 'Select a geofence for the trigger');
     }
-    if (form.conditions.some(conditionNeedsPlace)) {
-      return t('automations.builder.errorConditionPlace', 'Select a geofence for each geofence condition');
-    }
+    if (conditionError) return conditionError;
     if (form.actions.length === 0) {
       return t('automations.builder.errorActions', 'At least one action is required');
     }
@@ -605,7 +663,7 @@ export default function AutomationBuilderPage() {
       return t('automations.builder.errorActionDetails', 'Complete every action before saving');
     }
     return null;
-  }, [form, t]);
+  }, [conditionError, form, t]);
 
   const handleSave = useCallback(async () => {
     if (presetUnavailable) return;
@@ -923,7 +981,7 @@ export default function AutomationBuilderPage() {
                     <GlassPanel className="mt-3 p-4">
                       <TriggerConfigurator
                         trigger={selectedTrigger}
-                        onChange={(trigger) => update('triggers', [trigger])}
+                        onChange={updateSelectedTrigger}
                       />
                     </GlassPanel>
                   ) : (
@@ -941,7 +999,13 @@ export default function AutomationBuilderPage() {
             </FadeIn>
 
             <FadeIn delay={0.1}>
-              <div data-tour="automation-conditions">
+              <div
+                data-tour="automation-conditions"
+                role="group"
+                aria-label={t('automations.builder.onlyIf', 'Only if (conditions)')}
+                aria-invalid={!conditionsReady ? 'true' : undefined}
+                aria-describedby={conditionError ? conditionErrorId : undefined}
+              >
                 <FormSection
                   title={t('automations.builder.onlyIf', 'Only if (conditions)')}
                   description={t(
@@ -1022,8 +1086,8 @@ export default function AutomationBuilderPage() {
                   ))}
                 </ul>
                 {!conditionsReady && (
-                  <Text as="p" variant="bodySm" color="secondary" className="mt-3 break-words">
-                    {t('automations.builder.errorConditionPlace', 'Select a geofence for each geofence condition')}
+                  <Text id={conditionErrorId} as="p" variant="bodySm" color="secondary" className="mt-3 break-words" role="status">
+                    {conditionError}
                   </Text>
                 )}
                 <div className="mt-4">

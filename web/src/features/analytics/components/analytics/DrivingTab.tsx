@@ -72,13 +72,15 @@ export function DrivingTab({ query }: { query: FleetAnalyticsQuery }) {
       })),
     [tempEff, tempUnit, fromWhPerKm, fromKm],
   );
-  // Keep only points with a positive efficiency, then project the survivors into
-  // the user's efficiency unit (Wh/mi vs Wh/km) to match the axis label.
+  // A returned efficiency needs usable driving distance; charging energy is
+  // not a substitute for a missing daily driving-energy measurement.
   const effTrend = useMemo(
     () =>
       dailyTrend
-        .filter((d) => safe(d.efficiency) > 0)
-        .map((d) => ({ ...d, efficiency: fromWhPerKm(safe(d.efficiency)) })),
+        .flatMap((d) => Number.isFinite(d.distance) && d.distance > 0
+          && d.efficiency != null && Number.isFinite(d.efficiency) && d.efficiency > 0
+          ? [{ ...d, efficiency: fromWhPerKm(d.efficiency) }]
+          : []),
     [dailyTrend, fromWhPerKm],
   );
 
@@ -292,7 +294,7 @@ export function DrivingTab({ query }: { query: FleetAnalyticsQuery }) {
           error={err}
           onRetry={refetch}
           isEmpty={effTrend.length === 0}
-          emptyMessage={t('analytics.driving.noEffTrend', 'No efficiency trend data')}
+          emptyMessage={`${t('analytics.brief.unavailable', 'Evidence unavailable')}: ${t('analytics.driving.noEffTrend', 'No efficiency trend data')}`}
           ariaLabel={`${t('analytics.driving.effTrendAria', 'Daily efficiency trend')} (${efficiencyUnit})`}
           size="detail"
           data={effTrend}

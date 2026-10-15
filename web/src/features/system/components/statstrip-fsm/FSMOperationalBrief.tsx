@@ -8,6 +8,7 @@ import type { StatPeriod } from '@/lib/metric-reference';
 import type { FSMTransition } from '@/types/fsm';
 import { computeFlapIds } from '../FSMHealthPanel';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 export function fsmMetrics(
   transitions: FSMTransition[] | undefined, total: number | undefined,
@@ -49,6 +50,7 @@ export function FSMOperationalBrief({ transitions, stateQuery, currentState, per
   onRetry: () => void;
 }) {
   const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat();
   const history = deriveDataState(transitions);
   const live = deriveDataState(stateQuery);
   const fatal = history.fatalError ?? live.fatalError;
@@ -62,8 +64,8 @@ export function FSMOperationalBrief({ transitions, stateQuery, currentState, per
       partial: 'Partial source data', unavailable: 'No source data', initialFailure: 'Source unavailable',
     }[source.status],
   });
-  const fetchedAt = (updatedAt: number | null) => updatedAt != null
-    ? t('operationalSource.fetchedAt', 'Fetched {{time}}', { time: new Date(updatedAt).toLocaleString() })
+  const fetchedAt = (updatedAt: number | null) => updatedAt != null && Number.isFinite(updatedAt)
+    ? t('operationalSource.fetchedAt', 'Fetched {{time}}', { time: formatDateTime(new Date(updatedAt)) })
     : t('operationalSource.unknownFreshness', 'Fetch time not supplied');
   const scope = period.kind === 'analysis'
     ? t('fsm.brief.bounds', '{{label}} · [{{start}}, {{end}}) · {{timezone}}', {

@@ -11,7 +11,8 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { AlertBanner } from '@/components/feedback';
-import { GlassPanel, Heading, PanelTitle, Text } from '@/components/ui';
+import { GlassPanel, Heading, Icon, PanelTitle, Text } from '@/components/ui';
+import { typography } from '@/lib/tokens';
 
 import type { ArrivalReliabilityResult } from '../../lib/arrivalReliability';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -30,7 +31,7 @@ export function ArrivalReliabilityMethodology({
   const items = [
     {
       key: 'allowance',
-      icon: <CalendarRange className="h-5 w-5" aria-hidden="true" />,
+      icon: CalendarRange,
       title: t(
         'arrivalReliability.method.allowanceTitle',
         'Observed route allowance',
@@ -42,7 +43,7 @@ export function ArrivalReliabilityMethodology({
     },
     {
       key: 'index',
-      icon: <Sigma className="h-5 w-5" aria-hidden="true" />,
+      icon: Sigma,
       title: t(
         'arrivalReliability.method.indexTitle',
         'Timing consistency index',
@@ -54,7 +55,7 @@ export function ArrivalReliabilityMethodology({
     },
     {
       key: 'spread',
-      icon: <FlaskConical className="h-5 w-5" aria-hidden="true" />,
+      icon: FlaskConical,
       title: t(
         'arrivalReliability.method.spreadTitle',
         'Robust spread and percentiles',
@@ -66,7 +67,7 @@ export function ArrivalReliabilityMethodology({
     },
     {
       key: 'normalization',
-      icon: <Route className="h-5 w-5" aria-hidden="true" />,
+      icon: Route,
       title: t(
         'arrivalReliability.method.normalizationTitle',
         'Route-normalized profiles',
@@ -78,7 +79,7 @@ export function ArrivalReliabilityMethodology({
     },
     {
       key: 'timezone',
-      icon: <CarFront className="h-5 w-5" aria-hidden="true" />,
+      icon: CarFront,
       title: t(
         'arrivalReliability.method.timezoneTitle',
         'Vehicle-local calendar',
@@ -91,7 +92,7 @@ export function ArrivalReliabilityMethodology({
     },
     {
       key: 'matching',
-      icon: <MapPinned className="h-5 w-5" aria-hidden="true" />,
+      icon: MapPinned,
       title: t(
         'arrivalReliability.method.matchingTitle',
         'Directional route matching',
@@ -103,7 +104,7 @@ export function ArrivalReliabilityMethodology({
     },
     {
       key: 'support',
-      icon: <CircleSlash2 className="h-5 w-5" aria-hidden="true" />,
+      icon: CircleSlash2,
       title: t(
         'arrivalReliability.method.supportTitle',
         'Sample gates and support',
@@ -119,7 +120,7 @@ export function ArrivalReliabilityMethodology({
     },
     {
       key: 'limits',
-      icon: <CloudSun className="h-5 w-5" aria-hidden="true" />,
+      icon: CloudSun,
       title: t(
         'arrivalReliability.method.limitsTitle',
         'Inputs and interpretation limits',
@@ -136,7 +137,7 @@ export function ArrivalReliabilityMethodology({
     <section data-testid="arrival-methodology">
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
-          <FlaskConical className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Icon icon={FlaskConical} className={typography.color.secondary} />
           {t(
             'arrivalReliability.method.title',
             'Methodology and limitations',
@@ -154,8 +155,8 @@ export function ArrivalReliabilityMethodology({
               key={item.key}
               className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4"
             >
-              <div className="mb-2 flex items-center gap-2 text-cyan-300">
-                {item.icon}
+              <div className="mb-2 flex items-center gap-2">
+                <Icon icon={item.icon} size="lg" className={typography.color.secondary} />
                 <Heading level="sub">{item.title}</Heading>
               </div>
               <Text as="p" variant="bodySm">

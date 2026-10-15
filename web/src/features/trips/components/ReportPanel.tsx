@@ -12,6 +12,7 @@ import { JourneyEvidenceList } from './continuation-mobility-trips-watch/Journey
 
 import { safeArray } from '@/lib/safeArray';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 /**
  * Trip report card: distance, duration, detour factor, plan/replan
@@ -19,6 +20,7 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
  * transitions, check-ins, and replans.
  */
 export function ReportPanel({ session }: { session: JourneySession }) {
+  const { formatDateTime } = useDateFormat();
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const units = useUnits();
@@ -27,9 +29,10 @@ export function ReportPanel({ session }: { session: JourneySession }) {
   const reportState = useDataState(reportQuery);
   const report = reportQuery.data ?? null;
   const reportEvidence = safeArray(report?.evidence);
+  const endedAt = report?.ended_at ?? session.ended_at;
   const scope = t('trips.brief.report.scope', 'Journey #{{id}} · {{start}} – {{end}}', {
-    id: session.id, start: report?.started_at ?? session.started_at ?? session.created_at,
-    end: report?.ended_at ?? session.ended_at ?? t('trips.detail.inProgress', 'In progress'),
+    id: session.id, start: formatDateTime(report?.started_at ?? session.started_at ?? session.created_at),
+    end: endedAt != null ? formatDateTime(endedAt) : t('trips.detail.inProgress', 'In progress'),
   });
   const metrics: readonly StatMetric[] = [
     { metricId: 'distance', occurrenceId: 'distance', rawValue: report?.distance_m,

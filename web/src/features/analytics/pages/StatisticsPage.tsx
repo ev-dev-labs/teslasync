@@ -115,19 +115,13 @@ export default function StatisticsPage() {
   /* ── Derived ───────────────────────────────────────────────────── */
   const stateData = useMemo(() => {
     if (!stateSummary?.length) return [];
-    // Preserve both existing minute shapes at the display boundary.
-    // The restored endpoint and inherited hook contract are parent-owned;
-    // this presentation change does not reinterpret either source.
-    const minutes = stateSummary.map((e) => knownNumber(e.totalMin)
-      ?? knownNumber((e as { total_min?: number }).total_min));
-    const total = minutes.some(value => value == null || value < 0)
-      ? null : minutes.reduce<number>((sum, value) => sum + (value ?? 0), 0);
-    return stateSummary.map((e, index) => {
+    return stateSummary.map((e) => {
+      const percentage = knownNumber(e.percentage);
       return {
         state: e.state,
         name: Object.prototype.hasOwnProperty.call(STATE_LABELS, e.state) ? t(STATE_LABELS[e.state]) : e.state,
-        value: total != null && total > 0 && minutes[index] != null
-          ? Math.round((minutes[index] / total) * 100) : null,
+        value: percentage != null && percentage >= 0 && percentage <= 100
+          ? Math.round(percentage) : null,
         fill: palette[Object.prototype.hasOwnProperty.call(STATE_SERIES, e.state) ? STATE_SERIES[e.state] : 5],
       };
     });

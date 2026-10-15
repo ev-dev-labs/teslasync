@@ -172,6 +172,19 @@ function buildWaypoints(latest: LocationSnapshot): Waypoint[] {
 /*  Main Page                                                          */
 /* ------------------------------------------------------------------ */
 
+// Keep this page-owned read local until a shared API-hook owner is assigned.
+function useNavigationLocationHistory(vehicleId: number | null) {
+  return useQuery<LocationSnapshot[]>({
+    queryKey: ['location-history', vehicleId],
+    queryFn: ({ signal }) =>
+      request<LocationSnapshot[]>(
+        `/location-snapshots?vehicle_id=${vehicleId}&limit=200`,
+        { signal },
+      ),
+    enabled: vehicleId !== null,
+  });
+}
+
 export default function NavigationRoutePage() {
   const { fmtNumber, fmtScientificNumber } = useNumberFormatting();
   const { formatDateTime } = useDateFormat();
@@ -203,15 +216,7 @@ export default function NavigationRoutePage() {
   const latestError = latestState.fatalError;
 
   /* ---- history ---- */
-  const historyQuery = useQuery<LocationSnapshot[]>({
-    queryKey: ['location-history', vehicleId],
-    queryFn: ({ signal }) =>
-      request<LocationSnapshot[]>(
-        `/location-snapshots?vehicle_id=${vehicleId}&limit=200`,
-        { signal },
-      ),
-    enabled: vehicleId !== null,
-  });
+  const historyQuery = useNavigationLocationHistory(vehicleId);
   const { data: history, refetch: refetchHistory } = historyQuery;
   const historyState = deriveDataState(historyQuery, { provenance: 'historical', unavailable: history?.length === 0 });
   const historyLoading = historyState.status === 'initial';

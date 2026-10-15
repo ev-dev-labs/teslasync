@@ -6,6 +6,25 @@ import type { ComponentProps, ReactNode } from 'react';
 import { Children, isValidElement } from 'react';
 
 const chartProbe = vi.hoisted(() => vi.fn());
+const datePreferences = vi.hoisted(() => ({
+  locale: 'en-US',
+  timezone_user: 'UTC',
+  tz_display_default: 'user' as 'user' | 'vehicle' | 'utc',
+}));
+vi.mock('@/hooks/useSettings', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useSettings')>('@/hooks/useSettings');
+  return {
+    ...actual,
+    useSettings: () => {
+      const result = actual.useSettings();
+      return {
+        ...result,
+        locale: datePreferences.locale,
+        settings: { ...result.settings, ...datePreferences },
+      };
+    },
+  };
+});
 vi.mock('@/hooks/useChartPalette', () => ({ useChartPalette: () => ['series-primary', 'series-secondary'] }));
 vi.mock('@/components/charts', async () => {
   const actual = await vi.importActual<typeof import('@/components/charts')>('@/components/charts');
@@ -51,6 +70,8 @@ import { useModelTrust, useRecordOutcome, useRecordPrediction } from '@/api/hook
 import type { ModelScorecard, ModelTrustReport, Prediction } from '@/types/ownership';
 import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { MockResizeObserver } from '@/test/setup';
+import { formatDateTime } from '@/lib/dateFormat';
+import { formatPct } from '../formatters';
 import ModelTrustPage from './ModelTrustPage';
 import { expectOperationalBand, summaryMetric } from '../components/operationalbrief-all/testAssertions';
 
@@ -134,6 +155,7 @@ function renderPage() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  Object.assign(datePreferences, { locale: 'en-US', timezone_user: 'UTC', tz_display_default: 'user' });
   mockSelected.mockReturnValue({ vehicleId: 7, vehicle: null, vehicles: [], setVehicleId: vi.fn() });
   mockTrust.mockReturnValue(query(report()));
   mockPrediction.mockReturnValue({ mutate: vi.fn(), isPending: false });
@@ -141,6 +163,61 @@ beforeEach(() => {
 });
 
 describe('ModelTrustPage financial history preservation', () => {
+  it('updates page and brief dates with display preferences without rewriting raw instants or implying source freshness', () => {
+    const data = report();
+    const predictions = data.recent_predictions ?? [];
+    const model = scorecard();
+    model.quality = {
+      ...model.quality!,
+      window_start: '2026-01-02T00:30:00Z',
+      window_end: '2026-02-02T00:30:00Z',
+    };
+    data.scorecards = [model];
+    const original = structuredClone(data);
+    const loadedAt = Date.parse('2026-03-02T02:30:00Z');
+    mockTrust.mockReturnValue({ ...query(data), dataUpdatedAt: loadedAt });
+    Object.assign(datePreferences, { locale: 'de-DE', timezone_user: 'America/Los_Angeles' });
+    const view = renderPage();
+    fireEvent.click(within(card('Prediction ledger')).getByRole('button', { name: 'Score it' }));
+
+    const assertDates = (locale: string, tz: string) => {
+      const format = (value: string | Date | null | undefined) => formatDateTime(value, { locale, tz });
+      const ledger = card('Prediction ledger');
+      const rows = within(ledger).getAllByRole('row').slice(1);
+      expect(rows[0]).toHaveTextContent(format(predictions[0].predicted_at));
+      expect(rows[1]).toHaveTextContent(format(predictions[1].observed_at));
+      expect(document.getElementById('model-trust-scoring-context')).toHaveTextContent(
+        `Predicted at: ${format(predictions[0].predicted_at)}`,
+      );
+      const calibration = card('Calibration by prediction magnitude');
+      expect(within(calibration).getByRole('region', { name: 'Data quality' })).toHaveTextContent(
+        `${format(model.quality!.window_start)} – ${format(model.quality!.window_end)}`,
+      );
+      expect(calibration).toHaveTextContent(`First scored ${format(model.first_scored_at)}`);
+      expect(calibration).toHaveTextContent(`Last scored ${format(model.last_scored_at)}`);
+      const brief = card('Portfolio trust');
+      expect(brief).toHaveTextContent(tz);
+      expect(brief).toHaveTextContent(`Recorded bounds ${format(data.window.from)} → ${format(data.window.to)}`);
+      expect(brief).toHaveTextContent(`Client loaded ${format(new Date(loadedAt))}`);
+      expect(brief).toHaveTextContent('Source freshness unknown');
+      expect(brief).not.toHaveTextContent('Source as of');
+    };
+
+    assertDates('de-DE', 'America/Los_Angeles');
+    Object.assign(datePreferences, { locale: 'en-GB', tz_display_default: 'vehicle' });
+    mockSelected.mockReturnValue({
+      vehicleId: 7, vehicle: { id: 7, timezone: 'Asia/Tokyo' }, vehicles: [], setVehicleId: vi.fn(),
+    });
+    view.rerenderPage();
+    assertDates('en-GB', 'Asia/Tokyo');
+    datePreferences.tz_display_default = 'utc';
+    view.rerenderPage();
+    assertDates('en-GB', 'UTC');
+    expect(data).toEqual(original);
+    expect(mockPrediction().mutate).not.toHaveBeenCalled();
+    expect(mockOutcome().mutate).not.toHaveBeenCalled();
+  });
+
   it('retains row references, signed SI source errors and distinct absolute percentage errors in source order', () => {
     const rows = [
       prediction({ id: 11, model_name: 'Negative error', reference: 'Negative source reference', error_value: -1.125, abs_error_pct: 12.5 }),
@@ -257,6 +334,75 @@ describe('ModelTrustPage financial history preservation', () => {
 });
 
 describe('ModelTrustPage scoped modernization', () => {
+  it.each([65.123456, 0, null, undefined, NaN, Infinity])(
+    'labels bin coverage (%s) as a percent or unknown without changing raw chart values',
+    (coverage) => {
+      const model = scorecard();
+      mockTrust.mockReturnValue(query({
+        ...report(),
+        scorecards: [{ ...model, calibration: [{ ...model.calibration[0], coverage_pct: coverage }] }],
+      }));
+      renderPage();
+      const calibration = card('Calibration by prediction magnitude');
+      const table = within(calibration).getByRole('table');
+      const headers = within(table).getAllByRole('columnheader');
+      const coverageIndex = headers.findIndex(header => header.textContent === 'Coverage');
+      expect(coverageIndex).toBeGreaterThanOrEqual(0);
+      const cell = within(table).getAllByRole('row')[1].querySelectorAll('td')[coverageIndex];
+      expect(cell.textContent).toBe(typeof coverage === 'number' && Number.isFinite(coverage)
+        ? formatPct(coverage) : '—');
+      expect(chartProbe.mock.calls.at(-1)![0].data[0]).toMatchObject({
+        error: model.calibration![0].mean_abs_error,
+        bias: model.calibration![0].mean_bias,
+        coverage,
+        samples: 4,
+      });
+    },
+  );
+
+  it('shows the selected model quality, window and reasons separately from portfolio evidence', () => {
+    const first = {
+      ...scorecard(),
+      quality: {
+        status: 'limited' as const, sample_count: 4, coverage_pct: 65,
+        window_start: '2026-01-02T00:00:00Z', window_end: '2026-02-02T00:00:00Z',
+        reasons: ['Only four scored model outcomes'],
+      },
+    };
+    const second = {
+      ...scorecard(), model_name: 'Other model',
+      quality: {
+        status: 'insufficient' as const, sample_count: 0, coverage_pct: null,
+        window_start: null, window_end: null, reasons: ['No scored outcomes for this model'],
+      },
+    };
+    mockTrust.mockReturnValue(query({
+      ...report(), scorecards: [first, second],
+      quality: { ...report().quality, reasons: ['Portfolio-only quality reason'] },
+      evidence: [{ source: 'Portfolio ledger', summary: 'Portfolio-only source', sample_count: 2, observed_at: null }],
+    }));
+    renderPage();
+    const calibration = card('Calibration by prediction magnitude');
+    const quality = within(calibration).getByRole('region', { name: 'Data quality' });
+    expect(quality).toHaveTextContent('limited');
+    expect(quality).toHaveTextContent(/Coverage65(?:\.0+)?%/);
+    expect(quality).toHaveTextContent('Observation window');
+    expect(quality).toHaveTextContent(`${formatDateTime(first.quality.window_start, { locale: 'en-US', tz: 'UTC' })} – ${formatDateTime(first.quality.window_end, { locale: 'en-US', tz: 'UTC' })}`);
+    expect(quality).toHaveTextContent('Only four scored model outcomes');
+    expect(quality).not.toHaveTextContent('Portfolio-only');
+    const evidence = card('Evidence, quality, and limitations');
+    expect(evidence).toHaveTextContent('Portfolio-only quality reason');
+    expect(evidence).toHaveTextContent('Portfolio-only source');
+    expect(evidence).not.toHaveTextContent('Only four scored model outcomes');
+    fireEvent.click(within(card('Model scorecards')).getAllByRole('button', { name: 'Calibration' })[1]);
+    expect(quality).toHaveTextContent('insufficient');
+    expect(quality).toHaveTextContent('Coverage—');
+    expect(quality).toHaveTextContent('Observation window—');
+    expect(quality).toHaveTextContent('No scored outcomes for this model');
+    expect(quality).not.toHaveTextContent('Only four scored model outcomes');
+    expect(evidence).toHaveTextContent('Portfolio-only source');
+  });
+
   it.each([
     { target: 'cost_minor', si_unit: 'minor', predicted_value: 12345, observed_value: 12346 },
     { target: 'range_m', si_unit: 'm', predicted_value: 1609.344, observed_value: 1800.125 },
@@ -421,10 +567,134 @@ describe('ModelTrustPage scoped modernization', () => {
     expect(mockPrediction().mutate).not.toHaveBeenCalled();
   });
 
+  describe.each([
+    {
+      kind: 'forecast',
+      hook: mockPrediction,
+      open: 'Record prediction',
+      submit: 'Record forecast',
+      field: 'Model name required',
+      role: 'textbox',
+      value: 'Submitted forecast',
+      payload: { vehicle_id: 7, model_name: 'Submitted forecast' },
+    },
+    {
+      kind: 'outcome',
+      hook: mockOutcome,
+      open: 'Score it',
+      submit: 'Score prediction',
+      field: 'Observed value required',
+      role: 'spinbutton',
+      value: 54321,
+      payload: { prediction_id: 1, observed_value: 54321 },
+    },
+  ])('$kind submission lifecycle', ({ hook, open, submit, field, role, value, payload }) => {
+    it('freezes all submitted fields across scope changes, retains rejection and closes only on matching success', () => {
+      const mutate = vi.fn<(body: unknown, options: { onSuccess: () => void }) => void>();
+      hook.mockReturnValue({ mutate, isPending: false });
+      const view = renderPage();
+      fireEvent.click(screen.getByRole('button', { name: open }));
+      fireEvent.change(screen.getByRole(role, { name: field }), { target: { value: String(value) } });
+      const form = screen.getByRole('button', { name: submit }).closest('form')!;
+      fireEvent.submit(form);
+      expect(mutate).toHaveBeenCalledOnce();
+      expect(mutate.mock.calls[0][0]).toMatchObject(payload);
+
+      hook.mockReturnValue({ mutate, isPending: true });
+      view.rerenderPage();
+      const fields = [
+        ...within(form).queryAllByRole('textbox'),
+        ...within(form).queryAllByRole('spinbutton'),
+        ...within(form).queryAllByRole('combobox'),
+      ];
+      expect(fields).toHaveLength(open === 'Record prediction' ? 8 : 1);
+      fields.forEach(control => expect(control).toBeDisabled());
+      expect(screen.getByRole(role, { name: field })).toHaveValue(value);
+      expect(within(form).getByRole('button', { name: submit })).toBeDisabled();
+      fireEvent.click(within(card('Prediction ledger')).getByRole('button', { name: 'Cancel' }));
+      expect(screen.getByRole(role, { name: field })).toHaveValue(value);
+
+      mockSelected.mockReturnValue({ vehicleId: 8 });
+      mockTrust.mockReturnValue(query({
+        ...report(), vehicle_id: 8,
+        recent_predictions: [prediction({ id: 99, vehicle_id: 8, model_name: 'Different prediction' })],
+      }));
+      view.rerenderPage();
+      fields.forEach(control => expect(control).toBeDisabled());
+      expect(screen.getByRole(role, { name: field })).toHaveValue(value);
+      expect(screen.getByText('This form belongs to 7. Return to that context to save, or cancel and open a new form.')).toBeInTheDocument();
+      fireEvent.submit(form);
+      expect(mutate).toHaveBeenCalledOnce();
+      expect(mutate.mock.calls[0][0]).toMatchObject(payload);
+
+      hook.mockReturnValue({ mutate, isPending: false, error: new Error('submission rejected') });
+      view.rerenderPage();
+      expect(card('Prediction ledger')).toHaveTextContent('submission rejected');
+      expect(screen.getByRole(role, { name: field })).toHaveValue(value);
+      expect(screen.getByRole(role, { name: field })).toBeEnabled();
+      expect(screen.getByRole('button', { name: submit })).toBeDisabled();
+
+      mockSelected.mockReturnValue({ vehicleId: 7 });
+      view.rerenderPage();
+      expect(screen.getByRole('button', { name: submit })).toBeEnabled();
+      fireEvent.submit(form);
+      expect(mutate).toHaveBeenCalledTimes(2);
+      expect(mutate.mock.calls[1][0]).toMatchObject(payload);
+      hook.mockReturnValue({ mutate, isPending: true });
+      view.rerenderPage();
+      act(() => mutate.mock.calls[1][1].onSuccess());
+      expect(screen.queryByRole(role, { name: field })).not.toBeInTheDocument();
+    });
+
+    it('does not let a stale successful completion close a newer draft', () => {
+      const mutate = vi.fn<(body: unknown, options: { onSuccess: () => void }) => void>();
+      hook.mockReturnValue({ mutate, isPending: false });
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: open }));
+      fireEvent.change(screen.getByRole(role, { name: field }), { target: { value: String(value) } });
+      fireEvent.submit(screen.getByRole('button', { name: submit }).closest('form')!);
+      const staleSuccess = mutate.mock.calls[0][1].onSuccess;
+      act(() => staleSuccess());
+      expect(screen.queryByRole(role, { name: field })).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: open }));
+      const newerValue = role === 'textbox' ? 'New unsent forecast' : 67890;
+      fireEvent.change(screen.getByRole(role, { name: field }), { target: { value: String(newerValue) } });
+      act(() => staleSuccess());
+      expect(screen.getByRole(role, { name: field })).toHaveValue(newerValue);
+      expect(screen.getByRole('button', { name: submit })).toBeEnabled();
+      expect(mutate).toHaveBeenCalledOnce();
+    });
+
+    it('settles the captured submission successfully even if the workspace changes while pending', () => {
+      const mutate = vi.fn<(body: unknown, options: { onSuccess: () => void }) => void>();
+      hook.mockReturnValue({ mutate, isPending: false });
+      const view = renderPage();
+      fireEvent.click(screen.getByRole('button', { name: open }));
+      fireEvent.change(screen.getByRole(role, { name: field }), { target: { value: String(value) } });
+      fireEvent.submit(screen.getByRole('button', { name: submit }).closest('form')!);
+      hook.mockReturnValue({ mutate, isPending: true });
+      mockSelected.mockReturnValue({ vehicleId: 8 });
+      mockTrust.mockReturnValue(query({ ...report(), vehicle_id: 8, recent_predictions: [] }));
+      view.rerenderPage();
+      expect(screen.getByRole(role, { name: field })).toHaveValue(value);
+      expect(screen.getByRole(role, { name: field })).toBeDisabled();
+      expect(mutate.mock.calls[0][0]).toMatchObject(payload);
+      act(() => mutate.mock.calls[0][1].onSuccess());
+      expect(screen.queryByRole(role, { name: field })).not.toBeInTheDocument();
+      expect(mutate).toHaveBeenCalledOnce();
+    });
+  });
+
   it('exposes every original mobile field and both calibration and scoring actions through shared details', async () => {
-    const dimensions = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
-      width: 375, height: 300, top: 0, left: 0, right: 375, bottom: 300, x: 0, y: 0,
-      toJSON: () => ({}),
+    let allocatedWidth = 0;
+    const getBoundingClientRect = HTMLElement.prototype.getBoundingClientRect;
+    const dimensions = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      if (!this.hasAttribute('data-grid-frame')) return getBoundingClientRect.call(this);
+      return {
+        width: allocatedWidth, height: 300, top: 0, left: 0, right: allocatedWidth,
+        bottom: 300, x: 0, y: 0, toJSON: () => ({}),
+      };
     });
     const resizeObserver = globalThis.ResizeObserver;
     const observers = new Set<MockResizeObserver>();
@@ -452,11 +722,29 @@ describe('ModelTrustPage scoped modernization', () => {
         ],
       }));
       await act(async () => { renderPage(); });
+      const frames = [
+        card('Model scorecards').querySelector('[data-grid-frame]')!,
+        card('Prediction ledger').querySelector('[data-grid-frame]')!,
+      ];
+      expect(frames).toHaveLength(2);
+      for (const frame of frames) {
+        expect(frame).toBeInTheDocument();
+        expect([...observers].some(observer => observer.observed.has(frame))).toBe(true);
+        expect(frame.querySelector('[data-mobile-table]')).toBeNull();
+      }
+      allocatedWidth = 375;
       await act(async () => {
         for (const observer of observers) {
-          for (const target of observer.observed) observer.trigger(target);
+          for (const target of observer.observed) {
+            if (frames.includes(target)) observer.trigger(target);
+          }
         }
       });
+      for (const frame of frames) {
+        expect(frame.getBoundingClientRect().width).toBe(375);
+        expect(frame.querySelectorAll('[data-mobile-table]')).toHaveLength(1);
+        expect(frame.querySelector('table')).toBeNull();
+      }
       const cards = card('Model scorecards');
       expect(chartProbe.mock.calls.at(-1)![0].data[0]).toMatchObject({ error: 0.5, bias: 0.25 });
       expect(within(cards).getAllByRole('button', { name: 'Calibration' })[1]).toBeEnabled();

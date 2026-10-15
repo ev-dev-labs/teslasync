@@ -5,21 +5,31 @@ import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { formatTime } from '@/lib/dateFormat';
 import type { StatPeriod } from '@/lib/metric-reference';
 import type { YearReview } from '@/api/types';
 import { to12Hour } from '../year-review-modernization/yearReviewPresentation';
 
 export function YearPatternsBrief({ data, period, retained }: { data: YearReview; period: StatPeriod; retained?: boolean }) {
   const { t } = useTranslation();
-  const { fmtNumber, fmtInt } = useNumberFormatting();
+  const { fmtNumber, fmtInt, locale } = useNumberFormatting();
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
   const efficiencyUnit = distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km';
   const { hour12, isPM } = to12Hour(data.most_active_hour);
-  const meridiem = isPM ? t('yearReview.pm', 'PM') : t('yearReview.am', 'AM');
+  // An aggregate hour is a calendar bucket, not an instant in the saved display timezone.
+  const hour = (hour12 % 12) + (isPM ? 12 : 0);
+  const hourDisplay = data.most_active_hour != null && Number.isFinite(data.most_active_hour)
+    ? formatTime(new Date(Date.UTC(2000, 0, 2, hour)), { locale, tz: 'UTC' }) : '—';
+  const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const weekday = weekdays.indexOf(data.most_active_day_of_week ?? '');
+  const dayDisplay = weekday >= 0
+    ? new Intl.DateTimeFormat(locale, { weekday: 'long', timeZone: 'UTC' })
+      .format(new Date(Date.UTC(2000, 0, 2 + weekday)))
+    : data.most_active_day_of_week || '—';
   const metrics: StatMetric[] = [
     { metricId: 'rate', occurrenceId: 'year-drives-per-week', rawValue: data.avg_drives_per_week,
-      label: t('yearReview.drivesWeek', 'drives/week'), display: { formatter: raw => ({ value: fmtNumber(raw), unit: '' }) } },
+      label: t('yearReview.drivesWeek', 'drives/week'), display: { formatter: raw => ({ value: fmtNumber(raw, 1), unit: '' }) } },
     { metricId: 'distance', occurrenceId: 'year-distance-per-drive',
       rawValue: data.avg_distance_per_drive_km == null ? null : data.avg_distance_per_drive_km * 1000,
       label: t('yearReview.distancePerDrive', { unit: distanceUnit, defaultValue: '{{unit}}/drive avg' }),
@@ -33,9 +43,9 @@ export function YearPatternsBrief({ data, period, retained }: { data: YearReview
   return <div id="year-review-patterns" className="space-y-3">
     <div className="space-y-3">
       <div><Caption>{t('yearReview.favoriteDay', 'Favorite driving day')}</Caption>
-        <Text as="p" variant="body" className="break-words">{data.most_active_day_of_week || '—'}</Text></div>
+        <Text as="p" variant="body" className="break-words">{dayDisplay}</Text></div>
       <div><Caption>{t('yearReview.peakHour', 'Peak driving hour')}</Caption>
-        <Text as="p" variant="body" className="tabular-nums">{hour12} {meridiem}</Text></div>
+        <Text as="p" variant="body" className="tabular-nums">{hourDisplay}</Text></div>
     </div>
     <OperationalBrief compact testId="year-review-patterns-brief"
       eyebrow={t('yearReview.title', 'Year in review')} title={t('yearReview.drivingPatterns', 'Your driving patterns')}

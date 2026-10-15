@@ -480,6 +480,71 @@ describe('AINLSqlPlayground — streaming lifecycle', () => {
 })
 
 describe('AINLSqlPlayground — typed draft capture + Apply hand-off', () => {
+  it.each(['', 'Narration describes a different SQL query.'])(
+    'previews the exact typed SQL, rationale and tables before explicit Apply with narration %j',
+    async (narration) => {
+      enableFeature()
+      const onApply = vi.fn()
+      const proposal: ReadonlySQLDraft = {
+        ...validDraft,
+        sql: "SELECT vehicle_id, count(*)\nFROM drives\nGROUP BY vehicle_id;\n",
+        referenced_tables: ['drives', 'vehicles'],
+      }
+      installStreamingFetch(
+        (narration ? sseFrame('delta', { text: narration }) : '') +
+        draftFrame(proposal) + doneFrame,
+      )
+
+      render(<AINLSqlPlayground onApply={onApply} />)
+      await typePrompt(proposal.prompt)
+      await clickDraft()
+
+      const preview = await screen.findByRole('group', {
+        name: 'Proposed SQL (review before applying)',
+      })
+      expect(preview.querySelector('pre')?.textContent).toBe(proposal.sql)
+      expect(preview).toHaveTextContent(proposal.rationale)
+      expect(preview).toHaveTextContent('Referenced tables: drives, vehicles')
+      const apply = screen.getByRole('button', { name: /Apply to editor/i })
+      expect(preview.compareDocumentPosition(apply) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+      expect(onApply).not.toHaveBeenCalled()
+      const panel = screen.getByTestId('ai-output-panel')
+      expect(panel).not.toHaveTextContent('No output was generated.')
+      expect(panel).not.toHaveTextContent(proposal.sql)
+      expect(panel).toHaveTextContent(narration || 'No narration was returned.')
+      expect(screen.queryByText(/No applicable typed SQL proposal/)).not.toBeInTheDocument()
+
+      fireEvent.click(apply)
+      expect(onApply).toHaveBeenCalledExactlyOnceWith(proposal)
+    },
+  )
+
+  it.each(['', 'Here is a suggested query, but no typed proposal.'])(
+    'reports missing typed output independently of narration %j',
+    async (narration) => {
+      enableFeature()
+      const onApply = vi.fn()
+      installStreamingFetch(
+        (narration ? sseFrame('delta', { text: narration }) : '') +
+        draftFrame({ ...validDraft, sql: null }) + doneFrame,
+      )
+
+      render(<AINLSqlPlayground onApply={onApply} />)
+      await typePrompt(validDraft.prompt)
+      await clickDraft()
+
+      expect(await screen.findByText(
+        'No applicable typed SQL proposal was returned. The manual editor remains available.',
+      )).toHaveAttribute('role', 'status')
+      expect(screen.getByTestId('ai-output-panel')).toHaveTextContent(
+        narration || 'No output was generated.',
+      )
+      expect(screen.queryByTestId('ai-sql-draft-preview')).not.toBeInTheDocument()
+      expect(queryApplyButton()).not.toBeInTheDocument()
+      expect(onApply).not.toHaveBeenCalled()
+    },
+  )
+
   it('captures a valid draft_readonly_sql tool_result, shows the Apply button, and forwards the exact typed payload via onApply', async () => {
     enableFeature()
     const onApply = vi.fn()
@@ -707,6 +772,7 @@ describe('AINLSqlPlayground — stale-draft invalidation (regression guard)', ()
     )
 
     await typePrompt('a different request')
+    expect(screen.queryByTestId('ai-sql-draft-preview')).not.toBeInTheDocument()
     expect(screen.queryByTestId('ai-output-panel')).not.toBeInTheDocument()
     expect(queryApplyButton()).not.toBeInTheDocument()
     expect(draftButton()).toBeEnabled()

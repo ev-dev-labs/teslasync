@@ -30,6 +30,13 @@ const sizeConfig: Record<
   lg: { ring: 96, stroke: 5, iconSize: 'text-4xl', gap: 'gap-3', textSize: 'base' },
 };
 
+const knownAchievementIds = new Set([
+  'first-drive', 'century', 'thousand', 'ten-thousand', 'fifty-thousand',
+  'hundred-thousand', 'first-charge', 'megawatt', 'gigawatt', 'hundred-saved',
+  'thousand-saved', 'five-thousand-saved', 'ton-co2', 'tree-planter',
+  'marathon', 'earth-orbit', 'supercharger',
+]);
+
 export function AchievementBadge({ achievement, size = 'md' }: AchievementBadgeProps) {
   const { t } = useTranslation();
   const cfg = sizeConfig[size] ?? sizeConfig.md;
@@ -44,10 +51,13 @@ export function AchievementBadge({ achievement, size = 'md' }: AchievementBadgeP
   const tone = achievement.unlocked ? 'success' : isNearComplete ? 'warning' : 'neutral';
   const colors = neonColorMap[semanticToNeon[tone]];
 
-  const displayName = achievement.name || '—';
+  const localizedName = achievement.name && knownAchievementIds.has(achievement.id)
+    ? t(`lifetime.achievementNames.${achievement.id}`, achievement.name)
+    : achievement.name;
+  const displayName = localizedName || '—';
   const iconGlyph = achievement.icon || '🏆';
   const iconLabel =
-    achievement.name || achievement.description || t('lifetime.achievementBadge', 'Achievement');
+    localizedName || achievement.description || t('lifetime.achievementBadge', 'Achievement');
 
   return (
     <div

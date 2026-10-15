@@ -8,7 +8,9 @@ import {
 } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
 import { ChartCard } from '@/components/layout';
+import { chartTokens } from '@/lib/tokens';
 import { Text } from '@/components/ui';
+import { useUnits } from '@/hooks/useUnits';
 import type { SpeedHistogramBucket } from './types';
 
 interface SpeedHistogramChartProps {
@@ -17,6 +19,9 @@ interface SpeedHistogramChartProps {
 
 export function SpeedHistogramChart({ speedHistData }: SpeedHistogramChartProps) {
   const { t } = useTranslation();
+  const { unitPrefs } = useUnits();
+  const speedUnit = unitPrefs.speed;
+  const rangeLabel = `${t('driveDetail.col.range', 'Speed range')} (${speedUnit})`;
 
   // Null-safe: the drive-detail derivation may hand us `undefined`/`[]` before
   // telemetry resolves, despite the non-optional prop type. Guard once so the
@@ -32,11 +37,11 @@ export function SpeedHistogramChart({ speedHistData }: SpeedHistogramChartProps)
   return (
     <FadeIn className="h-full">
       <ChartCard
-        title={t('driveDetail.speedHistogram', 'Speed histogram')}
-        ariaLabel={t('driveDetail.speedHistogramAria', 'Speed-bucket distribution histogram')}
+        title={`${t('driveDetail.speedHistogram', 'Speed histogram')} (${speedUnit})`}
+        ariaLabel={`${t('driveDetail.speedHistogramAria', 'Speed-bucket distribution histogram')} (${speedUnit})`}
         data={tableData}
         dataColumns={[
-          { key: 'range', label: t('driveDetail.col.range', 'Speed range') },
+          { key: 'range', label: rangeLabel },
           { key: 'pct', label: t('driveDetail.report.sampleShare', '% of speed samples') },
         ]}
         height={220}
@@ -49,11 +54,11 @@ export function SpeedHistogramChart({ speedHistData }: SpeedHistogramChartProps)
         {buckets.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={buckets}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-              <XAxis dataKey="range" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-              <YAxis domain={[0, 100]} tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+              <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
+              <XAxis dataKey="range" tick={{ fill: chartTokens.axisStroke, fontSize: 10 }} height={50} label={{ value: rangeLabel, position: 'insideBottom', fill: chartTokens.axisStroke }} />
+              <YAxis domain={[0, 100]} tick={{ fill: chartTokens.axisStroke, fontSize: 10 }} />
               <Tooltip content={<ChartTooltip />} />
-              <Bar dataKey="pct" fill="#a855f7" name={t('driveDetail.report.sampleShare', '% of speed samples')} radius={[4, 4, 0, 0]} />
+              <Bar dataKey="pct" fill={chartTokens.series[0]} name={t('driveDetail.report.sampleShare', '% of speed samples')} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         ) : (

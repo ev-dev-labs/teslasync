@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { Drive } from '@/types/driving';
 import type { ComponentProps } from 'react';
@@ -274,6 +274,7 @@ import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
 import { summarizeColdStarts } from '../lib/coldStart';
 import { fmtInt } from '@/lib/numberFormat';
 import { CHART_COLORS } from '@/components/charts';
+import en from '@/i18n/en.json';
 
 function query(overrides: Record<string, unknown> = {}) {
   return {
@@ -477,6 +478,39 @@ describe('Cold-start chart precision', () => {
   });
 });
 
+describe('Cold-start opportunity energy alignment', () => {
+  it.each(['ltr', 'rtl'] as const)(
+    'uses logical end alignment and retains complete populated readings in %s',
+    (direction) => {
+      const summary = summarizeColdStarts(supportedDrives());
+      const original = structuredClone(summary);
+      render(
+        <div dir={direction}>
+          <ColdStartOpportunities
+            summary={summary}
+            state={{ isLoading: false, error: null, onRetry: vi.fn() }}
+          />
+        </div>,
+      );
+
+      const rows = within(screen.getByTestId('cold-start-opportunities')).getAllByRole('listitem');
+      expect(rows).toHaveLength(5);
+      rows.forEach((row, index) => {
+        const opportunity = summary.opportunities[index]!;
+        const energyColumn = within(row).getByText('Above baseline').parentElement;
+        expect(energyColumn).toHaveClass('text-end');
+        expect(energyColumn).not.toHaveClass('text-right');
+        expect(within(energyColumn!).getByText(`${opportunity.estimatedAvoidableWh} Wh`, { exact: true }))
+          .toBeInTheDocument();
+        expect(within(row).getByText(`${opportunity.distanceM} m`, { exact: true })).toBeInTheDocument();
+        expect(within(row).getByText(`${opportunity.outsideTempAvgC} °C`, { exact: true })).toBeInTheDocument();
+        expect(within(row).getByText(`#${index + 1}`, { exact: true })).toBeInTheDocument();
+      });
+      expect(summary).toEqual(original);
+    },
+  );
+});
+
 describe('Cold-start date display', () => {
   const state = { isLoading: false, error: null, onRetry: vi.fn() };
 
@@ -546,6 +580,7 @@ describe('ColdStartPage', () => {
     render(<ColdStartPage />);
 
     expect(screen.getByRole('heading', { name: 'Cold Start Cost' })).toBeInTheDocument();
+    expect(screen.getByText(en.coldStart.subtitle)).toBeInTheDocument();
     for (const id of SECTION_IDS) {
       expect(screen.getByTestId(id)).toHaveTextContent('ready');
     }
@@ -612,6 +647,53 @@ describe('ColdStartPage', () => {
     });
 
     describe('ColdWarmComparison efficiency readings', () => {
+      it.each([null, '$0.10'])('describes observed whole-drive differences and conditional advice with cost %s', penaltyCostLabel => {
+        const summary = summarizeColdStarts(supportedDrives());
+        const original = structuredClone(summary);
+        render(
+          <ColdWarmComparison
+            summary={summary}
+            penaltyCostLabel={penaltyCostLabel}
+            state={{ isLoading: false, error: null, onRetry: vi.fn() }}
+          />,
+        );
+
+        const panel = screen.getByTestId('cold-start-comparison');
+        const message = (penaltyCostLabel ? en.coldStart.takeawayCost : en.coldStart.takeaway)
+          .replace('{{energy}}', '500 Wh')
+          .replace('{{cost}}', penaltyCostLabel ?? '');
+        expect(panel).toHaveTextContent(message);
+        expect(panel).not.toHaveTextContent('Warm-up overhead added');
+        expect(nestedBriefPropsMock.mock.lastCall?.[0].period.reason)
+          .toBe(en.coldStart.comparison.help);
+        expect(en.coldStart.comparison.help).toContain('distance-weighted whole-drive consumption');
+        expect(en.coldStart.comparison.help).toContain('does not adjust for temperature, route, speed or trip length');
+        expect(panel).toHaveTextContent('5 cold and 5 warm observations');
+        expect(screen.getAllByRole('progressbar')).toHaveLength(2);
+        expect(nestedBriefPropsMock.mock.lastCall?.[0].metrics.map((metric: { rawValue: number | null }) => metric.rawValue))
+          .toEqual([0.1, 0.3, 0.2]);
+        expect(summary).toEqual(original);
+      });
+
+      it.each([
+        { name: 'zero', energy: 200 },
+        { name: 'negative', energy: 100 },
+        { name: 'insufficient', energy: 300, count: 10 },
+      ])('does not infer preconditioning savings from a $name cohort difference', ({ energy, count }) => {
+        const drives = supportedDrives().slice(0, count ?? 11)
+          .map((drive, index) => ({ ...drive, energyUsedWh: index > 5 ? energy : 200 }));
+        const summary = summarizeColdStarts(drives);
+        render(
+          <ColdWarmComparison summary={summary} penaltyCostLabel={null}
+            state={{ isLoading: false, error: null, onRetry: vi.fn() }} />,
+        );
+
+        const panel = screen.getByTestId('cold-start-comparison');
+        expect(panel).toHaveTextContent(count ? en.coldStart.noData : en.coldStart.comparison.noPositivePenalty);
+        expect(panel).not.toHaveTextContent('preconditioning may shift');
+        expect(screen.getAllByRole('progressbar')).toHaveLength(2);
+      });
+
       it('uses the neutral panel surface while retaining populated cohort identities and palette colors', () => {
         const summary = summarizeColdStarts(supportedDrives());
         render(

@@ -25,6 +25,23 @@ const (
 	StatusOverdue     Status = "overdue"
 )
 
+// BasisKind is the machine-readable source or fallback of a prognosis.
+type BasisKind string
+
+const (
+	BasisSoHTrend          BasisKind = "soh_trend"
+	BasisNoDecline         BasisKind = "no_measurable_decline"
+	BasisMissingHistory    BasisKind = "missing_history"
+	BasisInvalidInput      BasisKind = "invalid_input"
+	BasisMissingConfig     BasisKind = "missing_configuration"
+	BasisWholeLifeOdometer BasisKind = "whole_life_odometer"
+	BasisEnrollmentAge    BasisKind = "enrollment_age"
+)
+
+func finite(v float64) bool {
+	return !math.IsNaN(v) && !math.IsInf(v, 0)
+}
+
 // Tunable, documented thresholds and constants. Named so a test can pin them
 // and an admin-facing tuning surface could later expose them.
 const (
@@ -187,10 +204,13 @@ func SampleConfidence(samples int, adequate float64) float64 {
 // zero. When current is already at/below eol the result is <= 0 (overdue) with
 // ok=true. The positive result is capped at maxProjectionDays. Pure.
 func RemainingDays(current, eol, ratePerDay float64) (days float64, ok bool) {
-	if ratePerDay <= 0 || math.IsNaN(ratePerDay) || math.IsInf(ratePerDay, 0) {
+	if !finite(current) || !finite(eol) || !finite(ratePerDay) || ratePerDay <= 0 {
 		return 0, false
 	}
 	days = (current - eol) / ratePerDay
+	if math.IsNaN(days) || math.IsInf(days, -1) {
+		return 0, false
+	}
 	if days > maxProjectionDays {
 		days = maxProjectionDays
 	}
@@ -271,18 +291,18 @@ type DailyBattery struct {
 // with non-positive energy, are dropped (their capacity estimate is too noisy).
 // X is days since the first RETAINED day so the fit's slope is per-day. Pure.
 func BuildSoHSeries(rows []DailyBattery, nominalWh float64) []Point {
-	if nominalWh <= 0 || len(rows) == 0 {
+	if !finite(nominalWh) || nominalWh <= 0 || len(rows) == 0 {
 		return nil
 	}
 	var pts []Point
 	var first time.Time
 	for _, r := range rows {
-		if r.MaxSocPct < minSoCForSoH || r.MaxEnergyWh <= 0 {
+		if !finite(r.MaxSocPct) || !finite(r.MaxEnergyWh) || r.MaxSocPct < minSoCForSoH || r.MaxEnergyWh <= 0 {
 			continue
 		}
 		usable := r.MaxEnergyWh / (r.MaxSocPct / 100.0)
 		soh := usable / nominalWh * 100.0
-		if soh <= 0 {
+		if !finite(soh) || soh <= 0 {
 			continue
 		}
 		if soh > 100 {
@@ -321,11 +341,30 @@ func BatteryRUL(cfg ComponentConfig, label string, series []Point, now time.Time
 
 	c := ComponentRUL{Component: cfg.Component, Label: label, Status: string(StatusHealthy)}
 
+	if !finite(eol) {
+		c.RemainingDays = maxProjectionDays
+		c.BasisKind = BasisInvalidInput
+		c.Basis = "Invalid battery end-of-life threshold; estimate unavailable."
+		return c, projInputs{currentHealth: 100}
+	}
+	valid := make([]Point, 0, len(series))
+	for _, p := range series {
+		if finite(p.X) && finite(p.Y) {
+			valid = append(valid, p)
+		}
+	}
+	hadHistory := len(series) > 0
+	series = valid
 	if len(series) == 0 {
 		c.HealthPct = 0
 		c.Confidence = 0
 		c.RemainingDays = maxProjectionDays
 		c.Basis = "No battery state-of-health history yet; awaiting charge/energy telemetry."
+		c.BasisKind = BasisMissingHistory
+		if hadHistory {
+			c.BasisKind = BasisInvalidInput
+			c.Basis = "No valid battery state-of-health observations; estimate unavailable."
+		}
 		return c, projInputs{currentHealth: 100, eolHealth: eol, horizonDays: 0, confidence: 0}
 	}
 
@@ -334,6 +373,13 @@ func BatteryRUL(cfg ComponentConfig, label string, series []Point, now time.Time
 	if fit.N >= 2 {
 		current = fit.Intercept + fit.Slope*series[len(series)-1].X
 	}
+	if !finite(current) || !finite(fit.Slope) || !finite(fit.R2) {
+		c.RemainingDays = maxProjectionDays
+		c.BasisKind = BasisInvalidInput
+		c.Basis = "Invalid battery state-of-health fit; estimate unavailable."
+		return c, projInputs{currentHealth: 100, eolHealth: eol}
+	}
+	c.ObservationAvailable = true
 	current = clamp(current, 0, 100)
 
 	rate := 0.0
@@ -350,6 +396,8 @@ func BatteryRUL(cfg ComponentConfig, label string, series []Point, now time.Time
 	c.Confidence = round2(conf)
 	c.Status = string(status)
 	if ok {
+		c.ProjectionAvailable = true
+		c.BasisKind = BasisSoHTrend
 		c.RemainingDays = round1(clamp(remaining, 0, maxProjectionDays))
 		if remaining > 0 {
 			c.ProjectedEOLDate = eolDatePtr(now, remaining)
@@ -358,6 +406,7 @@ func BatteryRUL(cfg ComponentConfig, label string, series []Point, now time.Time
 			"Linear SoH trend over %d daily samples (%.3f%%/day decline, R²=%.2f); end-of-life at %.0f%% SoH.",
 			fit.N, rate, fit.R2, eol)
 	} else {
+		c.BasisKind = BasisNoDecline
 		c.RemainingDays = maxProjectionDays
 		c.Basis = fmt.Sprintf(
 			"SoH ~%.1f%% over %d samples shows no measurable decline yet; projection deferred until a trend emerges.",
@@ -379,11 +428,26 @@ func WearRUL(cfg ComponentConfig, label string, kmSinceRef, kmPerDay float64, dr
 	if cfg.NominalLifeKm != nil {
 		nominalKm = *cfg.NominalLifeKm
 	}
+	if !finite(nominalKm) {
+		c.BasisKind = BasisInvalidInput
+		c.RemainingDays = maxProjectionDays
+		c.Basis = "Invalid nominal distance life; estimate unavailable."
+		return c, projInputs{currentHealth: 100}
+	}
 	if nominalKm <= 0 {
+		c.BasisKind = BasisMissingConfig
 		c.HealthPct = 100
 		c.Basis = "No nominal distance life configured for this component."
 		return c, projInputs{currentHealth: 100, eolHealth: 0, horizonDays: 0, confidence: 0}
 	}
+	if !finite(kmSinceRef) || !finite(kmPerDay) {
+		c.BasisKind = BasisInvalidInput
+		c.RemainingDays = maxProjectionDays
+		c.Basis = "Invalid distance-wear inputs; estimate unavailable."
+		return c, projInputs{currentHealth: 100}
+	}
+	c.ObservationAvailable = true
+	c.BasisKind = BasisWholeLifeOdometer
 
 	remainingKm := nominalKm - kmSinceRef
 	health := clamp(remainingKm/nominalKm*100, 0, 100)
@@ -402,6 +466,7 @@ func WearRUL(cfg ComponentConfig, label string, kmSinceRef, kmPerDay float64, dr
 	rkm := round1(math.Max(remainingKm, 0))
 	c.RemainingKm = &rkm
 	if ok {
+		c.ProjectionAvailable = true
 		c.RemainingDays = round1(clamp(remaining, 0, maxProjectionDays))
 		if remaining > 0 {
 			c.ProjectedEOLDate = eolDatePtr(now, remaining)
@@ -428,10 +493,20 @@ func AgeRUL(cfg ComponentConfig, label string, ageDays float64, now time.Time) (
 		nominalDays = *cfg.NominalLifeDays
 	}
 	if nominalDays <= 0 {
+		c.BasisKind = BasisMissingConfig
 		c.HealthPct = 100
 		c.Basis = "No nominal calendar life configured for this component."
 		return c, projInputs{currentHealth: 100, eolHealth: 0, horizonDays: 0, confidence: 0}
 	}
+	if !finite(ageDays) {
+		c.BasisKind = BasisInvalidInput
+		c.RemainingDays = maxProjectionDays
+		c.Basis = "Invalid elapsed service age; estimate unavailable."
+		return c, projInputs{currentHealth: 100}
+	}
+	c.ObservationAvailable = true
+	c.ProjectionAvailable = true
+	c.BasisKind = BasisEnrollmentAge
 	if ageDays < 0 {
 		ageDays = 0
 	}

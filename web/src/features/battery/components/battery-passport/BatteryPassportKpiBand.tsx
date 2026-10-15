@@ -16,6 +16,7 @@ import type { BatteryPassportAnalysis } from '../../lib/batteryPassportAnalysis'
 import { BatteryPassportSectionBody } from './BatteryPassportSectionBody';
 import type { BatteryPassportQueryState } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { formatDateTime } from '@/lib/dateFormat';
 
 interface BatteryPassportKpiBandProps {
   analysis: BatteryPassportAnalysis;
@@ -91,7 +92,8 @@ export function BatteryPassportKpiBand({
           )}>
         <BatteryPassportSectionBody state={state}>
           <BatteryEvidenceBrief title={t('batteryPassport.kpis.title', 'Certificate-reported KPI band')} metrics={summary} loading={state.isLoading} retained={Boolean(state.refreshError)}
-            period={{ kind: 'snapshot', label: state.passport?.issued_at ?? '—',
+            timestampContext={state.timestampContext}
+            period={{ kind: 'snapshot', label: formatDateTime(state.passport?.issued_at, state.timestampContext),
               observedAt: state.passport?.issued_at ?? null,
               provenance: t('batteryPassport.kpis.subtitle', 'Direct certificate fields and server-derived proxies; no calibration, causality, or remaining-life claim.') }} />
         </BatteryPassportSectionBody>

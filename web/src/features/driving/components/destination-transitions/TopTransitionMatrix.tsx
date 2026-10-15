@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { isFiniteNumber } from '@/lib/numberFormat';
 
 import type {
   DestinationTransitionResult,
@@ -26,6 +27,8 @@ export function TopTransitionMatrix({
 }: TopTransitionMatrixProps) {
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
+  const countLabel = (value: unknown) =>
+    isFiniteNumber(value) ? fmtInt(value, locale) : '—';
   const rows = model.topMatrix;
   const destinations = rows.map((row) => ({
     key: row.fromKey,
@@ -42,7 +45,7 @@ export function TopTransitionMatrix({
           {
             from,
             to: cell.toLabel,
-            count: cell.count,
+            count: countLabel(cell.count),
           },
         )
       : t(
@@ -51,7 +54,7 @@ export function TopTransitionMatrix({
           {
             from,
             to: cell.toLabel,
-            count: cell.count,
+            count: countLabel(cell.count),
             share: destinationPercent(
               cell.observedConditionalShare,
               locale,
@@ -63,7 +66,7 @@ export function TopTransitionMatrix({
     <section data-testid="destination-transition-matrix">
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
-          <Grid3X3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Grid3X3 className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
           {t(
             'destinationTransitions.matrix.title',
             'Top transition matrix',
@@ -119,7 +122,7 @@ export function TopTransitionMatrix({
                       {t(
                         'destinationTransitions.matrix.outgoing',
                         '{{count}} outgoing',
-                        { count: row.outgoingTransitions },
+                        { count: countLabel(row.outgoingTransitions) },
                       )}
                     </Text>
                   </div>
@@ -131,14 +134,14 @@ export function TopTransitionMatrix({
                         cell.status === 'unsupported_origin'
                           ? 'border-dashed border-[var(--border-strong)] bg-[var(--surface-2)]'
                           : cell.status === 'observed'
-                            ? 'border-neon-cyan/20 bg-neon-cyan/5'
+                            ? 'border-[var(--border-default)] bg-[var(--surface-2)]'
                             : 'border-[var(--border-subtle)] bg-[var(--surface-1)]',
                       )}
                       role="cell"
                       aria-label={cellLabel(row.fromLabel, cell)}
                     >
                       <Text variant="bodySm" weight="semibold">
-                        {fmtInt(cell.count)}
+                        {countLabel(cell.count)}
                       </Text>
                       <Text variant="caption">
                         {destinationPercent(

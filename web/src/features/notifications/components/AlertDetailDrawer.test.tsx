@@ -153,19 +153,39 @@ describe('AlertDetailDrawer', () => {
     expect(screen.queryByRole('button', { name: 'Reopen alert' })).not.toBeInTheDocument();
   });
 
-  it('formats the trigger and related-context day in the saved user locale and timezone', () => {
+  it.each([
+    ['utc', 'UTC', '2026-05-02'],
+    ['user', 'America/Los_Angeles', '2026-05-01'],
+    ['vehicle', 'Asia/Tokyo', '2026-05-02'],
+  ] as const)('uses the saved %s display zone for trigger, audit, and related-context day', (mode, tz, day) => {
     vi.mocked(useSettings).mockReturnValue({
-      settings: { tz_display_default: 'utc' },
+      settings: { tz_display_default: mode },
       locale: 'de-DE',
     } as ReturnType<typeof useSettings>);
-    vi.mocked(useTimezone).mockReturnValue('America/Los_Angeles');
-    const created_at = '2026-05-02T01:00:00Z';
-    renderDrawer({ alert: alert({ created_at }) });
-    expect(screen.getByText('Triggered').closest('div')).toHaveTextContent(
-      formatDateTime(created_at, { locale: 'de-DE', tz: 'America/Los_Angeles' }),
+    vi.mocked(useTimezone).mockImplementation((requestedMode) =>
+      requestedMode === 'utc' ? 'UTC' :
+      requestedMode === 'vehicle' ? 'Asia/Tokyo' : 'America/Los_Angeles',
     );
-    expect(vi.mocked(useTimezone)).toHaveBeenCalledWith('user');
-    expect(screen.getByRole('link', { name: 'Drive history' })).toHaveAttribute('href', '/drives?from=2026-05-01&to=2026-05-01');
+    const created_at = '2026-05-02T01:00:00Z';
+    const sourceAlert = alert({ created_at });
+    renderDrawer({ alert: sourceAlert });
+    expect(screen.getByText('Triggered').closest('div')).toHaveTextContent(
+      formatDateTime(created_at, { locale: 'de-DE', tz }),
+    );
+    expect(screen.getByRole('list', { name: 'Timeline' })).toHaveTextContent(
+      formatDateTime(created_at, { locale: 'de-DE', tz }),
+    );
+    expect(vi.mocked(useTimezone)).toHaveBeenCalledWith(mode);
+    for (const [name, path] of [
+      ['Drive history', '/drives'],
+      ['Charging sessions', '/charging'],
+      ['Visited locations', '/locations'],
+      ['Telemetry evidence', '/signals'],
+    ]) {
+      const suffix = path === '/signals' ? '&signals=BatteryLevel' : '';
+      expect(screen.getByRole('link', { name })).toHaveAttribute('href', `${path}?from=${day}&to=${day}${suffix}`);
+    }
+    expect(sourceAlert.created_at).toBe(created_at);
   });
 
   it('shows lifecycle, owner, signal evidence, response guidance, note, and audit history', () => {

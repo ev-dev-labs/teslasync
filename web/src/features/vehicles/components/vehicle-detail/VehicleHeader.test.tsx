@@ -23,12 +23,13 @@
  *     deterministically while a spy records the (key, fallback) pairs.
  *   - renders are wrapped in MemoryRouter because the back <Link> needs router
  *     context.
- *   - user-event is intentionally NOT a dependency (see web/package.json); the
- *     one interactive control (the wake <button>) is exercised with fireEvent.
+ *   - user-event exercises native keyboard navigation/activation; fireEvent
+ *     retains the existing click coverage.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import userEvent from '@testing-library/user-event'
 import type { Vehicle, VehicleStatus } from '@/api/types'
 
 // jsdom lacks matchMedia; install a benign stub before anything evaluates in case
@@ -210,6 +211,30 @@ describe('VehicleHeader — back link a11y', () => {
 })
 
 describe('VehicleHeader — wake button', () => {
+  it('keeps full identifiers and wrapping labels with mobile-sized wake targets', () => {
+    const model = 'Model with an unusually long descriptive name'
+    const vin = '5YJ3E1EA7KF123456'
+    renderHeader({ vehicle: makeVehicle({ model, vin }) })
+    expect(screen.getByText(`${model} Performance`)).toHaveClass('max-w-full', 'whitespace-normal', 'break-words')
+    expect(screen.getByText(vin)).toHaveClass('break-all')
+    expect(screen.getByText(vin)).not.toHaveClass('truncate')
+    expect(screen.getByRole('button', { name: 'Wake up' })).toHaveClass(
+      'min-h-11', 'md:min-h-10', 'w-full', 'md:w-auto', 'h-auto',
+    )
+    expect(screen.getByRole('link', { name: 'Back' })).toHaveClass('min-h-11', 'min-w-11', 'shrink-0')
+  })
+
+  it('supports keyboard navigation from back to wake and native activation', async () => {
+    const user = userEvent.setup()
+    const { onWake } = renderHeader()
+    await user.tab()
+    expect(screen.getByRole('link', { name: 'Back' })).toHaveFocus()
+    await user.tab()
+    expect(screen.getByRole('button', { name: 'Wake up' })).toHaveFocus()
+    await user.keyboard('{Enter}')
+    expect(onWake).toHaveBeenCalledTimes(1)
+  })
+
   it('renders the wake control and fires onWake once when clicked', () => {
     const { onWake } = renderHeader({ waking: false })
     const btn = screen.getByRole('button', { name: 'Wake up' })

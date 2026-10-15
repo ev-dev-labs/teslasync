@@ -1182,6 +1182,14 @@ describe('BatteryDegradationPage — empty states', () => {
     expect(dod).toHaveTextContent('—%');
   });
 
+  it.each([undefined, NaN, Infinity, -1, 0, 0.5])('withholds fast-charge ratios for invalid or empty denominators %s', value => {
+    mockHealth.mockReturnValue(makeQuery({ data: { ...HEALTH, valid_charge_count: value } }));
+    renderPage();
+    expect(screen.getByText(/—% fast charges, 5 deep discharges/)).toBeInTheDocument();
+    expect(screen.getByText('Fast charge').parentElement).toHaveTextContent('—%');
+    expect(screen.getByText('Cycle depth').parentElement).toHaveTextContent('60.00/100');
+  });
+
   it.each([undefined, NaN, Infinity, -1, 101])('does not score invalid DoD %s', value => {
     mockHealth.mockReturnValue(makeQuery({ data: { ...HEALTH, avg_depth_of_discharge_pct: value } }));
     renderPage();

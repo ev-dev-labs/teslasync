@@ -23,7 +23,7 @@
  * display conversion and active-vehicle fallback are genuinely exercised.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, renderHook, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { act, render, renderHook, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -55,8 +55,10 @@ vi.hoisted(() => {
   }
 });
 
-const { mockRequest, translations } = vi.hoisted(() => ({
+const { mockRequest, mockSuccessToast, mockErrorToast, translations } = vi.hoisted(() => ({
   mockRequest: vi.fn(),
+  mockSuccessToast: vi.fn(),
+  mockErrorToast: vi.fn(),
   translations: {} as Record<string, string>,
 }));
 
@@ -66,6 +68,10 @@ vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client');
   return { ...actual, request: mockRequest };
 });
+
+vi.mock('@/api/hooks/_toastHelpers', () => ({
+  useMutationToast: () => ({ success: mockSuccessToast, error: mockErrorToast }),
+}));
 
 // i18n → developer fallback with {{var}} interpolation so assertions read real
 // sentences rather than raw keys.
@@ -98,7 +104,19 @@ import ChargingHeatmapPage from '../ChargingHeatmapPage';
 import { SelectedVehicleProvider, useSelectedVehicleStore } from '@/store/selectedVehicle';
 import { Button } from '@/components/ui';
 import { ApiError } from '@/lib/resilience';
-import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
+import {
+  autopilotKeys, chargingKeys, useBulkDeleteCharging, useChargingSessionsPaginated,
+  useChargeTelemetry, useOptimizeCharge, useSaveAutopilotProfile,
+  useAutopilotPreview, useAdviseChargeQueue,
+  useRefreshTeslaChargingHistory, teslaChargingHistoryKeys, teslaChargingSiteKeys,
+} from '@/api/hooks/useCharging';
+import { OperationalModeWriteError } from '@/lib/operationalMode';
+import { analyzeChargingThermalTax } from '../../lib/chargingThermalTax';
+import { heaterEvidence, thermalPowerRows } from '../../components/charging-thermal-tax-modernization/thermalPresentation';
+import { ThermalPhases } from '../../components/charging-thermal-tax-modernization/ThermalPhases';
+import { deriveDataState } from '@/api/dataState';
+import * as broadcastBus from '@/lib/broadcast';
+import { __flushQueryBroadcastForTests, __resetQueryBroadcastForTests } from '@/lib/queryBroadcast';
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
 const TWO_VEHICLES = [
@@ -243,9 +261,335 @@ beforeEach(() => {
   window.localStorage.clear();
 });
 afterEach(() => {
+  __resetQueryBroadcastForTests();
   onlineManager.setOnline(true);
   vi.clearAllMocks();
   vi.restoreAllMocks();
+});
+
+describe('Tesla charging history — live-only manual sync', () => {
+  function setup() {
+    const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+    client.setQueryData(teslaChargingHistoryKeys.all, { entries: [{ id: 7 }] });
+    client.setQueryData(teslaChargingSiteKeys.all, [{ site: 'Home' }]);
+    const hook = renderHook(() => useRefreshTeslaChargingHistory(), {
+      wrapper: ({ children }: { children: ReactNode }) =>
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>,
+    });
+    return { client, ...hook };
+  }
+
+  it.each([
+    undefined,
+    { vin: 'VIN00010', start_time: '2026-10-01T00:00:00Z', end_time: '2026-10-14T00:00:00Z' },
+  ])('preserves optional scope, real outcomes and success-only invalidation: %j', async params => {
+    const response = { entries: [{ id: 8 }], summary: { total_sessions: 1 } };
+    mockRequest.mockResolvedValue(response);
+    const { client, result, unmount } = setup();
+    expect(mockRequest).not.toHaveBeenCalled();
+    try {
+      await act(async () => {
+        expect(await result.current.mutateAsync(params)).toBe(response);
+      });
+      const query = new URLSearchParams(params).toString();
+      expect(mockRequest).toHaveBeenCalledWith(
+        `/tesla/charging/history/refresh${query ? `?${query}` : ''}`,
+        { method: 'POST', requiresLiveMode: true },
+      );
+      expect(mockSuccessToast).toHaveBeenCalledTimes(1);
+      expect(mockErrorToast).not.toHaveBeenCalled();
+      expect(client.getQueryState(teslaChargingHistoryKeys.all)?.isInvalidated).toBe(true);
+      expect(client.getQueryState(teslaChargingSiteKeys.all)?.isInvalidated).toBe(true);
+    } finally {
+      unmount();
+      client.clear();
+    }
+  });
+
+  it.each(['as_of', 'cached', 'server_error'] as const)(
+    'rejects %s without success or invalidation', async mode => {
+      const originalUrl = window.location.href;
+      const fetchSpy = vi.spyOn(globalThis, 'fetch');
+      if (mode === 'server_error') {
+        mockRequest.mockRejectedValue(new ApiError('Tesla unavailable', 503));
+      } else {
+        const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client');
+        mockRequest.mockImplementation(actual.request);
+        if (mode === 'as_of') {
+          window.history.replaceState(null, '', '?as_of=2026-10-01T00:00:00Z');
+        } else {
+          vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+        }
+      }
+      const { client, result, unmount } = setup();
+      try {
+        await act(async () => {
+          await expect(result.current.mutateAsync()).rejects.toMatchObject(
+            mode === 'server_error'
+              ? { status: 503 }
+              : { code: 'OPERATIONAL_MODE_READ_ONLY', mode },
+          );
+        });
+        expect(fetchSpy).not.toHaveBeenCalled();
+        expect(mockSuccessToast).not.toHaveBeenCalled();
+        expect(mockErrorToast).toHaveBeenCalledTimes(1);
+        expect(client.getQueryState(teslaChargingHistoryKeys.all)?.isInvalidated).toBe(false);
+        expect(client.getQueryState(teslaChargingSiteKeys.all)?.isInvalidated).toBe(false);
+        expect(client.getQueryData(teslaChargingHistoryKeys.all)).toEqual({ entries: [{ id: 7 }] });
+      } finally {
+        window.history.replaceState(null, '', originalUrl);
+        unmount();
+        client.clear();
+      }
+    },
+  );
+});
+
+describe('Smart charging — live-only persisted mutations', () => {
+  const optimizeParams = {
+    vehicle_id: 10, target_soc: 80, depart_by: '2026-10-15T08:00:00Z',
+    rate_plan_id: 'home',
+  };
+  const profile = {
+    vehicle_id: 10, enabled: true, target_soc: 80, ready_by: '08:00',
+    rate_plan: 'home', daily_cap_soc: 80, trip_override: false,
+    precondition: true, max_amps: 32, battery_capacity_kwh: 75,
+  };
+  const cases = [
+    { name: 'optimize', path: '/charge-planner/optimize', method: 'POST', params: optimizeParams },
+    { name: 'profile', path: '/charge-autopilot/profile', method: 'PUT', params: profile },
+  ] as const;
+
+  function setup() {
+    const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+    client.setQueryData(autopilotKeys.profile(10), profile);
+    const hook = renderHook(() => ({
+      optimize: useOptimizeCharge(), profile: useSaveAutopilotProfile(),
+    }), {
+      wrapper: ({ children }: { children: ReactNode }) =>
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>,
+    });
+    return {
+      client, ...hook,
+      mutate: (name: 'optimize' | 'profile') => name === 'optimize'
+        ? hook.result.current.optimize.mutateAsync(optimizeParams)
+        : hook.result.current.profile.mutateAsync(profile),
+    };
+  }
+
+  it.each(cases)('preserves the $name body, response and success-only feedback in live mode', async entry => {
+    const response = entry.name === 'profile' ? profile : { plan_id: 44, target_soc: 80 };
+    mockRequest.mockResolvedValue(response);
+    const { client, mutate, unmount } = setup();
+    await act(async () => { expect(await mutate(entry.name)).toBe(response); });
+    expect(mockRequest).toHaveBeenCalledWith(entry.path, {
+      method: entry.method, requiresLiveMode: true, body: JSON.stringify(entry.params),
+    });
+    expect(mockSuccessToast).toHaveBeenCalledTimes(1);
+    expect(mockErrorToast).not.toHaveBeenCalled();
+    expect(client.getQueryState(autopilotKeys.profile(10))?.isInvalidated)
+      .toBe(entry.name === 'profile');
+    unmount();
+    client.clear();
+  });
+
+  it.each(cases.flatMap(entry => (['as_of', 'cached'] as const).map(mode => ({ ...entry, mode }))))(
+    'blocks $name in $mode before network access without success, invalidation or broadcast',
+    async entry => {
+      const originalUrl = window.location.href;
+      const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client');
+      mockRequest.mockImplementation(actual.request);
+      const fetchSpy = vi.spyOn(globalThis, 'fetch');
+      const broadcast = vi.spyOn(broadcastBus, 'broadcast').mockImplementation(() => {});
+      if (entry.mode === 'as_of') {
+        window.history.replaceState(null, '', '?as_of=2026-10-01T00:00:00Z');
+      } else {
+        vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+      }
+      const { client, mutate, unmount } = setup();
+      try {
+        await act(async () => {
+          await expect(mutate(entry.name)).rejects.toMatchObject({
+            code: 'OPERATIONAL_MODE_READ_ONLY', mode: entry.mode,
+          });
+        });
+        expect(fetchSpy).not.toHaveBeenCalled();
+        expect(mockSuccessToast).not.toHaveBeenCalled();
+        expect(mockErrorToast).toHaveBeenCalledWith(
+          expect.any(OperationalModeWriteError), expect.any(String), expect.any(String),
+        );
+        expect(client.getQueryState(autopilotKeys.profile(10))?.isInvalidated).toBe(false);
+        expect(client.getQueryData(autopilotKeys.profile(10))).toEqual(profile);
+        __flushQueryBroadcastForTests();
+        expect(broadcast).not.toHaveBeenCalled();
+      } finally {
+        window.history.replaceState(null, '', originalUrl);
+        unmount();
+        client.clear();
+      }
+    },
+  );
+
+  it('leaves pure autopilot and queue previews without a live-only write restriction', async () => {
+    mockRequest.mockResolvedValue({ explanation: 'Preview' });
+    const client = new QueryClient();
+    const { result, unmount } = renderHook(() => ({
+      preview: useAutopilotPreview(), queue: useAdviseChargeQueue(),
+    }), {
+      wrapper: ({ children }: { children: ReactNode }) =>
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>,
+    });
+    const preview = { vehicle_id: 10, current_soc: 40 };
+    const queue = { vehicles: [], charger_kw: 7.2 };
+    await act(async () => {
+      await result.current.preview.mutateAsync(preview);
+      await result.current.queue.mutateAsync(queue);
+    });
+    expect(mockRequest).toHaveBeenCalledWith('/charge-autopilot/preview', {
+      method: 'POST', body: JSON.stringify(preview),
+    });
+    expect(mockRequest).toHaveBeenCalledWith('/charge-planner/queue', {
+      method: 'POST', body: JSON.stringify(queue),
+    });
+    unmount();
+    client.clear();
+  });
+});
+
+describe('Charging thermal telemetry — endpoint adapter', () => {
+  it.each([true, false, null])('retains timestamped SI charge evidence without inventing heater watts from state %s', async batteryHeaterOn => {
+    const rows = [0, 1].map(index => ({
+      created_at: `2026-01-01T00:0${index}:00Z`,
+      power_w: 7200,
+      energy_added: index * 0.12,
+      battery_heater_on: batteryHeaterOn,
+    }));
+    mockRequest.mockResolvedValue(rows);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { result, unmount } = renderHook(() => useChargeTelemetry(42), {
+      wrapper: ({ children }: { children: ReactNode }) =>
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>,
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const samples = result.current.data!;
+    expect(mockRequest).toHaveBeenCalledWith('/charging/42/telemetry', { signal: expect.any(AbortSignal) });
+    expect(samples[1]).toMatchObject({
+      ts: rows[1]!.created_at, power_w: 7200, energy_added: 0.12,
+      ac_charging_power_w: 7200, dc_charging_power_w: null,
+      ac_charging_energy_in_wh: 120, battery_heater_power_w: null,
+    });
+    expect(analyzeChargingThermalTax(samples)).toMatchObject({
+      sampleCount: 2, spanS: 60, deliveredEnergyWh: 120,
+      energySource: 'cumulative', heaterSharePct: null, phases: [],
+    });
+    expect(heaterEvidence(samples)).toEqual({ hasPeak: false, hasIntegral: false, incomplete: true });
+    expect(thermalPowerRows(samples, 'en-US')).toHaveLength(2);
+    expect(thermalPowerRows(samples, 'en-US')[1]).toMatchObject({ chargeW: 7200, heaterW: null });
+    render(<ThermalPhases selected loading={false}
+      samples={samples} summary={analyzeChargingThermalTax(samples)}
+      state={deriveDataState({ data: samples, isSuccess: true, fetchStatus: 'idle' })} />);
+    expect(screen.getByText('Heater-power analysis is unsupported for these samples: no measured heater power is available. Recorded charging telemetry is preserved; heater state is not a power measurement.')).toBeInTheDocument();
+    expect(screen.queryByText('No usable telemetry to segment into phases.')).not.toBeInTheDocument();
+    expect(screen.getByText('Metered running total')).toBeInTheDocument();
+    expect(client.getQueryData(chargingKeys.telemetry(42))).toEqual(rows);
+    unmount();
+    client.clear();
+  });
+
+  it('preserves populated canonical samples, measured zeros and SI counters without reconverting or double-counting', async () => {
+    const rows = [0, 1].map(index => ({
+      ts: `2026-01-01T00:0${index}:00Z`,
+      created_at: '2025-01-01T00:00:00Z',
+      power_w: 9999, energy_added: 999,
+      ac_charging_power_w: 0, dc_charging_power_w: 7200,
+      ac_charging_energy_in_wh: 0, dc_charging_energy_in_wh: index * 120,
+      battery_heater_power_w: index * 600,
+    }));
+    mockRequest.mockResolvedValue(rows);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { result, unmount } = renderHook(() => useChargeTelemetry(43), {
+      wrapper: ({ children }: { children: ReactNode }) =>
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>,
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual(rows);
+    expect(analyzeChargingThermalTax(result.current.data!)).toMatchObject({
+      sampleCount: 2, spanS: 60, deliveredEnergyWh: 120, heaterWh: 5,
+      energySource: 'cumulative', peakHeaterW: 600,
+    });
+    expect(heaterEvidence(result.current.data!)).toEqual({ hasPeak: true, hasIntegral: true, incomplete: false });
+    unmount();
+    client.clear();
+  });
+});
+
+describe('Charging bulk deletion — paginated cache contract', () => {
+  it('invalidates and broadcasts every paginated scope while returning failed IDs unchanged', async () => {
+    const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+    const keys = [
+      ['charging', 10, '2026-01-01', '2026-02-01', 50, 0],
+      ['charging', 10, '2026-01-01', '2026-02-01', 50, 50],
+      ['charging', 20, '2026-03-01', '2026-04-01', 2000, 0],
+      chargingKeys.byVehicle('10'),
+      chargingKeys.history('10'),
+    ];
+    for (const key of keys) client.setQueryData(key, SESSIONS);
+    client.setQueryData(['charging-optimizer', '10'], { unchanged: true });
+    const response = { deleted: 1, failed: [{ id: 2, reason: 'conflict' }] };
+    mockRequest.mockResolvedValue(response);
+    const broadcast = vi.spyOn(broadcastBus, 'broadcast').mockImplementation(() => {});
+    const { result, unmount } = renderHook(() => useBulkDeleteCharging(), {
+      wrapper: ({ children }: { children: ReactNode }) =>
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>,
+    });
+
+    await act(async () => {
+      expect(await result.current.mutateAsync([1, 2])).toBe(response);
+    });
+    expect(mockRequest).toHaveBeenCalledWith('/charging/bulk', {
+      method: 'DELETE',
+      requiresLiveMode: true,
+      body: JSON.stringify({ ids: [1, 2] }),
+    });
+    for (const key of keys) {
+      expect(client.getQueryState(key)?.isInvalidated).toBe(true);
+      expect(client.getQueryData(key)).toEqual(SESSIONS);
+    }
+    expect(client.getQueryState(['charging-optimizer', '10'])?.isInvalidated).toBe(false);
+    __flushQueryBroadcastForTests();
+    expect(broadcast).toHaveBeenCalledWith({
+      type: 'queryInvalidate',
+      keys: [chargingKeys.all, ['charging']],
+    });
+    unmount();
+    client.clear();
+  });
+
+  it('does not invalidate or broadcast when the live-only deletion is rejected', async () => {
+    const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+    const key = ['charging', 10, undefined, undefined, 50, 0];
+    client.setQueryData(key, SESSIONS);
+    const rejection = new Error('Live mode required');
+    mockRequest.mockRejectedValue(rejection);
+    const broadcast = vi.spyOn(broadcastBus, 'broadcast').mockImplementation(() => {});
+    const { result, unmount } = renderHook(() => useBulkDeleteCharging(), {
+      wrapper: ({ children }: { children: ReactNode }) =>
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>,
+    });
+
+    await act(async () => {
+      await expect(result.current.mutateAsync([1, 2])).rejects.toBe(rejection);
+    });
+    expect(mockRequest).toHaveBeenCalledWith('/charging/bulk', expect.objectContaining({
+      requiresLiveMode: true,
+    }));
+    expect(client.getQueryState(key)?.isInvalidated).toBe(false);
+    expect(client.getQueryData(key)).toEqual(SESSIONS);
+    __flushQueryBroadcastForTests();
+    expect(broadcast).not.toHaveBeenCalled();
+    unmount();
+    client.clear();
+  });
 });
 
 describe('ChargingHeatmapPage — precise server range contract', () => {

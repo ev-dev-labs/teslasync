@@ -81,7 +81,7 @@ vi.mock('react-i18next', async () => {
 
 vi.mock('@/api/hooks/useDriving', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/hooks/useDriving')>();
-  return { ...actual, useDrives: () => h.drives, useDriveScore: () => h.score };
+  return { ...actual, useDrives: () => h.drives, useDriveCalendarHistory: () => h.drives, useDriveScore: () => h.score };
 });
 
 vi.mock('@/hooks/useSelectedVehicle', () => ({
@@ -248,6 +248,8 @@ const apiScore = {
 interface QueryStub {
   data: unknown;
   isLoading: boolean;
+  isPending: boolean;
+  fetchStatus: 'fetching' | 'paused' | 'idle';
   isError: boolean;
   error: unknown;
   isFetching: boolean;
@@ -260,6 +262,8 @@ function makeQuery(overrides: Partial<QueryStub> = {}): QueryStub {
   return {
     data: undefined,
     isLoading: false,
+    isPending: false,
+    fetchStatus: 'idle',
     isError: false,
     error: null,
     isFetching: false,
@@ -297,6 +301,170 @@ afterEach(() => {
 });
 
 describe('DriveScorePage', () => {
+  function periodValue(label: string) {
+    const term = screen.getByText(label, { selector: 'dt' });
+    return term.parentElement?.querySelector('dd');
+  }
+
+  it('uses all in-range physical facts but only eligible scores for A+ counts', () => {
+    h.drives = makeQuery({ data: [
+      driveGreat,
+      makeDrive({ id: 99, distanceM: 50_000, durationS: 600, energyUsedWh: null, maxSpeedMps: 50 }),
+      makeDrive({ id: 100, startTs: recentIso(90), distanceM: 900_000 }),
+    ] });
+    renderPage();
+    expect(periodValue('Total Distance')).toHaveTextContent(/150/);
+    expect(periodValue('Avg Distance/Drive')).toHaveTextContent(/75/);
+    expect(periodValue('A+ Drives')).toHaveTextContent('1');
+    expect(screen.getByText('Score evidence is partial')).toBeInTheDocument();
+  });
+
+  it('renders physical facts even when no drive can be scored', () => {
+    h.drives = makeQuery({ data: [makeDrive({ distanceM: 50_000, energyUsedWh: null })] });
+    renderPage();
+    expect(periodValue('Total Distance')).toHaveTextContent(/50/);
+    expect(periodValue('Total Duration')).not.toHaveTextContent('—');
+    expect(periodValue('A+ Drives')).toHaveTextContent('0');
+    expect(screen.queryByRole('meter', { name: 'Overall Score' })).not.toBeInTheDocument();
+  });
+
+  it.each([undefined, null])('keeps absent physical payload %s unknown', (data) => {
+    h.drives = makeQuery({ data });
+    renderPage();
+    for (const label of ['Total Distance', 'Total Duration', 'Avg Distance/Drive', 'Avg Duration/Drive', 'Highest Max Speed', 'A+ Drives']) {
+      expect(periodValue(label)).toHaveTextContent('—');
+    }
+  });
+
+  it('does not confuse pending paused sources with active loading or measured zero', () => {
+    h.drives = makeQuery({ isPending: true, isLoading: true, fetchStatus: 'paused', dataUpdatedAt: 0 });
+    h.score = makeQuery({ isPending: true, isLoading: true, fetchStatus: 'paused', dataUpdatedAt: 0, refetch: scoreRefetchMock });
+    renderPage();
+    expect(periodValue('Total Distance')).toHaveTextContent('—');
+    expect(periodValue('A+ Drives')).toHaveTextContent('—');
+    expect(screen.queryByRole('status', { name: 'Loading drive' })).not.toBeInTheDocument();
+    expect(screen.getByText('Period Statistics')).toBeInTheDocument();
+    expect(screen.getAllByText('Drive history loading is deferred.').length).toBeGreaterThan(1);
+    expect(screen.getByText('Server drive score loading is deferred.')).toBeInTheDocument();
+    expect(screen.queryByText('No drives found for the selected period.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Not enough drives in the selected period to calculate a score.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Drive score evidence could not be loaded')).not.toBeInTheDocument();
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
+  });
+
+  it.each(['history', 'server'] as const)('keeps deferred %s recovery source-local while its neighbor stays ready', (source) => {
+    const deferred = { isPending: true, isLoading: true, fetchStatus: 'paused' as const, dataUpdatedAt: 0 };
+    if (source === 'history') {
+      h.drives = makeQuery(deferred);
+      h.score = makeQuery({ data: apiScore, refetch: scoreRefetchMock });
+    } else {
+      h.score = makeQuery({ ...deferred, refetch: scoreRefetchMock });
+    }
+    const view = renderPage();
+    const recovery = screen.getByText(
+      'Retry this source now, or wait for the request to resume. No result has been received yet.',
+    ).closest('[role="status"]');
+    if (!(recovery instanceof HTMLElement)) throw new Error('Missing source recovery notice');
+    fireEvent.click(within(recovery).getByRole('button', { name: 'Retry' }));
+    expect(source === 'history' ? refetchMock : scoreRefetchMock).toHaveBeenCalledOnce();
+    expect(source === 'history' ? scoreRefetchMock : refetchMock).not.toHaveBeenCalled();
+    expect(screen.getByRole('meter', { name: 'Overall Score' })).toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading drive' })).not.toBeInTheDocument();
+    if (source === 'history') {
+      expect(screen.getByText('Grade: A')).toBeInTheDocument();
+      expect(screen.queryByText('No drives found for the selected period.')).not.toBeInTheDocument();
+    } else {
+      expect(screen.getByText('First Drive')).toBeInTheDocument();
+      expect(within(screen.getByRole('region', { name: 'Drive History' })).getByRole('table')).toBeInTheDocument();
+    }
+    h.drives = makeQuery({ data: [driveGreat, driveBad, driveMid] });
+    h.score = makeQuery({ data: apiScore, refetch: scoreRefetchMock });
+    view.rerender(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <ToastProvider><MemoryRouter initialEntries={['/drive-score']}><DriveScorePage /></MemoryRouter></ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.queryByText(/loading is deferred/)).not.toBeInTheDocument();
+    expect(screen.getByText('Grade: A')).toBeInTheDocument();
+    expect(screen.getByText('First Drive')).toBeInTheDocument();
+  });
+
+  it('presents a deferred server source before loading in combined panels without blocking active history', () => {
+    h.drives = makeQuery({ isPending: true, isLoading: true, isFetching: true, fetchStatus: 'fetching' });
+    h.score = makeQuery({ isPending: true, isLoading: true, fetchStatus: 'paused', refetch: scoreRefetchMock });
+    renderPage();
+    const hero = within(screen.getByRole('region', { name: 'Overall Score' }));
+    expect(hero.getAllByText('Server drive score loading is deferred.')).toHaveLength(2);
+    expect(hero.queryByRole('status', { name: 'Loading drive' })).not.toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Drive History' })).getByRole('status', { name: 'Loading drive' })).toBeInTheDocument();
+  });
+
+  it('shows a physical-panel skeleton only while the first request is actively fetching', () => {
+    h.drives = makeQuery({ isPending: true, isFetching: true, fetchStatus: 'fetching', dataUpdatedAt: 0 });
+    renderPage();
+    expect(screen.getByText('Period Statistics')).toBeInTheDocument();
+    expect(screen.queryByText('Total Distance', { selector: 'dt' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('status', { name: 'Loading drive' }).length).toBeGreaterThan(0);
+  });
+
+  it('shows measured empty totals and count but unknown averages and speed', () => {
+    h.drives = makeQuery({ data: [] });
+    renderPage();
+    expect(periodValue('Total Distance')).toHaveTextContent(/0/);
+    expect(periodValue('Total Duration')).toHaveTextContent(/0/);
+    expect(periodValue('A+ Drives')).toHaveTextContent('0');
+    for (const label of ['Avg Distance/Drive', 'Avg Duration/Drive', 'Highest Max Speed']) {
+      expect(periodValue(label)).toHaveTextContent('—');
+    }
+  });
+
+  it('preserves measured zero physical readings independently of score eligibility', () => {
+    h.drives = makeQuery({ data: [makeDrive({ distanceM: 0, durationS: 0, maxSpeedMps: 0 })] });
+    renderPage();
+    for (const label of ['Total Distance', 'Total Duration', 'Avg Distance/Drive', 'Avg Duration/Drive', 'Highest Max Speed', 'A+ Drives']) {
+      expect(periodValue(label)).toHaveTextContent(/0/);
+      expect(periodValue(label)).not.toHaveTextContent('—');
+    }
+  });
+
+  it('keeps incomplete and nonfinite fields unknown instead of reporting partial totals or maxima', () => {
+    h.drives = makeQuery({ data: [driveGreat, makeDrive({
+      id: 99, distanceM: Number.NaN, durationS: null, maxSpeedMps: Number.POSITIVE_INFINITY,
+    })] });
+    renderPage();
+    for (const label of ['Total Distance', 'Total Duration', 'Avg Distance/Drive', 'Avg Duration/Drive', 'Highest Max Speed']) {
+      expect(periodValue(label)).toHaveTextContent('—');
+    }
+    expect(periodValue('A+ Drives')).toHaveTextContent('1');
+  });
+
+  it('retains unscored physical facts on refresh failure and clears the warning on recovery', () => {
+    const data = [makeDrive({ distanceM: 50_000, energyUsedWh: null })];
+    h.drives = makeQuery({ data, isError: true, error: new Error('refresh failed') });
+    const view = renderPage();
+    expect(periodValue('Total Distance')).toHaveTextContent(/50/);
+    const notice = screen.getByTestId('stale-refresh-warning');
+    fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }));
+    expect(refetchMock).toHaveBeenCalledOnce();
+    h.drives = makeQuery({ data });
+    view.rerender(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <ToastProvider><MemoryRouter initialEntries={['/drive-score']}><DriveScorePage /></MemoryRouter></ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(periodValue('Total Distance')).toHaveTextContent(/50/);
+  });
+
+  it('retains authoritative empty totals through a failed refresh', () => {
+    h.drives = makeQuery({ data: [], isError: true, error: new Error('refresh failed') });
+    renderPage();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(periodValue('Total Distance')).toHaveTextContent(/0/);
+    expect(periodValue('A+ Drives')).toHaveTextContent('0');
+    expect(periodValue('Avg Distance/Drive')).toHaveTextContent('—');
+  });
+
   it('renders every section, KPI, and insight when the fleet is scored', () => {
     renderPage();
 
@@ -429,6 +597,8 @@ describe('DriveScorePage', () => {
     expect(screen.getByText('Tips appear once drives are scored')).toBeInTheDocument();
     expect(screen.getByText('Achievements unlock as you complete scored drives')).toBeInTheDocument();
     expect(screen.getAllByText('No weekly/monthly averages available yet')).toHaveLength(6);
+    expect(screen.queryByText(/loading is deferred/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading drive' })).not.toBeInTheDocument();
 
     // The KPI band still renders its labels (never hidden), and no insight leaks.
     expect(screen.getByText('Avg Score')).toBeInTheDocument();
@@ -537,7 +707,7 @@ describe('DriveScorePage', () => {
   it('retains every band, ranked drive and history row when both refreshes fail', () => {
     h.drives = makeQuery({ data: [driveGreat, driveBad, driveMid], isError: true, error: new Error('history refresh') });
     h.score = makeQuery({ data: apiScore, isError: true, error: new Error('score refresh'), refetch: scoreRefetchMock });
-    renderPage();
+    const view = renderPage();
 
     expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
     expect(screen.getByText('Grade: A')).toBeInTheDocument();
@@ -545,6 +715,20 @@ describe('DriveScorePage', () => {
     expect(screen.getByText('High energy consumption — possibly high speeds or cold weather.')).toBeInTheDocument();
     expect(within(screen.getByRole('region', { name: 'Drive History' })).getAllByText('Home → Office')).toHaveLength(2);
     expect(screen.queryByText('Drive score evidence could not be loaded')).not.toBeInTheDocument();
+    expect(screen.getByText('First Drive')).toBeInTheDocument();
+    const warnings = screen.getAllByTestId('stale-refresh-warning');
+    fireEvent.click(within(warnings[1]).getByRole('button', { name: 'Refresh' }));
+    expect(scoreRefetchMock).toHaveBeenCalledOnce();
+    expect(refetchMock).not.toHaveBeenCalled();
+    h.drives = makeQuery({ data: [driveGreat, driveBad, driveMid] });
+    h.score = makeQuery({ data: apiScore, refetch: scoreRefetchMock });
+    view.rerender(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <ToastProvider><MemoryRouter initialEntries={['/drive-score']}><DriveScorePage /></MemoryRouter></ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getByText('Grade: A')).toBeInTheDocument();
     expect(screen.getByText('First Drive')).toBeInTheDocument();
   });
 
@@ -623,6 +807,7 @@ describe('DriveScorePage', () => {
     expect(screen.getByRole('meter', { name: 'Overall Score' })).toHaveAttribute('aria-valuenow', '0');
     expect(screen.getByRole('meter', { name: 'Efficiency' })).toHaveAttribute('aria-valuenow', '0');
     expect(screen.getByText('Grade: F')).toBeInTheDocument();
+    expect(screen.queryByText(/loading is deferred/)).not.toBeInTheDocument();
   });
 
   it('does not create numeric meters from nonfinite server readings', () => {

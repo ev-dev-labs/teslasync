@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next'
 import { GlassPanel, PanelTitle } from '@/components/ui'
 import { MetricBar } from '@/components/data-display'
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback'
-import { chartTokens } from '@/lib/tokens'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting'
+import { chartTokens, typography } from '@/lib/tokens'
 
 import type { BreakdownItem } from './sessionStats'
 
@@ -42,6 +43,7 @@ export function SessionBreakdownPanel({
   colorOffset = 0,
 }: SessionBreakdownPanelProps) {
   const { t } = useTranslation()
+  const { fmtInt } = useNumberFormatting()
   const series = chartTokens.series
   const rows = items ?? []
   const max = total > 0 ? total : 1
@@ -57,7 +59,7 @@ export function SessionBreakdownPanel({
   return (
     <GlassPanel className="p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <span className="text-cyan-300" aria-hidden="true">
+        <span className={typography.color.muted} aria-hidden="true">
           {icon}
         </span>
         {title}
@@ -80,7 +82,7 @@ export function SessionBreakdownPanel({
               value={row.count}
               max={max}
               color={series[(i + colorOffset) % series.length]}
-              sublabel={String(row.count)}
+              sublabel={fmtInt(row.count)}
             />
           ))}
         </div>

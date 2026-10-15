@@ -21,6 +21,7 @@ export default function VehicleManagementPage() {
     vehicle: selectedFromStore,
   } = useSelectedVehicle()
   const vehicles = vehiclesQuery.data ?? []
+  const rosterUnresolved = !vehiclesState.hasData && !vehiclesState.fatalError
   const selectedVehicle =
     selectedFromStore ??
     (vehicleId != null
@@ -54,6 +55,18 @@ export default function VehicleManagementPage() {
         )}
 
         <StaleRefreshWarning state={vehiclesState} label={t('vehicleManagement.pageTitle', 'Vehicle management')} />
+        {rosterUnresolved && !vehiclesQuery.isLoading && (
+          <AlertBanner
+            variant="info"
+            title={vehiclesState.isRefreshBlocked
+              ? t('dataSources.status.paused', 'Refresh paused')
+              : t('operations.status.awaitingData', 'Awaiting data')}
+          >
+            {vehiclesState.isRefreshBlocked
+              ? t('system.outage.pausedSource', 'Waiting for a connection before this source can load. Missing evidence remains unknown.')
+              : t('system.outage.awaitingSource', 'This source has not resolved yet; missing evidence is not a confirmed empty result.')}
+          </AlertBanner>
+        )}
         {vehiclesState.fatalError && (
           <AlertBanner
             variant="danger"
@@ -82,6 +95,7 @@ export default function VehicleManagementPage() {
         )}
 
         {!vehiclesQuery.isLoading &&
+          vehiclesState.hasData &&
           !vehiclesState.fatalError &&
           vehicles.length === 0 && (
             <AlertBanner

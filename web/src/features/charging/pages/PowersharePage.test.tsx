@@ -44,6 +44,8 @@ import { render, screen, within, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import type { DataStateSource } from '@/api/dataState';
+import type { Vehicle } from '@/types/vehicle';
 
 import { ToastProvider } from '@/components/feedback/Toast';
 import type { SignalObservation } from '@/types/signals';
@@ -63,6 +65,7 @@ import {
 // call args (for param-wiring assertions) and routes by signal_name.
 const h = vi.hoisted(() => ({
   selectedVehicleId: 7 as number | null,
+  vehiclesQuery: {} as DataStateSource<Vehicle[]>,
   queries: {} as Record<string, QueryStub>,
   observe: vi.fn((_vehicleId: unknown, opts?: { signal_name?: string; limit?: number }) => {
     const name = opts?.signal_name ?? '';
@@ -114,14 +117,20 @@ vi.mock('@/api/hooks/useTelemetry', async (importOriginal) => {
   return { ...actual, useSignalObservations: h.observe };
 });
 
-vi.mock('@/hooks/useSelectedVehicle', () => ({
-  useSelectedVehicle: () => ({
-    vehicleId: h.selectedVehicleId,
-    vehicle: null,
-    vehicles: [],
-    setVehicleId: vi.fn(),
-  }),
-}));
+vi.mock('@/hooks/useSelectedVehicle', async () => {
+  const { deriveDataState } = await import('@/api/dataState');
+  return {
+    useSelectedVehicle: () => ({
+      vehicleId: h.selectedVehicleId,
+      vehicle: null,
+      vehicles: h.vehiclesQuery.data ?? [],
+      vehiclesState: deriveDataState(h.vehiclesQuery, {
+        unavailable: h.vehiclesQuery.isSuccess && h.vehiclesQuery.data?.length === 0,
+      }),
+      setVehicleId: vi.fn(),
+    }),
+  };
+});
 
 vi.mock('@/hooks/useChartPalette', () => ({
   useChartPalette: () => ['var(--theme-primary)', 'var(--text-secondary)'],
@@ -134,6 +143,9 @@ vi.mock('@/components/forms', () => ({
 }));
 
 import PowersharePage from './PowersharePage';
+import runtimeCardSource from '../components/powershare-modernization/RuntimeCard.tsx?raw';
+import snapshotCardSource from '../components/powershare-modernization/SnapshotCard.tsx?raw';
+import stopReasonCardSource from '../components/powershare-modernization/StopReasonCard.tsx?raw';
 
 // jsdom lacks matchMedia (framer-motion's useReducedMotion, reached via FadeIn
 // and the freshness chip). The chart/observer polyfills already live in
@@ -250,9 +262,16 @@ function renderPage() {
   );
 }
 
+const vehicle: Vehicle = {
+  id: 7, vehicle_id: 7, vin: 'fixture-vin', display_name: 'Fixture vehicle',
+  model: 'Cybertruck', trim_badging: '', exterior_color: '', wheel_type: '',
+  state: 'online', healthy: true, created_at: '', updated_at: '',
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
   h.selectedVehicleId = 7;
+  h.vehiclesQuery = { data: [vehicle], isSuccess: true, refetch: vi.fn() };
   h.queries = {};
   readyFleet();
 });
@@ -262,8 +281,78 @@ afterEach(() => {
 });
 
 describe('PowersharePage', () => {
+  it.each([
+    ['RuntimeCard', runtimeCardSource],
+    ['SnapshotCard', snapshotCardSource],
+    ['StopReasonCard', stopReasonCardSource],
+  ])('%s uses the canonical layout category export', (_name, source) => {
+    expect(source).toMatch(/import \{ LayoutCard \} from '@\/components\/layout';/);
+    expect(source).not.toContain('@/components/layout/layout-reference');
+  });
+
+  it('shows vehicle lookup loading instead of a resolved empty selection', () => {
+    h.selectedVehicleId = null;
+    h.vehiclesQuery = { isLoading: true, isFetching: true };
+
+    renderPage();
+
+    expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
+    expect(screen.queryByText('Select a vehicle to view its Powershare telemetry.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Signal Snapshot')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
+    expect(h.observe.mock.calls.every(([id]) => id === undefined)).toBe(true);
+  });
+
+  it('surfaces initial vehicle lookup failure and retries that source only', () => {
+    h.selectedVehicleId = null;
+    const refetch = vi.fn();
+    h.vehiclesQuery = { isError: true, error: new Error('lookup failed'), refetch };
+
+    renderPage();
+
+    expect(screen.getByText(/Can't reach server/i)).toBeInTheDocument();
+    expect(screen.queryByText('Select a vehicle to view its Powershare telemetry.')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    for (const query of Object.values(h.queries)) {
+      expect(query.refetch).not.toHaveBeenCalled();
+    }
+  });
+
+  it('distinguishes a paused vehicle lookup from loading and an empty fleet', () => {
+    h.selectedVehicleId = null;
+    h.vehiclesQuery = { isPending: true, fetchStatus: 'paused' };
+
+    const { container } = renderPage();
+
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.getByRole('status')).not.toHaveAttribute('aria-busy');
+    expect(screen.queryByText('Select a vehicle to view its Powershare telemetry.')).not.toBeInTheDocument();
+    expect(container.querySelector('[class~="bg-[var(--skeleton-bg)]"]')).toBeNull();
+  });
+
+  it('retains populated telemetry when the vehicle lookup refresh fails', () => {
+    const refetch = vi.fn();
+    h.vehiclesQuery = {
+      data: [vehicle], isError: true, error: new Error('lookup refresh failed'), refetch,
+    };
+
+    renderPage();
+
+    const warning = within(screen.getByTestId('stale-refresh-warning'));
+    expect(warning.getByText('Previously loaded data remains visible while affected sources recover.')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Powershare metrics' })).toHaveTextContent('3.25 kW');
+    expect(screen.getByText('Signal Snapshot')).toBeInTheDocument();
+    expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
+    fireEvent.click(warning.getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
   it('renders the no-vehicle empty state (and no telemetry panels) when the fleet is empty', () => {
     h.selectedVehicleId = null;
+    h.vehiclesQuery = { data: [], isSuccess: true };
 
     renderPage();
 

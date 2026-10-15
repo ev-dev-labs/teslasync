@@ -124,7 +124,7 @@ export function ImportVerifyPanel() {
       )}
 
       {result && imported && (
-        <div className="space-y-3 rounded-lg border border-white/[0.06] p-3 text-xs">
+        <div className="space-y-3 rounded-lg border border-[var(--border-subtle)] p-3 text-xs">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant={result.valid ? 'success' : 'danger'} size="md">
               {result.valid
@@ -141,7 +141,7 @@ export function ImportVerifyPanel() {
                 ? t('resaleVault.import.sigValid', 'Signature valid')
                 : t('resaleVault.import.sigInvalid', 'Signature invalid')}
             </Badge>
-            {result.isKnownLocalKey && (
+            {result.signatureValid && result.isKnownLocalKey && (
               <Badge variant={result.localKeyRevoked ? 'danger' : 'info'}>
                 {result.localKeyRevoked
                   ? t('resaleVault.import.knownRevoked', 'Signed with a locally-known, revoked key')
@@ -152,9 +152,9 @@ export function ImportVerifyPanel() {
 
           <div className="flex items-center gap-2 text-[var(--text-secondary)]">
             {result.valid ? (
-              <ShieldCheck className="h-4 w-4 text-[var(--color-success,#22c55e)]" aria-hidden />
+              <ShieldCheck className="h-4 w-4 text-[var(--semantic-success)]" aria-hidden />
             ) : (
-              <ShieldX className="h-4 w-4 text-[var(--color-danger,#ef4444)]" aria-hidden />
+              <ShieldX className="h-4 w-4 text-[var(--semantic-danger)]" aria-hidden />
             )}
             <span className="font-mono break-all">{t('resaleVault.import.keyId', 'Key ID')}: {result.keyId}</span>
           </div>

@@ -7,11 +7,13 @@ import { chartTokens } from '@/lib/tokens';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
 import type { GridLimits, SlotResult } from '../lib/types';
+import { DEFAULT_SLOT_MINUTES } from '../lib/scenarioDefaults';
 
 interface TariffConstraintHeatmapProps {
   slots: SlotResult[];
   grid: GridLimits;
   hasPowerwall: boolean;
+  slotMinutes?: number;
 }
 
 const HEAT_LEGEND = [4, 15, 40, 55, 75].map(
@@ -34,7 +36,7 @@ function heatColor(ratio: number): string {
  * data-driven so a static Tailwind class cannot express them — the sanctioned
  * `style={{}}` exception (see `HeatmapGrid.tsx` precedent).
  */
-export function TariffConstraintHeatmap({ slots, grid, hasPowerwall }: TariffConstraintHeatmapProps) {
+export function TariffConstraintHeatmap({ slots, grid, hasPowerwall, slotMinutes = DEFAULT_SLOT_MINUTES }: TariffConstraintHeatmapProps) {
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
   const { formatPower } = useUnits();
@@ -90,6 +92,11 @@ export function TariffConstraintHeatmap({ slots, grid, hasPowerwall }: TariffCon
   ];
   const activeRow = rows.find((row) => row.key === activeCell.rowKey) ?? rows[0];
   const activeSlot = slots[activeCell.index] ?? slots[0];
+  const rowTime = (rowKey: string, s: SlotResult) => formatTime(
+    rowKey === 'powerwall'
+      ? new Date(Date.parse(s.startIso) + slotMinutes * 60_000).toISOString()
+      : s.startIso,
+  );
 
   return (
     <LayoutCard title={t('homeEnergy.heatmap.title', 'Tariff & constraint heatmap')}>
@@ -107,8 +114,8 @@ export function TariffConstraintHeatmap({ slots, grid, hasPowerwall }: TariffCon
                       key={i}
                       type="button"
                       variant="ghost"
-                      title={`${formatTime(s.startIso)} — ${row.format(s)}`}
-                      aria-label={`${row.label}: ${formatTime(s.startIso)} — ${row.format(s)}`}
+                      title={`${rowTime(row.key, s)} — ${row.format(s)}`}
+                      aria-label={`${row.label}: ${rowTime(row.key, s)} — ${row.format(s)}`}
                       aria-describedby={detailId}
                       className="h-11 w-11 min-w-11 p-0 md:h-6 md:w-6 md:min-w-6"
                       onFocus={() => setActiveCell({ rowKey: row.key, index: i })}
@@ -130,7 +137,7 @@ export function TariffConstraintHeatmap({ slots, grid, hasPowerwall }: TariffCon
       )}
       {activeSlot && (
         <Caption as="div" id={detailId} className="mt-2 break-words">
-          {`${activeRow.label}: ${formatTime(activeSlot.startIso)} — ${activeRow.format(activeSlot)}`}
+          {`${activeRow.label}: ${rowTime(activeRow.key, activeSlot)} — ${activeRow.format(activeSlot)}`}
         </Caption>
       )}
       <div className="mt-3 flex items-center gap-2">

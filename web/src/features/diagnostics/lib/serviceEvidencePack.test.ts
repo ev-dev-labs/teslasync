@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { deriveDataState } from '@/api/dataState';
+import type { SignalEvidenceBundleSource } from '@/api/hooks/useTelemetry';
 import {
   analyzeRootCause,
   NO_CAUSAL_PROOF_DISCLAIMER,
@@ -179,7 +181,7 @@ describe('buildServiceEvidencePackCore', () => {
   it('stamps the stable schema version and the injected clock', () => {
     const core = buildServiceEvidencePackCore(buildInput());
     expect(core.schemaVersion).toBe(SERVICE_EVIDENCE_PACK_SCHEMA_VERSION);
-    expect(core.schemaVersion).toBe('1.0.0');
+    expect(core.schemaVersion).toBe('1.1.0');
     expect(core.generatedAt).toBe(FIXED_NOW);
   });
 
@@ -433,6 +435,125 @@ describe('buildServiceEvidencePackCore', () => {
       expect(core.window.latestMs).toBe(analysis.dataWindow.latestMs);
     });
 
+    describe('source snapshot', () => {
+      it('keeps legacy populated evidence but never fabricates source trust or loaded counts', () => {
+        const analysis = buildPopulatedAnalysis();
+        const core = buildServiceEvidencePackCore(buildInput({ analysis }));
+        expect(core.quality).toEqual(analysis.quality);
+        expect(core.focalShift).toEqual(analysis.focalShift);
+        expect(core.snapshot?.counts).toEqual({
+          signalEvidence: core.signalEvidence.length,
+          hypotheses: core.hypotheses.length,
+          softwareUpdates: null,
+        });
+        const focal = core.snapshot?.sources.find((source) => source.signal === 'PackVoltage');
+        expect(focal?.loadedCount).toBeNull();
+        expect(focal?.reportedCount).toBeNull();
+        expect(focal?.trust).toEqual({
+          status: 'unknown', provenance: 'unknown', hasData: null,
+          isRefreshing: null, isRefreshBlocked: null,
+          hasRefreshError: null, hasFatalError: null, updatedAt: null, ageMs: null,
+        });
+      });
+
+      it('distinguishes absent analysis and update counts from explicitly empty arrays', () => {
+        const absent = buildServiceEvidencePackCore(buildInput({
+          analysis: {} as RootCauseAnalysisResult,
+        }));
+        expect(absent.snapshot?.counts).toEqual({
+          signalEvidence: null, hypotheses: null, softwareUpdates: null,
+        });
+        const empty = buildServiceEvidencePackCore(buildInput({
+          analysis: buildEmptyAnalysis(), softwareUpdates: [],
+        }));
+        expect(empty.snapshot?.counts).toEqual({
+          signalEvidence: 0, hypotheses: 0, softwareUpdates: 0,
+        });
+      });
+
+      it('captures every requested source identity and retained trust without raw payloads or error details', async () => {
+        const response = {
+          vehicleId: 42, signal: 'PackVoltage',
+          from: '2024-01-01T00:00:00Z', to: '2024-01-02T00:00:00Z',
+          count: 123, data: [{
+            ts: '2024-01-01T00:01:00Z', kind: 'ValueKindDouble', value: -10,
+            ingest_origin: null, source_emitted_at: null, received_at: null,
+            normalization_version: null,
+          }],
+        };
+        const histories: SignalEvidenceBundleSource[] = [
+          { signal: 'PackVoltage', state: deriveDataState({
+            data: response, error: new Error('authToken=secret'), dataUpdatedAt: BASE,
+            isFetching: true,
+          }, { provenance: 'historical', now: () => BASE + 500 }) },
+          { signal: 'PackTemperature', state: deriveDataState({
+            data: { ...response, signal: 'PackTemperature', count: 0, data: [] },
+          }, { provenance: 'historical', unavailable: true }) },
+          { signal: 'BatteryLevel', state: deriveDataState({
+            error: new Error('private initial failure'),
+          }, { provenance: 'historical' }) },
+          { signal: 'NeverLoaded', state: deriveDataState({}, { provenance: 'historical' }) },
+          { signal: 'Latitude', state: deriveDataState({
+            data: { ...response, signal: 'Latitude' },
+          }) },
+        ];
+        const input = buildInput({
+          sources: {
+            catalog: deriveDataState({ data: ['PackVoltage'], fetchStatus: 'paused' }),
+            histories,
+            softwareUpdates: deriveDataState({ data: [], isFetching: true }, { provenance: 'historical' }),
+          },
+        });
+        const before = canonicalStringify(histories);
+        const doc = await buildServiceEvidencePack(input);
+        const snapshots = doc.snapshot!.sources;
+        expect(snapshots.map((source) => source.signal)).toEqual([
+          null, 'PackVoltage', 'PackTemperature', 'BatteryLevel', 'NeverLoaded', null,
+        ]);
+        expect(snapshots[1]).toMatchObject({
+          kind: 'history', responseSignal: 'PackVoltage', vehicleId: 42,
+          from: response.from, to: response.to,
+          loadedCount: 1, reportedCount: 123,
+          trust: {
+            status: 'stale', provenance: 'historical', hasData: true,
+            isRefreshing: true, hasRefreshError: true, hasFatalError: false,
+            updatedAt: BASE, ageMs: 500,
+          },
+        });
+        expect(snapshots[2]).toMatchObject({ loadedCount: 0, reportedCount: 0, trust: { status: 'unavailable' } });
+        expect(snapshots[3]).toMatchObject({ loadedCount: null, reportedCount: null, trust: { status: 'initialFailure' } });
+        expect(snapshots[4]).toMatchObject({ loadedCount: null, trust: { status: 'initial' } });
+        expect(snapshots[0]?.trust).toMatchObject({ status: 'stale', isRefreshBlocked: true });
+        expect(snapshots[5]).toMatchObject({ loadedCount: 0, trust: { isRefreshing: true } });
+        expect(JSON.stringify(doc.snapshot)).not.toMatch(/Latitude|authToken|secret|private initial failure/);
+        expect(canonicalStringify(histories)).toBe(before);
+        expect(histories[0]!.state.data?.data[0]?.value).toBe(-10);
+        const { integrity, ...core } = doc;
+        expect(integrity.digestHex).toBe(await sha256Hex(canonicalStringify(core)));
+        histories[0]!.state.ageMs = 999;
+        expect(snapshots[1]?.trust.ageMs).toBe(500);
+        const changed = await buildServiceEvidencePack(input);
+        expect(changed.integrity.digestHex).not.toBe(integrity.digestHex);
+      });
+
+      it('counts raw software rows before normalization and rejects invalid reported counts', () => {
+        const source: SignalEvidenceBundleSource = {
+          signal: 'PackVoltage',
+          state: deriveDataState({ data: {
+            vehicleId: 42, signal: 'PackVoltage', from: '', to: '',
+            count: -1, data: [],
+          } }),
+        };
+        const core = buildServiceEvidencePackCore(buildInput({
+          softwareUpdates: [{ version: '' }, { version: '2024.20.1' }],
+          sources: { histories: [source] },
+        }));
+        expect(core.softwareUpdates).toHaveLength(1);
+        expect(core.snapshot?.counts.softwareUpdates).toBe(2);
+        expect(core.snapshot?.sources.find((entry) => entry.signal === 'PackVoltage')?.reportedCount).toBeNull();
+      });
+    });
+
     it('defaults hours to 0 for non-finite/missing values', () => {
       const core = buildServiceEvidencePackCore(buildInput({ windowHours: Number.POSITIVE_INFINITY }));
       expect(core.window.hours).toBe(0);
@@ -588,6 +709,7 @@ describe('buildServiceEvidencePack', () => {
         'privacy',
         'disclaimer',
         'integrity',
+        'snapshot',
       ].sort(),
     );
   });

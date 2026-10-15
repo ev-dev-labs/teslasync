@@ -5,6 +5,16 @@ import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import './metricPreferencesTestSetup';
 import { TelemetrySummaryBrief } from './TelemetrySummaryBrief';
 
+const preferences = vi.hoisted(() => ({
+  locale: 'en-US', timezone_user: 'UTC', tz_display_default: 'user',
+}));
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({ settings: preferences, locale: preferences.locale }),
+}));
+vi.mock('@/hooks/useSelectedVehicle', () => ({
+  useSelectedVehicle: () => ({ vehicle: null }),
+}));
+
 vi.mock('react-i18next', () => ({ useTranslation: () => ({
   t: (key: string, fallback?: unknown, variables?: Record<string, unknown>) => {
     const text = typeof fallback === 'string' ? fallback : key;
@@ -16,7 +26,12 @@ vi.mock('@/hooks/useOperationalMetrics', async importOriginal => {
   const actual = await importOriginal<typeof import('@/hooks/useOperationalMetrics')>();
   return { ...actual, useOperationalMetrics: vi.fn(actual.useOperationalMetrics) };
 });
-afterEach(() => { cleanup(); vi.clearAllMocks(); });
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+  preferences.locale = 'en-US';
+  preferences.timezone_user = 'UTC';
+});
 
 const metrics: readonly StatMetric[] = Object.freeze([
   Object.freeze({ metricId: 'rate' as const, occurrenceId: 'rate', rawValue: 1.234567,
@@ -34,6 +49,145 @@ function setup(overrides: Partial<Parameters<typeof TelemetrySummaryBrief>[0]> =
 }
 
 describe('Telemetry compact OperationalBrief contract', () => {
+  it('uses saved locale and timezone across day boundaries without losing exact evidence in either surface', () => {
+    preferences.locale = 'de-DE';
+    preferences.timezone_user = 'America/Los_Angeles';
+    const from = '2026-01-02T07:59:59.123Z';
+    const to = '2026-01-02T08:00:00.456Z';
+    setup({
+      requestedBounds: [{ signal: 'requested', from, to }],
+      sourceBounds: [{ signal: 'source', from, to }],
+      observedBounds: [{ signal: 'numeric', from, to }],
+      lastSuccessAt: to, completenessUnknown: true,
+    });
+    const localizedFrom = new Intl.DateTimeFormat('de-DE', {
+      timeZone: 'America/Los_Angeles', year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    }).format(new Date(from));
+    const localizedTo = new Intl.DateTimeFormat('de-DE', {
+      timeZone: 'America/Los_Angeles', year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    }).format(new Date(to));
+    expect(localizedFrom).toContain('1. Jan.');
+    expect(localizedTo).toContain('2. Jan.');
+    const assertEvidence = (surface: HTMLElement) => {
+      expect(surface).toHaveTextContent(`Requested: ${from} → ${to}`);
+      expect(surface).toHaveTextContent(`source source bounds: ${from} → ${to}`);
+      expect(surface).toHaveTextContent(`Observed evidence: ${from} → ${to}`);
+      expect(surface).toHaveTextContent(`(${localizedFrom} → ${localizedTo} · America/Los_Angeles)`);
+      expect(surface).toHaveTextContent(`Last successful response: ${to} (${localizedTo} · America/Los_Angeles)`);
+      expect(surface).toHaveTextContent('Returned evidence; completeness not guaranteed');
+      expect(surface).toHaveTextContent('24h requested; overlap only');
+      expect(surface).toHaveTextContent('Independent returned evidence');
+    };
+    assertEvidence(screen.getByTestId('brief'));
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    assertEvidence(screen.getByRole('dialog'));
+    expect(vi.mocked(useOperationalMetrics).mock.lastCall?.[0]).toBe(metrics);
+  });
+
+  it.each([
+    {},
+    { from: 'invalid', to: 'also-invalid' },
+    { from: '2026-01-02T08:00:00Z' },
+    { from: '2026-01-03T00:00:00Z', to: '2026-01-02T00:00:00Z' },
+  ])('keeps missing or invalid dates unknown with saved preferences: %j', bounds => {
+    preferences.locale = 'fr-FR';
+    preferences.timezone_user = 'Asia/Tokyo';
+    setup({
+      requestedBounds: [{ signal: 'request', ...bounds }],
+      observedBounds: [{ signal: 'numeric', ...bounds }],
+      sourceBounds: [{ signal: 'source', ...bounds }],
+      lastSuccessAt: 'invalid',
+    });
+    const assertUnknown = (surface: HTMLElement) => {
+      expect(surface).toHaveTextContent('Requested · request source bounds not supplied');
+      expect(surface).toHaveTextContent('Observed · numeric source bounds not supplied');
+      expect(surface).toHaveTextContent('source source bounds not supplied');
+      expect(surface).toHaveTextContent('Last successful response: Unknown');
+      expect(surface).not.toHaveTextContent('Invalid Date');
+      expect(surface).not.toHaveTextContent('Asia/Tokyo');
+      expect(surface).not.toHaveTextContent('full-range coverage');
+    };
+    assertUnknown(screen.getByTestId('brief'));
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    assertUnknown(screen.getByRole('dialog'));
+  });
+
+  it('does not infer completeness from matching requested, observed, and source extrema', () => {
+    const bounds = { signal: 'A', from: '2026-01-01T00:00:00Z', to: '2026-01-02T00:00:00Z' };
+    setup({ requestedBounds: [bounds], sourceBounds: [bounds], observedBounds: [bounds] });
+    expect(screen.getByTestId('brief')).toHaveTextContent('Queried snapshot');
+    expect(screen.getByTestId('brief')).not.toHaveTextContent('Complete');
+    expect(screen.getByTestId('brief')).not.toHaveTextContent('Cap reached');
+    expect(screen.getByTestId('brief')).not.toHaveTextContent('Partial source coverage');
+    expect(screen.getByTestId('brief')).not.toHaveTextContent('Last successful response:');
+  });
+
+  it('distinguishes requested and observed bounds and cap uncertainty while retaining payload and caveats', () => {
+    const { container } = setup({
+      requestedBounds: [{ signal: 'A', from: '2026-01-01T00:00:00Z', to: '2026-01-04T00:00:00Z' }],
+      observedBounds: [{ signal: 'A', from: '2026-01-02T01:00:00Z', to: '2026-01-02T02:00:00Z' }],
+      capReached: true,
+    });
+    const summary = screen.getByTestId('brief');
+    expect(summary).toHaveTextContent('Requested: 2026-01-01T00:00:00Z → 2026-01-04T00:00:00Z');
+    expect(summary).toHaveTextContent('Observed evidence: 2026-01-02T01:00:00Z → 2026-01-02T02:00:00Z');
+    expect(summary).toHaveTextContent('Cap reached; full-range coverage not claimed');
+    expect(summary).toHaveTextContent('Partial source coverage');
+    expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(3);
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(drawer).toHaveTextContent('Requested: 2026-01-01T00:00:00Z');
+    expect(drawer).toHaveTextContent('Observed evidence: 2026-01-02T01:00:00Z');
+    expect(drawer).toHaveTextContent('Cap reached; full-range coverage not claimed');
+    expect(drawer).toHaveTextContent('One-second tail rate; not broker lifetime throughput');
+    expect(drawer).toHaveTextContent('Producer-time history; receipt fallbacks excluded');
+    expect(vi.mocked(useOperationalMetrics).mock.lastCall?.[0]).toBe(metrics);
+  });
+
+  it.each([
+    { from: 'not-a-date', to: '2026-01-02T00:00:00Z' },
+    { from: '2026-01-03T00:00:00Z', to: '2026-01-02T00:00:00Z' },
+    { from: '2026-01-01T00:00:00Z' },
+  ])('does not replace invalid observed bounds with requested or source bounds: %j', bound => {
+    setup({
+      requestedBounds: [{ signal: 'A', from: '2026-01-01T00:00:00Z', to: '2026-01-04T00:00:00Z' }],
+      observedBounds: [{ signal: 'A', ...bound }],
+      sourceBounds: [{ signal: 'B', ...bound }],
+      completenessUnknown: true,
+    });
+    const summary = screen.getByTestId('brief');
+    expect(summary).toHaveTextContent('Observed · A source bounds not supplied');
+    expect(summary).toHaveTextContent('B source bounds not supplied');
+    expect(summary).not.toHaveTextContent('Observed evidence:');
+    expect(summary).toHaveTextContent('Returned evidence; completeness not guaranteed');
+    expect(summary).not.toHaveTextContent('Cap reached');
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('Observed · A source bounds not supplied');
+  });
+
+  it('keeps last-success freshness separate from observed timestamps and failed refreshes', () => {
+    const { container, rerender } = setup({
+      retained: true, loading: true, unavailable: true, capReached: true,
+      lastSuccessAt: '2026-01-03T00:00:00Z',
+      freshness: 'Refresh failed; last successful measurement retained',
+      observedBounds: [{ signal: 'A', from: '2026-01-02T01:00:00Z', to: '2026-01-02T02:00:00Z' }],
+    });
+    expect(screen.getByTestId('brief')).toHaveTextContent('Last successful response: 2026-01-03T00:00:00Z');
+    expect(screen.getByTestId('brief')).toHaveTextContent('Refresh failed; last successful measurement retained');
+    expect(screen.getByTestId('brief')).toHaveTextContent('Retained source data');
+    expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(3);
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('Last successful response: 2026-01-03T00:00:00Z');
+    expect(screen.getByRole('dialog')).toHaveTextContent('Cap reached; full-range coverage not claimed');
+    rerender(<TelemetrySummaryBrief title="Signal evidence" description="Independent returned evidence"
+      metrics={metrics} testId="brief" scope="Requested range" provenance="History"
+      retained lastSuccessAt="invalid" />);
+    expect(screen.getByTestId('brief')).toHaveTextContent('Last successful response: Unknown');
+    expect(screen.getByTestId('brief')).not.toHaveTextContent('Last successful response: invalid');
+  });
+
   it('uses the actual raw bridge without rounding input rate, coefficient, or signed lag', () => {
     const { container } = setup();
     expect(container.querySelectorAll('[data-operational-brief]')).toHaveLength(1);

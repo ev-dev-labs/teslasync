@@ -247,6 +247,72 @@ describe('NextChargeDecisionStrip', () => {
     expect(screen.getByRole('link', { name: 'Open Autopilot' })).toHaveAttribute('href', '/smart-charge');
   });
 
+  it.each([undefined, null, NaN, Infinity, -Infinity])(
+    'keeps unavailable narrative costs and savings unknown rather than free (%s)',
+    (value) => {
+      const decision: NextChargeDecision = {
+        ...WAIT,
+        reason: 'Savings {{save}}; home {{home}}; Supercharger {{sc}}; site {{site}}; time {{time}}',
+        home_savings: value,
+        home_now_cost: value,
+        supercharger_cost: value,
+        home_wait_start: 'invalid-time',
+        supercharger_site: '   ',
+      };
+      mockDecision.mockReturnValue(qr({ data: decision }));
+      renderStrip(50);
+      const summary = screen.getByTestId('vehicle-next-charge-summary');
+      expect(summary).toHaveTextContent(
+        'Savings Unknown; home Unknown; Supercharger Unknown; site Unknown; time Unknown',
+      );
+      expect(summary).not.toHaveTextContent('$0.00');
+      expect(screen.getByText('Home now').closest('[data-operational-metric]'))
+        .not.toHaveAttribute('data-value-state', 'valid');
+      expect(screen.getByText('Wait window').closest('[data-operational-metric]')).toHaveTextContent('$6.10');
+      expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(3);
+      expect(screen.getByRole('button', { name: 'Open Autopilot' })).toBeVisible();
+    },
+  );
+
+  it.each([0, -2.1, 2.1])('preserves genuine signed savings and unchanged cost metrics (%s)', (savings) => {
+    const decision: NextChargeDecision = {
+      ...WAIT,
+      reason: 'Save {{save}}; home {{home}}; Supercharger {{sc}}',
+      home_savings: savings,
+      home_now_cost: 0,
+      supercharger_cost: 12.34,
+    };
+    mockDecision.mockReturnValue(qr({ data: decision }));
+    renderStrip(50);
+    expect(screen.getByTestId('vehicle-next-charge-summary'))
+      .toHaveTextContent(`Save $${savings.toFixed(2)}; home $0.00; Supercharger $12.34`);
+    expect(screen.getByText('Home now').closest('[data-operational-metric]')).toHaveTextContent('$0.00');
+    expect(screen.getByText('Wait window').closest('[data-operational-metric]')).toHaveTextContent('$6.10');
+    expect(screen.getByText('Supercharger').closest('[data-operational-metric]')).toHaveTextContent('$12.34');
+    expect(decision.home_savings).toBe(savings);
+  });
+
+  it('marks invalid SOC and energy operands unknown without dropping the source verdict', () => {
+    mockDecision.mockReturnValue(qr({ data: {
+      ...WAIT, current_soc: NaN, target_soc: Infinity, kwh_needed: -Infinity,
+      reason: 'Observed {{soc}}% toward {{target}}%',
+    } }));
+    renderStrip(50);
+    expect(screen.getByText('Unknown% → Unknown% · Unknown kWh needed')).toBeVisible();
+    expect(screen.getByTestId('vehicle-next-charge-summary'))
+      .toHaveTextContent('Observed Unknown% toward Unknown%');
+    expect(screen.getAllByText('Wait for off-peak').length).toBeGreaterThan(0);
+  });
+
+  it.each(['', '   '])('uses the returned verdict when an unrecognized reason has no source text (%j)', (reason) => {
+    mockDecision.mockReturnValue(qr({ data: { ...WAIT, reason_key: 'unrecognized', reason } }));
+    renderStrip(50);
+    const summary = screen.getByTestId('vehicle-next-charge-summary');
+    expect(within(summary).getAllByText('Wait for off-peak').length).toBeGreaterThan(0);
+    expect(summary).not.toHaveTextContent('nextCharge.reason.unrecognized');
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(3);
+  });
+
   it('updates SOC and energy narratives with numeric preferences without changing source operands', () => {
     const preferences = getFormatterPreferences();
     const decision: NextChargeDecision = {

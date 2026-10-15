@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Badge, DataTable, Text, type Column } from '@/components/ui';
+import { Badge, BUTTON_BASE, DataTable, Text, type Column } from '@/components/ui';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useUnits } from '@/hooks/useUnits';
 import type { FsdObservatoryEvent } from '@/types/fsd';
@@ -9,6 +9,7 @@ import { FSD_DEFAULT_PAGE_SIZE, FSD_PAGE_SIZE_OPTIONS } from './useClientPaginat
 
 const pagination = { defaultPageSize: FSD_DEFAULT_PAGE_SIZE, pageSizeOptions: FSD_PAGE_SIZE_OPTIONS };
 const confidenceVariants = { high: 'success', estimated: 'info', ambiguous: 'warning', unknown: 'neutral' } as const;
+const driveLinkClassName = `${BUTTON_BASE} min-h-11 min-w-11 max-w-full justify-start whitespace-normal break-words text-[var(--text-primary)] hover:bg-[var(--control-bg-hover)] hover:underline md:min-h-0 md:min-w-0`;
 
 export function FsdObservatoryJournalTable({ events }: { events: FsdObservatoryEvent[] }) {
   const { t } = useTranslation();
@@ -20,7 +21,7 @@ export function FsdObservatoryJournalTable({ events }: { events: FsdObservatoryE
       header: t('fsd.observatory.columns.date', 'Date / time'),
       defaultWidth: 210,
       render: event => event.kind === 'drive' && event.drive_id != null
-        ? <Link to={`/drives/${event.drive_id}`} className="text-cyan-300 hover:underline">{formatDateTime(event.at)}</Link>
+        ? <Link to={`/drives/${event.drive_id}`} className={driveLinkClassName}>{formatDateTime(event.at)}</Link>
         : formatDateTime(event.at),
     },
     {

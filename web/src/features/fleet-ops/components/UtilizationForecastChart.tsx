@@ -1,4 +1,5 @@
 import { AlertTriangle } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Area,
@@ -10,16 +11,19 @@ import {
   YAxis,
   axisTick,
   chartGrid,
-  CHART_COLORS,
 } from '@/components/charts';
 import { AlertBanner, QueryError } from '@/components/feedback';
-import { ChartCard } from '@/components/layout';
+import { ChartCard, LayoutCard } from '@/components/layout';
 import type { FleetUtilizationForecast } from '@/api/hooks/useFleetOps';
+import type { DataState } from '@/api/dataState';
+import { chartTokens } from '@/lib/tokens';
 import { aggregateForecast } from '../helpers';
 
 interface UtilizationForecastChartProps {
   forecast: FleetUtilizationForecast | undefined;
   loading: boolean;
+  source?: DataState<unknown>;
+  pendingContent?: ReactNode;
   error: unknown;
   onRetry: () => void;
 }
@@ -27,6 +31,8 @@ interface UtilizationForecastChartProps {
 export function UtilizationForecastChart({
   forecast,
   loading,
+  source,
+  pendingContent,
   error,
   onRetry,
 }: UtilizationForecastChartProps) {
@@ -49,15 +55,21 @@ export function UtilizationForecastChart({
           {(forecast.limitations ?? []).join(' ')}
         </AlertBanner>
       )}
-      {error ? (
-        <QueryError error={error} onRetry={onRetry} resourceName={t('fleetOps.forecast.resource', 'Utilization forecast')} />
+      {source?.hasData !== true && error ? (
+        <LayoutCard title={t('fleetOps.forecast.title', 'Utilization forecast')}>
+          <QueryError error={error} onRetry={onRetry} resourceName={t('fleetOps.forecast.resource', 'Utilization forecast')} />
+        </LayoutCard>
+      ) : source && !source.hasData ? (
+        <LayoutCard title={t('fleetOps.forecast.title', 'Utilization forecast')}>
+          {pendingContent}
+        </LayoutCard>
       ) : (
         // chart-legend-audit:skip transparent lower offset and uncertainty width form one forecast band around the expected line
         <ChartCard
           title={t('fleetOps.forecast.title', 'Utilization forecast')}
           subtitle={t('fleetOps.forecast.subtitle', 'Expected daily fleet utilization with uncertainty band')}
           ariaLabel={t('fleetOps.forecast.aria', 'Daily fleet utilization forecast with lower and upper uncertainty bounds')}
-          loading={loading}
+          loading={source?.hasData ? false : loading}
           empty={data.length === 0}
           height={320}
           chartKey="fleet-ops-utilization"
@@ -90,14 +102,14 @@ export function UtilizationForecastChart({
                 name={t('fleetOps.forecast.uncertainty', 'Uncertainty')}
                 stackId="band"
                 stroke="none"
-                fill={CHART_COLORS[1]}
-                fillOpacity={0.18}
+                fill={chartTokens.series[1]}
+                fillOpacity={0.08}
               />
               <Line
                 type="monotone"
                 dataKey="expected"
                 name={t('fleetOps.forecast.expected', 'Expected utilization')}
-                stroke={CHART_COLORS[0]}
+                stroke={chartTokens.series[0]}
                 strokeWidth={2}
                 dot={false}
               />

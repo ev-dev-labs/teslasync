@@ -69,7 +69,7 @@ export function AlertDetailDrawer({
 }: AlertDetailDrawerProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { formatDateTime, tz } = useDateFormat('user');
+  const { formatDateTime, tz } = useDateFormat();
   const matchingDetail = detail?.id === alert?.id ? detail : undefined;
   const detailState = useDataState({ data: matchingDetail, error, isLoading, refetch: onRetry });
   const activeAlert = detailState.data ?? alert;

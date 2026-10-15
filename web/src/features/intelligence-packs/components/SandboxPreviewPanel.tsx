@@ -27,7 +27,7 @@ import {
   YAxis,
 } from '@/components/charts';
 import { MetricTile } from '@/components/data-display';
-import { Badge, Caption, Select, Text } from '@/components/ui';
+import { Badge, Button, Caption, Select, Text } from '@/components/ui';
 import { LayoutCard } from '@/components/layout';
 import { EmptyState, InlineCallout } from '@/components/feedback';
 
@@ -38,6 +38,8 @@ import { resolveDashboardWidgetResults } from '../lib/sandboxRunner';
 import type { FormulaRunResult } from '../lib/sandboxRunner';
 import type { PackCapabilityId, PackVizKind } from '../lib/manifestTypes';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDataState } from '@/hooks/useDataState';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { SandboxRunBrief } from './operationalbrief-all/SandboxRunBrief';
 
 function seriesToChartData(series: number[]) {
@@ -56,6 +58,7 @@ function FormulaSeriesChart({
   unit?: string;
 }) {
   const { t } = useTranslation();
+  const palette = useChartPalette();
 
   return (
     // chart-legend-audit:skip line, area, and bar are mutually exclusive render modes for one formula series
@@ -82,7 +85,7 @@ function FormulaSeriesChart({
             <XAxis dataKey="i" hide />
             <YAxis width={36} tick={{ fontSize: 10 }} />
             <Tooltip content={<ChartTooltip />} />
-            <Line type="monotone" dataKey="value" stroke="#22d3ee" dot={false} strokeWidth={2} isAnimationActive={false} />
+            <Line type="monotone" dataKey="value" stroke={palette[0]} dot={false} strokeWidth={2} isAnimationActive={false} />
           </LineChart>
         ) : kind === 'area' ? (
           <AreaChart data={data}>
@@ -90,7 +93,7 @@ function FormulaSeriesChart({
             <XAxis dataKey="i" hide />
             <YAxis width={36} tick={{ fontSize: 10 }} />
             <Tooltip content={<ChartTooltip />} />
-            <Area type="monotone" dataKey="value" stroke="#34d399" fill="#34d39933" isAnimationActive={false} />
+            <Area type="monotone" dataKey="value" stroke={palette[1]} fill={palette[1]} fillOpacity={0.08} isAnimationActive={false} />
           </AreaChart>
         ) : (
           <BarChart data={data}>
@@ -98,7 +101,7 @@ function FormulaSeriesChart({
             <XAxis dataKey="i" hide />
             <YAxis width={36} tick={{ fontSize: 10 }} />
             <Tooltip content={<ChartTooltip />} />
-            <Bar dataKey="value" fill="#a78bfa" isAnimationActive={false} />
+            <Bar dataKey="value" fill={palette[2]} isAnimationActive={false} />
           </BarChart>
         )}
       </ResponsiveContainer>
@@ -109,6 +112,7 @@ function FormulaSeriesChart({
 function WidgetCard({ title, kind, result }: { title: string; kind: PackVizKind; result: FormulaRunResult | null }) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  const palette = useChartPalette();
   if (!result) {
     return (
       <LayoutCard title={title}>
@@ -125,7 +129,7 @@ function WidgetCard({ title, kind, result }: { title: string; kind: PackVizKind;
       ) : kind === 'line' || kind === 'area' || kind === 'bar' ? (
         <FormulaSeriesChart title={title} kind={kind} data={data} unit={result.unit} />
       ) : kind === 'sparkline' ? (
-        <Sparkline data={result.series} ariaLabel={title} />
+        <Sparkline data={result.series} color={palette[0]} ariaLabel={title} />
       ) : kind === 'radial-gauge' ? (
         // A pack formula has no declared ceiling, so the previous ring scaled
         // itself to the sample's own peak — which pinned it to a full circle
@@ -169,6 +173,17 @@ export function SandboxPreviewPanel() {
 
   const selectedEntry = useMemo(() => entries.find((e) => e.envelope.manifest.id === selectedPackId) ?? null, [entries, selectedPackId]);
   const trustQuery = useTrustDecision(selectedEntry?.installedVersion != null ? selectedPackId : null);
+  const trustState = useDataState(trustQuery);
+  const installed = selectedEntry?.installedVersion != null;
+  const grantLabel = t('intelPacks.sandbox.usingInstalledGrant', 'Using installed capability grant');
+  const grantRetained = trustState.refreshError != null || trustState.isRefreshBlocked || trustState.isRefreshing;
+  const trustNotice = trustState.isRefreshBlocked
+    ? t('intelPacks.source.paused', 'The local {{label}} read is paused; no empty result is inferred.', { label: grantLabel })
+    : trustState.fatalError || trustState.refreshError
+      ? t('intelPacks.source.error', 'Could not read {{label}} from local storage.', { label: grantLabel })
+      : trustQuery.fetchStatus === 'fetching'
+        ? t('developerReference.layout.source.loading', 'Loading {{label}}', { label: grantLabel })
+        : null;
 
   const grantedCapabilities = useMemo<ReadonlySet<PackCapabilityId>>(() => {
     if (!selectedEntry) return new Set();
@@ -181,7 +196,9 @@ export function SandboxPreviewPanel() {
 
   const run = useSandboxPreview(selectedEntry?.envelope.manifest ?? null, grantedCapabilities);
   const grantDescription = trustQuery.data
-    ? t('intelPacks.sandbox.usingInstalledGrant', 'Using installed capability grant')
+    ? grantRetained
+      ? t('dataState.staleNamed.title', '{{label}} may be out of date', { label: grantLabel })
+      : grantLabel
     : selectedEntry?.installedVersion != null
       ? t('intelPacks.sandbox.installedGrantUnavailable', 'Installed pack: synthetic preview is simulating the full requested-capability grant because no installed grant is currently available.')
       : t('intelPacks.sandbox.usingFullGrant', 'Preview mode: simulating full requested-capability grant (not installed)');
@@ -208,9 +225,33 @@ export function SandboxPreviewPanel() {
       />
 
       {selectedEntry && (
-        <Badge variant={trustQuery.data ? 'success' : 'neutral'} size="sm">
+        <Badge variant={trustQuery.data && !grantRetained ? 'success' : 'neutral'} size="sm">
           {grantDescription}
         </Badge>
+      )}
+
+      {installed && trustNotice && (
+        <InlineCallout variant={trustState.fatalError || trustState.refreshError ? 'warning' : 'info'}>
+          <div className="space-y-2" role="status" aria-live="polite">
+            <Text as="p" variant="bodySm">{trustNotice}</Text>
+            {trustState.refreshError && (
+              <Text as="p" variant="bodySm">
+                {t('dataSources.staleMessage', 'Previously loaded data remains visible while affected sources recover.')}
+              </Text>
+            )}
+            {trustState.retry && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={trustQuery.fetchStatus === 'fetching'}
+                onClick={trustState.retry}
+              >
+                {t('error.retry', 'Retry')}
+              </Button>
+            )}
+          </div>
+        </InlineCallout>
       )}
 
       {run == null || !selectedEntry ? (

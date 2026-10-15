@@ -91,7 +91,7 @@ export function NotificationInboxTable({
           <Button
           type="button"
           variant="ghost"
-          className="!h-auto !min-h-9 w-full !justify-start !px-0 !py-1 text-left"
+          className="!h-auto !min-h-11 md:!min-h-9 w-full !justify-start !px-0 !py-1 text-left"
           onClick={() => onActivate(log)}
           aria-label={t('notifications.inbox.row.open', 'Open notification: {{title}}', { title: log.title || '—' })}
         >
@@ -122,7 +122,7 @@ export function NotificationInboxTable({
         <Button
           type="button"
           variant="ghost"
-          className="!h-auto !min-h-9 w-full !justify-start !px-0 !py-1 text-left"
+          className="!h-auto !min-h-11 md:!min-h-9 w-full !justify-start !px-0 !py-1 text-left"
           onClick={() => onActivate(log)}
           aria-label={t('notifications.inbox.row.readMessage', 'Read full message: {{title}}', { title: log.title || '—' })}
         >
@@ -225,7 +225,7 @@ export function NotificationInboxTable({
       header: t('notifications.inbox.columns.inspect', 'Inspect'),
       defaultWidth: 100,
       minWidth: 90,
-      render: log => <Button size="sm" variant="ghost" onClick={() => onActivate(log)} icon={<Eye className="h-3.5 w-3.5" aria-hidden="true" />}
+      render: log => <Button size="sm" variant="ghost" className="max-md:!h-auto max-md:!min-h-11" onClick={() => onActivate(log)} icon={<Eye className="h-3.5 w-3.5" aria-hidden="true" />}
         aria-label={t('notifications.inbox.row.inspect', 'Inspect notification: {{title}}', { title: log.title || '—' })}>
         {t('notifications.inbox.columns.inspect', 'Inspect')}
       </Button>,

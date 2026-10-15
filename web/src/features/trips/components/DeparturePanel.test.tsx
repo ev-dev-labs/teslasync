@@ -10,6 +10,17 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+import { formatTime } from '@/lib/dateFormat';
+
+const datePreferences = vi.hoisted(() => ({ locale: 'en-US', tz: 'UTC' }));
+vi.mock('@/hooks/useSettings', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useSettings')>();
+  return { ...actual, useSettings: () => ({ ...actual.useSettings(), locale: datePreferences.locale }) };
+});
+vi.mock('@/lib/timezone', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/timezone')>();
+  return { ...actual, useTimezone: () => datePreferences.tz };
+});
 
 // ── i18n stub ──
 vi.mock('react-i18next', () => {
@@ -88,11 +99,21 @@ function renderPanel(s: JourneySession = session) {
 }
 
 beforeEach(() => {
+  Object.assign(datePreferences, { locale: 'en-US', tz: 'UTC' });
   vi.clearAllMocks();
   mockDeparture.mockReturnValue(idle({ data: advice }));
 });
 
 describe('DeparturePanel', () => {
+  it('formats the recommendation and every slot in the selected locale and timezone', () => {
+    Object.assign(datePreferences, { locale: 'de-DE', tz: 'America/Los_Angeles' });
+    renderPanel();
+    expect(screen.getByText(`Leave ${formatTime(advice.recommended_at, datePreferences)}`)).toBeInTheDocument();
+    for (const slot of advice.slots) {
+      expect(screen.getByText(formatTime(slot.depart_at, datePreferences))).toBeInTheDocument();
+    }
+  });
+
   it('asks for an origin when the session has none', () => {
     renderPanel({ ...session, origin_lat: null });
     expect(screen.getByText(/Add an origin to advise/)).toBeInTheDocument();

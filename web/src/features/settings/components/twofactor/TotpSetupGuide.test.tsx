@@ -78,6 +78,26 @@ beforeEach(() => {
 })
 
 describe('TotpSetupGuide', () => {
+  it('uses neutral theme roles without implying progress or completion', () => {
+    const { container } = render(<TotpSetupGuide />)
+
+    expect(container.querySelector('svg')?.parentElement).toHaveClass(
+      'bg-[var(--surface-2)]',
+      'text-[var(--text-secondary)]',
+      'ring-[var(--border-default)]',
+    )
+    for (const item of screen.getAllByRole('listitem')) {
+      expect(item).not.toHaveAttribute('data-state')
+      expect(item).not.toHaveAttribute('aria-current')
+      expect(within(item).getByText(/^[1-4]$/).parentElement).toHaveClass(
+        'bg-[var(--surface-2)]',
+        'text-[var(--text-primary)]',
+        'ring-[var(--border-default)]',
+      )
+    }
+    expect(container.innerHTML).not.toMatch(/(?:text|bg|ring)-(?:neon|cyan|purple|emerald|amber)/)
+  })
+
   it('renders the translated heading and subtitle', () => {
     render(<TotpSetupGuide />)
 

@@ -71,7 +71,7 @@ export function TotpSetupGuide() {
   return (
     <GlassPanel className="h-full space-y-4 p-4 sm:p-5">
       <div className="flex items-center gap-3">
-        <IconBox color="cyan">
+        <IconBox className="bg-[var(--surface-2)] text-[var(--text-secondary)] ring-[var(--border-default)]">
           <ListChecks className="h-5 w-5" aria-hidden="true" />
         </IconBox>
         <div>

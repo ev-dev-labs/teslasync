@@ -40,10 +40,10 @@ function SchemaCatalogCardBase({ table }: SchemaCatalogCardProps) {
     <GlassPanel className="flex h-full min-w-0 max-w-full flex-col p-4 sm:p-5">
       <div className="mb-3 flex min-w-0 flex-wrap items-start gap-2.5">
         <span
-          className="mt-0.5 inline-flex shrink-0 items-center justify-center rounded-lg bg-cyan-500/10 p-1.5 ring-1 ring-cyan-400/20"
+          className="mt-0.5 inline-flex shrink-0 items-center justify-center rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-1.5"
           aria-hidden="true"
         >
-          <Database className="h-4 w-4 text-cyan-300" />
+          <Database className="h-4 w-4 text-[var(--text-secondary)]" />
         </span>
         <div className="min-w-0 flex-1">
           <PanelTitle className="break-words font-mono [overflow-wrap:anywhere]">
@@ -57,7 +57,7 @@ function SchemaCatalogCardBase({ table }: SchemaCatalogCardProps) {
           as="span"
           size="2xs"
           weight="medium"
-          color="muted"
+          color="secondary"
           className="max-w-full break-words rounded-full bg-[var(--surface-2)] px-2 py-0.5 tabular-nums"
         >
           {t('powerSql.catalog.columnCount', '{{count}} cols', {
@@ -86,17 +86,17 @@ function SchemaCatalogCardBase({ table }: SchemaCatalogCardProps) {
                       {isPrimaryKey && (
                         <KeyRound
                           role="img"
-                          className="h-3 w-3 shrink-0 self-center text-amber-300"
+                          className="h-3 w-3 shrink-0 self-center text-[var(--text-secondary)]"
                           aria-label={t('powerSql.catalog.primaryKey', 'Primary key')}
                         />
                       )}
-                      <Text mono size="xs" className="break-words text-emerald-300 [overflow-wrap:anywhere]">{col.name || EM_DASH}</Text>
+                      <Text mono size="xs" color="primary" className="break-words [overflow-wrap:anywhere]">{col.name || EM_DASH}</Text>
                     </div>
                   </th>
-                  <td><Text variant="caption">{col.type || EM_DASH}</Text></td>
+                  <td><Text size="xs" color="secondary">{col.type || EM_DASH}</Text></td>
                   <td>
                     {col.description
-                      ? <Text variant="caption" as="p">{col.description}</Text>
+                      ? <Text size="xs" color="secondary" as="p">{col.description}</Text>
                       : EM_DASH}
                   </td>
                 </tr>
@@ -106,9 +106,10 @@ function SchemaCatalogCardBase({ table }: SchemaCatalogCardProps) {
         </Table>
       ) : (
         <Text
-          variant="caption"
+          size="xs"
+          color="secondary"
           as="p"
-          className="rounded-md border border-dashed border-[var(--border-subtle)] bg-white/[0.02] px-2.5 py-3 text-center"
+          className="rounded-md border border-dashed border-[var(--border-subtle)] bg-[var(--surface-2)] px-2.5 py-3 text-center"
         >
           {t('powerSql.catalog.noColumns', 'No columns documented for this table.')}
         </Text>

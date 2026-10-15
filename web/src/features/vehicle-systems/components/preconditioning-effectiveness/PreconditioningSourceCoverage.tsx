@@ -5,7 +5,7 @@ import { LayoutCard, Grid } from '@/components/layout';
 import { Badge, Text } from '@/components/ui';
 import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
 import type { UnitFormatter } from '@/hooks/useUnits';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
 import type {
@@ -29,8 +29,8 @@ export function PreconditioningSourceCoverage({
   summary,
   state,
   formatDuration,
-  locale,
 }: PreconditioningSourceCoverageProps) {
+  const { formatDateTime } = useDateFormat();
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const climateReady = sourceReady(state.climate);
@@ -47,6 +47,9 @@ export function PreconditioningSourceCoverage({
     }
     if (source.isLoading) {
       return result(t('preconditioningEffectiveness.coverage.loading', 'Loading'), 'info');
+    }
+    if (source.isPaused) {
+      return result(t('preconditioningEffectiveness.availability.paused', 'Paused offline'), 'warning');
     }
     if (source.error) {
       return result(t('preconditioningEffectiveness.coverage.failed', 'Unavailable'), 'warning');
@@ -78,7 +81,7 @@ export function PreconditioningSourceCoverage({
           <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <Cloud className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                <Cloud className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
                 <Text as="h3" variant="label">
                   {t(
                     'preconditioningEffectiveness.coverage.climateSource',
@@ -110,10 +113,10 @@ export function PreconditioningSourceCoverage({
                 '{{earliest}} to {{latest}} · span {{span}} · median gap {{gap}}',
                 {
                   earliest: climateReady && summary.coverage.climateEarliestMs != null
-                    ? formatDateTime(new Date(summary.coverage.climateEarliestMs), { locale })
+                    ? formatDateTime(new Date(summary.coverage.climateEarliestMs))
                     : '—',
                   latest: climateReady && summary.coverage.climateLatestMs != null
-                    ? formatDateTime(new Date(summary.coverage.climateLatestMs), { locale })
+                    ? formatDateTime(new Date(summary.coverage.climateLatestMs))
                     : '—',
                   span: climateReady
                     ? formatDuration(summary.coverage.climateSpanS)
@@ -128,7 +131,7 @@ export function PreconditioningSourceCoverage({
           <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <Route className="h-4 w-4 text-purple-300" aria-hidden="true" />
+                <Route className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
                 <Text as="h3" variant="label">
                   {t(
                     'preconditioningEffectiveness.coverage.driveSource',
@@ -157,10 +160,10 @@ export function PreconditioningSourceCoverage({
                 '{{earliest}} to {{latest}} · endpoint limit 1,000 rows',
                 {
                   earliest: drivesReady && summary.coverage.driveEarliestMs != null
-                    ? formatDateTime(new Date(summary.coverage.driveEarliestMs), { locale })
+                    ? formatDateTime(new Date(summary.coverage.driveEarliestMs))
                     : '—',
                   latest: drivesReady && summary.coverage.driveLatestMs != null
-                    ? formatDateTime(new Date(summary.coverage.driveLatestMs), { locale })
+                    ? formatDateTime(new Date(summary.coverage.driveLatestMs))
                     : '—',
                 },
               )}

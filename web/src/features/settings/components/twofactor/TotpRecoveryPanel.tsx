@@ -43,7 +43,7 @@ export function TotpRecoveryPanel() {
   return (
     <GlassPanel role="region" aria-labelledby={titleId} className="h-full space-y-4 p-4 sm:p-5">
       <div className="flex items-center gap-3">
-        <IconBox color="amber">
+        <IconBox className="bg-[var(--surface-2)] text-[var(--text-secondary)] ring-[var(--border-default)]">
           <LifeBuoy className="h-5 w-5" aria-hidden="true" />
         </IconBox>
         <div>
@@ -54,7 +54,7 @@ export function TotpRecoveryPanel() {
       <ul className="space-y-3">
         {tips.map(({ key, Icon, text }) => (
           <li key={key} className="flex items-start gap-3">
-            <Icon className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" aria-hidden="true" />
+            <Icon className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
             <Text variant="bodySm" as="p">
               {text}
             </Text>

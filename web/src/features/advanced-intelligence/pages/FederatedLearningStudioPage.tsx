@@ -37,7 +37,7 @@ const initialForm = (): RoundForm => ({
 });
 
 export default function FederatedLearningStudioPage() {
-  const { fmtNumber, fmtInt } = useNumberFormatting();
+  const { fmtNumber, fmtInt, fmtScientificNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
@@ -210,6 +210,7 @@ export default function FederatedLearningStudioPage() {
           <form className="space-y-4" onSubmit={requestConfirmation}>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               <Input
+                className="min-h-11 md:min-h-10"
                 label={t('advancedIntelligence.federated.form.name', 'Model name')}
                 value={form.model_name}
                 maxLength={120}
@@ -217,18 +218,21 @@ export default function FederatedLearningStudioPage() {
                 onChange={(event) => setForm((current) => ({ ...current, model_name: event.target.value }))}
               />
               <Input
+                className="min-h-11 md:min-h-10"
                 label={t('advancedIntelligence.federated.form.version', 'Model version')}
                 value={form.model_version}
                 required
                 onChange={(event) => setForm((current) => ({ ...current, model_version: event.target.value }))}
               />
               <Select
+                className="min-h-11 md:min-h-10"
                 label={t('advancedIntelligence.federated.form.task', 'Task')}
                 value={form.task}
                 options={[{ value: 'efficiency', label: t('advancedIntelligence.federated.task.efficiency', 'Efficiency') }]}
                 onChange={(event) => setForm((current) => ({ ...current, task: event.target.value }))}
               />
               <Input
+                className="min-h-11 md:min-h-10"
                 type="number"
                 label={t('advancedIntelligence.federated.form.epsilon', 'Requested epsilon')}
                 value={form.epsilon}
@@ -239,6 +243,7 @@ export default function FederatedLearningStudioPage() {
                 onChange={(event) => setForm((current) => ({ ...current, epsilon: Number(event.target.value) }))}
               />
               <Input
+                className="min-h-11 md:min-h-10"
                 type="number"
                 label={t('advancedIntelligence.federated.form.budget', 'Epsilon budget')}
                 value={form.epsilon_budget}
@@ -249,6 +254,7 @@ export default function FederatedLearningStudioPage() {
                 onChange={(event) => setForm((current) => ({ ...current, epsilon_budget: Number(event.target.value) }))}
               />
               <Input
+                className="min-h-11 md:min-h-10"
                 type="number"
                 label={t('advancedIntelligence.federated.form.expectedVersion', 'Expected model-card version')}
                 value={form.expected_version}
@@ -286,7 +292,7 @@ export default function FederatedLearningStudioPage() {
         message={t(
           'advancedIntelligence.federated.confirm.body',
           'This local round may spend {{epsilon}} epsilon. It never uploads raw vehicle data.',
-          { epsilon: review?.epsilon ?? form.epsilon },
+          { epsilon: fmtScientificNumber(review?.epsilon ?? form.epsilon, 2) },
         )}
         details={<MutationError error={mutationError} />}
         confirmDisabled={review == null || review.vehicle_id !== vehicleId}

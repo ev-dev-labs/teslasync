@@ -7,6 +7,17 @@ import { __resetAuditTrailForTests } from '../lib/auditTrail';
 import type { UseSigningVaultResult } from '../hooks/useSigningVault';
 import type { SigningKeyRecord } from '../lib/types';
 
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({
+    locale: 'de-DE',
+    settings: { tz_display_default: 'user', timezone_user: 'America/Los_Angeles' },
+  }),
+}));
+vi.mock('@/hooks/useSelectedVehicle', () => ({
+  useSelectedVehicle: () => ({ vehicle: null }),
+}));
+vi.mock('@/lib/timezone', async () => vi.importActual<typeof import('@/lib/timezone')>('@/lib/timezone'));
+
 function Harness() {
   const vault = useSigningVault();
   return <SignatureKeyPanel vault={vault} />;
@@ -116,7 +127,7 @@ describe('SignatureKeyPanel', () => {
     expect(screen.getByText('Key access denied')).toBeInTheDocument();
     expect(screen.getByText('Key storage permission denied; keys are session-only.')).toBeInTheDocument();
     expect(screen.getByText(/Rotated from key_old/)).toBeInTheDocument();
-    expect(screen.getByText(/Revoked at 2024-02-01T00:00:00Z \(rotation\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Revoked at 31\. Jan\. 2024, 16:00 \(rotation\)/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Revoke' })).toBeEnabled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Revoke' }));
@@ -160,5 +171,28 @@ describe('SignatureKeyPanel', () => {
     expect(screen.getByRole('button', { name: 'Revoke' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Generate new key' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Rotate active key' })).toBeEnabled();
+  });
+
+  it.each([
+    ['2026-01-01T00:30:00Z', 'Created: 31. Dez. 2025, 16:30'],
+    ['2026-07-01T00:30:00Z', 'Created: 30. Juni 2026, 17:30'],
+    ['2026-01-01', 'Created: 1. Jan. 2026'],
+    ['2026-02-30', 'Created: —'],
+    ['invalid', 'Created: —'],
+    ['', 'Created: —'],
+  ])('formats lifecycle instants using saved locale/timezone without changing %s', (created_at, expected) => {
+    const key: SigningKeyRecord = {
+      key_id: 'key_dates', public_jwk: { kty: 'EC', crv: 'P-256', x: 'x', y: 'y' },
+      created_at, revoked_at: 'invalid', revoked_reason: null, rotated_from: null, persisted: true,
+    };
+    const vault: UseSigningVaultResult = {
+      capability: null, keys: [key], activeKey: null, auditLog: [], isLoading: false, isMutating: false, error: null,
+      generateKey: vi.fn(), rotateKey: vi.fn(), revokeKey: vi.fn(), refresh: vi.fn(),
+    };
+    render(<SignatureKeyPanel vault={vault} />);
+    expect(screen.getByText(expected)).toBeInTheDocument();
+    expect(screen.getByText('Revoked at —')).toBeInTheDocument();
+    expect(key.created_at).toBe(created_at);
+    expect(key.revoked_at).toBe('invalid');
   });
 });

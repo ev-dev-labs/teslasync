@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { CalendarDays } from 'lucide-react';
 
 import { EmptyState, Skeleton } from '@/components/feedback';
-import { HelpTooltip, Caption } from '@/components/ui';
+import { Accordion, Table, HelpTooltip, Caption } from '@/components/ui';
 import { LayoutCard, SourceContent } from '@/components/layout';
 import { useUnits } from '@/hooks/useUnits';
 import { cn } from '@/lib/cn';
@@ -15,10 +15,10 @@ import type { DriveCalendarSectionState } from './types';
 const WEEK_GRID = 'grid grid-flow-col auto-cols-[minmax(1.125rem,1fr)] gap-1';
 const LEVEL_CLASSES = [
   'bg-[var(--surface-2)]',
-  'bg-emerald-500/25',
-  'bg-emerald-500/45',
-  'bg-emerald-500/70',
-  'bg-emerald-400',
+  'bg-[var(--theme-primary)]/25',
+  'bg-[var(--theme-primary)]/45',
+  'bg-[var(--theme-primary)]/70',
+  'bg-[var(--theme-primary)]',
 ] as const;
 
 interface DriveCalendarHeatmapProps extends DriveCalendarSectionState {
@@ -158,6 +158,28 @@ export function DriveCalendarHeatmap({
             <Caption>{t('driveCalendar.more', 'More')}</Caption>
           </div>
         </div>
+        <Accordion title={t('card.viewDetails', 'View details')} className="mt-3">
+          <Table variant="embedded" aria-label={t('driveCalendar.activity', 'Driving activity')}>
+            <thead>
+              <tr>
+                <th scope="col">{t('common.date', 'Date')}</th>
+                <th scope="col">{t('driveCalendar.distance', 'Distance')}</th>
+                <th scope="col">{t('driveCalendar.weekdayPattern.drives', 'Drives')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {calendar.days.map((day) => (
+                <tr key={day.date}>
+                  <th scope="row">
+                    {formatDayKey(day.date, { style: 'long', locale: unitPrefs.locale })}
+                  </th>
+                  <td>{formatDistance(day.distanceM)}</td>
+                  <td>{day.drives}</td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </Accordion>
       </SourceContent>
     </LayoutCard>
     </div>

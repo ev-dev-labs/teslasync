@@ -26,13 +26,14 @@ vi.mock('../client', async () => {
 
 // Hoisted so the (also hoisted) mock factory closes over the same spies the
 // assertions read.
-const { toastSuccess, toastError } = vi.hoisted(() => ({
+const { toastSuccess, toastWarning, toastError } = vi.hoisted(() => ({
   toastSuccess: vi.fn(),
+  toastWarning: vi.fn(),
   toastError: vi.fn(),
 }));
 
 vi.mock('./_toastHelpers', () => ({
-  useMutationToast: () => ({ success: toastSuccess, error: toastError }),
+  useMutationToast: () => ({ success: toastSuccess, warning: toastWarning, error: toastError }),
 }));
 
 import { request, SudoCanceledError } from '../client';
@@ -102,6 +103,7 @@ const changesPayload: FeatureFlagChangesResponse = {
 beforeEach(() => {
   mockedRequest.mockReset();
   toastSuccess.mockReset();
+  toastWarning.mockReset();
   toastError.mockReset();
 });
 
@@ -356,7 +358,7 @@ describe('useSetFlag', () => {
 // ── useDeleteFlag ────────────────────────────────────────────────────────────
 describe('useDeleteFlag', () => {
   const write: FeatureFlagWriteResponse = {
-    key: 'beta.dashboard',
+    key: 'beta/x',
     old_value: 'true',
     deleted: true,
     audit_id: 13,
@@ -399,6 +401,46 @@ describe('useDeleteFlag', () => {
       'admin.flags.toast.deleteError',
       'Failed to delete flag',
     );
+  });
+
+  it.each([false, undefined])('reports an audited absent flag (deleted=%s) without deletion success', async (deleted) => {
+    const response = { key: 'missing', audit_id: 14, ...(deleted === undefined ? {} : { deleted }) };
+    mockedRequest.mockResolvedValueOnce(response);
+    const client = makeClient();
+    const invalidateSpy = vi.spyOn(client, 'invalidateQueries');
+    const { result } = renderHook(() => useDeleteFlag(), { wrapper: wrapperFor(client) });
+    await act(async () => {
+      await expect(result.current.mutateAsync({ key: 'missing', reason: 'cleanup' })).resolves.toEqual(response);
+    });
+    expect(toastWarning).toHaveBeenCalledWith('toast.noChanges', 'No changes');
+    expect(toastSuccess).not.toHaveBeenCalled();
+    expect(toastError).not.toHaveBeenCalled();
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['system', 'flags'] });
+  });
+
+  it.each([
+    [{ key: 'k', deleted: true, audit_id: 0 }, 'The flag was deleted, but the change was not recorded'],
+    [{ key: 'k', deleted: false, audit_id: 0 }, 'The flag was already absent, but the delete attempt was not recorded'],
+    [{ key: 'k', audit_id: 0 }, 'The flag was already absent, but the delete attempt was not recorded'],
+    [{ key: 'k', deleted: true }, 'invalid flag deletion result'],
+    [{ key: 'other', deleted: true, audit_id: 1 }, 'invalid flag deletion result'],
+    [{ key: 'k', deleted: 'true', audit_id: 1 }, 'invalid flag deletion result'],
+    [{ key: 'k', deleted: true, audit_id: -1 }, 'invalid flag deletion result'],
+    [{ key: 'k', deleted: true, audit_id: '1' }, 'invalid flag deletion result'],
+    [null, 'invalid flag deletion result'],
+  ] as const)('rejects an unconfirmed or unaudited response %j', async (response, message) => {
+    mockedRequest.mockResolvedValueOnce(response);
+    const client = makeClient();
+    const invalidateSpy = vi.spyOn(client, 'invalidateQueries');
+    const { result } = renderHook(() => useDeleteFlag(), { wrapper: wrapperFor(client) });
+    await act(async () => {
+      await expect(result.current.mutateAsync({ key: 'k', reason: 'retain me' })).rejects.toThrow(message);
+    });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(toastError).toHaveBeenCalledWith(expect.any(Error), 'admin.flags.toast.deleteError', 'Failed to delete flag');
+    expect(toastSuccess).not.toHaveBeenCalled();
+    expect(toastWarning).not.toHaveBeenCalled();
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['system', 'flags'] });
   });
 
   it('swallows a SudoCanceledError without any toast', async () => {

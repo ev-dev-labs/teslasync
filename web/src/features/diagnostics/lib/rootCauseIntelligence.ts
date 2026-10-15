@@ -37,6 +37,58 @@
 // Domains
 // ─────────────────────────────────────────────────────────────────────────
 
+import type { TFunction } from 'i18next';
+
+export interface DiagnosticReason {
+  id: DiagnosticReasonId;
+  args: Readonly<Record<string, string | number>>;
+}
+
+const REASON_TEXT = {
+  concurrent: "{{signal}} shifted within {{minutes}} min of {{focalSignal}}'s change (concurrent), with a robust effect size of {{effectSize}}. Ranked by shift strength, timing proximity, sample coverage, and evidence reliability — a lead worth reviewing, not a diagnosis.",
+  leads: "{{signal}} shifted about {{minutes}} min before {{focalSignal}}'s change (leading), with a robust effect size of {{effectSize}}. Ranked by shift strength, timing proximity, sample coverage, and evidence reliability — a lead worth reviewing, not a diagnosis.",
+  lags: "{{signal}} shifted about {{minutes}} min after {{focalSignal}}'s change (lagging), with a robust effect size of {{effectSize}}. Ranked by shift strength, timing proximity, sample coverage, and evidence reliability — a lead worth reviewing, not a diagnosis.",
+  association: 'Every listed item is an evidence-ranked hypothesis derived from statistical association. This is an evidence-ranked hypothesis, not a diagnosis or a claim of causal proof.',
+  boundedWindow: 'Analysis is limited to the selected time window and the bounded set of related signals available in the catalog; unrecorded or unavailable signals cannot be considered.',
+  noFocalShift: 'The focal signal did not show a robust, well-supported shift in this window, so hypotheses are withheld rather than guessed.',
+  noRelated: 'No related signals were identified in the catalog for this focal signal.',
+  noCorroboration: 'None of the related signals cleared the minimum evidence bar for sample coverage or shift strength.',
+  lowQuality: 'Evidence quality is low — treat any listed hypothesis as preliminary and confirm with additional data before acting.',
+  temporalLimit: 'Temporal proximity alone does not establish which signal, if any, is upstream of the other.',
+  focalUnavailable: 'Focal history unavailable; no shift conclusion can be drawn.',
+  insufficientHistory: 'Not enough history yet for this signal and window.',
+  incompleteEvidence: '{{focalSignal}} shows a robust shift, but related numeric evidence is incomplete; corroboration is unknown. This is an evidence-ranked hypothesis, not a diagnosis or a claim of causal proof.',
+  coverage: '{{resolved}} of {{selected}} selected related histories resolved; {{usable}} have enough valid numeric samples; {{unknown}} remain unknown. Missing or unusable histories are not evidence of an absent shift.',
+  scoreDenominator: 'The raw evidence score retains all selected candidates in its coverage denominator, including unknown or unusable histories; it is not a score of complete corroboration.',
+  chooseSignal: 'Choose a focal signal to generate an evidence-ranked summary.',
+  stableSignal: 'No robust shift was found for {{focalSignal}} in the analyzed window, so no hypotheses are offered. This may mean the signal was stable, or that the window was too short or sparse.',
+  isolatedShift: '{{focalSignal}} shows a robust shift, but no other analyzed signal showed a comparable, well-timed shift. Treat this as an isolated change with weak corroborating evidence. This is an evidence-ranked hypothesis, not a diagnosis or a claim of causal proof.',
+  rankedSummary: '{{focalSignal}} shows a robust shift with {{count}} ranked, evidence-based {{hypothesisLabel}} for review (evidence quality: {{band}}). This is an evidence-ranked hypothesis, not a diagnosis or a claim of causal proof.',
+} as const;
+
+export type DiagnosticReasonId = keyof typeof REASON_TEXT;
+
+function formatDiagnosticReason(reason: DiagnosticReason): string {
+  return REASON_TEXT[reason.id].replace(/\{\{(\w+)\}\}/g, (_, key: string) => {
+    const value = reason.args[key];
+    if (value == null) throw new Error(`Missing diagnostic argument ${key} for ${reason.id}`);
+    return String(value);
+  });
+}
+
+export function localizeDiagnosticReason(reason: DiagnosticReason, t: TFunction): string {
+  const args = { ...reason.args };
+  if (reason.id === 'rankedSummary') {
+    args.band = t(`rootCauseIntelligence.reasons.band.${reason.args.band}`, String(reason.args.band));
+    args.hypothesisLabel = reason.args.count === 1
+      ? t('rootCauseIntelligence.reasons.hypothesis', 'hypothesis')
+      : t('rootCauseIntelligence.reasons.hypotheses', 'hypotheses');
+  }
+  return t(`rootCauseIntelligence.reasons.${reason.id}`, REASON_TEXT[reason.id], {
+    ...args, interpolation: { escapeValue: false },
+  });
+}
+
 export type SignalDomain =
   | 'battery'
   | 'charge'
@@ -488,6 +540,7 @@ export interface RankedHypothesis {
   score: number;
   sampleCount: number;
   rationale: string;
+  rationaleReason?: DiagnosticReason;
 }
 
 function buildHypothesisRationale(params: {
@@ -497,18 +550,14 @@ function buildHypothesisRationale(params: {
   lagMs: number;
   effectSize: number;
 }): string {
-  const minutes = Math.round(Math.abs(params.lagMs) / 60_000);
-  const timing =
-    params.relation === 'concurrent'
-      ? `shifted within ${minutes} min of ${params.focalSignal}'s change (concurrent)`
-      : params.relation === 'leads'
-        ? `shifted about ${minutes} min before ${params.focalSignal}'s change (leading)`
-        : `shifted about ${minutes} min after ${params.focalSignal}'s change (lagging)`;
-  return (
-    `${params.signal} ${timing}, with a robust effect size of ${roundTo(params.effectSize, 2)}. ` +
-    'Ranked by shift strength, timing proximity, sample coverage, and evidence reliability — ' +
-    'a lead worth reviewing, not a diagnosis.'
-  );
+  return formatDiagnosticReason({
+    id: params.relation,
+    args: {
+      signal: params.signal, focalSignal: params.focalSignal,
+      minutes: Math.round(Math.abs(params.lagMs) / 60_000),
+      effectSize: roundTo(params.effectSize, 2),
+    },
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -735,26 +784,14 @@ function buildSummary(params: {
   quality: EvidenceQuality;
 }): string {
   const { focalSignal, focalShift, hypothesesCount, quality } = params;
-  if (focalSignal === '') {
-    return 'Choose a focal signal to generate an evidence-ranked summary.';
-  }
-  if (focalShift == null) {
-    return (
-      `No robust shift was found for ${focalSignal} in the analyzed window, so no hypotheses are offered. ` +
-      'This may mean the signal was stable, or that the window was too short or sparse.'
-    );
-  }
-  if (hypothesesCount === 0) {
-    return (
-      `${focalSignal} shows a robust shift, but no other analyzed signal showed a comparable, well-timed shift. ` +
-      `Treat this as an isolated change with weak corroborating evidence. ${NO_CAUSAL_PROOF_DISCLAIMER}`
-    );
-  }
-  const plural = hypothesesCount === 1 ? 'is' : 'es';
-  return (
-    `${focalSignal} shows a robust shift with ${hypothesesCount} ranked, evidence-based hypothes${plural} for review ` +
-    `(evidence quality: ${quality.band}). ${NO_CAUSAL_PROOF_DISCLAIMER}`
-  );
+  return formatDiagnosticReason({
+    id: focalSignal === '' ? 'chooseSignal' : focalShift == null ? 'stableSignal'
+      : hypothesesCount === 0 ? 'isolatedShift' : 'rankedSummary',
+    args: {
+      focalSignal, count: hypothesesCount, band: quality.band,
+      hypothesisLabel: hypothesesCount === 1 ? 'hypothesis' : 'hypotheses',
+    },
+  });
 }
 
 function buildLimitations(params: {
@@ -817,6 +854,8 @@ export interface RootCauseAnalysisResult {
   quality: EvidenceQuality;
   limitations: string[];
   summary: string;
+  limitationReasons?: DiagnosticReason[];
+  summaryReason?: DiagnosticReason;
   dataWindow: { earliestMs: number | null; latestMs: number | null };
 }
 
@@ -830,6 +869,28 @@ export interface RootCausePresentation {
   candidateCoverageComplete: boolean;
   summary: string;
   limitations: string[];
+  limitationReasons?: DiagnosticReason[];
+  summaryReason?: DiagnosticReason;
+}
+
+/** Localize a display copy only; canonical analysis/export strings and raw facts stay intact. */
+export function localizeRootCause<T extends RootCauseAnalysisResult | RootCausePresentation>(
+  result: T,
+  t: TFunction,
+): T {
+  return {
+    ...result,
+    summary: result.summaryReason ? localizeDiagnosticReason(result.summaryReason, t) : result.summary,
+    limitations: result.limitations.map((note, index) => {
+      const reason = result.limitationReasons?.[index];
+      return reason ? localizeDiagnosticReason(reason, t) : note;
+    }),
+    ...('hypotheses' in result ? {
+      hypotheses: result.hypotheses.map(h => ({
+        ...h, rationale: h.rationaleReason ? localizeDiagnosticReason(h.rationaleReason, t) : h.rationale,
+      })),
+    } : {}),
+  };
 }
 
 /** Source eligibility qualifies presentation only; the engine's scores and payload remain unchanged. */
@@ -862,12 +923,31 @@ export function presentRootCause(
     : incompleteCandidates && analysis.hypotheses.length === 0
       ? `${analysis.focalSignal} shows a robust shift, but related numeric evidence is incomplete; corroboration is unknown. ${NO_CAUSAL_PROOF_DISCLAIMER}`
       : analysis.summary;
-  const limitations = analysis.limitations.filter((note) =>
-    (focalNumericEligible || !note.startsWith('The focal signal did not show'))
-    && (candidateCoverageComplete || !note.startsWith('None of the related signals'))
-    && (scoreComputed || !note.startsWith('Evidence quality is low')));
-  if (!focalNumericEligible && analysis.focalSignal !== '') limitations.push(summary);
+  const limitationReasons = (analysis.limitationReasons ?? []).filter(({ id }) =>
+    (focalNumericEligible || id !== 'noFocalShift')
+    && (candidateCoverageComplete || id !== 'noCorroboration')
+    && (scoreComputed || id !== 'lowQuality'));
+  const summaryReason: DiagnosticReason | undefined = analysis.focalSignal === '' ? analysis.summaryReason
+    : !focalNumericEligible ? { id: focal == null ? 'focalUnavailable' : 'insufficientHistory', args: {} }
+      : incompleteCandidates && analysis.hypotheses.length === 0
+        ? { id: 'incompleteEvidence', args: { focalSignal: analysis.focalSignal } }
+        : analysis.summaryReason;
+  const limitations = analysis.limitations.filter((note, index) => {
+    const id = analysis.limitationReasons?.[index]?.id;
+    return (focalNumericEligible || (id ? id !== 'noFocalShift' : !note.startsWith('The focal signal did not show')))
+      && (candidateCoverageComplete || (id ? id !== 'noCorroboration' : !note.startsWith('None of the related signals')))
+      && (scoreComputed || (id ? id !== 'lowQuality' : !note.startsWith('Evidence quality is low')));
+  });
+  if (!focalNumericEligible && analysis.focalSignal !== '') {
+    limitations.push(summary);
+    if (summaryReason) limitationReasons.push(summaryReason);
+  }
   if (!candidateCoverageComplete) {
+    limitationReasons.push({ id: 'coverage', args: {
+      resolved: candidatesResolved, selected: analysis.relatedCandidates.length,
+      usable: candidatesUsable, unknown: candidatesUnknown,
+    } });
+    if (scoreComputed) limitationReasons.push({ id: 'scoreDenominator', args: {} });
     limitations.push(
       `${candidatesResolved} of ${analysis.relatedCandidates.length} selected related histories resolved; ` +
       `${candidatesUsable} have enough valid numeric samples; ${candidatesUnknown} remain unknown. ` +
@@ -880,7 +960,8 @@ export function presentRootCause(
   return {
     focalResolved: focal != null, focalNumericEligible, scoreComputed,
     candidatesResolved, candidatesUsable, candidatesUnknown, candidateCoverageComplete,
-    summary, limitations,
+    summary, limitations, summaryReason,
+    limitationReasons: analysis.limitationReasons ? limitationReasons : undefined,
   };
 }
 
@@ -1017,6 +1098,10 @@ export function analyzeRootCause(input: RootCauseAnalysisInput): RootCauseAnalys
         reliabilityScore,
         score,
         sampleCount: points.length,
+        rationaleReason: { id: relation, args: {
+          focalSignal, signal: candidate.signal,
+          minutes: Math.round(Math.abs(lagMs) / 60_000), effectSize: roundTo(shift.effectSize, 2),
+        } },
         rationale: buildHypothesisRationale({
           focalSignal,
           signal: candidate.signal,
@@ -1064,6 +1149,23 @@ export function analyzeRootCause(input: RootCauseAnalysisInput): RootCauseAnalys
   });
 
   const summary = buildSummary({ focalSignal, focalShift, hypothesesCount: hypotheses.length, quality });
+  const limitationReasons: DiagnosticReason[] = [
+    { id: 'association', args: {} }, { id: 'boundedWindow', args: {} },
+    ...(!focalQualifies ? [{ id: 'noFocalShift' as const, args: {} }] : []),
+    ...(relatedCandidates.length === 0 ? [{ id: 'noRelated' as const, args: {} }]
+      : hypotheses.length === 0 && focalQualifies ? [{ id: 'noCorroboration' as const, args: {} }] : []),
+    ...(quality.band === 'weak' || quality.band === 'insufficient'
+      ? [{ id: 'lowQuality' as const, args: {} }] : []),
+    { id: 'temporalLimit', args: {} },
+  ];
+  const summaryReason: DiagnosticReason = {
+    id: focalSignal === '' ? 'chooseSignal' : focalShift == null ? 'stableSignal'
+      : hypotheses.length === 0 ? 'isolatedShift' : 'rankedSummary',
+    args: {
+      focalSignal, count: hypotheses.length, band: quality.band,
+      hypothesisLabel: hypotheses.length === 1 ? 'hypothesis' : 'hypotheses',
+    },
+  };
 
   return {
     focalSignal,
@@ -1077,6 +1179,8 @@ export function analyzeRootCause(input: RootCauseAnalysisInput): RootCauseAnalys
     quality,
     limitations,
     summary,
+    summaryReason,
+    limitationReasons,
     dataWindow,
   };
 }

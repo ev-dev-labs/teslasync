@@ -35,9 +35,11 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import type { FleetContentQuery } from '../components/overview-modernization/retainFleetContent';
+import { FleetSectionBrief } from '../components/operationalbrief-a-m/FleetSectionBrief';
 
 // i18n stub: return the fallback string, interpolating {{var}} tokens from the
 // options object so assertions can target the rendered English copy.
@@ -74,11 +76,7 @@ vi.mock('@/api/client', async () => {
 // markers. Each echoes the threaded query's state so the page's data-threading
 // and tab-switching contracts can be asserted without mounting recharts.
 vi.mock('../components/analytics', () => {
-  interface StubQuery {
-    isLoading: boolean;
-    isError: boolean;
-    data?: { total_drives?: number } | null;
-  }
+  type StubQuery = FleetContentQuery;
   const label = (q: StubQuery): string =>
     q.isLoading ? 'loading' : q.isError ? 'error' : `ready:${q.data?.total_drives ?? 0}`;
   return {
@@ -86,24 +84,37 @@ vi.mock('../components/analytics', () => {
       <div data-testid="hero-gauges">{`hero:${label(query)}`}</div>
     ),
     OverviewTab: ({ query }: { query: StubQuery }) => (
-      <div data-testid="tab-overview">{`overview:${label(query)}`}</div>
+      <div data-testid="tab-overview">{`overview:${label(query)}`}
+        <FleetSectionBrief query={query} title="Overview brief" description="" metrics={[]} />
+      </div>
     ),
     DrivingTab: ({ query }: { query: StubQuery }) => (
-      <div data-testid="tab-driving">{`driving:${label(query)}`}</div>
+      <div data-testid="tab-driving">{`driving:${label(query)}`}
+        <FleetSectionBrief query={query} title="Driving brief" description="" metrics={[]} />
+      </div>
     ),
     ChargingTab: ({ query }: { query: StubQuery }) => (
-      <div data-testid="tab-charging">{`charging:${label(query)}`}</div>
+      <div data-testid="tab-charging">{`charging:${label(query)}`}
+        <FleetSectionBrief query={query} title="Charging brief" description="" metrics={[]} />
+      </div>
     ),
     BatteryTab: ({ query }: { query: StubQuery }) => (
-      <div data-testid="tab-battery">{`battery:${label(query)}`}</div>
+      <div data-testid="tab-battery">{`battery:${label(query)}`}
+        <FleetSectionBrief query={query} title="Battery brief" description="" metrics={[]} />
+      </div>
     ),
   };
 });
 vi.mock('../components/operationalbrief-a-m/FleetOverviewBrief', async () => {
   const { HeroGauges } = await import('../components/analytics');
-  return { FleetOverviewBrief: ({ query, scope }: {
-    query: Parameters<typeof HeroGauges>[0]['query']; scope: string;
-  }) => <><HeroGauges query={query} /><span>{scope}</span></> };
+  const { FleetOverviewBrief } = await vi.importActual<typeof import('../components/operationalbrief-a-m/FleetOverviewBrief')>(
+    '../components/operationalbrief-a-m/FleetOverviewBrief',
+  );
+  return { FleetOverviewBrief: ({ query, scope, retained }: {
+    query: Parameters<typeof HeroGauges>[0]['query']; scope: string; retained: boolean;
+  }) => <><HeroGauges query={query} /><FleetOverviewBrief query={query} scope={scope} retained={retained} />
+    <span data-testid="overview-source-status">{retained ? 'retained' : 'current'}</span>
+  </> };
 });
 
 // jsdom lacks matchMedia; framer-motion (via <FadeIn>) reads it. Guarded
@@ -180,7 +191,10 @@ beforeEach(() => {
   window.localStorage.clear();
 });
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  onlineManager.setOnline(true);
+  vi.restoreAllMocks();
+});
 
 function fleetPath(start: string, end: string) {
   return `/analytics/fleet?${new URLSearchParams({ start, end })}`;
@@ -195,6 +209,37 @@ function calendarFleetPath(start: string, end: string) {
 }
 
 describe('AnalyticsPage', () => {
+  it('discloses HTTP-success partial sources, retains totals during retry failure and clears the notice on recovery', async () => {
+    const reasons = ['drive_query_failed', 'charging_record_cap_reached', 'future_source_reason'];
+    const data = makeFleet({ partial_result: {
+      is_partial: true, reasons,
+    } });
+    installFleet(data);
+    renderPage();
+    const notice = await screen.findByTestId('analytics-fleet-partial');
+    expect(notice).toHaveTextContent('not treated as complete');
+    for (const reason of reasons) expect(notice).toHaveTextContent(reason);
+    expect(within(screen.getByRole('region', { name: 'Fleet summary metrics' })).getByText('Partial data')).toBeInTheDocument();
+    expect(screen.getByTestId('tab-overview')).toHaveTextContent('overview:ready:42');
+    mockedRequest.mockRejectedValue(new Error('Fleet refresh failed'));
+    fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }));
+    await waitFor(() => expect(screen.getByTestId('overview-source-status')).toHaveTextContent('retained'));
+    expect(screen.getByTestId('analytics-fleet-partial')).toHaveTextContent('drive_query_failed');
+    expect(screen.getByTestId('tab-overview')).toHaveTextContent('overview:ready:42');
+    installFleet(makeFleet({ total_drives: 43, partial_result: { is_partial: false, reasons: [] } }));
+    fireEvent.click(within(screen.getByTestId('analytics-fleet-partial')).getByRole('button', { name: 'Refresh' }));
+    await waitFor(() => expect(screen.queryByTestId('analytics-fleet-partial')).not.toBeInTheDocument());
+    expect(screen.getByTestId('tab-overview')).toHaveTextContent('overview:ready:43');
+    expect(screen.getByTestId('overview-source-status')).toHaveTextContent('current');
+  });
+
+  it('discloses partial zero totals even when no reasons were returned', async () => {
+    installFleet(makeFleet({ total_drives: 0, partial_result: { is_partial: true, reasons: null } }));
+    renderPage();
+    expect(await screen.findByTestId('analytics-fleet-partial')).toHaveTextContent('not treated as complete');
+    expect(screen.getByTestId('tab-overview')).toHaveTextContent('overview:ready:0');
+  });
+
   it('renders the shell: heading, subtitle, labelled KPI region, tab nav, default tab + title', async () => {
     installFleet();
 
@@ -229,6 +274,49 @@ describe('AnalyticsPage', () => {
 
     expect(screen.getByTestId('hero-gauges')).toHaveTextContent('hero:loading');
     expect(screen.getByTestId('tab-overview')).toHaveTextContent('overview:loading');
+    expect(within(screen.getByTestId('tab-overview')).getByText('Loading evidence')).toBeInTheDocument();
+  });
+
+  it('shows unavailable rather than loading or returned evidence when paused without data', () => {
+    onlineManager.setOnline(false);
+    mockedRequest.mockReturnValue(new Promise(() => {}));
+    renderPage();
+    const tab = screen.getByTestId('tab-overview');
+    expect(within(tab).getByText('Evidence unavailable')).toBeInTheDocument();
+    expect(within(tab).queryByText('Loading evidence')).not.toBeInTheDocument();
+    expect(within(tab).queryByText('Returned evidence')).not.toBeInTheDocument();
+    expect(fleetPaths()).toEqual([]);
+  });
+
+  it('treats a successful zero response as returned evidence, not unavailable', async () => {
+    installFleet(makeFleet({ total_drives: 0, total_distance_km: 0, total_energy_kwh: 0,
+      vehicle_comparison: [], battery_trend: [] }));
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('tab-overview')).toHaveTextContent('overview:ready:0'));
+    expect(within(screen.getByTestId('tab-overview')).getByText('Returned evidence')).toBeInTheDocument();
+  });
+
+  it('hands retained failure state to every domain brief without replacing content, then recovers', async () => {
+    installFleet();
+    const { client } = renderPage();
+    await waitFor(() => expect(screen.getByTestId('tab-overview')).toHaveTextContent('overview:ready:42'));
+    mockedRequest.mockRejectedValue(new Error('Refresh unavailable'));
+    await client.refetchQueries({ queryKey: ['analytics'] });
+    await waitFor(() => expect(screen.getByTestId('overview-source-status')).toHaveTextContent('retained'));
+    const nav = screen.getByRole('navigation', { name: 'Analytics sections' });
+    for (const [name, id] of [
+      ['Overview', 'overview'], ['Driving', 'driving'], ['Charging', 'charging'], ['Battery', 'battery'],
+    ]) {
+      fireEvent.click(within(nav).getByRole('button', { name }));
+      const tab = screen.getByTestId(`tab-${id}`);
+      expect(tab).toHaveTextContent(`${id}:ready:42`);
+      expect(within(tab).getByText('Retained evidence')).toBeInTheDocument();
+    }
+    installFleet(makeFleet({ total_drives: 43 }));
+    await client.refetchQueries({ queryKey: ['analytics'] });
+    await waitFor(() => expect(screen.getByTestId('tab-battery')).toHaveTextContent('battery:ready:43'));
+    expect(within(screen.getByTestId('tab-battery')).getByText('Returned evidence')).toBeInTheDocument();
+    expect(screen.getByTestId('overview-source-status')).toHaveTextContent('current');
   });
 
   it('threads resolved fleet data (total_drives) to the hero band and the active tab', async () => {
@@ -362,6 +450,25 @@ describe('AnalyticsPage', () => {
     expect(updatedKey).not.toEqual(initialKey);
     await waitFor(() => expect(client.getQueryData(updatedKey)).toBeDefined());
     expect(client.getQueryData(initialKey)).toBeDefined();
+  });
+
+  it.each(['42', '99'])('keeps populated fleet analytics unfiltered with carried vehicle_id=%s', async (vehicleId) => {
+    installFleet(makeFleet({ total_vehicles: 2, total_drives: 42 }));
+    const { client } = renderPage([
+      `/analytics?vehicle_id=${vehicleId}&from=2025-03-01&to=2025-03-15`,
+    ]);
+    const expectedPath = calendarFleetPath('2025-03-01', '2025-03-15');
+
+    await waitFor(() => expect(screen.getByTestId('hero-gauges')).toHaveTextContent('hero:ready:42'));
+    expect(screen.getByTestId('tab-overview')).toHaveTextContent('overview:ready:42');
+    expect(fleetPaths()).toEqual([expectedPath]);
+    for (const path of fleetPaths()) {
+      const params = new URL(path, 'http://localhost').searchParams;
+      expect([...params.keys()].sort()).toEqual(['end', 'start']);
+    }
+    const params = new URL(expectedPath, 'http://localhost').searchParams;
+    expect(client.getQueryData(analyticsKeys.fleet(undefined, params.get('start')!, params.get('end')!)))
+      .toMatchObject({ total_vehicles: 2, total_drives: 42 });
   });
 
   it('preserves non-UTC custom boundaries across daylight saving time in both the request and cache key', async () => {

@@ -6,7 +6,7 @@ import i18n from 'i18next';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastProvider } from '@/components/feedback';
-import type { CostBreakdown } from '@/types/analytics';
+import type { CostBreakdown, TcoLedgerResponse } from '@/types/analytics';
 import type { StatMetric } from '@/components/data-display';
 
 const bridgeCapture = vi.hoisted(() => vi.fn<(metrics: readonly StatMetric[]) => void>());
@@ -26,6 +26,7 @@ const h = vi.hoisted(() => ({
   hookIds: [] as string[],
   directoryFails: false,
   narrationFails: false,
+  ledgerData: undefined as TcoLedgerResponse | undefined,
 }));
 
 const refetch = vi.fn();
@@ -71,6 +72,11 @@ vi.mock('@/api/hooks/useAnalytics', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/hooks/useAnalytics')>();
   return {
     ...actual,
+    useTcoLedger: () => ({
+      data: h.ledgerData, isLoading: false, isPending: h.ledgerData === undefined,
+      isSuccess: h.ledgerData !== undefined, isError: false, error: null,
+      isFetching: false, fetchStatus: 'idle', refetch: vi.fn(),
+    }),
     useCostBreakdown: (vehicleId: string) => {
       h.hookIds.push(vehicleId);
       return h.query;
@@ -277,6 +283,7 @@ beforeEach(() => {
   h.vehicleId = 7;
   h.directoryFails = false;
   h.narrationFails = false;
+  h.ledgerData = undefined;
   h.query = query({
     data: cost(),
     isSuccess: true,
@@ -289,6 +296,32 @@ afterEach(() => {
 });
 
 describe('TrueCostPage persistent query states', () => {
+  it.each([
+    { isLoading: true, isPending: true, fetchStatus: 'fetching' as const },
+    { isPending: true, fetchStatus: 'paused' as const },
+    { isError: true, error: new Error('aggregate unavailable') },
+  ])('withholds all-in totals when the aggregate has no data: %o', (overrides) => {
+    h.ledgerData = { vehicle_id: 7, entries: [], totals: { by_category: {}, grand_total: 0, entries: 0 } };
+    h.query = query(overrides);
+    renderPage();
+    expect(screen.getByText('All-in: — (—/km)')).toBeInTheDocument();
+    expect(screen.getByText('0 entries · 0.00 fixed · — km lifetime')).toBeInTheDocument();
+  });
+
+  it('retains aggregate inputs through failure and recovery without inferring a charging currency', () => {
+    h.ledgerData = { vehicle_id: 7, entries: [], totals: { by_category: {}, grand_total: 0, entries: 0 } };
+    h.query = query({ data: cost(), isError: true, error: new Error('refresh failed') });
+    const view = renderPage();
+    expect(screen.getByText('All-in: — (—/km)')).toBeInTheDocument();
+    expect(screen.getByText('0 entries · 0.00 fixed · 1,000.00 km lifetime')).toBeInTheDocument();
+    h.query = query({ data: cost({ total_charging_cost: 0, total_km: 0 }), isSuccess: true });
+    view.rerender(<QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter><ToastProvider><TrueCostPage /></ToastProvider></MemoryRouter>
+    </QueryClientProvider>);
+    expect(screen.getByText('All-in: — (—/km)')).toBeInTheDocument();
+    expect(screen.getByText('0 entries · 0.00 fixed · 0.00 km lifetime')).toBeInTheDocument();
+  });
+
   it('renders all 16 evidence sections, the AI slot, and exact vehicle hook scope', () => {
     renderPage();
 

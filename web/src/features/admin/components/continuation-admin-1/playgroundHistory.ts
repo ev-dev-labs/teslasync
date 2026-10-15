@@ -26,7 +26,7 @@ function historyMetadata(entry: HistoryEntry): HistoryEntry {
   };
 }
 
-/** Invalid envelopes reach the existing render boundary; salvageable rows are reported and filtered. */
+/** Invalid envelopes throw for consumer recovery; salvageable rows are reported and filtered. */
 export function loadHistory(): HistoryEntry[] {
   const raw = sessionStorage.getItem(HISTORY_KEY);
   if (raw === null) return [];

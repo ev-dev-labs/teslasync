@@ -5,21 +5,31 @@ import {
 } from '@/components/charts';
 import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
 import { chartTokens } from '@/lib/tokens';
+import { getEfficiency } from '@/lib/drivesAggregation';
 import { EfficiencyChart } from './EfficiencyChart';
 import type { DrivesPresentation } from './types';
 
 export function EfficiencyTrend({ model, source, units, selectedVehicleId }: DrivesPresentation & { selectedVehicleId: number | null }) {
   const { t } = useTranslation();
   const efficiencyUnit = units.unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
-  const { dailyTrend } = model;
+  const { dailyTrend, filteredDrives } = model;
+  const eligibleCount = filteredDrives.filter(drive => getEfficiency(drive) !== null).length;
   const chartText = {
     fill: chartTokens.axisStroke,
     fontFamily: getChartFontFamily(),
     fontSize: getChartFontSize(12),
   };
   return <EfficiencyChart source={source}
-    title={t('efficiency.dailyTrend', { unit: efficiencyUnit, defaultValue: 'Daily Efficiency ({{unit}})' })}
-    ariaLabel={t('efficiency.dailyTrendAria', 'Daily efficiency trend area chart')}
+    title={t('efficiency.perDriveTrend', { unit: efficiencyUnit, defaultValue: 'Per-drive efficiency ({{unit}})' })}
+    ariaLabel={t('efficiency.perDriveTrendAria', 'Per-drive efficiency subset area chart')}
+    subtitle={t('efficiency.perDriveTrendContext', 'Up to 30 eligible drive observations in reverse source order; not daily averages.')}
+    metadata={{
+      sourceLabel: t('efficiency.perDriveTrendCounts', {
+        shown: dailyTrend.length, eligible: eligibleCount, loaded: filteredDrives.length,
+        defaultValue: 'Showing {{shown}} of {{eligible}} eligible drives from {{loaded}} range-filtered loaded drives.',
+      }),
+      unitLabel: efficiencyUnit,
+    }}
     data={dailyTrend}
     dataColumns={[
       { key: 'date', label: t('efficiency.col.date', 'Date') },

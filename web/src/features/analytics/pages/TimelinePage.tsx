@@ -758,6 +758,7 @@ export default function TimelinePage() {
                   key: 'drives',
                   label: t('entityContext.drives', 'Drive history'),
                   to: buildContextHref('/drives', {
+                    vehicle_id: vehicleId,
                     from: previewDay,
                     to: previewDay,
                   }),
@@ -767,6 +768,7 @@ export default function TimelinePage() {
                   key: 'charging',
                   label: t('entityContext.charging', 'Charging sessions'),
                   to: buildContextHref('/charging', {
+                    vehicle_id: vehicleId,
                     from: previewDay,
                     to: previewDay,
                   }),
@@ -776,6 +778,7 @@ export default function TimelinePage() {
                   key: 'locations',
                   label: t('entityContext.locations', 'Visited locations'),
                   to: buildContextHref('/locations', {
+                    vehicle_id: vehicleId,
                     from: previewDay,
                     to: previewDay,
                   }),
@@ -785,6 +788,7 @@ export default function TimelinePage() {
                   key: 'alerts',
                   label: t('entityContext.alerts', 'Alerts'),
                   to: buildContextHref('/notifications/inbox', {
+                    vehicle_id: vehicleId,
                     from: previewDay,
                     to: previewDay,
                   }),
@@ -793,13 +797,14 @@ export default function TimelinePage() {
                 {
                   key: 'service',
                   label: t('entityContext.service', 'Service history'),
-                  to: '/maintenance',
+                  to: buildContextHref('/maintenance', { vehicle_id: vehicleId }),
                   icon: <Icon icon={Wrench} />,
                 },
                 {
                   key: 'telemetry',
                   label: t('entityContext.telemetry', 'Telemetry evidence'),
                   to: buildContextHref('/signals', {
+                    vehicle_id: vehicleId,
                     from: previewDay,
                     to: previewDay,
                     signals: previewTransition.trigger_field

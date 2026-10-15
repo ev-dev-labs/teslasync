@@ -92,6 +92,8 @@ describe('retained analytics content view', () => {
     expect(view.isError).toBe(false);
     expect(view.isLoading).toBe(false);
     expect(view.error).toBeNull();
+    expect(view.sourceQuery).toBe(original);
+    expect(retainFleetContent(view).sourceQuery).toBe(original);
 
     // Header/source metadata still receive the unmodified original result.
     expect(original.isError).toBe(true);
@@ -120,6 +122,26 @@ describe('retained analytics content view', () => {
     expect(view.data?.vehicle_comparison).toEqual([]);
     expect(view.data?.battery_trend).toEqual([]);
     expect(view.data?.period_days).toBe(30);
+    client.clear();
+  });
+
+  it('drops the retained handoff when the source recovers with a successful zero response', async () => {
+    const { client, source } = observer(fleetFixture());
+    const failed = await source.refetch();
+    expect(retainFleetContent(failed).sourceQuery).toBe(failed);
+    const empty = fleetFixture();
+    empty.total_drives = 0;
+    empty.vehicle_comparison = [];
+    source.setOptions({
+      queryKey: ['analytics-modernization-retention'],
+      queryFn: async () => empty,
+      retry: false,
+    });
+    const recovered = await source.refetch();
+    expect(recovered.isSuccess).toBe(true);
+    expect(retainFleetContent(recovered)).toBe(recovered);
+    expect(retainFleetContent(recovered).sourceQuery).toBeUndefined();
+    expect(recovered.data?.total_drives).toBe(0);
     client.clear();
   });
 });

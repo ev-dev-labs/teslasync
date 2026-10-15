@@ -43,16 +43,21 @@ export default function ChargerResiliencePage() {
   const sessionsQuery = useChargingHistory(vehicleIdStr);
   const sessionsState = useDataState(sessionsQuery, { provenance: 'historical' });
   const summary = useMemo(() => analyzeChargerResilience(sessionsQuery.data ?? []), [sessionsQuery.data]);
+  const energyAvailable = summary.energyDenominator === 'available';
+  const unknownLocation = t('chargerResilience.unknownLocation', 'Unknown location');
+  const energyUnavailable = summary.energyDenominator === 'missing'
+    ? t('chargerResilience.energyMissing', 'Energy denominator unavailable: some sessions have missing or invalid energy measurements.')
+    : t('chargerResilience.energyNonpositive', 'Energy denominator unavailable: no positive recorded energy.');
 
   const chartData = useMemo(
     () =>
       summary.sites.map((s) => ({
-        site: s.label,
-        share: Math.round(s.energyShare * 1000) / 10,
+        site: s.label ?? unknownLocation,
+        share: energyAvailable ? Math.round(s.energyShare * 1000) / 10 : null,
         sessions: s.sessions,
         isTop: summary.topSite != null && s.key === summary.topSite.key,
       })),
-    [summary.sites, summary.topSite],
+    [summary.sites, summary.topSite, energyAvailable, unknownLocation],
   );
 
   // Keep the highlighted site's meaning in the scalar table and CSV as well.
@@ -109,16 +114,17 @@ export default function ChargerResiliencePage() {
             loading={isLoading}
             error={fatalError}
             onRetry={recovery.onRetry}
-            empty={chartData.length === 0}
+            empty={chartData.length === 0 || !energyAvailable}
             emptyMessage={!sessionsState.hasData ? unavailableMessage
-              : t('chargerResilience.noData', 'No charging locations recorded yet.')}
+              : summary.sites.length === 0 ? t('chargerResilience.noData', 'No charging locations recorded yet.')
+                : energyUnavailable}
             height={340}
             data={exportData}
             exportData={exportData}
             dataColumns={[
               { key: 'site', label: t('chargerResilience.col.site', 'Site') },
-              { key: 'share', label: t('chargerResilience.col.share', 'Energy share (%)') },
-              { key: 'sessions', label: t('chargerResilience.col.sessions', 'Sessions') },
+              { key: 'share', label: t('chargerResilience.col.share', 'Energy share (%)'), kind: 'measurement' },
+              { key: 'sessions', label: t('chargerResilience.col.sessions', 'Sessions'), kind: 'count' },
               { key: 'dependency', label: t('chargerResilience.topDependency', 'Top-Site Dependency') },
             ]}
           >
@@ -148,22 +154,35 @@ export default function ChargerResiliencePage() {
                 size="sm"
                 i18nKey="help.chargerResilience.whatIf"
                 defaultValue="A hypothetical, not a prediction: it simply recomputes the same concentration metrics with the top site's energy and sessions removed, to show how much resilience is being masked or hurt by relying on it."
-                ariaLabel={t('help.chargerResilience.iconLabel', 'More info about the what-if scenario')}
+                ariaLabel={t('help.chargerResilience.whatIfIconLabel', 'More info about the what-if scenario')}
               />
             </div>}>
             <SourceContent state={detailStatus === 'ready' && summary.whatIfTopSiteLoss == null ? 'empty' : detailStatus}
               label={sourceLabel}
               emptyMessage={!sessionsState.hasData ? unavailableMessage : t('chargerResilience.noWhatIf', 'Not enough data to model a loss scenario yet.')}
               errorMessage={unavailableMessage} error={fatalError} errorRecovery={recovery}>
-            {summary.whatIfTopSiteLoss != null && (
+            {summary.whatIfTopSiteLoss != null && <>
+              {summary.whatIfTopSiteLoss.remainingSiteCount === 0
+                ? <Text variant="caption">{t('chargerResilience.noRemainingSites', 'No remaining sites after removing the top site.')}</Text>
+                : summary.whatIfTopSiteLoss.energyDenominator !== 'available'
+                  ? <Text variant="caption">
+                    {summary.whatIfTopSiteLoss.energyDenominator === 'missing'
+                      ? t('chargerResilience.remainingEnergyMissing', 'Remaining sites have missing or invalid energy measurements.')
+                      : t('chargerResilience.noRemainingEnergy', 'Sites remain, but no positive recorded energy remains.')}
+                    {' '}{t('chargerResilience.sessionFallback', 'Session-based fallback, not energy-weighted; diversification uses the observed site count.')}
+                  </Text> : null}
               <dl className="grid min-w-0 grid-cols-1 gap-4 break-words @sm:grid-cols-2">
                 <div className="min-w-0 space-y-1">
                   <Text as="dt" variant="caption">{t('chargerResilience.atRisk', 'Energy at risk')}</Text>
-                  <Text as="dd" variant="bodySm">{formatEnergy(summary.whatIfTopSiteLoss.energyAtRiskWh)}</Text>
+                  <Text as="dd" variant="bodySm">{summary.whatIfTopSiteLoss.energyAtRiskAvailable
+                    ? formatEnergy(summary.whatIfTopSiteLoss.energyAtRiskWh)
+                    : t('chargerResilience.energyMissing', 'Energy denominator unavailable: some sessions have missing or invalid energy measurements.')}</Text>
                 </div>
                 <div className="min-w-0 space-y-1">
                   <Text as="dt" variant="caption">{t('chargerResilience.newTop', 'New top site')}</Text>
-                  <Text as="dd" variant="bodySm">{summary.whatIfTopSiteLoss.newTopSiteLabel ?? t('chargerResilience.none', 'None yet')}</Text>
+                  <Text as="dd" variant="bodySm">{summary.whatIfTopSiteLoss.newTopSiteLabel
+                    ?? (summary.whatIfTopSiteLoss.remainingSiteCount > 0
+                      ? unknownLocation : t('chargerResilience.none', 'None yet'))}</Text>
                 </div>
                 <div className="min-w-0 space-y-1">
                   <Text as="dt" variant="caption">{t('chargerResilience.scoreBefore', 'Score before')}</Text>
@@ -183,7 +202,7 @@ export default function ChargerResiliencePage() {
                   </Text>
                 </div>
               </dl>
-            )}
+            </>}
             </SourceContent>
           </LayoutCard>
 
@@ -196,7 +215,7 @@ export default function ChargerResiliencePage() {
                 {summary.sites.map((s) => (
                   <li key={s.key} className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-2.5">
                     <div className="min-w-0">
-                      <Text variant="bodySm" className="break-words font-medium">{s.label}</Text>
+                      <Text variant="bodySm" className="break-words font-medium">{s.label ?? unknownLocation}</Text>
                       <Text variant="caption">
                         {t(`chargerResilience.groupedBy.${s.groupedBy}`, GROUPED_BY_DEFAULTS[s.groupedBy])}
                       </Text>
@@ -208,8 +227,9 @@ export default function ChargerResiliencePage() {
                       <Badge variant="neutral" size="sm">
                         {t('chargerResilience.sessionsCount', '{{n}} sessions', { n: s.sessions })}
                       </Badge>
-                      <Badge variant={s.energyShare >= 0.5 ? 'warning' : 'neutral'}>
-                        {fmtPercent(Math.round(s.energyShare * 1000) / 10)}
+                      <Badge variant={energyAvailable && s.energyShare >= 0.5 ? 'warning' : 'neutral'}>
+                        {energyAvailable ? fmtPercent(Math.round(s.energyShare * 1000) / 10)
+                          : t('chargerResilience.energyShareUnavailable', 'Energy share unavailable')}
                       </Badge>
                     </div>
                   </li>

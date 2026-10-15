@@ -53,6 +53,7 @@ function DraftBody({ draft }: { draft: ClaimDraft }) {
       )}
       <CopyButton
         text={draft.body}
+        className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
         withToast
         label={t('serviceIntelligence.claim.copy', 'Copy ticket text')}
       />
@@ -67,6 +68,7 @@ export function ClaimDraftPanel({ vehicleId }: ClaimDraftPanelProps) {
   const [submitted, setSubmitted] = useState<string | null>(null);
   const query = useClaimDraft(vehicleId, submitted);
   const draftState = useDataState(query);
+  const draftRequested = submitted != null || query.isLoading || query.isFetching || draftState.isRefreshBlocked;
 
   return (
     <LayoutCard title={t('serviceIntelligence.claim.title', 'Warranty claim draft')}
@@ -77,20 +79,22 @@ export function ClaimDraftPanel({ vehicleId }: ClaimDraftPanelProps) {
           onChange={(e) => setIssue(e.target.value)}
           placeholder={t('serviceIntelligence.claim.placeholder', 'Describe the issue (e.g. charge rate drops after 60%)')}
           aria-label={t('serviceIntelligence.claim.issueLabel', 'Issue description')}
-          className="flex-1"
+          className="flex-1 min-h-11 md:min-h-10"
         />
         <Button
+          wrapLabel
           onClick={() => setSubmitted(issue)}
           disabled={vehicleId == null || query.isFetching}
           loading={query.isFetching}
           icon={<Icons.fileText className="h-4 w-4" aria-hidden="true" />}
-          className="gap-2"
+          className="gap-2 min-h-11 min-w-11 md:min-h-10 md:min-w-0"
         >
           {t('serviceIntelligence.claim.generate', 'Draft ticket')}
         </Button>
       </div>
       <StaleRefreshWarning state={draftState} label={t('serviceIntelligence.claim.title', 'Warranty claim draft')} />
       <PanelState
+        source={draftRequested || draftState.hasData || draftState.fatalError != null ? draftState : null}
         selected={vehicleId != null}
         loading={!draftState.hasData && (query.isLoading || query.isFetching)}
         error={draftState.fatalError}

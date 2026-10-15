@@ -1,6 +1,6 @@
 import { type ComponentProps } from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import {
@@ -11,6 +11,7 @@ import {
 import { ApiError } from '@/api/client';
 import { deriveDataState } from '@/api/dataState';
 import { typography } from '@/lib/tokens';
+import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 
 const MIDDOT = '\u00B7'; // ` · ` separator between count and percent
 const EM_DASH = '\u2014'; // `—` shown when a status/role has no label
@@ -53,6 +54,42 @@ const role = (o: Partial<AccessRoleSlice> = {}): AccessRoleSlice => ({
 });
 
 describe('AccessOverviewPanel', () => {
+  it('reactively formats secondary counts without changing bar totals or ratios', () => {
+    const preferences = getFormatterPreferences();
+    const props = makeProps({
+      statusBreakdown: [status({ count: 1234 })],
+      roleBreakdown: [role({ count: 1234 })],
+      totalInvitations: 2468,
+      totalDrivers: 1234,
+    });
+    try {
+      setGlobalLocale('en-US');
+      setGlobalPrecision(2);
+      renderPanel(props);
+      const bar = screen.getByRole('progressbar', { name: 'Pending' });
+      expect(screen.getByText(`1,234 ${MIDDOT} 50.00%`)).toBeInTheDocument();
+      expect(within(screen.getByRole('list')).getByText('1,234')).toBeInTheDocument();
+      expect(bar).toHaveAttribute('aria-valuenow', '1234');
+      expect(bar).toHaveAttribute('aria-valuemax', '2468');
+
+      act(() => {
+        setGlobalLocale('de-DE');
+        setGlobalPrecision(3);
+      });
+      expect(screen.getByText(`1.234 ${MIDDOT} 50,000%`)).toBeInTheDocument();
+      expect(within(screen.getByRole('list')).getByText('1.234')).toBeInTheDocument();
+      expect(bar).toHaveAttribute('aria-valuenow', '1234');
+      expect(bar).toHaveAttribute('aria-valuemax', '2468');
+      expect(props.statusBreakdown[0].count).toBe(1234);
+      expect(props.roleBreakdown[0].count).toBe(1234);
+    } finally {
+      act(() => {
+        setGlobalLocale(preferences.locale);
+        setGlobalPrecision(preferences.precision);
+      });
+    }
+  });
+
   it.each([false, true])('uses neutral, decorative shared icons with populated data: %s', (populated) => {
     const { container } = renderPanel(populated ? {
       statusBreakdown: [status()],

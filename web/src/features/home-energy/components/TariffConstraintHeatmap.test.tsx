@@ -51,9 +51,9 @@ function slot(index: number, overrides: Partial<SlotResult> = {}): SlotResult {
   };
 }
 
-function time(value: SlotResult): string {
+function time(value: SlotResult, end = false, slotMinutes = 15): string {
   return new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' })
-    .format(new Date(value.startIso));
+    .format(new Date(Date.parse(value.startIso) + (end ? slotMinutes * 60_000 : 0)));
 }
 
 function color(bucket: number): string {
@@ -72,6 +72,20 @@ beforeEach(() => {
 });
 
 describe('TariffConstraintHeatmap', () => {
+  it('labels battery SOC at a custom interval end while keeping flow cells at the actual start', async () => {
+    const value = slot(0, { startIso: '2026-10-12T23:45:00Z', batterySocPct: 62.3 });
+    render(<TariffConstraintHeatmap slots={[value]} grid={grid} hasPowerwall slotMinutes={30} />);
+    for (const label of labels.slice(0, 4)) {
+      expect(within(screen.getByRole('group', { name: label })).getByRole('button'))
+        .toHaveAccessibleName(new RegExp(`^${label}: ${time(value)} — `));
+    }
+    const battery = screen.getByRole('button', { name: `Powerwall SoC: ${time(value, true, 30)} — 62%` });
+    expect(battery).toHaveAttribute('title', `${time(value, true, 30)} — 62%`);
+    await userEvent.setup().click(battery);
+    expect(document.getElementById(battery.getAttribute('aria-describedby') ?? ''))
+      .toHaveTextContent(`Powerwall SoC: ${time(value, true, 30)} — 62%`);
+  });
+
   it.each([
     { name: 'four rows without Powerwall', hasPowerwall: false, rowCount: 4 },
     { name: 'five rows with Powerwall', hasPowerwall: true, rowCount: 5 },
@@ -87,7 +101,7 @@ describe('TariffConstraintHeatmap', () => {
       const buttons = within(screen.getByRole('group', { name: label })).getAllByRole('button');
       expect(buttons).toHaveLength(96);
       buttons.forEach((button, index) => {
-        expect(button).toHaveAccessibleName(new RegExp(`^${label}: ${time(slots[index])} — `));
+        expect(button).toHaveAccessibleName(new RegExp(`^${label}: ${time(slots[index], label === 'Powerwall SoC')} — `));
         expect(button).toHaveAttribute('type', 'button');
         expect(button).not.toBeDisabled();
       });
@@ -123,7 +137,7 @@ describe('TariffConstraintHeatmap', () => {
       buttons.forEach((button, index) => expectBucket(button, buckets[rowIndex][index]));
     });
     expect(screen.getByRole('button', { name: `Import tariff: ${time(slots[1])} — $0.25/kWh` })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: `Powerwall SoC: ${time(slots[2])} — 75%` })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: `Powerwall SoC: ${time(slots[2], true)} — 75%` })).toBeInTheDocument();
   });
 
   it('retains zero tariff and vehicle floors and nonpositive grid caps without inventing values', () => {
@@ -152,11 +166,11 @@ describe('TariffConstraintHeatmap', () => {
       expect(button).toHaveFocus();
       expect(detail).toHaveTextContent(button.getAttribute('aria-label') ?? '');
     }
-    const last = screen.getByRole('button', { name: `Powerwall SoC: ${time(slots[1])} — 0%` });
+    const last = screen.getByRole('button', { name: `Powerwall SoC: ${time(slots[1], true)} — 0%` });
     expect(last).toHaveFocus();
     await user.keyboard(' ');
     expect(document.getElementById(last.getAttribute('aria-describedby') ?? '')).toHaveTextContent(
-      `Powerwall SoC: ${time(slots[1])} — 0%`,
+      `Powerwall SoC: ${time(slots[1], true)} — 0%`,
     );
     await user.tab({ shift: true });
     expect(buttons[buttons.length - 2]).toHaveFocus();
@@ -196,10 +210,10 @@ describe('TariffConstraintHeatmap', () => {
     const user = userEvent.setup();
     const slots = [slot(0), slot(1, { batterySocPct: 80 })];
     const { rerender } = render(<TariffConstraintHeatmap slots={slots} grid={grid} hasPowerwall />);
-    const powerwall = screen.getByRole('button', { name: `Powerwall SoC: ${time(slots[1])} — 80%` });
+    const powerwall = screen.getByRole('button', { name: `Powerwall SoC: ${time(slots[1], true)} — 80%` });
     await user.click(powerwall);
     const detailId = powerwall.getAttribute('aria-describedby') ?? '';
-    expect(document.getElementById(detailId)).toHaveTextContent(`Powerwall SoC: ${time(slots[1])} — 80%`);
+    expect(document.getElementById(detailId)).toHaveTextContent(`Powerwall SoC: ${time(slots[1], true)} — 80%`);
 
     const current = slot(2, { importPricePerKwh: 0.3 });
     rerender(<TariffConstraintHeatmap slots={[current]} grid={grid} hasPowerwall={false} />);

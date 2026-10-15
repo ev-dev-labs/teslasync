@@ -3,6 +3,15 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { StateTimeline } from '../StateTimeline';
 import type { FSMTransition } from '@/types/fsm';
+import { formatDateShort, formatTime, formatRelative } from '@/lib/dateFormat';
+
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({ settings: { tz_display_default: 'user' }, locale: 'de-DE' }),
+}));
+vi.mock('@/lib/timezone', async importOriginal => ({
+  ...await importOriginal<typeof import('@/lib/timezone')>(),
+  useTimezone: () => 'Asia/Tokyo',
+}));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -37,6 +46,25 @@ function makeTransition(overrides: Partial<FSMTransition>): FSMTransition {
 }
 
 describe('StateTimeline', () => {
+  it('labels both dates across saved-zone midnight and excludes invalid or missing timestamps', () => {
+    const start = '2026-10-01T14:55:00Z';
+    const end = '2026-10-01T15:05:00Z';
+    const opts = { locale: 'de-DE', tz: 'Asia/Tokyo' };
+    render(<StateTimeline transitions={[
+      makeTransition({ id: 1, ts: start }),
+      makeTransition({ id: 2, ts: 'invalid' }),
+      makeTransition({ id: 3, ts: '' }),
+    ]} fsmType="vehicle" anchor={new Date(end)} windowMinutes={10} />);
+    expect(screen.getByText(`${formatDateShort(start, opts)} ${formatTime(start, opts)}`)).toBeInTheDocument();
+    expect(screen.getByText(`${formatDateShort(end, opts)} ${formatTime(end, opts)}`)).toBeInTheDocument();
+    expect(screen.queryByTestId('state-timeline-tick-2')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('state-timeline-tick-3')).not.toBeInTheDocument();
+  });
+
+  it.each(['invalid', '', '2026-01-01T23:30:00Z'])('formats empty-window freshness with saved preferences: %s', ts => {
+    render(<StateTimeline transitions={[]} fsmType="vehicle" lastTransition={makeTransition({ ts })} />);
+    expect(screen.getByText(`Last transition ${formatRelative(ts, { locale: 'de-DE', tz: 'Asia/Tokyo' })}`)).toBeInTheDocument();
+  });
   it('shows the empty placeholder when no transitions are in the window', () => {
     const anchor = new Date('2025-01-15T12:00:00Z');
     // The page now pre-windows transitions before passing them in;

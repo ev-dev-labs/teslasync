@@ -13,6 +13,7 @@ import { useSignalEvidenceBundle, telemetryKeys } from '@/api/hooks/useTelemetry
 import * as apiClient from '@/api/client';
 import { SignalWindowPicker } from '../components/SignalWindowPicker';
 import { getFormatterPreferences, setGlobalLocale } from '@/lib/numberFormat';
+import { neonColorMap } from '@/lib/tokens';
 
 const initialLocale = getFormatterPreferences().locale;
 const mocks = vi.hoisted(() => ({ workspace: vi.fn(), announcement: vi.fn() }));
@@ -117,6 +118,36 @@ afterEach(() => {
 });
 
 describe('root-cause deferred catalog and evidence sources', () => {
+  it.each([{ catalog: ['Soc', 'PackVoltage'] }, { catalog: [] }])('uses canonical neutral decorative picker icons for catalog $catalog', ({ catalog }) => {
+    const onFocalSignalChange = vi.fn();
+    const onWindowHoursChange = vi.fn();
+    const { container } = render(<SignalWindowPicker catalog={catalog} signalsLoading={false} signalsError={null}
+      onRetrySignals={vi.fn()} focalSignal="Soc" onFocalSignalChange={onFocalSignalChange}
+      windowHours={72} onWindowHoursChange={onWindowHoursChange} />);
+    const title = screen.getByRole('heading', { name: 'Choose a signal to investigate' });
+    const titleIcon = title.querySelector('svg');
+    expect(titleIcon).toHaveClass('lucide-waypoints', 'h-4', 'w-4', 'shrink-0', neonColorMap.neutral.text);
+    const icons = container.querySelectorAll('svg.lucide-waypoints');
+    expect(icons).toHaveLength(catalog.length ? 1 : 2);
+    for (const icon of icons) {
+      expect(icon).toHaveAttribute('aria-hidden', 'true');
+      expect(icon).toHaveAttribute('focusable', 'false');
+      expect(icon).toHaveClass('shrink-0', neonColorMap.neutral.text);
+    }
+    if (catalog.length) {
+      expect(screen.getByRole('combobox', { name: 'Focal signal' })).toHaveValue('Soc');
+      expect(screen.getByRole('combobox', { name: 'Analysis window' })).toHaveValue('72');
+      fireEvent.change(screen.getByRole('combobox', { name: 'Focal signal' }), { target: { value: 'PackVoltage' } });
+      fireEvent.change(screen.getByRole('combobox', { name: 'Analysis window' }), { target: { value: '168' } });
+      expect(onFocalSignalChange).toHaveBeenCalledWith('PackVoltage');
+      expect(onWindowHoursChange).toHaveBeenCalledWith(168);
+    } else {
+      expect(screen.getByText('No telemetry signals have been recorded for this vehicle yet.')).toBeInTheDocument();
+      expect(icons[1]).toHaveClass('h-6', 'w-6');
+      expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    }
+  });
+
   it.each(['fetching', 'paused'] as const)('keeps an initial %s catalog unknown rather than empty', (fetchStatus) => {
     const input = workspace({ data: history('Soc') });
     mocks.workspace.mockReturnValue({
@@ -373,6 +404,42 @@ describe('root-cause shared analysis window', () => {
 });
 
 describe('root-cause page evidence eligibility and progressive presentation', () => {
+  it.each([
+    ['up', 10, 20],
+    ['down', 20, 10],
+  ] as const)('keeps populated %s shifts on their source scale without implying a favorable outcome', (direction, before, after) => {
+    const focal = history('Soc');
+    const neighbor = history('PackVoltage');
+    focal.data = focal.data.map((point, index) => ({ ...point, value: index < 24 ? before : after }));
+    neighbor.data = neighbor.data.map((point, index) => ({ ...point, value: index < 24 ? before : after }));
+    const input = workspace({ data: focal });
+    input.evidenceBundle.data[1]!.response = neighbor;
+    input.evidenceBundle.sources[1]!.state = deriveDataState({ data: neighbor }, { provenance: 'historical' });
+    input.analysis = analyzeRootCause({
+      focalSignal: 'Soc', catalog: input.catalog, focalPoints: focal.data,
+      relatedSeries: [{ signal: 'PackVoltage', points: neighbor.data }],
+    });
+    expect(input.analysis.hypotheses).toHaveLength(1);
+    expect(input.analysis.hypotheses[0]!.shift.direction).toBe(direction);
+    mocks.workspace.mockReturnValue(input);
+    renderPage();
+    const panel = screen.getByRole('heading', { name: 'Ranked hypotheses' }).closest('[data-print-card]')!;
+    expect(panel).toHaveTextContent('before and after medians retain their source scale');
+    const item = within(panel as HTMLElement).getByRole('listitem');
+    expect(item).toHaveTextContent('PackVoltage');
+    expect(item).toHaveTextContent(`${before} → ${after}`);
+    expect(item).toHaveTextContent(input.analysis.hypotheses[0]!.rationale);
+    const icon = item.querySelector(`.lucide-arrow-${direction}`)!;
+    expect(icon).toHaveClass('text-[var(--text-muted)]');
+    expect(item.querySelector('[class*="emerald"], [class*="rose"], [class*="neon"]')).toBeNull();
+    expect(item).not.toHaveTextContent(/kWh|kW|mph|km\/h|°C|bar|%/);
+    const brief = screen.getByTestId('root-cause-summary');
+    expect(brief.querySelector('[data-operational-metric="root-cause-effect"]'))
+      .toHaveTextContent(`${before} → ${after}`);
+    expect(focal.data[0]!.value).toBe(before);
+    expect(neighbor.data[47]!.value).toBe(after);
+  });
+
   it.each(['pending', 'failed', 'empty'] as const)('qualifies missing focal conclusions while preserving every section and neighbor for %s history', (outcome) => {
     const focal = outcome === 'pending' ? { isLoading: true, isFetching: true }
       : outcome === 'failed' ? { error: new Error('Focal history failed') }

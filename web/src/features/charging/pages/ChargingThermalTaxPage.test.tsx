@@ -1,6 +1,8 @@
 import { createElement, type ComponentProps, type PropsWithChildren, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { createInstance } from 'i18next';
+import english from '@/i18n/en.json';
 import { deriveDataState, type DataStateSource } from '@/api/dataState';
 import type { ChargingThermalTaxSummary, ThermalTaxSample } from '../lib/chargingThermalTax';
 import { ThermalTaxStats } from '../components/charging-thermal-tax-modernization/ThermalTaxStats';
@@ -29,7 +31,9 @@ const sources = vi.hoisted(() => ({
   stats: vi.fn(),
   chart: vi.fn(),
   phases: vi.fn(),
-  t: (_key: string, fallback?: string) => fallback ?? _key,
+  t: (_key: string, fallback?: string, options?: Record<string, unknown>) =>
+    (fallback ?? _key).replace(/\{\{(\w+)\}\}/g, (placeholder, key: string) =>
+      options?.[key] == null ? placeholder : String(options[key])),
 }));
 
 vi.mock('@/hooks/useSettings', () => ({
@@ -135,7 +139,46 @@ beforeEach(() => {
   sources.history = { data: [session], fetchStatus: 'idle', isLoading: false, dataUpdatedAt: 1 };
   sources.telemetry = { data: samples, fetchStatus: 'idle', isLoading: false, dataUpdatedAt: 1 };
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
+
+describe('ChargingThermalTaxPage observed history context', () => {
+  it.each([0, 1, 1000])('describes %i returned rows without changing the history request', async count => {
+    const i18n = createInstance();
+    await i18n.init({ lng: 'en', resources: { en: { translation: english } } });
+    vi.spyOn(sources, 't').mockImplementation((key, fallback, options) =>
+      i18n.t(key, { defaultValue: fallback, ...options }));
+    sources.history = {
+      ...sources.history,
+      data: Array.from({ length: count }, (_, index) => ({ ...session, id: String(index + 42) })),
+    };
+    render(<ChargingThermalTaxPage />);
+    expect(screen.getByText(
+      `Session choices use an observed window of ${new Intl.NumberFormat('fr-FR').format(count)} returned charging sessions (request cap: ${new Intl.NumberFormat('fr-FR').format(1000)}). This is not a server total or a guarantee of complete history.`,
+    )).toBeInTheDocument();
+    expect(sources.historyHook.mock.calls.every(args => args.length === 1 && args[0] === '7')).toBe(true);
+    expect(screen.getAllByRole('region')).toHaveLength(4);
+    if (count === 0) {
+      expect(screen.getByText('No charging sessions were returned in this observed window.')).toBeInTheDocument();
+    }
+  });
+
+  it('does not present unresolved history as an observed zero and retains context on refresh failure', () => {
+    sources.history = { data: undefined, isLoading: true, fetchStatus: 'fetching' };
+    const result = render(<ChargingThermalTaxPage />);
+    expect(screen.queryByText(/Session choices use an observed window/)).not.toBeInTheDocument();
+    sources.history = {
+      data: [session], isLoading: false, fetchStatus: 'idle', dataUpdatedAt: 1,
+      error: new Error('History refresh failed'),
+    };
+    result.rerender(<ChargingThermalTaxPage />);
+    expect(screen.getByText(/observed window of 1 returned charging sessions/)).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: '1 oct. · DC' })).toHaveValue('42');
+    expect(screen.getAllByRole('region')).toHaveLength(4);
+  });
+});
 
 describe('ChargingThermalTaxPage locale adoption', () => {
   it('formats session dates with the selected app locale rather than the browser default', () => {

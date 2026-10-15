@@ -20,6 +20,7 @@ import { ChartCard } from '@/components/layout';
 import { useUnits } from '@/hooks/useUnits';
 
 import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { isFiniteNumber } from '@/lib/numberFormat';
 
 import type { CalendarMonth } from '../../lib/driveCalendar';
 import { formatCalendarMonth } from './labels';
@@ -48,7 +49,9 @@ export function MonthlyActivityChart({
     () =>
       months.map((month) => ({
         month: formatCalendarMonth(month.month, locale, true),
-        distance: Math.round(convertDistanceFromSI(month.distanceM, distanceUnit) * 10) / 10,
+        distance: isFiniteNumber(month.distanceM)
+          ? convertDistanceFromSI(month.distanceM, distanceUnit)
+          : null,
         drives: month.drives,
         activeDays: month.activeDays,
       })),
@@ -89,7 +92,7 @@ export function MonthlyActivityChart({
         {
           key: 'distance',
           label: distanceName,
-          format: (value) => fmtNumber(value),
+          format: (value) => isFiniteNumber(value) ? fmtNumber(value) : '—',
         },
         {
           key: 'drives',
@@ -124,7 +127,7 @@ export function MonthlyActivityChart({
                 tick={axisTick}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(value) => fmtNumber(value)}
+                tickFormatter={(value) => isFiniteNumber(value) ? fmtNumber(value) : '—'}
               />
               <YAxis
                 yAxisId="drives"
@@ -139,7 +142,7 @@ export function MonthlyActivityChart({
                   <ChartTooltip
                     valueFormatter={(value, name) =>
                       name === distanceName
-                        ? `${fmtNumber(value)} ${distanceUnit}`
+                        ? isFiniteNumber(value) ? `${fmtNumber(value)} ${distanceUnit}` : '—'
                         : fmtInt(value)
                     }
                   />

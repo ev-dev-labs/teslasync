@@ -7,6 +7,7 @@ import { contributingDriveExportRows, FsdDriveAnalyticsPanels } from './FsdDrive
 import { fsdInsights as buildFsdInsights } from './__tests__/fixtures';
 import type { UnitPref } from '@/lib/unitConversion';
 import { neonColorMap, typography } from '@/lib/tokens';
+import { setGlobalLocale } from '@/lib/numberFormat';
 
 vi.unmock('@/lib/timezone');
 
@@ -21,6 +22,7 @@ const { downloadJSON, downloadRowsAsCSV, display } = vi.hoisted(() => ({
     unitPrefs: { distance: 'km', precision: 2, locale: 'en-US' } as UnitPref,
     locale: 'en-US',
     settings: { tz_display_default: 'user', timezone_user: 'UTC' },
+    translations: {} as Record<string, string>,
   },
 }));
 
@@ -43,10 +45,10 @@ vi.mock('@/lib/csvExport', async () => {
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (_key: string, fallback: string, values?: Record<string, unknown>) =>
+    t: (key: string, fallback: string, values?: Record<string, unknown>) =>
       Object.entries(values ?? {}).reduce(
         (text, [name, value]) => text.replaceAll(`{{${name}}}`, String(value)),
-        fallback,
+        display.translations[key] ?? fallback,
       ),
   }),
 }));
@@ -72,9 +74,97 @@ beforeEach(() => {
   display.unitPrefs = { distance: 'km', precision: 2, locale: 'en-US' };
   display.locale = 'en-US';
   display.settings = { tz_display_default: 'user', timezone_user: 'UTC' };
+  display.translations = {};
+  setGlobalLocale('en-US');
 });
 
 describe('FsdDriveAnalyticsPanels', () => {
+  it.each([null, undefined, NaN, Infinity, -Infinity, '', '0'])(
+    'preserves populations when shares are unavailable (%s) without fabricating zero',
+    (value) => {
+      const insights = fsdInsights();
+      Object.assign(insights.drive_analytics.firmware_spotlight.routes[0], {
+        before_fsd_share_pct: value,
+        after_fsd_share_pct: 0,
+        before_drive_count: 1234,
+        after_drive_count: 0,
+        share_change_pct_points: value,
+      });
+      Object.assign(insights.drive_analytics.repeated_routes[0], { drive_count: value, fsd_share_pct: value });
+      Object.assign(insights.drive_analytics.commute_identities[0].this_month, { unknown_days: value, fsd_share_pct: value });
+      Object.assign(insights.drive_analytics.route_efficiency[0], {
+        fsd_heavy_drive_count: value,
+        fsd_heavy_efficiency_wh_per_km: 0,
+      });
+      render(<MemoryRouter><FsdDriveAnalyticsPanels insights={insights} state={readyState} /></MemoryRouter>);
+
+      const spotlight = screen.getByTestId('fsd-firmware-spotlight');
+      expect(within(spotlight).getByText('Not measured · 1,234')).toBeInTheDocument();
+      expect(within(spotlight).getByText('0.00% · 0')).toBeInTheDocument();
+      expect(within(spotlight).getByText('-')).toBeInTheDocument();
+      expect(within(screen.getByTestId('fsd-comparison-groups')).getByText('Not measured')).toBeInTheDocument();
+      expect(within(screen.getByTestId('fsd-commute-identity')).getAllByText('Unknown')).toHaveLength(2);
+      expect(within(screen.getByTestId('fsd-route-efficiency')).getByText('Not measured / 0.00 Wh/km')).toBeInTheDocument();
+    },
+  );
+
+  it('formats integer populations with locale grouping while preserving fractional signed measurements', () => {
+    setGlobalLocale('de-DE');
+    display.unitPrefs = { distance: 'km', precision: 2, locale: 'de-DE' };
+    const insights = fsdInsights();
+    Object.assign(insights.drive_analytics.repeated_routes[0], { drive_count: 1234.6 });
+    Object.assign(insights.drive_analytics.firmware_spotlight.routes[0], {
+      before_drive_count: 1234.6,
+      after_drive_count: 0,
+      before_fsd_share_pct: 0,
+      after_fsd_share_pct: 12.345,
+      share_change_pct_points: -12.345,
+    });
+    Object.assign(insights.drive_analytics.commute_identities[0].this_month, { unknown_days: 1234.6 });
+    insights.drive_analytics.commute_identities[0].share_change_pct_points = 12.345;
+    Object.assign(insights.drive_analytics.route_efficiency[0], {
+      fsd_heavy_drive_count: 1234.6,
+      low_fsd_drive_count: 0,
+      fsd_heavy_efficiency_wh_per_km: -12.345,
+      low_fsd_efficiency_wh_per_km: 0,
+      difference_pct: -12.345,
+    });
+    render(<MemoryRouter><FsdDriveAnalyticsPanels insights={insights} state={readyState} /></MemoryRouter>);
+
+    expect(within(screen.getByTestId('fsd-comparison-groups')).getByText('1.235')).toBeInTheDocument();
+    const spotlight = screen.getByTestId('fsd-firmware-spotlight');
+    expect(within(spotlight).getByText('0,00% · 1.235')).toBeInTheDocument();
+    expect(within(spotlight).getByText('12,35% · 0')).toBeInTheDocument();
+    expect(within(spotlight).getByText('-12,35 pts')).toBeInTheDocument();
+    const commute = screen.getByTestId('fsd-commute-identity');
+    expect(within(commute).getByText('1.235')).toBeInTheDocument();
+    expect(within(commute).getByText('+12,35 pt')).toBeInTheDocument();
+    const efficiency = screen.getByTestId('fsd-route-efficiency');
+    expect(within(efficiency).getByText('1.235 / -12,35 Wh/km')).toBeInTheDocument();
+    expect(within(efficiency).getByText('0 / 0,00 Wh/km')).toBeInTheDocument();
+    expect(within(efficiency).getByText('-12,35%')).toBeInTheDocument();
+  });
+
+  it('lets whole localized phrases reorder routes, populations, units, and signed changes', () => {
+    display.translations = {
+      'fsd.analytics.routePlaces': '{{end}} from {{start}}',
+      'fsd.analytics.share': 'percent {{value}}{{approximate}}',
+      'fsd.analytics.sharePopulation': '{{drives}} drives: {{share}}',
+      'fsd.analytics.shareChangePoints': 'points {{delta}}',
+      'fsd.analytics.shareChangePoint': 'point {{delta}}',
+      'fsd.analytics.efficiencyValue': '{{unit}}: {{value}}',
+      'fsd.analytics.efficiencyPopulation': '{{efficiency}} across {{drives}} drives',
+    };
+    const insights = efficiencyInsights();
+    render(<MemoryRouter><FsdDriveAnalyticsPanels insights={insights} state={readyState} /></MemoryRouter>);
+    expect(within(screen.getByTestId('fsd-contributing-drives')).getByText('Office from Home')).toBeInTheDocument();
+    expect(within(screen.getByTestId('fsd-firmware-spotlight')).getByText('points +40.00')).toBeInTheDocument();
+    expect(within(screen.getByTestId('fsd-firmware-spotlight')).getAllByText(/drives: percent/)).toHaveLength(2);
+    expect(within(screen.getByTestId('fsd-commute-identity')).getByText(/point [+-]/)).toBeInTheDocument();
+    expect(within(screen.getByTestId('fsd-route-efficiency')).getByText('Wh/km: 1,234.57 across 3 drives')).toBeInTheDocument();
+    expect(within(screen.getByTestId('fsd-route-efficiency')).getByText('percent -1.23')).toBeInTheDocument();
+  });
+
   it('keeps extracted attribution buckets distinct for measured zero and unavailable distance', () => {
     const insights = structuredClone(fsdInsights());
     insights.drive_analytics.attribution = {

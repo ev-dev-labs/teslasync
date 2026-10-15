@@ -158,7 +158,9 @@ export function PreconditioningDataAvailability({
         >
           <VehicleOperationalBrief embedded id="preconditioning-availability-summary"
             title={t('preconditioningEffectiveness.availability.title', 'Data availability and query state')}
-            retained={Boolean(state.climate.refreshError) || Boolean(state.drives.refreshError)}
+            retained={Boolean(state.climate.refreshError) || Boolean(state.drives.refreshError)
+              || (state.climate.hasData && state.climate.isPaused)
+              || (state.drives.hasData && state.drives.isPaused)}
             period={{ kind: 'unknown', label: t('preconditioningEffectiveness.coverage.title', 'Source and temporal coverage'),
               reason: t('preconditioningEffectiveness.availability.subtitle', 'Query transport state is separate from analytical availability, and cached evidence remains visible after a refresh failure.') }}
             metrics={items.map(item => ({

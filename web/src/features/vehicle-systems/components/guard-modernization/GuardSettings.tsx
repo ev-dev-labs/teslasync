@@ -11,6 +11,10 @@ export function GuardSettings({ model: m }: { model: GuardPageModel }) {
   const placement = useCardPlacement();
   const configReady = m.configQuery.data !== undefined;
   const disabled = m.noVehicle || m.setConfig.isPending || !configReady;
+  const configDeferred = !m.noVehicle && !m.configState.hasData &&
+    !m.configState.fatalError && !m.configQuery.isLoading;
+  const geofencesDeferred = !m.geofencesState.hasData &&
+    !m.geofencesState.fatalError && !m.geofencesQuery.isLoading;
   return (
     <div data-guard-section="settings" className={cn('min-w-0', placement?.className)}>
       <FormSection title={t('guard.settings', 'Guard settings')}
@@ -18,6 +22,24 @@ export function GuardSettings({ model: m }: { model: GuardPageModel }) {
       {m.guardConfig === null && <HelperText>{t('guard.modernization.notSaved', 'No saved guard policy yet')}</HelperText>}
       <StaleRefreshWarning state={m.configState} label={t('guard.settings', 'Guard settings')} />
       <StaleRefreshWarning state={m.geofencesState} label={t('guard.homeGeofence', 'Home geofence')} />
+      {[
+        { deferred: configDeferred, state: m.configState, label: t('guard.settings', 'Guard settings') },
+        { deferred: geofencesDeferred, state: m.geofencesState, label: t('guard.homeGeofence', 'Home geofence') },
+      ].map(({ deferred, state, label }) => deferred && (
+        <div key={label} className="min-w-0 space-y-2">
+          <HelperText role="status" data-initial-deferred={state.isRefreshBlocked ? 'paused' : 'pending'}>
+            {label}: {state.isRefreshBlocked
+              ? t('dataSources.status.paused', 'Refresh paused')
+              : t('dataSources.status.pending', 'Pending')}
+          </HelperText>
+          {state.retry && (
+            <Button variant="secondary" size="sm" onClick={state.retry}
+              aria-label={`${t('common.refresh', 'Refresh')}: ${label}`}>
+              {t('common.refresh', 'Refresh')}
+            </Button>
+          )}
+        </div>
+      ))}
       {m.geofencesState.fatalError && <QueryError error={m.geofencesState.fatalError} onRetry={m.geofencesState.retry ?? undefined} />}
       {m.configState.fatalError && <QueryError error={m.configState.fatalError} onRetry={m.configState.retry ?? undefined} />}
       {m.configQuery.isLoading && !configReady ? <Skeleton height={180} /> : configReady ? (

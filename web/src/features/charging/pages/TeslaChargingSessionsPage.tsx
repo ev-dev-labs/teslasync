@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import {
   DollarSign, RefreshCw, MapPin,
   Building2, Info, Download, AlertCircle, Plug,
@@ -44,7 +45,6 @@ import {
   useRefreshTeslaChargingSessions,
   type TeslaChargingSession,
 } from '@/api/hooks/useCharging';
-import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import {
   ALL_VEHICLES_VIN,
@@ -57,6 +57,7 @@ import { formatDateTime } from '@/lib/dateFormat';
 
 import { convertEnergyFromSI } from '@/lib/unitConversion';
 import { formatCurrencyValue } from '@/lib/currencyFormat';
+import { fmtNumber as formatNumber } from '@/lib/numberFormat';
 import { neonColorMap, typography } from '@/lib/tokens';
 import type { OperationalNarrative } from '@/types/operationalNarrative';
 
@@ -82,12 +83,17 @@ function sourceCurrency(sessions: TeslaChargingSession[]): string | null {
  * Guards null / undefined / NaN / Infinity / negative input by returning an
  * em dash so malformed telemetry can never render "NaNm" or "-2m".
  */
-export function formatDurationSeconds(seconds: number | null | undefined): string {
+export function formatDurationSeconds(seconds: number | null | undefined, t?: TFunction, locale?: string): string {
   if (seconds == null || !Number.isFinite(seconds) || seconds < 0) return '—';
   const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
+  const hours = formatNumber(h, 0, locale);
+  const minutes = formatNumber(Math.floor((seconds % 3600) / 60), 0, locale);
+  if (h > 0) return t
+    ? t('tesla_sessions.durationHoursMinutes', '{{hours}}h {{minutes}}m', { hours, minutes })
+    : `${hours}h ${minutes}m`;
+  return t
+    ? t('tesla_sessions.durationMinutes', '{{minutes}}m', { minutes })
+    : `${minutes}m`;
 }
 
 /**
@@ -139,6 +145,10 @@ export function groupSessions(
 export default function TeslaChargingSessionsPage() {
   const { fmtNumber, fmtInt, precision, locale } = useNumberFormatting();
   const { t } = useTranslation();
+  const formatChargingDuration = useCallback(
+    (seconds: number | null | undefined) => formatDurationSeconds(seconds, t, locale),
+    [t, locale],
+  );
   const { formatEnergy } = useUnits();
   const currencyUnavailable = t('tesla_sessions.currencyUnavailable', 'Mixed or unknown currency; monetary totals and comparisons are unavailable. See recorded session amounts. No currency conversion is applied.');
   const unknownCurrency = t('tesla_sessions.unknownCurrency', 'Unknown currency');
@@ -149,15 +159,18 @@ export default function TeslaChargingSessionsPage() {
   [locale, precision, fmtNumber, unknownCurrency]);
   usePageTitle(t('tesla_sessions.title', 'Fleet charging sessions'));
 
-  const { isLoading: vehiclesLoading } = useVehicles();
   const {
+    allVehicles,
     queryVin,
+    scopeReady,
+    isResolving: vehiclesLoading,
+    vehiclesState,
     selectedVin,
     setSelectedVin,
     vehicles,
   } = useVehicleVinFilter();
-  const sessionsQuery = useTeslaChargingSessions(queryVin, {
-    enabled: !vehiclesLoading,
+  const sessionsQuery = useTeslaChargingSessions(scopeReady ? queryVin : null, {
+    enabled: scopeReady,
   });
   const {
     data: response,
@@ -165,8 +178,10 @@ export default function TeslaChargingSessionsPage() {
   } = sessionsQuery;
   const sessionsDataState = useDataState(sessionsQuery, { provenance: 'historical' });
   const error = sessionsDataState.fatalError;
-  const isLoading = (vehiclesLoading || sessionsLoading) && !sessionsDataState.hasData;
-  const sourceUnresolved = !sessionsDataState.hasData;
+  const isLoading = ((!allVehicles && vehiclesLoading) || sessionsLoading) && !sessionsDataState.hasData;
+  const sourceUnresolved = !sessionsDataState.hasData || !Array.isArray(response?.sessions);
+  const importBlocked = !scopeReady || sessionsDataState.isRefreshBlocked
+    || (!allVehicles && (vehiclesState.status !== 'ok'));
   const unavailableMessage = t('tesla_sessions.sourceUnavailable', 'Fleet charging sessions have not loaded. Retry this source or reconnect to continue.');
   const refreshMutation = useRefreshTeslaChargingSessions();
 
@@ -199,8 +214,11 @@ export default function TeslaChargingSessionsPage() {
     for (const v of vehicles) {
       opts.push({ value: v.vin, label: `${v.display_name} (${v.vin.slice(-6)})` });
     }
+    if (!opts.some(option => option.value === selectedVin)) {
+      opts.push({ value: selectedVin, label: selectedVin || t('operations.status.unavailable', 'Data unavailable') });
+    }
     return opts;
-  }, [vehicles, t]);
+  }, [vehicles, selectedVin, t]);
 
   const monthlyData = useMemo(() => scopedCurrency ? buildMonthlyCost(
     sessions.filter(session => session.total_cost != null && Number.isFinite(session.total_cost)),
@@ -249,6 +267,7 @@ export default function TeslaChargingSessionsPage() {
   const lastSync = response && sessions.length > 0 ? sessions[0]?.fetched_at : null;
 
   const handleRefresh = () => {
+    if (importBlocked) return;
     refreshMutation.mutate(queryVin ? { vin: queryVin } : undefined);
   };
 
@@ -260,6 +279,7 @@ export default function TeslaChargingSessionsPage() {
     sessionsDataState.refreshError != null
     || sessionsDataState.isRefreshBlocked
     || sessionsDataState.status === 'stale'
+    || (!allVehicles && vehiclesState.status !== 'ok')
   );
 
   const operationalTotals = useMemo(() => {
@@ -467,7 +487,14 @@ export default function TeslaChargingSessionsPage() {
   };
 
   const selectedVehicleLabel = vehicleOptions.find((option) => option.value === selectedVin)?.label
-    ?? t('tesla_sessions.allVehicles', 'All vehicles');
+    ?? (selectedVin || t('operations.status.unavailable', 'Data unavailable'));
+  const filteredNoMatch = !sourceUnresolved && allSessions.length > 0 && sessions.length === 0;
+  const noMatchMessage = t('tesla_sessions.noMatch', 'No fleet charging sessions match this analysis window.');
+  const emptyScopeGuidance = t(
+    'tesla_sessions.emptyScopeGuidance',
+    'Scope: {{vehicle}}, {{start}} to {{end}}. Change the vehicle or widen or clear the date range in View settings to review another scope.',
+    { vehicle: selectedVehicleLabel, start, end },
+  );
 
   const columns: Column<TeslaChargingSession>[] = useMemo(() => [
     {
@@ -536,11 +563,11 @@ export default function TeslaChargingSessionsPage() {
       key: 'duration',
       align: 'right',
       filterValue: (row) => row.charge_duration_s ?? null,
-      filterValueLabel: (_, row) => formatDurationSeconds(row.charge_duration_s),
+      filterValueLabel: (_, row) => formatChargingDuration(row.charge_duration_s),
       header: t('tesla_sessions.col.duration', 'Duration'),
       render: (row) => (
         <Text variant="body">
-          {formatDurationSeconds(row.charge_duration_s)}
+          {formatChargingDuration(row.charge_duration_s)}
         </Text>
       ),
     },
@@ -583,7 +610,7 @@ export default function TeslaChargingSessionsPage() {
         </Text>
       ),
     },
-  ], [t, formatSourceAmount, fmtNumber]);
+  ], [t, formatSourceAmount, fmtNumber, formatChargingDuration]);
 
   const [sortKey, setSortKey] = useState<string>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
@@ -675,7 +702,7 @@ export default function TeslaChargingSessionsPage() {
     <Button
       wrapLabel
       onClick={handleRefresh}
-      disabled={sessionsDataState.isRefreshBlocked}
+      disabled={importBlocked}
       loading={refreshMutation.isPending}
       className="min-h-11 min-w-11"
       icon={<Icon icon={RefreshCw} />}
@@ -718,7 +745,7 @@ export default function TeslaChargingSessionsPage() {
     { metricId: 'duration', occurrenceId: 'duration', label: t('operations.charging.averageDuration', 'Average duration'),
       rawValue: sourceUnresolved || isLoading || error ? null : operationalTotals.averageDurationSeconds,
       description: t('operations.charging.durationDetail', 'Mean charging duration for sessions with valid timing data.'),
-      display: { formatter: raw => ({ value: formatDurationSeconds(raw), unit: '' }) } },
+      display: { formatter: raw => ({ value: formatChargingDuration(raw), unit: '' }) } },
   ]);
 
   return (
@@ -729,6 +756,24 @@ export default function TeslaChargingSessionsPage() {
       contextActions={contextActions}
       primaryAction={primaryAction}
     >
+      {!allVehicles && (
+        <div data-testid="vehicle-source-state">
+          {(vehiclesState.refreshError || vehiclesState.isRefreshBlocked || vehiclesState.status === 'stale') && (
+            <StaleRefreshWarning state={vehiclesState} label={t('common.vehicles', 'Vehicles')} />
+          )}
+          {vehiclesState.fatalError && (
+            <QueryError error={vehiclesState.fatalError} onRetry={vehiclesState.retry ?? undefined} />
+          )}
+          {!scopeReady && !vehiclesLoading && !vehiclesState.fatalError && (
+            <DataStateNotice state="unavailable" title={t('common.vehicles', 'Vehicles')} role="status">
+              {unavailableMessage}
+              <Button variant="ghost" onClick={vehiclesState.retry ?? undefined}>
+                {t('common.retry', 'Retry')}
+              </Button>
+            </DataStateNotice>
+          )}
+        </div>
+      )}
       <StaleRefreshWarning state={sessionsDataState} label={t('tesla_sessions.title', 'Fleet charging sessions')} />
       {sourceUnresolved && sessionsDataState.isRefreshBlocked ? (
         <DataStateNotice state="unavailable" title={t('tesla_sessions.title', 'Fleet charging sessions')} role="status">
@@ -747,7 +792,7 @@ export default function TeslaChargingSessionsPage() {
         title={t('operations.charging.returnedSessionsTitle', 'Cost, energy, and session evidence in one operating view')}
         description={t('operations.charging.returnedSessionsDescription', 'The selected vehicle and date range drive charging totals, location analysis, and the supporting session history.')}
         statusLabel={
-          error || (sourceUnresolved && sessionsDataState.isRefreshBlocked)
+          error || (sourceUnresolved && (!scopeReady || sessionsDataState.isRefreshBlocked) && !isLoading)
             ? t('operations.status.unavailable', 'Data unavailable')
             : isLoading
               ? t('operations.charging.sessionsLoading', 'Updating')
@@ -831,7 +876,7 @@ export default function TeslaChargingSessionsPage() {
           aria-label={t('tesla_sessions.kpis', 'Summary metrics')}
         >
           <ChargingSummaryBrief id="tesla-fleet-charging-summary" metrics={summaryMetrics} loading={isLoading}
-            retained={sessionsDataState.hasData && (sessionsDataState.refreshError != null || sessionsDataState.isRefreshBlocked)}
+            retained={retainedUnconfirmed}
             period={{
               kind: 'unknown', label: t('tesla_sessions.kpis', 'Summary metrics'),
               reason: t('tesla_sessions.summaryScope', 'Tesla lifetime summary. The analysis window filters loaded sessions, charts, and operational totals separately.'),
@@ -890,7 +935,7 @@ export default function TeslaChargingSessionsPage() {
               ) : (
                 <EmptyState
                   icon={<Icon icon={DollarSign} size="xl" />}
-                  message={sourceUnresolved ? unavailableMessage : sessions.length > 0 && !scopedCurrency ? currencyUnavailable : t('tesla_sessions.noChartData', 'No cost data yet. Click "Refresh from Tesla" to sync.')}
+                  message={sourceUnresolved ? unavailableMessage : filteredNoMatch ? noMatchMessage : sessions.length > 0 && !scopedCurrency ? currencyUnavailable : t('tesla_sessions.noChartData', 'No cost data yet. Click "Refresh from Tesla" to sync.')}
                 />
               )}
             </ChartContainer>
@@ -922,7 +967,7 @@ export default function TeslaChargingSessionsPage() {
             ) : (
               <EmptyState
                 icon={<Icon icon={Plug} size="xl" />}
-                message={sourceUnresolved ? unavailableMessage : t('tesla_sessions.noChargerData', 'No charger breakdown yet.')}
+                message={sourceUnresolved ? unavailableMessage : filteredNoMatch ? noMatchMessage : t('tesla_sessions.noChargerData', 'No charger breakdown yet.')}
               />
             )}
             </SectionErrorBoundary>
@@ -961,7 +1006,7 @@ export default function TeslaChargingSessionsPage() {
             ) : (
               <EmptyState
                 icon={<Icon icon={MapPin} size="xl" />}
-                message={sourceUnresolved ? unavailableMessage : t('tesla_sessions.noMapData', 'No location data available yet.')}
+                message={sourceUnresolved ? unavailableMessage : filteredNoMatch ? noMatchMessage : t('tesla_sessions.noMapData', 'No location data available yet.')}
               />
             )}
             </SectionErrorBoundary>
@@ -995,7 +1040,7 @@ export default function TeslaChargingSessionsPage() {
             ) : (
               <EmptyState
                 icon={<Icon icon={MapPin} size="xl" />}
-                message={sourceUnresolved ? unavailableMessage : t('tesla_sessions.noLocationData', 'No location breakdown yet.')}
+                message={sourceUnresolved ? unavailableMessage : filteredNoMatch ? noMatchMessage : t('tesla_sessions.noLocationData', 'No location breakdown yet.')}
               />
             )}
             </SectionErrorBoundary>
@@ -1021,7 +1066,7 @@ export default function TeslaChargingSessionsPage() {
                       case 'date': return formatDateTime(row.charge_start_datetime);
                       case 'energy': return row.total_energy_added_wh == null ? null
                         : fmtNumber(convertEnergyFromSI(row.total_energy_added_wh, 'kWh'));
-                      case 'duration': return formatDurationSeconds(row.charge_duration_s);
+                      case 'duration': return formatChargingDuration(row.charge_duration_s);
                       case 'cost': return row.total_cost == null ? null
                         : formatSourceAmount(row.total_cost, sourceCurrency([row]));
                       case 'type': return row.charger_type;
@@ -1073,7 +1118,7 @@ export default function TeslaChargingSessionsPage() {
                   energy: row.total_energy_added_wh != null
                     ? convertEnergyFromSI(row.total_energy_added_wh, 'kWh') : null,
                   peakPower: row.peak_power_kw ?? null,
-                  duration: formatDurationSeconds(row.charge_duration_s),
+                  duration: formatChargingDuration(row.charge_duration_s),
                   cost: row.total_cost != null
                     ? formatSourceAmount(row.total_cost, sourceCurrency([row])) : null,
                   currency: row.currency_code ?? '',
@@ -1110,7 +1155,8 @@ export default function TeslaChargingSessionsPage() {
             ) : (
               <EmptyState
                 icon={<Icon icon={Info} size="xl" />}
-                message={sourceUnresolved ? unavailableMessage : t('tesla_sessions.noData', 'No fleet charging sessions yet. Click "Refresh from Tesla" to import data.')}
+                message={sourceUnresolved ? unavailableMessage : filteredNoMatch ? noMatchMessage : t('tesla_sessions.noData', 'No fleet charging sessions yet. Click "Refresh from Tesla" to import data.')}
+                description={sourceUnresolved ? undefined : emptyScopeGuidance}
               />
             )}
             </SectionErrorBoundary>

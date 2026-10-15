@@ -375,9 +375,14 @@
     "tempRange": "Temp range",
     "tempVsEfficiency": "Temperature vs efficiency",
     "tempVsEfficiencyAria": "Temperature versus efficiency scatter plot",
+    "temperatureTable": {
+      "averageConsumption": "Avg {{unit}}",
+      "economy": "{{unit}}/kWh",
+      "measurement": "{{value}} {{unit}}",
+      "totalDistance": "Total {{unit}}"
+    },
     "title": "Efficiency",
     "topSpeed": "Top speed",
-    "total": "Total",
     "totalDistLabel": "Total distance",
     "totalDriveTime": "Total drive time",
     "totalRegen": "Total regen"

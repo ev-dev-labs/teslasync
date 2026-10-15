@@ -16,19 +16,22 @@ export function EfficiencyTemperatureTable({ model, source, units }: DrivesPrese
   const labels = {
     range: t('efficiency.tempRange', 'Temp range'),
     count: t('efficiency.drives', 'Drives'),
-    avgEff: `${t('efficiency.avg', 'Avg')} ${efficiencyUnit}`,
-    kmPerKwh: `${distanceUnit}/kWh`,
-    totalDist: `${t('efficiency.total', 'Total')} ${distanceUnit}`,
+    avgEff: t('efficiency.temperatureTable.averageConsumption', 'Avg {{unit}}', { unit: efficiencyUnit }),
+    kmPerKwh: t('efficiency.temperatureTable.economy', '{{unit}}/kWh', { unit: distanceUnit }),
+    totalDist: t('efficiency.temperatureTable.totalDistance', 'Total {{unit}}', { unit: distanceUnit }),
     avgSpeed: t('efficiency.avgSpeedCol', 'Avg speed'),
   };
   const displayValue = (b: TemperatureBucket, key: string): string | number => {
     switch (key) {
       case 'range': return b.range;
-      case 'count': return b.count;
+      case 'count': return finite(b.count) ? fmtInt(b.count) : '—';
       case 'avgEff': return finite(b.avgEff) ? fmtInt(toEfficiencyDisplay(b.avgEff)) : '—';
       case 'kmPerKwh': return finite(b.avgEff) && b.avgEff > 0 ? fmtNumber(1000 / toEfficiencyDisplay(b.avgEff)) : '—';
       case 'totalDist': return finite(b.totalDist) ? fmtNumber(toDistanceDisplay(b.totalDist)) : '—';
-      case 'avgSpeed': return finite(b.avgSpeed) ? `${fmtNumber(toSpeedDisplay(b.avgSpeed))} ${speedUnit}` : '—';
+      case 'avgSpeed': return finite(b.avgSpeed)
+        ? t('efficiency.temperatureTable.measurement', '{{value}} {{unit}}', {
+          value: fmtNumber(toSpeedDisplay(b.avgSpeed)), unit: speedUnit,
+        }) : '—';
       default: return '—';
     }
   };
@@ -43,7 +46,7 @@ export function EfficiencyTemperatureTable({ model, source, units }: DrivesPrese
           { key: 'range', header: labels.range,
             render: b => <Text weight="medium" color="primary">{b.range}</Text> },
           { key: 'count', header: labels.count, align: 'right',
-            render: b => <Text color="secondary">{b.count}</Text> },
+            render: b => <Text color="secondary">{displayValue(b, 'count')}</Text> },
           { key: 'avgEff', header: labels.avgEff, align: 'right',
             render: b => <Text className="tabular-nums">{displayValue(b, 'avgEff')}</Text> },
           { key: 'kmPerKwh', header: labels.kmPerKwh, align: 'right',
@@ -58,7 +61,9 @@ export function EfficiencyTemperatureTable({ model, source, units }: DrivesPrese
           roles: { range: 'title', count: 'meta', avgEff: 'primary',
             kmPerKwh: 'hidden', totalDist: 'hidden', avgSpeed: 'hidden' },
           displayValue: (b, key) => key === 'avgEff' && finite(b.avgEff)
-            ? `${displayValue(b, key)} ${efficiencyUnit}` : displayValue(b, key),
+            ? t('efficiency.temperatureTable.measurement', '{{value}} {{unit}}', {
+              value: displayValue(b, key), unit: efficiencyUnit,
+            }) : displayValue(b, key),
           // The adapter's real allColumns detail modal retains all six columns.
           // Do not duplicate them through allDetails or add another controller.
         }}

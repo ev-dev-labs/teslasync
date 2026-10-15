@@ -105,12 +105,18 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 
 	// === Battery health accumulators ===
 	type batteryPoint struct {
-		Date        string  `json:"date"`
-		HealthScore float64 `json:"health_score"`
-		CapacityWh  float64 `json:"capacity_wh"`
-		Degradation float64 `json:"degradation_pct"`
-		RangeKm     float64 `json:"range_km"`
-		CycleCount  int     `json:"cycle_count"`
+		Date          string   `json:"date"`
+		VehicleID     int64    `json:"vehicle_id"`
+		HealthScore   *float64 `json:"health_score"`
+		CapacityWh    *float64 `json:"capacity_wh"`
+		Degradation   *float64 `json:"degradation_pct"`
+		RangeKm       *float64 `json:"range_km"`
+		CycleCount    *int     `json:"cycle_count"`
+		SocPct        *float64 `json:"soc_pct"`
+		Source        string   `json:"source"`
+		AsOf          string   `json:"as_of,omitempty"`
+		CoverageStart string   `json:"coverage_start,omitempty"`
+		CoverageEnd   string   `json:"coverage_end,omitempty"`
 	}
 	var batteryTrend []batteryPoint
 	partialReasons := make(map[string]struct{})
@@ -139,7 +145,7 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 		} else if len(sessions) >= maxAnalyticsRecordsPerVehicle {
 			markPartial("charging_record_cap_reached")
 		}
-		// Per-vehicle battery health from latest signal snapshot via
+		// Per-vehicle battery observations from latest signal snapshot via
 		// StateReader.State at time.Now(). State() returns the forward-folded
 		// current state, so the BatteryLevel signal is carried across
 		// emissions. Errors are logged and skipped so a single vehicle's
@@ -157,16 +163,25 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 				Msg("analytics: failed to get latest signal snapshot")
 			markPartial("state_query_failed")
 		} else if snap != nil {
-			if bl, ok := signal.Float64(snap["BatteryLevel"]); ok && bl > 0 {
-				const nomCap = 75000.0
-				const nomRange = 531.0
-				batteryTrend = append(batteryTrend, batteryPoint{
-					Date:        now.Format("2006-01-02"),
-					HealthScore: bl,
-					CapacityWh:  bl * nomCap / 100,
-					Degradation: 100 - bl,
-					RangeKm:     bl * nomRange / 100,
-				})
+			point := batteryPoint{
+				Date: now.Format("2006-01-02"), VehicleID: v.ID,
+				Source: "state", AsOf: now.Format(time.RFC3339),
+			}
+			// State is carried forward as of the query time, not a fresh
+			// observation. SOC cannot establish health, degradation or cycles.
+			if bl, ok := signal.Float64(snap["BatteryLevel"]); ok && bl >= 0 && bl <= 100 {
+				point.SocPct = &bl
+			}
+			if capacity, ok := signal.Float64(snap["NominalFullPackEnergyKwh"]); ok && capacity > 0 && !math.IsInf(capacity, 0) {
+				// Despite the upstream signal name, normalization stores Wh.
+				point.CapacityWh = &capacity
+			}
+			if ratedRange, ok := signal.Float64(snap["RatedRange"]); ok && ratedRange >= 0 && !math.IsInf(ratedRange, 0) {
+				rangeKm := ratedRange / 1000
+				point.RangeKm = &rangeKm
+			}
+			if point.SocPct != nil || point.CapacityWh != nil || point.RangeKm != nil {
+				batteryTrend = append(batteryTrend, point)
 			}
 		}
 
@@ -322,8 +337,6 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 
 		// Battery trend from cagg_battery_daily
 		if h.db != nil {
-			const btCap = 75000.0
-			const btRange = 531.0
 			// Build conditional SQL: cutoff/endCutoff are independently
 			// optional, so only emit the bound clauses when set rather
 			// than passing time.Time{} sentinel values that would silently
@@ -352,16 +365,14 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 						markPartial("battery_trend_row_scan_failed")
 						continue
 					}
-					soc := 0.0
-					if endSOC != nil {
-						soc = *endSOC
+					if endSOC != nil && (*endSOC < 0 || *endSOC > 100 || math.IsNaN(*endSOC) || math.IsInf(*endSOC, 0)) {
+						endSOC = nil
 					}
 					batteryTrend = append(batteryTrend, batteryPoint{
-						Date:        bucket.Format("2006-01-02"),
-						HealthScore: soc,
-						CapacityWh:  soc * btCap / 100,
-						Degradation: 100 - soc,
-						RangeKm:     soc * btRange / 100,
+						Date: bucket.Format("2006-01-02"), VehicleID: v.ID,
+						SocPct: endSOC, Source: "daily_soc",
+						CoverageStart: bucket.Format(time.RFC3339),
+						CoverageEnd: bucket.AddDate(0, 0, 1).Format(time.RFC3339),
 					})
 				}
 				btRows.Close()
@@ -504,9 +515,12 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 	dailyTrend := make([]map[string]interface{}, 0, len(dailyDriveAgg))
 	for d, data := range dailyDriveAgg {
 		dailyTrend = append(dailyTrend, map[string]interface{}{
-			"date":     d,
-			"drives":   data["drives"],
-			"distance": math.Round(data["distance"].(float64)*10) / 10,
+			"date":       d,
+			"drives":     data["drives"],
+			"distance":   math.Round(data["distance"].(float64)*10) / 10,
+			// This aggregation has no matched driving-energy evidence.
+			// Charging totals cannot establish daily driving efficiency.
+			"efficiency": nil,
 		})
 	}
 	sort.Slice(dailyTrend, func(i, j int) bool {
@@ -597,7 +611,12 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Sort battery trend chronologically
-	sort.Slice(batteryTrend, func(i, j int) bool {
+	sort.SliceStable(batteryTrend, func(i, j int) bool {
+		if batteryTrend[i].Date == batteryTrend[j].Date {
+			// A daily SOC bucket must not obscure reported capacity/range
+			// from the separately disclosed as-of state on the same day.
+			return batteryTrend[i].Source == "daily_soc" && batteryTrend[j].Source == "state"
+		}
 		return batteryTrend[i].Date < batteryTrend[j].Date
 	})
 
@@ -615,7 +634,8 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 		periodDays = int(periodEnd.Sub(cutoff).Hours()/24) + 1
 	}
 
-	// === Build total response ===
+	// HTTP success preserves available aggregates; partial_result independently
+	// discloses failed sources and record caps, including on a zero-total result.
 	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"generated_at": now,
 		"source":       "derived_fleet_analytics",

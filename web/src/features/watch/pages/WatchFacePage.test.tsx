@@ -30,6 +30,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import { Shield, Thermometer } from 'lucide-react'
 import { gaugeTone, severityTokens } from '@/lib/tokens'
+import { ApiError } from '@/lib/resilience'
 import { getGlobalLocale, getGlobalPrecision, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat'
 
 // framer-motion's useReducedMotion (via <Spinner>) probes matchMedia, which
@@ -169,7 +170,7 @@ afterEach(() => {
 
 describe('WatchFacePage', () => {
   it('shows the watch-shaped loading skeleton while the summary query is in flight', () => {
-    hooks.summary = { data: undefined, isLoading: true, error: null }
+    hooks.summary = { data: undefined, isLoading: true, error: null, fetchStatus: 'fetching' }
     renderPage()
 
     const status = screen.getByRole('status')
@@ -181,17 +182,19 @@ describe('WatchFacePage', () => {
     expect(screen.queryByText('My Model 3')).toBeNull()
   })
 
-  it('renders the error text when the summary query fails, without a blank panel', () => {
+  it('renders friendly recovery instead of raw error text when the summary query fails', () => {
     hooks.summary = { data: undefined, isLoading: false, error: new Error('boom') }
     renderPage()
 
-    expect(screen.getByText('Error: boom')).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent("Can't reach server")
+    expect(screen.getByText('Check your internet connection and try again.')).toBeInTheDocument()
+    expect(screen.queryByText(/boom/)).not.toBeInTheDocument()
     expect(screen.queryByRole('status')).toBeNull()
     expect(screen.queryByText('No vehicle found')).toBeNull()
   })
 
   it('renders an explicit empty state (not a blank panel) when there is no data and no error', () => {
-    hooks.summary = { data: undefined, isLoading: false, error: null }
+    hooks.summary = { data: null, isLoading: false, error: null, fetchStatus: 'idle' }
     renderPage()
 
     expect(screen.getByText('No vehicle found')).toBeInTheDocument()
@@ -221,9 +224,10 @@ describe('WatchFacePage', () => {
     expect(screen.getByText('online')).toBeInTheDocument()
 
     // Icon-only lock control now carries a descriptive accessible name (bug fix).
-    expect(screen.getByRole('button', { name: 'Unlock vehicle' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Unlock vehicle' })).toHaveClass('h-auto', 'min-h-11', 'min-w-11')
     const climate = screen.getByRole('button', { name: 'Turn climate on' })
     expect(climate).toHaveTextContent('21°')
+    expect(climate).toHaveClass('h-auto', 'min-h-11', 'min-w-11')
     expect(screen.getByRole('img', { name: 'Sentry mode off' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Sentry mode off' })).not.toBeInTheDocument()
   })
@@ -264,7 +268,8 @@ describe('WatchFacePage', () => {
     }
     renderPage()
 
-    expect(screen.getByText('Error: watch unavailable')).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent("Can't reach server")
+    expect(screen.queryByText('Error: watch unavailable')).not.toBeInTheDocument()
     expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
     expect(refetch).toHaveBeenCalledTimes(1)
@@ -285,7 +290,9 @@ describe('WatchFacePage', () => {
       expect(screen.getByRole('link', { name: 'Manage API keys' })).toHaveAttribute('href', '/api-keys')
     } else {
       expect(screen.getByText('Watch access could not be checked')).toBeInTheDocument()
-      fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+      const retry = screen.getByRole('button', { name: 'Retry' })
+      expect(retry).toHaveClass('h-auto', 'min-h-11', 'max-w-full', 'whitespace-normal')
+      fireEvent.click(retry)
       expect(recheckAvailability).toHaveBeenCalledTimes(1)
     }
     expect(hooks.command.mutate).not.toHaveBeenCalled()
@@ -486,7 +493,11 @@ describe('WatchFacePage', () => {
     const refetch = vi.fn()
     hooks.summary = { data: undefined, isLoading: false, error: new Error('watch unavailable'), refetch }
     renderPage()
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    const retry = screen.getByRole('button', { name: 'Retry' })
+    expect(retry).toHaveClass('h-auto', 'max-w-full', 'whitespace-normal')
+    expect(retry.parentElement).toHaveClass('[&_button]:min-h-11')
+    expect(screen.getByRole('alert')).toHaveClass('p-3')
+    fireEvent.click(retry)
     expect(refetch).toHaveBeenCalledTimes(1)
     expect(hooks.command.mutate).not.toHaveBeenCalled()
   })
@@ -538,6 +549,64 @@ describe('WatchFacePage', () => {
     expect(screen.getByText('72%')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
     expect(refetch).toHaveBeenCalledTimes(1)
+    expect(hooks.command.mutate).not.toHaveBeenCalled()
+  })
+
+  it('offers only safe optional HTTP details, then clears recovery after a successful retry', () => {
+    const refetch = vi.fn()
+    const privateMessage = 'key=private-key VIN=private-vin <script>private</script>'
+    const error = new ApiError(privateMessage, 500, 'private-code')
+    error.stack = 'private stack with watch URL'
+    hooks.summary = { data: undefined, isLoading: false, error, refetch }
+    const view = renderPage()
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Server error')
+    expect(screen.queryByText('Status: HTTP 500')).not.toBeInTheDocument()
+    const details = screen.getByRole('button', { name: 'Learn more' })
+    expect(details).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(details)
+    expect(screen.getByRole('region', { name: 'Learn more' })).toHaveTextContent('Status: HTTP 500')
+    expect(document.body.textContent).not.toMatch(/private-key|private-vin|private-code|private stack|<script>/)
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(refetch).toHaveBeenCalledTimes(1)
+
+    hooks.summary = { data: makeSummary(), isLoading: false, error: null }
+    view.rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter><WatchFacePage /></MemoryRouter>
+      </QueryClientProvider>,
+    )
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Learn more' })).not.toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Battery 72%; range 300 km' })).toBeInTheDocument()
+    expect(hooks.command.mutate).not.toHaveBeenCalled()
+  })
+
+  it('retains readings during refresh failure and clears the warning on recovery', () => {
+    const refetch = vi.fn()
+    hooks.summary = { data: makeSummary(), isLoading: false, error: new ApiError('private refresh', 503), refetch }
+    const view = renderPage()
+    expect(screen.getByText('Cached')).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('Service unavailable')
+    expect(screen.getByRole('img', { name: 'Battery 72%; range 300 km' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Unlock vehicle' })).toBeEnabled()
+    const retry = screen.getByRole('button', { name: 'Retry' })
+    expect(retry).toHaveClass('h-auto', 'max-w-full', 'whitespace-normal')
+    expect(retry.parentElement).toHaveClass('[&_button]:min-h-11')
+    expect(screen.getByRole('alert')).toHaveClass('p-3')
+    fireEvent.click(retry)
+    expect(refetch).toHaveBeenCalledTimes(1)
+
+    hooks.summary = { data: makeSummary({ battery_level: 0, range_m: 0 }), isLoading: false, error: null }
+    view.rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter><WatchFacePage /></MemoryRouter>
+      </QueryClientProvider>,
+    )
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.queryByText('Cached')).not.toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Battery 0%; range 0 km' })).toBeInTheDocument()
+    expect(screen.getByRole('main')).toHaveClass('overflow-y-auto')
     expect(hooks.command.mutate).not.toHaveBeenCalled()
   })
 

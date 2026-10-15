@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Info } from 'lucide-react';
-import { LayoutCard } from '@/components/layout/layout-reference';
+import { LayoutCard } from '@/components/layout';
 import { Badge, HelperText } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { POWERSHARE_SIGNALS, humanizeEnum } from '../powershare';

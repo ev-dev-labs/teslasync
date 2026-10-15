@@ -25,7 +25,7 @@ import {
 } from '../components';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { hasSignalHistory } from '../lib/signalEvidenceAvailability';
-import { presentRootCause } from '../lib/rootCauseIntelligence';
+import { localizeRootCause, presentRootCause } from '../lib/rootCauseIntelligence';
 
 /**
  * Root-Cause Intelligence Graph.
@@ -64,10 +64,10 @@ export default function RootCauseIntelligencePage() {
     workspace.evidenceBundle.refetch();
   }, [workspace.signalsQuery, workspace.evidenceBundle]);
 
-  const { analysis } = workspace;
-  const presentation = workspace.presentation ?? presentRootCause(analysis, workspace.evidenceBundle.data.map(
+  const analysis = localizeRootCause(workspace.analysis, t);
+  const presentation = localizeRootCause(workspace.presentation ?? presentRootCause(workspace.analysis, workspace.evidenceBundle.data.map(
     ({ signal, response }) => ({ signal, points: response.data ?? [] }),
-  ));
+  )), t);
   const isLoading = !evidenceState.hasData && (
     (workspace.signalsQuery.isLoading && !signalsState.hasData) ||
     (workspace.hasChosenSignal && workspace.evidenceBundle.isLoading)

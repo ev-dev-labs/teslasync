@@ -24,9 +24,9 @@
  *     no matter what they are. First differences are offered so the user can
  *     ask about co-movement rather than shared drift.
  *  3. **Effective sample size.** Resampled series are heavily autocorrelated,
- *     so the naive n wildly overstates significance. The reported significance
- *     uses an autocorrelation-adjusted n, which is why a correlogram peak here
- *     is far harder to reach than in a naive implementation.
+ *     so the naive n wildly overstates significance. The screening threshold
+ *     uses an approximate autocorrelation-adjusted n; it is not a calibrated
+ *     significance guarantee and does not correct for searching across lags.
  *
  * Pure and React-free.
  */
@@ -51,7 +51,7 @@ export interface LagPoint {
   /** Positive = signal B lags behind signal A. */
   lagS: number;
   r: number;
-  /** Overlapping samples used at this lag. */
+  /** Overlapping resampled pairs used at this lag, after optional differencing. */
   n: number;
 }
 
@@ -64,12 +64,19 @@ export interface CorrelationResult {
   /** The lag with the largest |r|. */
   bestLagS: number;
   bestR: number;
-  /** Samples contributing at the best lag. */
+  /** Overlapping resampled pairs at the best lag, not original source records. */
   bestN: number;
-  /** Autocorrelation-adjusted sample size at the best lag. */
+  /** Returned history record counts, before validation, deduplication or resampling. */
+  sourceCountA?: number;
+  sourceCountB?: number;
+  /** Valid timestamp-deduplicated measurements before overlap clipping or resampling. */
+  validCountA?: number;
+  validCountB?: number;
+  /** Approximate lag-1 autocorrelation-adjusted sample size at the best lag. */
   effectiveN: number;
-  /** |r| needed to clear 95 % significance at `effectiveN`. */
+  /** Approximate screening cutoff for |r|; not a calibrated 95 % guarantee. */
   significanceThreshold: number;
+  /** Whether the peak clears the screening cutoff, not proof of a relationship. */
   significant: boolean;
   /** Which signal moves first. */
   lead: 'a' | 'b' | 'simultaneous' | 'none';
@@ -211,6 +218,7 @@ function lag1Autocorrelation(series: ReadonlyArray<number | null>): number {
  * Resampling a 10-minute signal onto a 60-second grid multiplies the apparent
  * sample size tenfold without adding a single new observation; without this
  * correction every correlogram peak would look overwhelmingly significant.
+ * This lag-1 approximation does not model all temporal dependence or gaps.
  */
 export function effectiveSampleSize(n: number, rhoA: number, rhoB: number): number {
   const product = rhoA * rhoB;
@@ -286,8 +294,9 @@ export function analyzeCorrelation(
   const rhoB = lag1Autocorrelation(vb);
   const effectiveN = Math.round(effectiveSampleSize(best.n, rhoA, rhoB));
 
-  // 95 % critical |r| for n−2 degrees of freedom, via the t↔r identity with
-  // t ≈ 1.96 (adequate once the effective n clears ~30, conservative below).
+  // Approximate screening cutoff via the t↔r identity with fixed t ≈ 1.96.
+  // This is not a finite-sample Student-t critical value (and is not
+  // conservative at small effective n), nor a correction for the lag search.
   const df = Math.max(1, effectiveN - 2);
   const tCrit = 1.96;
   const significanceThreshold = Math.round(
@@ -309,6 +318,10 @@ export function analyzeCorrelation(
     bestLagS: best.lagS,
     bestR: best.r,
     bestN: best.n,
+    sourceCountA: a.length,
+    sourceCountB: b.length,
+    validCountA: pa.length,
+    validCountB: pb.length,
     effectiveN,
     significanceThreshold,
     significant,

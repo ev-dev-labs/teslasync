@@ -18,12 +18,24 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { render, renderHook, act, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import type { FeedbackEntry } from '@/api/types'
 import type { FeedbackListParams } from '@/api/hooks/useFeedback'
+import * as apiClient from '@/api/client'
+import type { OperationalModeContextValue } from '@/hooks/useOperationalMode'
+
+vi.mock('@/hooks/useOperationalMode', () => ({
+  useOperationalMode: () => operationalMode,
+}))
+
+vi.mock('@/api/hooks/_toastHelpers', () => ({
+  useMutationToast: () => ({ success: vi.fn(), error: vi.fn() }),
+}))
+
+let operationalMode: OperationalModeContextValue
 
 // ── Deterministic i18n: return the English fallback, interpolate {{vars}}. ─────
 vi.mock('react-i18next', async () => {
@@ -244,6 +256,10 @@ function feedbackListImpl(params: FeedbackListParams = {}) {
 }
 
 beforeEach(() => {
+  operationalMode = {
+    mode: 'live', asOf: null, online: true, isReadOnly: false,
+    label: 'Live', description: '', canWrite: true, writeBlockReason: null,
+  }
   refetches = {
     main: vi.fn(),
     new: vi.fn(),
@@ -306,6 +322,55 @@ function drawerFor(title: string): HTMLElement {
 }
 
 describe('FeedbackQueuePage', () => {
+  it.each(['cached', 'as_of'] as const)(
+    'blocks manual writes in %s mode without losing retained feedback, selection or drafts, then recovers',
+    async (mode) => {
+      const { rerenderPage } = renderPage()
+      fireEvent.click(screen.getAllByRole('checkbox', { name: /^Select (?!all)/ })[0])
+      expandRow('Timeline cuts off early')
+      fireEvent.change(within(drawerFor('Timeline cuts off early')).getByRole('textbox'), {
+        target: { value: 'https://github.com/acme/repo/issues/7' },
+      })
+      const reason = mode === 'cached'
+        ? 'Reconnect before making operational changes.'
+        : 'Return to live mode before making operational changes.'
+      operationalMode = { ...operationalMode, mode, canWrite: false, isReadOnly: true, writeBlockReason: reason }
+      configure({ main: { isError: true, error: new Error('refresh failed') } })
+      rerenderPage()
+
+      expect(screen.getByText(reason)).toHaveAttribute('role', 'status')
+      expect(screen.getByText('Add dark map tiles')).toBeInTheDocument()
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument()
+      for (const name of ['Mark triaged', 'Close selected', 'Reopen selected']) {
+        const button = screen.getByRole('button', { name })
+        expect(button).toBeDisabled()
+        expect(button).toHaveAttribute('title', reason)
+        fireEvent.click(button)
+      }
+      const region = drawerFor('Timeline cuts off early')
+      expect(within(region).getByRole('combobox')).toBeDisabled()
+      expect(within(region).getByRole('textbox')).toBeDisabled()
+      expect(within(region).getByRole('button', { name: 'Save URL' })).toBeDisabled()
+      fireEvent.change(within(region).getByRole('combobox'), { target: { value: 'closed' } })
+      expect(mockMutate).not.toHaveBeenCalled()
+      expect(mockBulkMutateAsync).not.toHaveBeenCalled()
+      expect(screen.getAllByRole('checkbox', { name: /^Deselect (?!all)/ })[0]).toBeChecked()
+
+      fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+      expect(refetches.main).toHaveBeenCalledTimes(1)
+      operationalMode = { ...operationalMode, mode: 'live', canWrite: true, isReadOnly: false, writeBlockReason: null }
+      configure()
+      rerenderPage()
+      expect(screen.queryByText(reason)).toBeNull()
+      expect(screen.queryByTestId('stale-refresh-warning')).toBeNull()
+      expect(within(drawerFor('Timeline cuts off early')).getByRole('textbox')).toHaveValue('https://github.com/acme/repo/issues/7')
+      fireEvent.change(within(drawerFor('Timeline cuts off early')).getByRole('combobox'), { target: { value: 'closed' } })
+      expect(mockMutate).toHaveBeenCalledWith({ id: 101, update: { status: 'closed' } })
+      fireEvent.click(screen.getByRole('button', { name: 'Close selected' }))
+      await waitFor(() => expect(mockBulkMutateAsync).toHaveBeenCalledWith({ ids: [101], update: { status: 'closed' } }))
+    },
+  )
+
   it('uses restrained issue-link roles and retains every column in the contained mobile table', () => {
     renderPage()
     const link = screen.getByRole('link', { name: /Open issue/i })
@@ -319,6 +384,38 @@ describe('FeedbackQueuePage', () => {
       expect(header).not.toHaveClass('md:table-cell')
     }
     expect(screen.getByText('/drives')).toBeInTheDocument()
+  })
+
+  describe('manual feedback request protection', () => {
+    it.each(['single', 'bulk'] as const)('opts every %s PATCH into live-mode protection', async (kind) => {
+      const actual = await vi.importActual<typeof import('@/api/hooks/useFeedback')>('@/api/hooks/useFeedback')
+      const request = vi.spyOn(apiClient, 'request').mockResolvedValue(rowA())
+      const qc = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={qc}>{children}</QueryClientProvider>
+      )
+      const { result, unmount } = renderHook(() => ({
+        single: actual.useUpdateFeedback(),
+        bulk: actual.useBulkUpdateFeedback(),
+      }), { wrapper })
+      try {
+        await act(async () => {
+          if (kind === 'single') await result.current.single.mutateAsync({ id: 101, update: { status: 'closed' } })
+          else await result.current.bulk.mutateAsync({ ids: [101, 102], update: { status: 'closed' } })
+        })
+        expect(request).toHaveBeenCalledTimes(kind === 'single' ? 1 : 2)
+        for (const [path, options] of request.mock.calls) {
+          expect(path).toMatch(/^\/admin\/feedback\/10[12]$/)
+          expect(options).toMatchObject({
+            method: 'PATCH', requiresLiveMode: true, body: JSON.stringify({ status: 'closed' }),
+          })
+        }
+      } finally {
+        unmount()
+        qc.clear()
+        request.mockRestore()
+      }
+    })
   })
 
   it('distinguishes filtered no-results from an empty queue and clears both filters', () => {
@@ -687,6 +784,79 @@ describe('FeedbackQueuePage', () => {
       id: 101,
       update: { github_issue_url: 'https://github.com/acme/repo/issues/7' },
     })
+  })
+
+  it.each(['single', 'bulk'] as const)(
+    'blocks all manual actions while a %s update is pending and restores them without losing selection or drafts',
+    (pendingMutation) => {
+      configure({
+        main: {
+          data: {
+            items: [rowA(), rowB()], total: 2, limit: 25, offset: 0,
+            github_bridge_enabled: true, github_repo: 'ev-dev-labs/teslasync',
+          },
+        },
+      })
+      const { rerenderPage } = renderPage()
+      fireEvent.click(screen.getAllByRole('checkbox', { name: /^Select (?!all)/ })[0])
+      expandRow('Timeline cuts off early')
+      const region = drawerFor('Timeline cuts off early')
+      fireEvent.change(within(region).getByRole('textbox'), {
+        target: { value: 'https://github.com/acme/repo/issues/7' },
+      })
+
+      mockUseUpdateFeedback.mockReturnValue({
+        mutate: mockMutate, isPending: pendingMutation === 'single',
+      })
+      mockUseBulkUpdateFeedback.mockReturnValue({
+        mutateAsync: mockBulkMutateAsync, isPending: pendingMutation === 'bulk',
+      })
+      rerenderPage()
+
+      for (const name of ['Mark triaged', 'Close selected', 'Reopen selected']) {
+        expect(screen.getByRole('button', { name })).toBeDisabled()
+        fireEvent.click(screen.getByRole('button', { name }))
+      }
+      expect(within(region).getByRole('combobox')).toBeDisabled()
+      expect(within(region).getByRole('textbox')).toBeDisabled()
+      for (const name of ['Save URL', 'Forward to GitHub']) {
+        expect(within(region).getByRole('button', { name })).toBeDisabled()
+        fireEvent.click(within(region).getByRole('button', { name }))
+      }
+      // Synthetic change events bypass native disabled-select behavior; the
+      // page's handler must still reject the mutation.
+      fireEvent.change(within(region).getByRole('combobox'), { target: { value: 'closed' } })
+      expect(mockMutate).not.toHaveBeenCalled()
+      expect(mockBulkMutateAsync).not.toHaveBeenCalled()
+      expect(screen.getAllByRole('checkbox', { name: /^Deselect (?!all)/ })[0]).toBeChecked()
+
+      mockUseUpdateFeedback.mockReturnValue({ mutate: mockMutate, isPending: false })
+      mockUseBulkUpdateFeedback.mockReturnValue({ mutateAsync: mockBulkMutateAsync, isPending: false })
+      rerenderPage()
+      expect(screen.getByRole('button', { name: 'Mark triaged' })).toBeEnabled()
+      expect(screen.getByRole('button', { name: 'Close selected' })).toBeEnabled()
+      expect(within(region).getByRole('combobox')).toBeEnabled()
+      expect(within(region).getByRole('textbox')).toHaveValue('https://github.com/acme/repo/issues/7')
+      expect(within(region).getByRole('button', { name: 'Save URL' })).toBeEnabled()
+      expect(within(region).getByRole('button', { name: 'Forward to GitHub' })).toBeEnabled()
+      fireEvent.click(within(region).getByRole('button', { name: 'Save URL' }))
+      expect(mockMutate).toHaveBeenCalledWith({
+        id: 101, update: { github_issue_url: 'https://github.com/acme/repo/issues/7' },
+      })
+    },
+  )
+
+  it('retains selected feedback after a failed bulk update so the same rows can be retried', async () => {
+    mockBulkMutateAsync.mockRejectedValueOnce(new Error('bulk update failed'))
+    renderPage()
+    fireEvent.click(screen.getAllByRole('checkbox', { name: /^Select (?!all)/ })[0])
+    fireEvent.click(screen.getByRole('button', { name: 'Close selected' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Close selected' })).toBeEnabled())
+    expect(screen.getAllByRole('checkbox', { name: /^Deselect (?!all)/ })[0]).toBeChecked()
+    expect(mockBulkMutateAsync).toHaveBeenCalledWith({ ids: [101], update: { status: 'closed' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Close selected' }))
+    await waitFor(() => expect(mockBulkMutateAsync).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Close selected' })).toBeNull())
   })
 
   it('bulk-updates selected feedback and clears the selection after success', async () => {

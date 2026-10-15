@@ -1,10 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { MapPin } from 'lucide-react';
-import { BUTTON_BASE, BUTTON_VARIANTS, GlassPanel, Icon, Logo, Text } from '@/components/ui';
+import { BUTTON_BASE, BUTTON_VARIANTS, Icon, Logo, Text } from '@/components/ui';
 import { ChartCard, LayoutCard, PageHeader } from '@/components/layout';
-import { EmptyState, Skeleton } from '@/components/feedback';
+import { DataSourceNotice, EmptyState, Skeleton } from '@/components/feedback';
 import {
   ChartTooltip, chartGrid, axisTick,
   AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -12,13 +12,12 @@ import {
   AREA_DEFAULTS,
 } from '@/components/charts';
 import {
-  MapContainer, Polyline, CircleMarker,
+  MapContainer, Polyline, CircleMarker, Popup,
   MapTileLayer,
   type LatLngExpression,
 } from '@/components/maps';
 import { useSharedDrive } from '@/api/hooks/useSharing';
 import { FadeIn } from '@/components/motion';
-import { useUnits } from '@/hooks/useUnits';
 import { PublicDriveBrief } from '../components/operationalbrief-public';
 
 import {
@@ -28,10 +27,11 @@ import {
 } from '@/lib/unitConversion';
 import { normalizeSharedDriveData, isSharedSession } from '@/types/sharing';
 import { SharedSessionReport } from './SharedSessionReport';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { usePublicDisplayFormatting } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { cn } from '@/lib/cn';
 import { chartTokens } from '@/lib/tokens';
+import { isApiError } from '@/api/client';
 
 /* ------------------------------------------------------------------ */
 /*  Boundary constants                                                */
@@ -134,23 +134,55 @@ function SharedDriveLoading() {
 
 // EXCEPTION: public share route is chrome-less so unauthenticated recipients see only the branded report.
 export default function SharedDrivePage() {
-  const { fmtNumber } = useNumberFormatting();
+  const { fmtNumber, unitPrefs, formatDistance, formatSpeed } = usePublicDisplayFormatting();
   const { token } = useParams<{ token: string }>();
   const { t } = useTranslation();
-  const { data: rawData, isLoading, error } = useSharedDrive(token ?? '');
+  const query = useSharedDrive(token ?? '');
+  const { data: rawData, isLoading, error, dataUpdatedAt } = query;
+  const [deniedVersions, setDeniedVersions] = useState(() => new Map<string, number>());
+  // Public authorization failures invalidate disclosure, not just freshness.
+  // Clearing an error or pausing a retry must never resurrect the denied cache.
+  const tokenDenied = isApiError(error) && [401, 403, 404, 410].includes(error.status);
+  const deniedVersion = deniedVersions.get(token ?? '');
+  if (tokenDenied && (deniedVersion === undefined || dataUpdatedAt > deniedVersion)) {
+    setDeniedVersions(previous => new Map(previous).set(token ?? '', dataUpdatedAt));
+  }
+  const revalidated = !error && query.isSuccess && dataUpdatedAt > (deniedVersion ?? Infinity);
+  if (revalidated) {
+    setDeniedVersions(previous => {
+      const next = new Map(previous);
+      next.delete(token ?? '');
+      return next;
+    });
+  }
+  const cacheDenied = deniedVersion !== undefined
+    && !revalidated;
+  const unavailable = !token || tokenDenied || cacheDenied;
+  const hasReport = rawData != null;
+  const initialLoading = !hasReport && isLoading && query.fetchStatus !== 'paused';
+  // Never expose backend error text, token values, or authenticated diagnostics
+  // on the public report. Shared feedback supplies localized recovery copy.
+  const sourceNotice = (
+    <DataSourceNotice sources={[{
+      id: 'shared-report',
+      label: t('share.header', 'Shared drive report'),
+      query: { ...query, data: rawData ?? undefined, error: undefined, isError: Boolean(error) },
+    }]} />
+  );
   // One /s/:token route serves both link kinds: session payloads branch to
   // their own report before drive normalization (which would see no drive).
   const driveRaw = isSharedSession(rawData) ? undefined : rawData;
   const data = useMemo(() => normalizeSharedDriveData(driveRaw), [driveRaw]);
-  const { unitPrefs, formatDistance, formatSpeed } = useUnits();
   const distancePref = unitPrefs.distance;
   const speedPref = unitPrefs.speed;
   const elevPref = elevationLabel(distancePref);
   const effPref = efficiencyUnit(distancePref);
   usePageTitle(
-    isLoading
+    unavailable
+      ? t('share.unavailable.title', 'Share link unavailable')
+      : initialLoading
       ? t('share.header', 'Shared drive report')
-      : error || (!data && !isSharedSession(rawData))
+      : !data && !isSharedSession(rawData) && !error && query.fetchStatus !== 'paused'
         ? t('share.unavailable.title', 'Share link unavailable')
         : isSharedSession(rawData)
           ? t('share.sessionHeader', 'Shared charging report')
@@ -215,18 +247,27 @@ export default function SharedDrivePage() {
   );
 
   /* ---- Loading state ---- */
-  if (isLoading) {
+  if (unavailable) {
+    return <ExpiredShareView />;
+  }
+  if (initialLoading) {
     return <SharedDriveLoading />;
   }
 
-  // A cached session payload must not bypass a failed public-token check.
-  if (error) {
-    return <ExpiredShareView />;
+  if (!hasReport && (error || query.fetchStatus === 'paused')) {
+    return (
+      <main className="min-h-screen bg-[var(--bg-primary)]">
+        <div className="w-full min-w-0 space-y-4 px-4 py-4">
+          <PageHeader title={t('share.header', 'Shared drive report')} icon={<Logo />} />
+          {sourceNotice}
+        </div>
+      </main>
+    );
   }
 
   /* ---- Session share branch ---- */
   if (isSharedSession(rawData)) {
-    return <main><SharedSessionReport data={rawData} /></main>;
+    return <main>{sourceNotice}<SharedSessionReport data={rawData} /></main>;
   }
 
   /* ---- Error / expired ---- */
@@ -239,6 +280,7 @@ export default function SharedDrivePage() {
   return (
     <main className="min-h-screen bg-[var(--bg-primary)]">
       <div className="w-full min-w-0 px-4 py-4">
+        {sourceNotice}
         <PageHeader
           title={data.title}
           icon={<Logo />}
@@ -258,7 +300,7 @@ export default function SharedDrivePage() {
       </div>
 
       {/* Hero map */}
-      {mapPoints.length > 1 && (
+      {mapPoints.length > 1 ? (
         <FadeIn>
           <div className="h-[50vh] relative">
             <MapContainer
@@ -270,25 +312,45 @@ export default function SharedDrivePage() {
               <MapTileLayer style="dark" />
               <Polyline
                 positions={mapPoints}
-                pathOptions={{ color: 'var(--theme-primary)', weight: 3, opacity: 0.8 }}
+                pathOptions={{ color: chartTokens.series[0], weight: 2, opacity: 0.8 }}
               />
               {startPos && (
                 <CircleMarker
                   center={startPos}
                   radius={6}
-                  pathOptions={{ color: '#22c55e', fillColor: '#22c55e', fillOpacity: 1 }}
-                />
+                  pathOptions={{ color: chartTokens.series[0], weight: 2, fill: false }}
+                >
+                  <Popup>
+                    <Text variant="bodySm">{t('share.traceStart', 'Start of disclosed trace')}</Text>
+                  </Popup>
+                </CircleMarker>
               )}
               {endPos && (
                 <CircleMarker
                   center={endPos}
                   radius={6}
-                  pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 1 }}
-                />
+                  pathOptions={{ color: chartTokens.series[0], weight: 2, fillColor: chartTokens.series[0], fillOpacity: 1 }}
+                >
+                  <Popup>
+                    <Text variant="bodySm">{t('share.traceEnd', 'End of disclosed trace')}</Text>
+                  </Popup>
+                </CircleMarker>
               )}
             </MapContainer>
           </div>
+          <div className="flex flex-wrap justify-between gap-2 bg-[var(--surface-1)] px-4 py-2">
+            <Text variant="caption">{t('share.traceStart', 'Start of disclosed trace')} ○</Text>
+            <Text variant="caption">{t('share.traceEnd', 'End of disclosed trace')} ●</Text>
+          </div>
         </FadeIn>
+      ) : (
+        <div className="w-full min-w-0 px-4">
+          <LayoutCard title={t('share.route', 'Route')}>
+            <EmptyState /* no-action: public recipients cannot request private geometry */
+              message={t('share.routeNotIncluded', 'The route was not included in this share.')}
+            />
+          </LayoutCard>
+        </div>
       )}
 
       {/* Content */}
@@ -316,7 +378,7 @@ export default function SharedDrivePage() {
         )}
 
         {/* Elevation profile */}
-        {elevationData.length > 0 && (
+        {elevationData.length > 0 ? (
           <FadeIn delay={0.15}>
             <ChartCard
               size="standard"
@@ -340,7 +402,7 @@ export default function SharedDrivePage() {
                     {...axisTick}
                     tickFormatter={(v: number) => `${fmtNumber(v)} ${distancePref}`}
                   />
-                  <YAxis {...axisTick} tickFormatter={(v: number) => `${Math.round(v)} ${elevPref}`} />
+                  <YAxis {...axisTick} tickFormatter={(v: number) => `${fmtNumber(Math.round(v) + 0, 0)} ${elevPref}`} />
                   <Tooltip
                     content={<ChartTooltip
                       labelFormatter={value => displayValue(value, distancePref)}
@@ -360,10 +422,16 @@ export default function SharedDrivePage() {
               </ResponsiveContainer>
             </ChartCard>
           </FadeIn>
+        ) : (
+          <LayoutCard title={t('share.elevation', 'Elevation profile')}>
+            <EmptyState /* no-action: only owner-disclosed profile data may be shown */
+              message={t('share.elevationNotIncluded', 'The elevation profile was not included in this share.')}
+            />
+          </LayoutCard>
         )}
 
         {/* Speed profile */}
-        {speedData.length > 0 && (
+        {speedData.length > 0 ? (
           <FadeIn delay={0.2}>
             <ChartCard
               size="standard"
@@ -387,7 +455,7 @@ export default function SharedDrivePage() {
                     {...axisTick}
                     tickFormatter={(v: number) => `${fmtNumber(v)} ${distancePref}`}
                   />
-                  <YAxis {...axisTick} tickFormatter={(v: number) => `${Math.round(v)}`} />
+                  <YAxis {...axisTick} tickFormatter={(v: number) => fmtNumber(Math.round(v) + 0, 0)} />
                   <Tooltip
                     content={<ChartTooltip
                       labelFormatter={value => displayValue(value, distancePref)}
@@ -405,16 +473,12 @@ export default function SharedDrivePage() {
               </ResponsiveContainer>
             </ChartCard>
           </FadeIn>
-        )}
-
-        {/* No map data fallback */}
-        {mapPoints.length <= 1 && elevationData.length === 0 && speedData.length === 0 && (
-          <GlassPanel className="p-8">
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-              icon={<MapPin className="h-8 w-8" />}
-              message={t('share.noMapData', 'Route data is not available for this shared drive.')}
+        ) : (
+          <LayoutCard title={t('share.speed', 'Speed profile')}>
+            <EmptyState /* no-action: only owner-disclosed profile data may be shown */
+              message={t('share.speedNotIncluded', 'The speed profile was not included in this share.')}
             />
-          </GlassPanel>
+          </LayoutCard>
         )}
 
         {/* Footer */}

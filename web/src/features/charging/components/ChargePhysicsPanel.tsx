@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Clock3, PlugZap, Timer } from 'lucide-react';
 
 import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
-import { AlertBanner, QueryError, Skeleton } from '@/components/feedback';
+import { AlertBanner, DataSourceNotice, EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { useChargePhysics } from '@/api/hooks/useTeslaPhysics';
 import { useDataState } from '@/hooks/useDataState';
 import { formatDateTime } from '@/lib/dateFormat';
@@ -25,18 +25,26 @@ export function ChargePhysicsPanel({ sessionId }: { sessionId: string | undefine
   return (
     <GlassPanel className="space-y-4 p-4 sm:p-5" data-testid="charge-physics">
       <PanelTitle className="flex items-center gap-2">
-        <PlugZap className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+        <PlugZap className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
         {t('charging.physics.title', 'Charge physics')}
       </PanelTitle>
+      {!state.fatalError && (
+        <DataSourceNotice sources={[{
+          id: 'charge-physics',
+          label: t('charging.physics.title', 'Charge physics'),
+          query,
+          enabled: !!sessionId,
+        }]} />
+      )}
       {state.status === 'initial' ? (
-        <Skeleton className="h-28" />
+        query.fetchStatus === 'fetching' ? <Skeleton className="h-28" data-testid="charge-physics-loading" /> : null
       ) : state.fatalError ? (
         <QueryError error={state.fatalError} onRetry={() => { void query.refetch(); }} />
       ) : physics ? (
         <>
           <Text as="p" variant="caption">{physics.honesty}</Text>
           <ol className="flex flex-wrap gap-2">
-            {physics.story.map((phase) => (
+            {(physics.story ?? []).map((phase) => (
               <li key={`${phase.state}-${phase.started_at}`}>
                 <Badge variant={phase.at_limit ? 'success' : 'neutral'} size="sm">
                   {phase.state}
@@ -47,17 +55,20 @@ export function ChargePhysicsPanel({ sessionId }: { sessionId: string | undefine
               </li>
             ))}
           </ol>
+          {(physics.story ?? []).length === 0 && (
+            <EmptyState message={t('common.noData', 'No data available')} />
+          )}
           {physics.at_limit_still_plugged_s != null && (
-            <Text as="p" className="flex items-center gap-2 text-sm">
-              <Timer className="h-4 w-4 text-amber-300" aria-hidden="true" />
+            <Text as="p" variant="bodySm" className="flex items-center gap-2">
+              <Timer className="h-4 w-4" aria-hidden="true" />
               {t('charging.physics.stillPlugged', 'At limit, still plugged {{duration}}.', {
                 duration: formatDuration(physics.at_limit_still_plugged_s),
               })}
             </Text>
           )}
           {physics.etiquette.applicable && (
-            <Text as="p" className="flex items-center gap-2 text-sm">
-              <Clock3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <Text as="p" variant="bodySm" className="flex items-center gap-2">
+              <Clock3 className="h-4 w-4" aria-hidden="true" />
               {physics.etiquette.dwell_s == null
                 ? t('charging.physics.etiquettePending', 'DC session reached Complete; unplug not observed yet.')
                 : t('charging.physics.etiquette', 'Supercharger dwell after Complete: {{duration}}.', {
@@ -83,7 +94,7 @@ export function ChargePhysicsPanel({ sessionId }: { sessionId: string | undefine
           ) : (
             <Text as="p" variant="caption">{physics.schedule.honesty}</Text>
           )}
-          <Link to="/physics-cockpit" className="text-sm text-cyan-300 underline-offset-2 hover:underline">
+          <Link to="/physics-cockpit" className="text-sm text-[var(--text-secondary)] underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus-ring)]">
             {t('charging.physics.cockpit', 'Open Tesla physics cockpit')}
           </Link>
         </>

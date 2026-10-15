@@ -81,7 +81,7 @@ export function PageHeader({
                     variant="ghost"
                     size="sm"
                     aria-label={`${t('help.tooltip.iconLabel', 'More info')}: ${title}`}
-                    className="h-11 w-11 shrink-0 text-[var(--text-secondary)] sm:h-9 sm:w-9"
+                    className="h-11 w-11 shrink-0 text-[var(--text-secondary)] md:h-9 md:w-9"
                   >
                     <Icon icon={Info} />
                   </Button>

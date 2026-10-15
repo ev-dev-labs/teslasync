@@ -19,6 +19,89 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
+type automationListMetadataRepo struct {
+	automationPersistenceFakeRepo
+	rows []models.AutomationFull
+}
+
+func (r *automationListMetadataRepo) ListFull(context.Context) ([]models.AutomationFull, error) {
+	return r.rows, nil
+}
+
+func TestListPreservesUnavailableMetadata(t *testing.T) {
+	for _, enabledOnly := range []bool{false, true} {
+		t.Run(fmt.Sprint(enabledOnly), func(t *testing.T) {
+			h := &AutomationHandler{repo: &automationListMetadataRepo{
+				rows: []models.AutomationFull{
+					{Automation: models.Automation{ID: 1, Name: "Enabled", Enabled: true}},
+					{Automation: models.Automation{ID: 2, Name: "Disabled", Enabled: false}},
+				},
+			}}
+			rec := httptest.NewRecorder()
+			h.List(rec, httptest.NewRequest(http.MethodGet, fmt.Sprintf("/automations?enabled=%t", enabledOnly), nil))
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+			}
+			var rows []map[string]json.RawMessage
+			if err := json.Unmarshal(rec.Body.Bytes(), &rows); err != nil {
+				t.Fatal(err)
+			}
+			wantRows := 2
+			if enabledOnly {
+				wantRows = 1
+			}
+			if len(rows) != wantRows {
+				t.Fatalf("rows = %d, want %d", len(rows), wantRows)
+			}
+			for i, row := range rows {
+				if string(row["id"]) != fmt.Sprint(i+1) {
+					t.Fatalf("base row identity lost: %s", row["id"])
+				}
+				for _, field := range []string{"execution_count", "failure_count", "last_triggered_at", "auto_disabled"} {
+					if string(row[field]) != "null" {
+						t.Errorf("%s = %s, want explicit null", field, row[field])
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestAutomationResponsePreservesKnownMetadata(t *testing.T) {
+	last := time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC)
+	for _, runs := range []int64{0, 12} {
+		t.Run(fmt.Sprint(runs), func(t *testing.T) {
+			failures := int64(0)
+			autoDisabled := false
+			response := newAutomationResponse(&models.Automation{ID: 1, Name: "Measured", Enabled: true})
+			response.ExecutionCount = &runs
+			response.FailureCount = &failures
+			response.AutoDisabled = &autoDisabled
+			if runs > 0 {
+				response.LastTriggeredAt = &last
+			}
+			body, err := json.Marshal(response)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var row map[string]json.RawMessage
+			if err := json.Unmarshal(body, &row); err != nil {
+				t.Fatal(err)
+			}
+			if string(row["execution_count"]) != fmt.Sprint(runs) || string(row["failure_count"]) != "0" || string(row["auto_disabled"]) != "false" {
+				t.Fatalf("known metadata changed: %s", body)
+			}
+			wantLast := "null"
+			if runs > 0 {
+				wantLast = `"` + last.Format(time.RFC3339) + `"`
+			}
+			if string(row["last_triggered_at"]) != wantLast {
+				t.Fatalf("last_triggered_at = %s, want %s", row["last_triggered_at"], wantLast)
+			}
+		})
+	}
+}
+
 func TestEvaluateTestConditionsTypedWeekdayParity(t *testing.T) {
 	h := &AutomationHandler{}
 	tests := []struct {

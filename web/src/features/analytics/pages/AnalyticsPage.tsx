@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Car, Zap, BarChart3, Battery } from 'lucide-react';
 import { PageLayout } from '@/components/layout';
-import { Icon } from '@/components/ui';
+import { Button, Icon, Text } from '@/components/ui';
+import { DataStateNotice } from '@/components/feedback';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useFleetAnalytics } from '@/api/hooks/useAnalytics';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -23,6 +24,7 @@ export default function AnalyticsPage() {
 
   const fleetQuery = useFleetAnalytics({ start: startInstant, end: endInstantExclusive });
   const contentQuery = retainFleetContent(fleetQuery);
+  const briefQuery = contentQuery.sourceQuery ?? contentQuery;
 
   const tabs = useMemo(
     () => [
@@ -45,12 +47,26 @@ export default function AnalyticsPage() {
         query: fleetQuery,
       }]}
     >
+      {fleetQuery.data?.partial_result?.is_partial && (
+        <DataStateNotice state="partial" role="status" data-testid="analytics-fleet-partial">
+          <Text as="p" variant="bodySm" color="secondary">
+            {t('dataState.partial.message', 'Some sources did not respond. Available results remain visible and are not treated as complete.')}
+          </Text>
+          {(fleetQuery.data.partial_result.reasons ?? []).map(reason => (
+            <Text as="p" variant="bodySm" color="secondary" key={reason}>{reason}</Text>
+          ))}
+          <Button variant="ghost" size="sm" disabled={fleetQuery.isFetching}
+            onClick={() => { void fleetQuery.refetch(); }}>
+            {t('common.refresh', 'Refresh')}
+          </Button>
+        </DataStateNotice>
+      )}
       <AnalyticsWorkspace
         tabs={tabs}
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        summary={<FleetOverviewBrief query={contentQuery} scope={`${start} – ${end}`}
-          retained={fleetQuery.data != null && (fleetQuery.isError || fleetQuery.fetchStatus === 'paused')} />}
+        summary={<FleetOverviewBrief query={briefQuery} scope={`${start} – ${end}`}
+          retained={briefQuery.data != null && (briefQuery.isError || briefQuery.fetchStatus === 'paused')} />}
       >
         {activeTab === 'overview' && <OverviewTab query={contentQuery} />}
         {activeTab === 'driving' && <DrivingTab query={contentQuery} />}

@@ -30,6 +30,7 @@ import type {
 } from '@/api/types';
 import type { AutomationFullInput } from '@/api/hooks/useAutomations';
 import type { DataStateSource } from '@/api/dataState';
+import type { AutomationConditionStepInput } from '../components/stepInputTypes';
 import { neonColorMap, typography } from '@/lib/tokens';
 
 // ── Shared, hoisted mock state (created before any vi.mock factory runs). ──
@@ -47,6 +48,7 @@ const H = vi.hoisted(() => ({
   updateMutateAsync: vi.fn(),
   testRunMutate: vi.fn(),
   realAI: false,
+  realTrigger: false,
 }));
 
 vi.mock('@/hooks/useSettings', async (importOriginal) => {
@@ -120,8 +122,10 @@ vi.mock('./TriggerConfigurator', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./TriggerConfigurator')>();
   return {
     ...actual,
-    TriggerConfigurator: ({ trigger }: { trigger: { kind?: string } | null }) => (
-      <div data-testid="trigger-configurator">tc:{trigger?.kind ?? 'none'}</div>
+    TriggerConfigurator: (props: React.ComponentProps<typeof actual.TriggerConfigurator>) => H.realTrigger ? (
+      <actual.TriggerConfigurator {...props} />
+    ) : (
+      <div data-testid="trigger-configurator">tc:{props.trigger?.kind ?? 'none'}</div>
     ),
   };
 });
@@ -258,6 +262,7 @@ import AutomationBuilderPage, {
   applyDraftToForm,
   triggerNeedsPlace,
   conditionNeedsPlace,
+  conditionIsIncomplete,
   actionIsIncomplete,
 } from './AutomationBuilderPage';
 
@@ -303,8 +308,49 @@ const EDIT_AUTOMATION: AutomationFull = {
   actions: [{ kind: 'action_command', command_name: 'climate_on' }],
 };
 
+const INVALID_CONDITIONS: { label: string; condition: AutomationConditionStepInput }[] = [
+  ...[0, -1, 1.5, NaN, Infinity].flatMap((id) => [
+    { label: `geofence identifier ${id}`, condition: { kind: 'condition_geofence' as const, place_id: id, state: 'inside' as const } },
+    { label: `other automation identifier ${id}`, condition: { kind: 'condition_other_automation' as const, other_automation_id: id, state: 'enabled' as const } },
+  ]),
+  { label: 'missing signal identifier', condition: { kind: 'condition_signal', signal: '', op: '<', value_num: 0 } },
+  { label: 'blank signal identifier', condition: { kind: 'condition_signal', signal: ' ', op: '<', value_num: 0 } },
+  ...[undefined, null, NaN, Infinity].map((value_num) => ({
+    label: `missing or invalid threshold ${value_num}`,
+    condition: { kind: 'condition_signal' as const, signal: 'outside_temp', op: '<' as const, value_num },
+  })),
+  { label: 'missing range maximum', condition: { kind: 'condition_signal', signal: 'outside_temp', op: 'between', value_min: 0 } },
+  { label: 'reversed range', condition: { kind: 'condition_signal', signal: 'outside_temp', op: 'between', value_min: 2, value_max: -2 } },
+  { label: 'missing state value', condition: { kind: 'condition_signal', signal: 'state', op: '=', value_text: ' ' } },
+  { label: 'missing boolean value', condition: { kind: 'condition_signal', signal: 'is_locked', op: '=' } },
+  { label: 'invalid numeric list', condition: { kind: 'condition_signal', signal: 'outside_temp', op: 'in', value_text: '0,invalid' } },
+  { label: 'empty list member', condition: { kind: 'condition_signal', signal: 'outside_temp', op: 'in', value_text: '0,' } },
+  ...[
+    { start_time: '' }, { end_time: '' }, { start_time: '25:00' }, { timezone: ' ' }, { days_of_week: [7] },
+  ].map((fields) => ({
+    label: `incomplete time window ${JSON.stringify(fields)}`,
+    condition: { kind: 'condition_time_window' as const, start_time: '06:00', end_time: '09:00', timezone: 'UTC', days_of_week: [], ...fields },
+  })),
+];
+
+const VALID_CONDITIONS: { label: string; condition: AutomationConditionStepInput }[] = [
+  ...[0, -12, +12, -0.25, 0.25].map((value_num) => ({
+    label: `measured threshold ${value_num}`,
+    condition: { kind: 'condition_signal' as const, signal: 'outside_temp', op: '<' as const, value_num },
+  })),
+  { label: 'signed fractional range', condition: { kind: 'condition_signal', signal: 'outside_temp', op: 'between', value_min: -1.25, value_max: 0 } },
+  { label: 'signed fractional numeric list', condition: { kind: 'condition_signal', signal: 'outside_temp', op: 'in', value_text: '-1.25,0,+2.5' } },
+  { label: 'false boolean', condition: { kind: 'condition_signal', signal: 'is_locked', op: '=', value_bool: false } },
+  { label: 'state text', condition: { kind: 'condition_signal', signal: 'state', op: '=', value_text: 'online' } },
+  { label: 'geofence', condition: { kind: 'condition_geofence', place_id: 7, state: 'inside' } },
+  { label: 'other automation', condition: { kind: 'condition_other_automation', other_automation_id: 7, state: 'enabled' } },
+  { label: 'overnight window with optional weekdays', condition: { kind: 'condition_time_window', start_time: '22:00', end_time: '06:00', timezone: 'UTC', days_of_week: [] } },
+  { label: 'full-day window', condition: { kind: 'condition_time_window', start_time: '00:00', end_time: '00:00', timezone: 'UTC', days_of_week: [0] } },
+];
+
 beforeEach(() => {
   H.realAI = false;
+  H.realTrigger = false;
   H.createMutateAsync.mockReset();
   H.updateMutateAsync.mockReset();
   H.testRunMutate.mockReset();
@@ -315,6 +361,44 @@ beforeEach(() => {
   H.channelsState = { data: [], isLoading: false, error: null };
   window.localStorage.clear();
   __resetEditLeasesForTests();
+});
+
+describe('condition readiness and submit validation', () => {
+  it.each(INVALID_CONDITIONS)('rejects $label in both readiness and submit', async ({ condition }) => {
+    expect(conditionIsIncomplete(condition)).toBe(true);
+    H.automationState = { data: { ...EDIT_AUTOMATION, conditions: [condition] }, isLoading: false, error: null };
+    const { container } = renderPage('/automations/5/edit');
+    await screen.findByDisplayValue('Existing One');
+    const group = screen.getByRole('group', { name: 'Only if (conditions)' });
+    expect(group).toHaveAttribute('aria-invalid', 'true');
+    const feedback = document.getElementById(group.getAttribute('aria-describedby')!);
+    expect(feedback).toBeInTheDocument();
+    expect(feedback?.textContent).not.toBe('');
+    expect(screen.getAllByText('Not ready yet')).toHaveLength(2);
+    fireEvent.submit(container.querySelector('form')!);
+    expect(H.updateMutateAsync).not.toHaveBeenCalled();
+    expect(H.createMutateAsync).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'add-condition' })).toHaveFocus();
+    expect(screen.getByText('Save error').parentElement).toHaveTextContent(feedback!.textContent!);
+  });
+
+  it.each([
+    ...VALID_CONDITIONS.map(({ label, condition }) => ({ label, conditions: [condition] })),
+    { label: 'optional zero-condition rule', conditions: [] },
+  ])('saves $label without changing its values', async ({ conditions }) => {
+    conditions.forEach((condition) => expect(conditionIsIncomplete(condition)).toBe(false));
+    H.automationState = { data: { ...EDIT_AUTOMATION, conditions }, isLoading: false, error: null };
+    H.updateMutateAsync.mockResolvedValue({ id: 5 });
+    const { container } = renderPage('/automations/5/edit');
+    await screen.findByDisplayValue('Existing One');
+    expect(screen.getAllByText('Ready to save')).toHaveLength(2);
+    expect(screen.getByRole('group', { name: 'Only if (conditions)' })).not.toHaveAttribute('aria-invalid');
+    fireEvent.submit(container.querySelector('form')!);
+    await waitFor(() => expect(H.updateMutateAsync).toHaveBeenCalledWith({
+      id: 5,
+      input: expect.objectContaining({ conditions }),
+    }));
+  });
 });
 
 describe('canonical geofence SSE draft through baseline save and readback', () => {
@@ -960,6 +1044,92 @@ describe('AutomationBuilderPage — edit mode', () => {
 });
 
 // ──────────────────── Draft autosave regression (bug fix) ────────────────────
+
+describe('AutomationBuilderPage — multi-trigger editing', () => {
+  const siblings: AutomationFull['triggers'] = [
+    { kind: 'trigger_schedule', cron_expr: '*/15 9-17 * * 1-5', timezone: 'Europe/London' },
+    { kind: 'trigger_geofence', place_id: 7, event: 'dwell', dwell_minutes: 2.5 },
+    { kind: 'trigger_signal', signal: 'outside_temp', op: '<', value_num: -0.5 },
+  ];
+
+  function hydrateRule() {
+    const rule: AutomationFull = {
+      ...EDIT_AUTOMATION,
+      vehicle_id: 7,
+      enabled: false,
+      triggers: [
+        { kind: 'trigger_signal', signal: 'battery_level', op: '<', value_num: 20 },
+        ...siblings,
+      ],
+      conditions: [{ kind: 'condition_geofence', place_id: 3, state: 'inside' }],
+      actions: [{ kind: 'action_wait', duration_s: 30 }],
+    };
+    H.automationState = { data: rule, isLoading: false, error: null };
+    H.updateMutateAsync.mockResolvedValue({ id: 5 });
+    return rule;
+  }
+
+  it.each([
+    { label: 'missing', input: '', expected: undefined },
+    { label: 'invalid', input: 'invalid', expected: undefined },
+    { label: 'measured zero', input: '0', expected: 0 },
+    { label: 'negative signed value', input: '-12', expected: -12 },
+    { label: 'positive signed value', input: '+12', expected: 12 },
+    { label: 'fractional value', input: '0.25', expected: 0.25 },
+    { label: 'negative fractional value', input: '-0.25', expected: -0.25 },
+  ])('preserves the hydrated graph when trigger zero receives $label', async ({ input, expected }) => {
+    H.realTrigger = true;
+    const rule = hydrateRule();
+    const original = structuredClone(rule);
+    const { container, refresh } = renderPage('/automations/5/edit');
+    await screen.findByDisplayValue('Existing One');
+    const valueEditor = screen.getByRole('textbox', { name: /^Value\b/ });
+    fireEvent.focus(valueEditor);
+    fireEvent.change(valueEditor, {
+      target: { value: input },
+    });
+    fireEvent.blur(valueEditor);
+    if (input === 'invalid') {
+      expect(screen.getByText('Enter a valid number')).toBeInTheDocument();
+    }
+    refresh();
+    fireEvent.submit(container.querySelector('form')!);
+    await waitFor(() => expect(H.updateMutateAsync).toHaveBeenCalledOnce());
+    const trigger: AutomationFullInput['triggers'][number] = {
+      kind: 'trigger_signal', signal: 'battery_level', op: '<',
+      ...(expected !== undefined ? { value_num: expected } : {}),
+    };
+    expect(H.updateMutateAsync).toHaveBeenCalledWith({
+      id: 5,
+      input: { ...formToPayload(automationToForm(rule)), triggers: [trigger, ...siblings] },
+    });
+    expect(rule).toEqual(original);
+    expect(H.createMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { kind: 'trigger_event', first: { kind: 'trigger_event', event_type: 'online' } },
+    { kind: '', first: null },
+  ])('preserves siblings when the first trigger type changes to "$kind"', async ({ kind, first }) => {
+    const rule = hydrateRule();
+    const original = structuredClone(rule);
+    const { container } = renderPage('/automations/5/edit');
+    await screen.findByDisplayValue('Existing One');
+    fireEvent.change(screen.getByRole('combobox', { name: 'Trigger type' }), {
+      target: { value: kind },
+    });
+    fireEvent.submit(container.querySelector('form')!);
+    await waitFor(() => expect(H.updateMutateAsync).toHaveBeenCalledOnce());
+    expect(H.updateMutateAsync).toHaveBeenCalledWith({
+      id: 5,
+      input: {
+        ...formToPayload(automationToForm(rule)),
+        triggers: first ? [first, ...siblings] : siblings,
+      },
+    });
+    expect(rule).toEqual(original);
+  });
+});
 
 describe('AutomationBuilderPage — new-automation draft autosave', () => {
   beforeEach(() => {

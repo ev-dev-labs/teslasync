@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import {
   ChartContainer,
+  ChartTooltip,
   AreaChart,
   Area,
   XAxis,
@@ -120,7 +121,8 @@ export function SOCRouteChart({ socCurve, chargeStops, minArrivalSOC }: SOCRoute
             label={{ value: t('tripPlanner.socChart.socAxis', 'SOC %'), angle: -90, position: 'insideLeft', fill: chartTokens.axisStroke }}
           />
           <Tooltip
-            contentStyle={{ background: chartTokens.tooltipBg, border: `1px solid ${chartTokens.tooltipBorder}`, color: chartTokens.tooltipText, borderRadius: 8 }}
+            content={<ChartTooltip />}
+            cursor={chartTokens.cursor}
             labelFormatter={(v) => `${formatNumber(v)} ${distanceUnit}`}
             formatter={(v: number) => [`${formatNumber(v)}%`, t('tripPlanner.socChart.socSeries', 'SOC')]}
           />
@@ -135,8 +137,9 @@ export function SOCRouteChart({ socCurve, chargeStops, minArrivalSOC }: SOCRoute
           <ReferenceLine
             y={minSOC}
             stroke={chartTokens.series[3]}
+            strokeWidth={1}
             strokeDasharray="6 4"
-            label={{ value: t('tripPlanner.socChart.minArrival', 'Min {{soc}}%', { soc: formatNumber(minSOC) }), fill: chartTokens.series[3], position: 'right' }}
+            label={{ value: t('tripPlanner.socChart.minArrival', 'Min {{soc}}%', { soc: formatNumber(minSOC) }), fill: chartTokens.tooltipMutedText, position: 'right' }}
           />
           {/* Charge stop vertical lines */}
           {stopDistances.map((dist, i) => (
@@ -144,8 +147,9 @@ export function SOCRouteChart({ socCurve, chargeStops, minArrivalSOC }: SOCRoute
               key={`stop-${i}`}
               x={dist}
               stroke={chartTokens.series[0]}
+              strokeWidth={1}
               strokeDasharray="4 4"
-              label={{ value: t('tripPlanner.socChart.stopLabel', '⚡ Stop {{n}}', { n: i + 1 }), fill: chartTokens.series[0], position: 'top' }}
+              label={{ value: t('tripPlanner.socChart.stopLabel', '⚡ Stop {{n}}', { n: i + 1 }), fill: chartTokens.tooltipMutedText, position: 'top' }}
             />
           ))}
         </AreaChart>

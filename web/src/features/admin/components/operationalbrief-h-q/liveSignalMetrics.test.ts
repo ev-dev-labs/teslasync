@@ -13,6 +13,20 @@ const preferences: MetricPreferences = {
 };
 
 describe('liveSignalMetrics raw source contract', () => {
+  it('describes freshness counts without claiming a physical read layer', () => {
+    const metrics = liveSignalMetrics(computeStats([
+      { name: 'fresh', value: 0, source: 'l1', ageMs: 500 },
+      { name: 'stale', value: false, source: 'stale', ageMs: 200_000 },
+      { name: 'unknownAge', value: 'retained', source: 'l2' },
+    ]), true, t);
+    expect(metrics.slice(1, 4).map(metric => metric.label)).toEqual(['Fresh', 'Stale', 'age: Unknown']);
+    expect(metrics.slice(1, 4).map(metric => metric.rawValue)).toEqual([1, 1, 1]);
+    for (const metric of metrics.slice(1, 4)) {
+      expect(metric.description).toContain('Source layer unknown.');
+      expect(`${metric.label} ${metric.description}`).not.toMatch(/L1|L2|Redis|in-process/);
+    }
+  });
+
   it('keeps numeric count operands and canonical seconds with the existing compact specialist age display', () => {
     const stats = computeStats([
       { name: 'speed', value: 3, source: 'l1', ageMs: 101 },

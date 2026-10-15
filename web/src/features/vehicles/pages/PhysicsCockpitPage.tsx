@@ -4,20 +4,29 @@ import { Download } from 'lucide-react';
 import { usePhysicsCockpit, useFsdHeartbeat, useSessionCertificate } from '@/api/hooks/useTeslaPhysics';
 import { Badge, Button, Icon, Text } from '@/components/ui';
 import { DataProvenanceBadge, type StatMetric } from '@/components/data-display';
-import { EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { EmptyState, StaleRefreshWarning } from '@/components/feedback';
 import { PageLayout, LayoutCard, SourceContent } from '@/components/layout';
+import type { DataState, DataStateSource } from '@/api/dataState';
 
 import { useDataState } from '@/hooks/useDataState';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { downloadJSON, defaultExportFilename } from '@/lib/csvExport';
-import { formatDateTime } from '@/lib/dateFormat';
 
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { VehicleEvidenceBrief } from '../components/operationalbrief-n-z/VehicleEvidenceBrief';
 
+function sourceBodyState<T>(state: DataState<T>, query: DataStateSource<T>, hasContent: boolean) {
+  if (state.fatalError) return 'error';
+  if (state.hasData) return hasContent ? state.status === 'stale' ? 'retained' : 'ready' : 'empty';
+  if (state.status === 'initial' && !state.isRefreshBlocked && query.isFetching) return 'loading';
+  return 'empty';
+}
+
 export default function PhysicsCockpitPage() {
+  const { formatDateTime } = useDateFormat();
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('vehicles.physicsCockpit.title', 'Tesla physics cockpit'));
@@ -35,6 +44,18 @@ export default function PhysicsCockpitPage() {
   const hasVehicle = vehicleId != null;
   const canExport = hasVehicle && certificate?.vehicle_id === vehicleId;
   const prerequisite = t('common.noVehicleSelected.title', 'No vehicle selected');
+  const unresolved = t('shareCard.states.pending', 'Source availability has not resolved yet.');
+  const deferred = t('dataSources.status.paused', 'Refresh paused');
+  const pendingContent = (state: DataState<unknown>, query: DataStateSource<unknown>) =>
+    !hasVehicle ? <EmptyState message={prerequisite} />
+      : state.status === 'initial' && (query.isPending || !query.isSuccess)
+        ? <div role="status">
+            <Text as="p" variant="bodySm">{unresolved}</Text>
+            {state.isRefreshBlocked && <Text as="p" variant="bodySm">
+              {deferred}
+            </Text>}
+          </div>
+        : undefined;
   const { formatDistance, formatEnergy, formatSpeed } = useUnits();
   const readings: readonly StatMetric[] = [
     { metricId: 'status', occurrenceId: 'cockpit-gear', label: t('vehicles.physicsCockpit.gear', 'Gear'), rawValue: cockpit?.gear || null },
@@ -86,30 +107,41 @@ export default function PhysicsCockpitPage() {
         <Text as="p" variant="bodySm">{cockpit.honesty}</Text>
       )}
       {!hasVehicle && <EmptyState message={prerequisite} />}
-      <StaleRefreshWarning state={cockpitState} label={t('vehicles.physicsCockpit.snapshot', 'Live cockpit readings')} />
-      {cockpitState.fatalError && (
-        <QueryError error={cockpitState.fatalError} onRetry={() => { void cockpitQuery.refetch(); }} />
-      )}
+      <LayoutCard title={t('vehicles.physicsCockpit.snapshot', 'Live cockpit readings')}>
+      <StaleRefreshWarning state={cockpitState} label={t('vehicles.physicsCockpit.snapshot', 'Live cockpit readings')}
+        message={cockpitState.isRefreshBlocked ? deferred : undefined} />
+      <SourceContent
+        state={!hasVehicle || cockpitState.hasData && cockpitState.status === 'stale' ? 'ready' : sourceBodyState(cockpitState, cockpitQuery, !!cockpit)}
+        label={t('vehicles.physicsCockpit.snapshot', 'Live cockpit readings')}
+        emptyMessage={t('common.noData', 'No data available')}
+        errorMessage={t('error.loadFailed', 'Failed to load data')}
+        error={cockpitState.fatalError}
+        errorRecovery={{ onRetry: () => { void cockpitQuery.refetch(); } }}
+        emptyContent={pendingContent(cockpitState, cockpitQuery)}
+      >
         <VehicleEvidenceBrief
           id="physics-cockpit-readings"
           title={t('vehicles.physicsCockpit.snapshot', 'Live cockpit readings')}
           description={t('vehicles.physicsCockpit.briefDescription', 'Independently reported cockpit measurements; a missing field is unknown, not zero.')}
-          loading={hasVehicle && cockpitQuery.isLoading}
+          loading={hasVehicle && cockpitState.status === 'initial' && !cockpitState.isRefreshBlocked && cockpitQuery.isFetching}
           status={hasVehicle ? cockpitState.status : 'unavailable'}
           scope={t('vehicles.physicsCockpit.scopeUnknown', 'Latest returned fields; observation time is not supplied')}
           provenance={t('dataSources.labels.liveVehicleState', 'Live vehicle state')}
           freshness={<DataProvenanceBadge provenance={cockpitState.provenance} status={cockpitState.status} updatedAt={cockpitState.updatedAt} />}
           metrics={readings}
         />
+      </SourceContent>
+      </LayoutCard>
       <LayoutCard title={heartbeat?.label ?? t('vehicles.physicsCockpit.heartbeat', 'FSD trip-meter heartbeat')}>
         <SourceContent
-          state={!hasVehicle ? 'empty' : heartbeatState.fatalError ? 'error' : heartbeat ? heartbeatState.status === 'stale' ? 'retained' : 'ready' : heartbeatQuery.isLoading ? 'loading' : 'empty'}
+          state={!hasVehicle ? 'empty' : sourceBodyState(heartbeatState, heartbeatQuery, !!heartbeat)}
           label={t('vehicles.physicsCockpit.heartbeat', 'FSD trip-meter heartbeat')}
           emptyMessage={t('vehicles.physicsCockpit.noHeartbeat', 'No trip-meter heartbeat has been reported.')}
           errorMessage={t('vehicles.physicsCockpit.heartbeatError', 'Trip-meter heartbeat could not be loaded.')}
           error={heartbeatState.fatalError}
           errorRecovery={{ onRetry: () => { void heartbeatQuery.refetch(); } }}
-          emptyContent={!hasVehicle ? <EmptyState message={prerequisite} /> : undefined}
+          retainedMessage={heartbeatState.isRefreshBlocked ? deferred : undefined}
+          emptyContent={pendingContent(heartbeatState, heartbeatQuery)}
         >
         {heartbeat && <>
           <VehicleEvidenceBrief id="physics-heartbeat-readings"
@@ -139,13 +171,14 @@ export default function PhysicsCockpitPage() {
       </LayoutCard>
       <LayoutCard title={t('vehicles.physicsCockpit.park', 'Park truth')}>
         <SourceContent
-          state={!hasVehicle ? 'empty' : cockpitState.fatalError ? 'error' : cockpit?.park ? 'ready' : cockpitQuery.isLoading ? 'loading' : 'empty'}
+          state={!hasVehicle ? 'empty' : sourceBodyState(cockpitState, cockpitQuery, !!cockpit?.park)}
           label={t('vehicles.physicsCockpit.park', 'Park truth')}
           emptyMessage={t('vehicles.physicsCockpit.noPark', 'No park evidence has been reported.')}
           errorMessage={t('vehicles.physicsCockpit.parkError', 'Park evidence could not be loaded.')}
           error={cockpitState.fatalError}
           errorRecovery={{ onRetry: () => { void cockpitQuery.refetch(); } }}
-          emptyContent={!hasVehicle ? <EmptyState message={prerequisite} /> : undefined}
+          retainedMessage={cockpitState.isRefreshBlocked ? deferred : undefined}
+          emptyContent={pendingContent(cockpitState, cockpitQuery)}
         >
         {cockpit?.park ? <>
           <VehicleEvidenceBrief id="physics-park-readings"
@@ -188,15 +221,16 @@ export default function PhysicsCockpitPage() {
       </LayoutCard>
       <LayoutCard title={t('vehicles.physicsCockpit.certificate', 'Session certificate')}>
         <SourceContent
-          state={!hasVehicle ? 'empty' : certificateState.fatalError ? 'error' : certificate ? 'ready' : certificateQuery.isLoading ? 'loading' : 'empty'}
+          state={!hasVehicle ? 'empty' : certificateState.status === 'stale' && certificateState.hasData ? 'ready' : sourceBodyState(certificateState, certificateQuery, !!certificate)}
           label={t('vehicles.physicsCockpit.certificate', 'Session certificate')}
           emptyMessage={t('system.outage.certificateEmpty', 'A session certificate is not available for this vehicle yet.')}
           errorMessage={t('system.outage.certificateError', 'Unable to load the session certificate.')}
           error={certificateState.fatalError}
           errorRecovery={{ onRetry: () => { void certificateQuery.refetch(); } }}
-          emptyContent={!hasVehicle ? <EmptyState message={prerequisite} /> : undefined}
+          emptyContent={pendingContent(certificateState, certificateQuery)}
         >
-          <StaleRefreshWarning state={certificateState} label={t('vehicles.physicsCockpit.certificate', 'Session certificate')} />
+          <StaleRefreshWarning state={certificateState} label={t('vehicles.physicsCockpit.certificate', 'Session certificate')}
+            message={certificateState.isRefreshBlocked ? deferred : undefined} />
           {certificate && <>
             <Text as="p" variant="bodySm">{t('system.outage.certificateReady', 'The session certificate is available for download with its original evidence intact.')}</Text>
             <Text as="p" variant="caption">{t('teslaOnly.certificateWindow', 'Certificate window: {{from}} to {{to}} · Issued {{issued}}', {

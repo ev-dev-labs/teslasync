@@ -3,7 +3,7 @@ import { Calculator } from 'lucide-react';
 import { Input, Button, Text } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBrief';
-import type { StatPeriod } from '@/lib/metric-reference';
+import { formatMetric, type StatPeriod, type MetricPreferences } from '@/lib/metric-reference';
 import { DEFAULT_GAS_PRICE, DEFAULT_MPG, DEFAULT_ELECTRICITY_RATE } from '../cost-analysis/constants';
 import type { GasComparison } from '../cost-analysis/types';
 import { CostStatSection } from './CostStatSection';
@@ -34,39 +34,51 @@ export function SavingsCalculator({
   onElectricityRateChange, distanceUnit, isLoading, error, onRetry, period,
 }: SavingsCalculatorProps) {
   const { t } = useTranslation();
-  const { text, preferences } = useStatFormatting();
+  const { preferences } = useStatFormatting();
+  const assumptionPreferences: MetricPreferences = {
+    ...preferences, currency: { kind: 'iso', value: 'USD' },
+  };
+  const currencyText = (value: number) => {
+    const result = formatMetric('currency', value, assumptionPreferences);
+    const reason = result.reasonKey ? t(result.reasonKey, result.reason ?? '') : result.reason;
+    return reason ? `${result.text} (${reason})` : result.text;
+  };
   const unit = distanceUnit?.trim() ? distanceUnit : 'km';
 
   return (
     <CostStatSection
       title={t('costAnalysis.calculator.title', 'Gas vs Electric Savings Calculator')}
-      icon={<Calculator className="h-4 w-4 text-emerald-300" aria-hidden="true" />}
-      glow="green" period={period}>
+      icon={<Calculator className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />}
+      period={period}>
       {periodHeaderId => (
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
           {/* Inputs remain visible in every data state. No saved assumptions are mutated. */}
           <div className="space-y-3">
             <Text as="h4" variant="label">{t('costAnalysis.calculator.inputs', 'Your Assumptions')}</Text>
+            <Text as="p" variant="caption">
+              {t('costAnalysis.calculator.usdAssumptions',
+                'Assumptions and comparisons are in USD. Changing the display currency does not convert these amounts. Gas volume uses US gallons.')}
+            </Text>
             <Input
               type="number"
-              label={t('costAnalysis.calculator.gasPrice', 'Gas Price ($/gal)')}
+              label={t('costAnalysis.calculator.gasPriceUsd', 'Gas price (USD/US gal)')}
               value={finiteOr(gasPrice, DEFAULT_GAS_PRICE)}
               onChange={(e) => onGasPriceChange(Number(e.target.value) || 0)}
-              suffix="$/gal"
+              suffix={t('costAnalysis.calculator.usdPerGallon', 'USD/US gal')}
             />
             <Input
               type="number"
-              label={t('costAnalysis.calculator.mpg', 'Gas Car MPG')}
+              label={t('costAnalysis.calculator.mpgUs', 'Gas car efficiency (mi/US gal)')}
               value={finiteOr(mpg, DEFAULT_MPG)}
               onChange={(e) => onMpgChange(Number(e.target.value) || 1)}
-              suffix="mpg"
+              suffix={t('costAnalysis.calculator.milesPerGallon', 'mi/US gal')}
             />
             <Input
               type="number"
-              label={t('costAnalysis.calculator.elecRate', 'Electricity Rate ($/kWh)')}
+              label={t('costAnalysis.calculator.elecRateUsd', 'Electricity rate (USD/kWh)')}
               value={finiteOr(electricityRate, DEFAULT_ELECTRICITY_RATE)}
               onChange={(e) => onElectricityRateChange(Number(e.target.value) || 0)}
-              suffix="$/kWh"
+              suffix={t('costAnalysis.calculator.usdPerKwh', 'USD/kWh')}
             />
             <Button type="button" className="mt-2 w-full" onClick={() => {
               onGasPriceChange(DEFAULT_GAS_PRICE);
@@ -81,21 +93,21 @@ export function SavingsCalculator({
             {error ? <QueryError error={error} onRetry={onRetry} /> : null}
             {isLoading && !gasComparison && !error ? <Skeleton height={160} /> : gasComparison ? (
               <ChargingSummaryBrief title={t('costAnalysis.calculator.comparison', 'Comparison')}
-                period={period} preferences={preferences} periodInHeader periodContextInHeader periodHeaderId={periodHeaderId}
+                period={period} preferences={assumptionPreferences} periodInHeader periodContextInHeader periodHeaderId={periodHeaderId}
                 loading={isLoading} retained={Boolean(error || isLoading)}
                 metrics={[
                   { metricId: 'currency', rawValue: gasComparison.gasCost,
                     label: t('costAnalysis.calculator.gasCost', 'Gas Cost (equivalent)'),
-                    context: `${text('currency', gasComparison.costPerMileGas)}/${unit}` },
+                    context: `${currencyText(gasComparison.costPerMileGas)}/${unit}` },
                   { metricId: 'currency', rawValue: gasComparison.actualCost,
                     label: t('costAnalysis.calculator.evCost', 'EV Cost (actual)'),
-                    context: `${text('currency', gasComparison.costPerMileEV)}/${unit}` },
+                    context: `${currencyText(gasComparison.costPerMileEV)}/${unit}` },
                   { metricId: 'currency', rawValue: gasComparison.savings,
                     label: t('costAnalysis.calculator.totalSavings', 'Total Savings'),
                     context: t('costAnalysis.calculator.overPeriod', 'over selected period') },
                   { metricId: 'currency', rawValue: gasComparison.monthlySavings,
                     label: t('costAnalysis.calculator.monthlySavings', 'Monthly Savings'),
-                    context: `~${text('currency', gasComparison.yearlySavings)} ${t('costAnalysis.calculator.perYear', '/ year')}` },
+                    context: `~${currencyText(gasComparison.yearlySavings)} ${t('costAnalysis.calculator.perYear', '/ year')}` },
                 ]} />
             ) : !error && (
               <EmptyState

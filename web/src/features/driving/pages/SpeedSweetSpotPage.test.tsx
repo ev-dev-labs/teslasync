@@ -2,8 +2,12 @@ import type { ReactNode } from 'react';
 import type { OperationalBriefProps } from '@/components/data-display/OperationalBrief';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ChartContainerProps } from '@/components/charts/ChartContainer';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import type { Drive } from '@/types/driving';
+import { SpeedBandScorecard } from '../components/speed-sweet-spot/SpeedBandScorecard';
+import { computeSweetSpot } from '../lib/speedSweetSpot';
 
 const {
   pageTitleMock,
@@ -11,12 +15,14 @@ const {
   unitsMock,
   useDrivesMock,
   sharedRange,
+  chartController,
 } = vi.hoisted(() => ({
   pageTitleMock: vi.fn(),
   selectedVehicleMock: vi.fn(),
   unitsMock: vi.fn(),
   useDrivesMock: vi.fn(),
   sharedRange: { set: (_range: { start: string; end: string }) => {} },
+  chartController: { enabled: false },
 }));
 
 vi.mock('react-i18next', () => ({
@@ -211,39 +217,76 @@ vi.mock('../components/operationalbrief-n-z/SweetSpotMethodBrief', () => ({
       section('speed-sweet-spot-method', props.state),
 }));
 
-vi.mock('@/components/charts', () => ({
-  ChartContainer: (props: ChartContainerProps) => (
-    <div data-testid={`${props.chartKey}-frame`}
-      data-row-count={props.data?.length ?? 0}
-      data-exportable={String(props.exportable)}
-      data-chart-state={props.loading ? 'loading' : props.error ? 'error' : 'ready'}>
-      {props.subtitle}
-      {props.action}
-      {props.loading ? 'loading' : props.error ? (
-        <div>error<button type="button" onClick={props.onRetry}>Retry</button></div>
-      ) : (
-        <>ready{typeof props.children === 'function'
-          ? props.children({ hiddenSeries: null, hidden: false, annotations: [] })
-          : props.children}</>
-      )}
-    </div>
-  ),
-  ResponsiveContainer: () => <div data-testid="evidence-plot" />,
-  EmbeddedChart: () => <div data-testid="evidence-plot" />,
-  CHART_COLORS: [],
-  Bar: () => null,
-  Cell: () => null,
-  ChartLegend: () => null,
-  ChartTooltip: () => null,
-  ComposedChart: () => null,
-  Line: () => null,
-  LineChart: () => null,
-  Tooltip: () => null,
-  XAxis: () => null,
-  YAxis: () => null,
-  axisTick: {},
-  chartGrid: null,
-}));
+vi.mock('@/components/charts', async () => {
+  const { ChartHiddenSeriesProvider, useChartHiddenSeries } = await vi.importActual<
+    typeof import('@/components/charts/ChartHiddenSeriesContext')
+  >('@/components/charts/ChartHiddenSeriesContext');
+  const { LegendSeriesLabel } = await vi.importActual<
+    typeof import('@/components/charts/ChartLegend')
+  >('@/components/charts/ChartLegend');
+  const seriesKeys = [
+    'distance', 'qualifiedConsumption', 'unqualifiedConsumption',
+    'Other eligible drives', 'Best-band drives',
+  ];
+  const series = (props: { dataKey?: string; name?: string; hide?: boolean; data?: unknown[] }) => (
+    <div data-testid={`series-${props.dataKey ?? props.name}`}
+      data-hidden={String(props.hide)} data-point-count={props.data?.length} />
+  );
+  const children = ({ children }: { children?: ReactNode }) => <>{children}</>;
+  return {
+    ChartContainer: (props: ChartContainerProps) => (
+      <div data-testid={`${props.chartKey}-frame`}
+        data-row-count={props.data?.length ?? 0}
+        data-columns={props.dataColumns?.map((column) => column.key).join(',')}
+        data-export-rows={props.exportData?.length ?? 0}
+        data-export-filename={props.exportFilename}
+        data-exportable={String(props.exportable)}
+        data-chart-state={props.loading ? 'loading' : props.error ? 'error' : 'ready'}>
+        {props.subtitle}
+        {props.action}
+        {props.loading ? 'loading' : props.error ? (
+          <div>error<button type="button" onClick={props.onRetry}>Retry</button></div>
+        ) : (
+          <>ready{chartController.enabled ? (
+            <ChartHiddenSeriesProvider chartKey={props.chartKey}>
+              {(hiddenSeries) => typeof props.children === 'function'
+                ? props.children({ hiddenSeries, hidden: false, annotations: [] })
+                : props.children}
+            </ChartHiddenSeriesProvider>
+          ) : typeof props.children === 'function'
+            ? props.children({ hiddenSeries: null, hidden: false, annotations: [] })
+            : props.children}</>
+        )}
+      </div>
+    ),
+    ResponsiveContainer: ({ children }: { children?: ReactNode }) =>
+      <div data-testid="evidence-plot">{children}</div>,
+    EmbeddedChart: () => <div data-testid="unexpected-inner-controller" />,
+    CHART_COLORS: [],
+    Bar: series,
+    Cell: () => null,
+    ChartLegend: () => {
+      const resolved = useChartHiddenSeries();
+      return resolved ? <>{seriesKeys.map((key) =>
+        <LegendSeriesLabel key={key} resolved={resolved} value={key} entry={{ dataKey: key }} />,
+      )}</> : null;
+    },
+    ChartTooltip: () => null,
+    ComposedChart: children,
+    Line: series,
+    ScatterChart: children,
+    Scatter: series,
+    CartesianGrid: () => null,
+    ReferenceArea: () => null,
+    ZAxis: () => null,
+    LineChart: () => null,
+    Tooltip: () => null,
+    XAxis: () => null,
+    YAxis: () => null,
+    axisTick: {},
+    chartGrid: null,
+  };
+});
 
 vi.mock('../components/speed-sweet-spot', async () => ({
     ...(await vi.importActual<typeof import('../components/speed-sweet-spot/SpeedBandCoverage')>(
@@ -259,6 +302,16 @@ vi.mock('../components/speed-sweet-spot', async () => ({
 }));
 
 import SpeedSweetSpotPage from './SpeedSweetSpotPage';
+
+const { SweetSpotEvidenceBrief } = await vi.importActual<
+  typeof import('../components/operationalbrief-n-z/SweetSpotEvidenceBrief')
+>('../components/operationalbrief-n-z/SweetSpotEvidenceBrief');
+const { ConsumptionSpeedCurve } = await vi.importActual<
+  typeof import('../components/speed-sweet-spot/ConsumptionSpeedCurve')
+>('../components/speed-sweet-spot/ConsumptionSpeedCurve');
+const { DriveEvidenceScatter } = await vi.importActual<
+  typeof import('../components/speed-sweet-spot/DriveEvidenceScatter')
+>('../components/speed-sweet-spot/DriveEvidenceScatter');
 
 function query(overrides: Record<string, unknown> = {}) {
   return {
@@ -317,6 +370,7 @@ const SECTION_IDS = [
 
 beforeEach(() => {
   vi.clearAllMocks();
+  chartController.enabled = false;
   selectedVehicleMock.mockReturnValue({ vehicleId: 42 });
   useDrivesMock.mockReturnValue(query());
   unitsMock.mockReturnValue({
@@ -330,6 +384,182 @@ beforeEach(() => {
       power: 'kW',
       locale: 'en-US',
     },
+  });
+});
+
+describe('Speed Sweet Spot chart controller ownership', () => {
+  it('restores shared outer URL state and toggles every populated series without inner controllers', async () => {
+    chartController.enabled = true;
+    const summary = computeSweetSpot([
+      drive(1), drive(2), drive(3),
+      { ...drive(4), avgSpeedMps: 80 / 3.6, energyUsedWh: 1200 },
+    ]);
+    function LocationProbe() {
+      return <output data-testid="chart-url">{useLocation().search}</output>;
+    }
+    render(
+      <MemoryRouter initialEntries={[
+        '/driving/speed-sweet-spot?from=2026-07-01&hidden_speed-sweet-spot-curve=qualifiedConsumption&hidden_speed-sweet-spot-drive-evidence=Best-band%20drives',
+      ]}>
+        <ConsumptionSpeedCurve summary={summary} state={{ isLoading: false, error: null }} />
+        <DriveEvidenceScatter summary={summary} state={{ isLoading: false, error: null }}
+          resolved retained={false} />
+        <LocationProbe />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByTestId('unexpected-inner-controller')).not.toBeInTheDocument();
+    expect(screen.getByRole('group', {
+      name: 'Qualified and unqualified energy consumption across speed bands',
+    })).toBeInTheDocument();
+    expect(screen.getByRole('group', {
+      name: 'Individual drive evidence scatter plot across speed and energy consumption',
+    })).toBeInTheDocument();
+    const cases = [
+      {
+        key: 'speed-sweet-spot-curve',
+        series: ['distance', 'qualifiedConsumption', 'unqualifiedConsumption'],
+        hidden: 'qualifiedConsumption',
+        rows: summary.points.length,
+        columns: 'band,qualifiedConsumption,unqualifiedConsumption,distance,drives,qualification',
+      },
+      {
+        key: 'speed-sweet-spot-drive-evidence',
+        series: ['Other eligible drives', 'Best-band drives'],
+        hidden: 'Best-band drives',
+        rows: summary.driveEvidence.length,
+        columns: 'driveId,date,group,speed,consumption,distance',
+      },
+    ];
+    for (const chart of cases) {
+      const frame = screen.getByTestId(`${chart.key}-frame`);
+      expect(frame).toHaveAttribute('data-exportable', 'true');
+      expect(frame).toHaveAttribute('data-export-filename', chart.key);
+      expect(frame).toHaveAttribute('data-export-rows', String(chart.rows));
+      expect(frame).toHaveAttribute('data-row-count', String(chart.rows));
+      expect(frame).toHaveAttribute('data-columns', chart.columns);
+      for (const key of chart.series) {
+        const plotSeries = within(frame).getByTestId(`series-${key}`);
+        const legend = within(frame).getByRole('button', { name: key });
+        const initiallyHidden = key === chart.hidden;
+        expect(plotSeries).toHaveAttribute('data-hidden', String(initiallyHidden));
+        expect(legend).toHaveAttribute('aria-pressed', String(initiallyHidden));
+        await userEvent.click(legend);
+        expect(plotSeries).toHaveAttribute('data-hidden', String(!initiallyHidden));
+        expect(legend).toHaveAttribute('aria-pressed', String(!initiallyHidden));
+        const params = new URLSearchParams(screen.getByTestId('chart-url').textContent ?? '');
+        expect((params.get(`hidden_${chart.key}`) ?? '').split(',').includes(key))
+          .toBe(!initiallyHidden);
+        expect(params.get('from')).toBe('2026-07-01');
+        expect(params.has('hidden_consumption-speed')).toBe(false);
+        expect(params.has('hidden_drive-evidence')).toBe(false);
+        await userEvent.click(legend);
+        expect(plotSeries).toHaveAttribute('data-hidden', String(initiallyHidden));
+      }
+    }
+    expect(screen.getByTestId('series-Other eligible drives')).toHaveAttribute('data-point-count', '1');
+    expect(screen.getByTestId('series-Best-band drives')).toHaveAttribute('data-point-count', '3');
+    const restored = new URLSearchParams(screen.getByTestId('chart-url').textContent ?? '');
+    expect(restored.get('hidden_speed-sweet-spot-curve')).toBe('qualifiedConsumption');
+    expect(restored.get('hidden_speed-sweet-spot-drive-evidence')).toBe('Best-band drives');
+  });
+});
+
+describe('SweetSpotEvidenceBrief measurements', () => {
+  function evidence(summary = computeSweetSpot([]), resolved = true) {
+    return <SweetSpotEvidenceBrief summary={summary} resolved={resolved} retained={false}
+      scope="Selected window" state={{ isLoading: false, error: null }} />;
+  }
+
+  function metric(key: string) {
+    return within(screen.getByTestId('speed-sweet-spot-evidence-brief'))
+      .getByTestId(`metric-${key}`);
+  }
+
+  it('keeps every measurement unknown before the source resolves', () => {
+    render(evidence(computeSweetSpot([drive(1), drive(2), drive(3)]), false));
+    for (const key of ['eligible', 'qualified-bands', 'winning-drives', 'winning-distance', 'distance-share']) {
+      expect(metric(key)).toHaveAttribute('data-value-state', 'missing');
+      expect(metric(key)).not.toHaveAttribute('data-raw-value');
+    }
+    expect(screen.queryByText('Qualified comparison')).not.toBeInTheDocument();
+  });
+
+  it.each([0, 2])('shows resolved counts for %s eligible drives without inventing winning coverage', (count) => {
+    render(evidence(computeSweetSpot(Array.from({ length: count }, (_, index) => drive(index + 1)))));
+    expect(metric('eligible')).toHaveAttribute('data-raw-value', String(count));
+    expect(metric('eligible')).toHaveAttribute('data-value-state', 'value');
+    expect(metric('qualified-bands')).toHaveAttribute('data-raw-value', '0');
+    expect(metric('qualified-bands')).toHaveAttribute('data-value-state', 'value');
+    for (const key of ['winning-drives', 'winning-distance', 'distance-share']) {
+      expect(metric(key)).toHaveAttribute('data-value-state', 'missing');
+      expect(metric(key)).not.toHaveAttribute('data-raw-value');
+    }
+    expect(screen.getByText('Insufficient evidence')).toBeInTheDocument();
+    expect(screen.getByText('No speed band has enough eligible drives to support a best-band comparison in this window.'))
+      .toBeInTheDocument();
+  });
+
+  it.each(['winner', 'coverage'] as const)('requires both winner and coverage when %s is missing', (missing) => {
+    const summary = computeSweetSpot([drive(1), drive(2), drive(3)]);
+    render(evidence({ ...summary,
+      sweetSpot: missing === 'winner' ? null : summary.sweetSpot,
+      winningBandCoverage: missing === 'coverage' ? null : summary.winningBandCoverage,
+    }));
+    expect(metric('eligible')).toHaveAttribute('data-raw-value', '3');
+    expect(metric('qualified-bands')).toHaveAttribute('data-raw-value', '1');
+    for (const key of ['winning-drives', 'winning-distance', 'distance-share']) {
+      expect(metric(key)).toHaveAttribute('data-value-state', 'missing');
+    }
+  });
+
+  it.each([NaN, Infinity, -Infinity, -1, 1.5])('rejects invalid count %s without hiding resolved counts', (value) => {
+    const summary = computeSweetSpot([drive(1), drive(2), drive(3)]);
+    render(evidence({ ...summary, eligible: value, qualifiedBandCount: value,
+      winningBandCoverage: { drives: value, driveShare: 1, distanceM: 30_000, distanceShare: 1 },
+    }));
+    for (const key of ['eligible', 'qualified-bands', 'winning-drives']) {
+      expect(metric(key)).toHaveAttribute('data-value-state', 'invalid');
+    }
+    expect(metric('winning-distance')).toHaveAttribute('data-value-state', 'value');
+  });
+
+  it.each([NaN, Infinity, -Infinity])('keeps invalid coverage %s distinct from zero', (value) => {
+    const summary = computeSweetSpot([drive(1), drive(2), drive(3)]);
+    render(evidence({ ...summary,
+      winningBandCoverage: { drives: 3, driveShare: 1, distanceM: value, distanceShare: value },
+    }));
+    for (const key of ['winning-distance', 'distance-share']) {
+      expect(metric(key)).toHaveAttribute('data-value-state', 'invalid');
+    }
+  });
+
+  it.each([null, undefined])('keeps absent numeric inputs (%s) missing, not measured zero', (value) => {
+    const summary = computeSweetSpot([drive(1), drive(2), drive(3)]);
+    for (const key of ['eligible', 'qualifiedBandCount']) {
+      Object.defineProperty(summary, key, { value });
+    }
+    for (const key of ['drives', 'distanceM', 'distanceShare']) {
+      Object.defineProperty(summary.winningBandCoverage, key, { value });
+    }
+    render(evidence(summary));
+    for (const key of ['eligible', 'qualified-bands', 'winning-drives', 'winning-distance', 'distance-share']) {
+      expect(metric(key)).toHaveAttribute('data-value-state', 'missing');
+      expect(metric(key)).not.toHaveAttribute('data-raw-value');
+    }
+  });
+
+  it.each([0, -0.125, 0.125])('preserves measured zero, signed and fractional coverage %s', (value) => {
+    const summary = computeSweetSpot([drive(1), drive(2), drive(3)]);
+    render(evidence({ ...summary,
+      winningBandCoverage: { drives: 0, driveShare: 0, distanceM: value, distanceShare: value },
+    }));
+    expect(metric('winning-drives')).toHaveAttribute('data-raw-value', '0');
+    expect(metric('winning-drives')).toHaveAttribute('data-value-state', 'value');
+    expect(metric('winning-distance')).toHaveAttribute('data-raw-value', String(value));
+    expect(metric('distance-share')).toHaveAttribute('data-raw-value', String(value * 100));
+    for (const key of ['winning-distance', 'distance-share']) {
+      expect(metric(key)).toHaveAttribute('data-value-state', 'value');
+    }
   });
 });
 
@@ -351,6 +581,69 @@ describe('SpeedSweetSpotPage', () => {
     expect(pageTitleMock).toHaveBeenCalledWith('Speed Sweet Spot');
   });
 
+    describe('SpeedBandScorecard field access', () => {
+      const observers = new Map<Element, ResizeObserverCallback>();
+      beforeEach(() => {
+        localStorage.clear();
+        observers.clear();
+        vi.stubGlobal('ResizeObserver', class {
+          constructor(private callback: ResizeObserverCallback) {}
+          observe(element: Element) { observers.set(element, this.callback); }
+          unobserve(element: Element) { observers.delete(element); }
+          disconnect() {
+            observers.forEach((callback, element) => {
+              if (callback === this.callback) observers.delete(element);
+            });
+          }
+        });
+      });
+      afterEach(() => vi.unstubAllGlobals());
+
+      it.each([375, 1440])('preserves all nine fields and every band at %spx', async (width) => {
+        const summary = computeSweetSpot([
+          drive(1), drive(2), drive(3),
+          { ...drive(4), avgSpeedMps: 80 / 3.6, energyUsedWh: 1200 },
+          { ...drive(5), avgSpeedMps: 120 / 3.6, energyUsedWh: 1800 },
+        ]);
+        render(<SpeedBandScorecard summary={summary}
+          state={{ isLoading: false, error: null, onRetry: vi.fn() }} />);
+        act(() => observers.forEach((callback, element) => callback(
+          [{ target: element, contentRect: { width } } as ResizeObserverEntry],
+          {} as ResizeObserver,
+        )));
+        const headers = [
+          'Rank', 'Speed band', 'Consumption', 'Distance', 'Drives',
+          'Distance share', 'Qualification', 'Gap to best', 'Gap to overall',
+        ];
+        if (width === 375) {
+          const quickViews = screen.getAllByRole('button', { name: 'Quick view' });
+          expect(quickViews).toHaveLength(summary.bands.length);
+          for (const [index, trigger] of quickViews.entries()) {
+            trigger.focus();
+            await userEvent.keyboard('{Enter}');
+            const dialog = await screen.findByRole('dialog');
+            for (const header of headers) expect(within(dialog).getByText(header)).toBeInTheDocument();
+            expect(dialog.querySelectorAll('dt')).toHaveLength(9);
+            expect(dialog.querySelectorAll('dd')).toHaveLength(9);
+            const values = Array.from(dialog.querySelectorAll('dd'));
+            expect(values[0]).toHaveTextContent(index === 0 ? '#1' : '—');
+            expect(values[6]).toHaveTextContent(index === 0 ? 'Qualified' : 'Below sample floor');
+            expect(values[7].textContent).toMatch(index === 0 ? /^0/ : index === 1 ? /^−/ : /^\+/);
+            expect(values[8].textContent).toMatch(index === 0 ? /^0/ : index === 1 ? /^−/ : /^\+/);
+            await userEvent.keyboard('{Escape}');
+            await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+            expect(trigger).toHaveFocus();
+          }
+        } else {
+          for (const header of headers) {
+            expect(screen.getByRole('columnheader', { name: header })).toBeInTheDocument();
+          }
+          expect(screen.getAllByRole('row')).toHaveLength(summary.bands.length + 1);
+        }
+        expect(screen.getByTestId('speed-sweet-spot-scorecard')).toHaveTextContent('#1');
+        expect(screen.getByTestId('speed-sweet-spot-scorecard')).toHaveTextContent('Below sample floor');
+      });
+    });
   it('re-queries when the selected range changes', async () => {
     render(<SpeedSweetSpotPage />);
     act(() => sharedRange.set({ start: '2026-07-01', end: '2026-07-31' }));

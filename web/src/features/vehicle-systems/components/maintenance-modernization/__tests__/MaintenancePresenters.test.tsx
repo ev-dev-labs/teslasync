@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { deriveDataState, type DataStateSource } from '@/api/dataState';
@@ -17,6 +18,7 @@ import { MaintenanceCategoriesPanel } from '../MaintenanceCategoriesPanel';
 import { categoryColor } from '../maintenancePresentation';
 import { resolveChartPalette } from '@/hooks/useChartPalette';
 import { item, record } from './fixtures';
+import { typography } from '@/lib/tokens';
 
 const h = vi.hoisted(() => ({
   items: {} as DataStateSource<MaintenanceItem[]>,
@@ -156,6 +158,44 @@ afterEach(() => {
 });
 
 describe('complete maintenance presenters', () => {
+  it('uses semantic captions while keeping tabular values and keyboard-accessible full metadata', async () => {
+    const user = userEvent.setup();
+    const source = item({
+      due_date: '2024-06-01', due_mileage: 50000, current_mileage: 25000,
+      last_service_date: '2024-01-01', last_service_mileage: 10000,
+      interval_miles: 40000, interval_months: 6,
+    });
+    const { container } = mount(<MaintenanceItemCard item={source}
+      formatDistance={value => `${((value ?? 0) / 1000).toFixed(2)} km`} />);
+    const captionClasses = typography.role.caption.split(' ');
+    for (const caption of [
+      screen.getByText('Source status'), screen.getByText(source.description),
+      screen.getByText('Rotation service progress'), screen.getByText(/^Due: /),
+      screen.getByText('25.00 km'), screen.getByText(/%$/),
+    ]) expect(caption).toHaveClass(...captionClasses);
+    expect(screen.getByText('25.00 km')).toHaveClass('tabular-nums');
+    expect(screen.getByText(/%$/)).toHaveClass('tabular-nums');
+    expect(screen.getByText(source.description)).toHaveClass('break-words');
+    expect(screen.getByRole('progressbar', { name: 'Rotation service progress' }))
+      .toHaveAttribute('aria-valuemax', '100');
+    const trigger = screen.getByRole('button', { name: 'Service interval and metadata' });
+    await user.tab();
+    expect(trigger).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    const region = screen.getByRole('region', { name: 'Service interval and metadata' });
+    expect(region.id).toBe(trigger.getAttribute('aria-controls'));
+    expect(region.querySelectorAll('dt')).toHaveLength(11);
+    expect(region.querySelectorAll('dd')).toHaveLength(11);
+    for (const label of region.querySelectorAll('dt')) expect(label).toHaveClass(...captionClasses);
+    for (const value of region.querySelectorAll('dd')) expect(value).toHaveClass('break-words', 'tabular-nums');
+    expect(within(region).getByText('40.00 km')).toBeInTheDocument();
+    expect(container.querySelectorAll('svg:not([aria-hidden="true"])')).toHaveLength(0);
+    await user.keyboard(' ');
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(trigger).toHaveFocus();
+  });
+
   it('uses saved palettes with stable category slots and neutral unknown categories', () => {
     const source = deriveDataState(query([item()]));
     const breakdown = [

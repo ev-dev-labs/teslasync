@@ -79,6 +79,12 @@ export default function ChargingThermalTaxPage() {
             disabled={sessionsQuery.isLoading || sessions.length === 0}
           />
         </div>
+        {sessionsState.hasData && <Text as="p" variant="bodySm" color="secondary">
+          {t('chargingThermalTax.observedWindow', 'Session choices use an observed window of {{returned}} returned charging sessions (request cap: {{limit}}). This is not a server total or a guarantee of complete history.', {
+            returned: new Intl.NumberFormat(locale).format(sessions.length),
+            limit: new Intl.NumberFormat(locale).format(1000),
+          })}
+        </Text>}
         {!sessionsState.hasData && sessionsState.isRefreshBlocked && <div className="space-y-2">
           <Text as="p" variant="bodySm">
             {t('chargingThermalTax.state.historyPaused', 'Charging history loading is paused. Connect to resume or retry.')}
@@ -88,7 +94,7 @@ export default function ChargingThermalTaxPage() {
           </Button>}
         </div>}
         {sessionsState.hasData && sessions.length === 0 && <EmptyState
-          message={t('chargingThermalTax.noSessions', 'No charging sessions are available for this vehicle.')}
+          message={t('chargingThermalTax.noSessions', 'No charging sessions were returned in this observed window.')}
           action={sessionsState.retry ? { label: t('common.retry', 'Retry'), onClick: sessionsState.retry } : undefined}
         />}
       </LayoutCard>

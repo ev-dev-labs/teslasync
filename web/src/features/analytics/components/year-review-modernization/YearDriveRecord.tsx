@@ -5,6 +5,7 @@ import { EmptyState } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { formatDayKey, ymdInTz } from '@/lib/dateFormat';
 import type { YearReviewDriveHighlight } from '@/api/types';
 import type { StatPeriod } from '@/lib/metric-reference';
 import { recordDuration } from './yearReviewPresentation';
@@ -14,7 +15,7 @@ export function YearDriveRecord({ drive, id, period }: {
   id: string;
   period: StatPeriod;
 }) {
-  const { fmtInt } = useNumberFormatting();
+  const { fmtInt, locale } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
@@ -24,6 +25,10 @@ export function YearDriveRecord({ drive, id, period }: {
   const efficiencyWhKm = drive?.efficiency_wh_km ?? 0;
   const efficiencyDisplay = efficiencyWhKm > 0
     ? fmtInt(distanceUnit === 'mi' ? efficiencyWhKm * 1.609344 : efficiencyWhKm) : '—';
+  const dayKey = drive?.date;
+  const dateDisplay = dayKey && /^\d{4}-\d{2}-\d{2}$/.test(dayKey)
+    && !dayKey.startsWith('0000-') && ymdInTz(new Date(`${dayKey}T12:00:00Z`), 'UTC') === dayKey
+    ? formatDayKey(dayKey, { locale }) : '—';
 
   if (!drive) return <EmptyState
     message={t('yearReview.noDriveData', 'No drive data for this year')}
@@ -42,7 +47,7 @@ export function YearDriveRecord({ drive, id, period }: {
         { metricId: 'text', rawValue: durationDisplay, label: t('yearReview.duration', 'duration') },
         { metricId: 'text', rawValue: efficiencyDisplay, label: efficiencyUnit },
       ]} />
-      <Caption className="break-words">{drive.date || '—'}</Caption>
+      <Caption className="break-words">{dateDisplay}</Caption>
     </>
   );
 }

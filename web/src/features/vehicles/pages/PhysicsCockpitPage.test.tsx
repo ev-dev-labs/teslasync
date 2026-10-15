@@ -14,11 +14,20 @@ const h = vi.hoisted(() => ({
   certificateMissing: false,
   certificateLoading: false,
   certificatePaused: false,
+  cockpitPending: false,
+  heartbeatPending: false,
+  certificatePending: false,
+  cockpitPaused: false,
+  heartbeatPaused: false,
   nullPark: false,
   nullRejections: false,
   nullMeasurements: false,
   nullCertificateArrays: false,
+  lastTickAt: null as string | null,
+  dateLocale: 'en-US',
+  dateTimezone: 'UTC',
   certificateRefetch: vi.fn(),
+  heartbeatRefetch: vi.fn(),
   refetch: vi.fn(),
 }));
 const { downloadJSON } = vi.hoisted(() => ({ downloadJSON: vi.fn() }));
@@ -34,6 +43,15 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: () => undefined }));
+vi.mock('@/hooks/useDateFormat', async () => {
+  const { formatDateTime } = await vi.importActual<typeof import('@/lib/dateFormat')>('@/lib/dateFormat');
+  return {
+    useDateFormat: () => ({
+      formatDateTime: (value: string | Date | null | undefined) =>
+        formatDateTime(value, { locale: h.dateLocale, tz: h.dateTimezone }),
+    }),
+  };
+});
 vi.mock('@/hooks/useSelectedVehicle', () => ({
   useSelectedVehicle: () => ({ vehicleId: h.vehicleId }),
 }));
@@ -122,29 +140,45 @@ function queryStub<T>(data: T, error: Error | null = null) {
     isPending: false,
     isLoading: false,
     isFetching: false,
-    isSuccess: true,
+    isSuccess: error == null,
     fetchStatus: 'idle' as const,
     dataUpdatedAt: Date.now(),
     refetch: h.refetch,
   };
 }
 
+function pendingStub(pending: boolean, paused: boolean, error: Error | null) {
+  return {
+    isPending: pending,
+    isLoading: pending && !paused,
+    isFetching: pending && !paused,
+    isSuccess: !pending && error == null,
+    fetchStatus: paused ? 'paused' as const : pending ? 'fetching' as const : 'idle' as const,
+  };
+}
+
 vi.mock('@/api/hooks/useTeslaPhysics', () => ({
-  usePhysicsCockpit: () => queryStub(h.cockpitMissing ? undefined : {
-    ...cockpit,
-    ...(h.nullMeasurements ? {
-      battery_level_pct: null, energy_remaining_wh: null, pack_current_a: null,
-      pack_voltage_v: null, driving_distance_m: null, speed_mps: null,
-    } : {}),
-    park: h.nullPark ? null : h.nullRejections ? { ...cockpit.park, rejected: null } : cockpit.park,
-  }, h.cockpitError),
-  useFsdHeartbeat: () => queryStub(h.heartbeatMissing ? undefined : heartbeat, h.heartbeatError),
+  usePhysicsCockpit: () => ({
+    ...queryStub(h.cockpitMissing ? undefined : {
+      ...cockpit,
+      ...(h.nullMeasurements ? {
+        battery_level_pct: null, energy_remaining_wh: null, pack_current_a: null,
+        pack_voltage_v: null, driving_distance_m: null, speed_mps: null,
+      } : {}),
+      park: h.nullPark ? null : h.nullRejections ? { ...cockpit.park, rejected: null } : cockpit.park,
+    }, h.cockpitError),
+    ...pendingStub(h.cockpitPending, h.cockpitPaused, h.cockpitError),
+  }),
+  useFsdHeartbeat: () => ({
+    ...queryStub(h.heartbeatMissing ? undefined : { ...heartbeat, last_tick_at: h.lastTickAt }, h.heartbeatError),
+    ...pendingStub(h.heartbeatPending, h.heartbeatPaused, h.heartbeatError),
+    refetch: h.heartbeatRefetch,
+  }),
   useSessionCertificate: () => ({
     ...queryStub(h.certificateMissing ? undefined : h.nullCertificateArrays ? {
       ...certificate, drives: null, charges: null,
     } : certificate, h.certificateError),
-    isLoading: h.certificateLoading,
-    fetchStatus: h.certificatePaused ? 'paused' as const : 'idle' as const,
+    ...pendingStub(h.certificatePending || h.certificateLoading, h.certificatePaused, h.certificateError),
     refetch: h.certificateRefetch,
   }),
 }));
@@ -166,13 +200,138 @@ beforeEach(() => {
   h.certificateMissing = false;
   h.certificateLoading = false;
   h.certificatePaused = false;
+  h.cockpitPending = false;
+  h.heartbeatPending = false;
+  h.certificatePending = false;
+  h.cockpitPaused = false;
+  h.heartbeatPaused = false;
   h.nullPark = false;
   h.nullRejections = false;
   h.nullMeasurements = false;
   h.nullCertificateArrays = false;
+  h.lastTickAt = null;
+  h.dateLocale = 'en-US';
+  h.dateTimezone = 'UTC';
 });
 
 describe('PhysicsCockpitPage', () => {
+  it('updates tick and certificate timestamps with display preferences without changing exported evidence', () => {
+    const tickInstant = '2026-03-03T00:15:00Z';
+    h.lastTickAt = tickInstant;
+    const originalCertificate = structuredClone(certificate);
+    const view = renderPage();
+    const expectedDate = (instant: string) => new Date(instant).toLocaleString(h.dateLocale, {
+      timeZone: h.dateTimezone,
+      year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+    });
+    const expectedTick = () => `Last tick ${expectedDate(tickInstant)}`;
+    const expectedWindow = () =>
+      `Certificate window: ${expectedDate(certificate.from)} to ${expectedDate(certificate.to)} · Issued ${expectedDate(certificate.issued_at)}`;
+    const initialTick = expectedTick();
+    const initialWindow = expectedWindow();
+    expect(screen.getByText(initialTick)).toBeVisible();
+    expect(screen.getByText(initialWindow)).toBeVisible();
+
+    h.dateTimezone = 'America/Los_Angeles';
+    view.rerender(<MemoryRouter><PhysicsCockpitPage /></MemoryRouter>);
+    expect(screen.getByText(expectedTick())).toBeVisible();
+    expect(screen.getByText(expectedWindow())).toBeVisible();
+    expect(screen.queryByText(initialTick)).not.toBeInTheDocument();
+    expect(screen.queryByText(initialWindow)).not.toBeInTheDocument();
+    const zonedTick = expectedTick();
+    const zonedWindow = expectedWindow();
+
+    h.dateLocale = 'de-DE';
+    view.rerender(<MemoryRouter><PhysicsCockpitPage /></MemoryRouter>);
+    expect(screen.getByText(expectedTick())).toBeVisible();
+    expect(screen.getByText(expectedWindow())).toBeVisible();
+    expect(screen.queryByText(zonedTick)).not.toBeInTheDocument();
+    expect(screen.queryByText(zonedWindow)).not.toBeInTheDocument();
+    expect(screen.getByText('Disconnected')).toBeVisible();
+    expect(screen.getByText('Confirmed park')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Session certificate' }));
+    expect(downloadJSON.mock.calls[0][1]).toBe(certificate);
+    expect(downloadJSON.mock.calls[0][1]).toEqual(originalCertificate);
+    expect(h.lastTickAt).toBe(tickInstant);
+  });
+
+  it.each(['cockpit', 'heartbeat', 'certificate'] as const)(
+    'distinguishes active loading, deferred availability and successful empty %s evidence',
+    (source) => {
+      h[`${source}Missing`] = true;
+      h[`${source}Pending`] = true;
+      const labels = source === 'cockpit'
+        ? ['Live cockpit readings', 'Park truth']
+        : [source === 'heartbeat' ? 'FSD trip-meter heartbeat' : 'Session certificate'];
+      const emptyMessage = source === 'cockpit' ? 'No park evidence has been reported.'
+        : source === 'heartbeat' ? 'No trip-meter heartbeat has been reported.'
+          : 'A session certificate is not available for this vehicle yet.';
+      const view = renderPage();
+      for (const label of labels) {
+        expect(screen.getByRole('status', { name: `Loading ${label}` })).toBeVisible();
+      }
+      expect(screen.queryByText(emptyMessage)).not.toBeInTheDocument();
+
+      h[`${source}Paused`] = true;
+      view.rerender(<MemoryRouter><PhysicsCockpitPage /></MemoryRouter>);
+      for (const label of labels) {
+        expect(screen.queryByRole('status', { name: `Loading ${label}` })).not.toBeInTheDocument();
+      }
+      expect(screen.getAllByText('Source availability has not resolved yet.')).toHaveLength(labels.length);
+      expect(screen.getAllByText('Refresh paused')).toHaveLength(labels.length);
+      expect(screen.queryByText(emptyMessage)).not.toBeInTheDocument();
+      expect(screen.queryByText(/device is offline|Paused offline/i)).not.toBeInTheDocument();
+
+      h[`${source}Pending`] = false;
+      h[`${source}Paused`] = false;
+      view.rerender(<MemoryRouter><PhysicsCockpitPage /></MemoryRouter>);
+      expect(screen.getByText(emptyMessage)).toBeVisible();
+      h[`${source}Missing`] = false;
+      view.rerender(<MemoryRouter><PhysicsCockpitPage /></MemoryRouter>);
+      expect(screen.queryByText(emptyMessage)).not.toBeInTheDocument();
+      expect(screen.queryByText('Source availability has not resolved yet.')).not.toBeInTheDocument();
+    },
+  );
+
+  it('recovers each retained refresh failure without losing measurements or export evidence', () => {
+    h.cockpitError = new Error('cockpit refresh failed');
+    h.heartbeatError = new Error('heartbeat refresh failed');
+    h.certificateError = new Error('certificate refresh failed');
+    const view = renderPage();
+    expect(screen.getByText('0 km/h')).toBeVisible();
+    expect(screen.getByText('Confirmed park')).toBeVisible();
+    expect(screen.getByText(certificate.rules)).toBeVisible();
+    expect(screen.getAllByText('Retained after refresh failure')).toHaveLength(3);
+
+    h.cockpitError = null;
+    h.heartbeatError = null;
+    h.certificateError = null;
+    view.rerender(<MemoryRouter><PhysicsCockpitPage /></MemoryRouter>);
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.queryByText('Retained after refresh failure')).not.toBeInTheDocument();
+    expect(screen.getByText('0 km/h')).toBeVisible();
+    expect(screen.getByText('Confirmed park')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Session certificate' }));
+    expect(downloadJSON.mock.calls[0][1]).toBe(certificate);
+  });
+
+  it('retries and recovers an initial heartbeat failure independently', () => {
+    h.heartbeatMissing = true;
+    h.heartbeatError = new Error('heartbeat initial failure');
+    const view = renderPage();
+    expect(screen.getByText('Trip-meter heartbeat could not be loaded.')).toBeVisible();
+    expect(screen.getByText('Disconnected')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(h.heartbeatRefetch).toHaveBeenCalledTimes(1);
+    expect(h.refetch).not.toHaveBeenCalled();
+    expect(h.certificateRefetch).not.toHaveBeenCalled();
+    h.heartbeatMissing = false;
+    h.heartbeatError = null;
+    view.rerender(<MemoryRouter><PhysicsCockpitPage /></MemoryRouter>);
+    expect(screen.queryByText('Trip-meter heartbeat could not be loaded.')).not.toBeInTheDocument();
+    expect(screen.getByText('No trip-meter tick in the recent window')).toBeVisible();
+  });
+
   it('retains all cockpit, heartbeat and park evidence after independent refresh failures', () => {
     h.cockpitError = new Error('cockpit refresh failed');
     h.heartbeatError = new Error('heartbeat refresh failed');
@@ -274,6 +433,9 @@ describe('PhysicsCockpitPage', () => {
     h.cockpitMissing = true;
     h.heartbeatMissing = true;
     h.certificateMissing = true;
+    h.cockpitPending = true;
+    h.heartbeatPending = true;
+    h.certificatePending = true;
     renderPage();
     expect(screen.getByTestId('physics-cockpit-readings')).toBeVisible();
     expect(screen.getByRole('heading', { name: 'FSD trip-meter heartbeat' })).toBeVisible();

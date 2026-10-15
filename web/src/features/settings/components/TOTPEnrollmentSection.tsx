@@ -1,32 +1,17 @@
 /**
- * TOTP enrollment section — the interactive core of the two-factor page.
- *
- * Thin stateful container: it drives `useTotpEnrollmentFlow` (the
- * enroll → verify → backup-codes state machine + disable confirmation)
- * and composes the presentational surfaces in `./twofactor`:
- *
- *   • Open mode (no forward-auth header upstream) → `TotpOpenModeNotice`
- *     — the enroll/disable controls are NOT rendered so no enroll
- *     endpoint is hit. Mirrors the future
- *     `<RequiresAuth capability="totp_enrollment">` gate.
- *   • Forward-auth + not enrolled → `TotpStatusHero` with an "Enable
- *     TOTP" button that opens `TotpEnrollModal` (QR + manual secret +
- *     6-digit verify). Success flips to `TotpBackupCodesModal`.
- *   • Forward-auth + active credential → `TotpStatusHero` with last-used
- *     time, remaining backup-code count, and Regenerate + Disable. Disable
- *     opens a typed-confirmation `ConfirmDialog`; the upstream RequireSudo
- *     middleware triggers the ReauthDialog interceptor automatically.
- *
- * The section never throws — every mutation error is surfaced by the
- * flow's toasts or inline error text so the rest of the page keeps
- * working.
+ * Composes the enrollment flow without persisting credentials.
+ * Retained status stays visible, but mutations require capability and live
+ * readiness, rechecked on submit. Only confirmed open mode hides controls.
  */
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { onlineManager, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { GlassPanel, ConfirmDialog } from '@/components/ui'
+import { GlassPanel, ConfirmDialog, HelperText, Button } from '@/components/ui'
 import { VisuallyHidden } from '@/components/a11y'
 import { Skeleton, QueryError } from '@/components/feedback'
 import { deriveDataState } from '@/api/dataState'
 import { FadeIn } from '@/components/motion'
+import { totpKeys, type TOTPStatus } from '@/api/hooks/useTOTP'
 import {
   useTotpEnrollmentFlow,
   TotpStatusHero,
@@ -35,13 +20,53 @@ import {
   TotpOpenModeNotice,
 } from './twofactor'
 
-export function TOTPEnrollmentSection() {
+interface TOTPEnrollmentSectionProps {
+  capability?: boolean
+  liveReady?: boolean
+}
+
+const subscribeToOnline = (onChange: () => void) => onlineManager.subscribe(onChange)
+const getOnlineSnapshot = () => onlineManager.isOnline()
+
+export function TOTPEnrollmentSection({
+  capability = true,
+  liveReady = true,
+}: TOTPEnrollmentSectionProps = {}) {
   const { t } = useTranslation('settings')
+  const queryClient = useQueryClient()
   const flow = useTotpEnrollmentFlow()
   const { status } = flow
   const statusState = deriveDataState(status)
+  const online = useSyncExternalStore(subscribeToOnline, getOnlineSnapshot)
+  const readiness = useRef({ capability, liveReady })
+  readiness.current = { capability, liveReady }
+  const [submissionBlocked, setSubmissionBlocked] = useState(false)
+  const commandsReady = capability && liveReady && online
+    && status.isSuccess && status.fetchStatus === 'idle'
+    && status.data?.mode === 'session'
+  useEffect(() => {
+    if (commandsReady) setSubmissionBlocked(false)
+  }, [commandsReady, status.dataUpdatedAt])
+  const blockedMessage = t(
+    'totp.commands.blocked',
+    'Two-factor changes require available enrollment access and a successful live status check. Previously loaded settings remain visible. Retry the status check when access and the connection are ready.',
+  )
+  const guardCommand = (command: () => void | Promise<void>, expectedActivated: boolean) => () => {
+    // Read the cache at submission time too: a dialog may outlive its status read.
+    const current = queryClient.getQueryState<TOTPStatus>(totpKeys.status)
+    if (!readiness.current.capability || !readiness.current.liveReady
+      || !onlineManager.isOnline() || current?.status !== 'success'
+      || current.fetchStatus !== 'idle' || current.data?.mode !== 'session'
+      || (current.data.activated === true) !== expectedActivated) {
+      setSubmissionBlocked(true)
+      return
+    }
+    setSubmissionBlocked(false)
+    void command()
+  }
 
-  if (status.isLoading) {
+  if (statusState.status === 'initial' && !statusState.isRefreshBlocked
+    && status.fetchStatus === 'fetching') {
     return (
       <FadeIn delay={0.05}>
         <GlassPanel
@@ -73,7 +98,25 @@ export function TOTPEnrollmentSection() {
     )
   }
 
-  if (!status.data || status.data.mode === 'open') {
+  if (!status.data) {
+    return (
+      <FadeIn delay={0.05}>
+        <GlassPanel className="space-y-3 p-4 sm:p-5" role="status">
+          <HelperText>
+            {statusState.isRefreshBlocked
+              ? t('common:dataSources.status.paused', 'Refresh paused')
+              : t('totp.loading', 'Loading two-factor settings…')}
+          </HelperText>
+          <HelperText>{blockedMessage}</HelperText>
+          <Button variant="ghost" onClick={() => void status.refetch()}>
+            {t('common:retry', 'Retry')}
+          </Button>
+        </GlassPanel>
+      </FadeIn>
+    )
+  }
+
+  if (status.data.mode === 'open') {
     return (
       <FadeIn delay={0.05}>
         <TotpOpenModeNotice />
@@ -89,26 +132,36 @@ export function TOTPEnrollmentSection() {
   return (
     <>
       <FadeIn delay={0.05}>
-        <TotpStatusHero
-          activated={activated}
-          lastUsedAt={lastUsedAt}
-          backupRemaining={backupRemaining}
-          enrolling={flow.enrolling}
-          regenerating={flow.regenerating}
-          onEnroll={flow.handleEnroll}
-          onRegenerate={flow.handleRegenerate}
-          onDisable={flow.openDisableConfirm}
-        />
+        {!commandsReady && (
+          <div className="space-y-2 pb-3" role="status" data-testid="totp-commands-blocked">
+            <HelperText>{blockedMessage}</HelperText>
+            <Button variant="ghost" onClick={() => void status.refetch()} disabled={status.isFetching}>
+              {t('common:retry', 'Retry')}
+            </Button>
+          </div>
+        )}
+        <fieldset disabled={!commandsReady} className="min-w-0">
+          <TotpStatusHero
+            activated={activated}
+            lastUsedAt={lastUsedAt}
+            backupRemaining={backupRemaining}
+            enrolling={flow.enrolling}
+            regenerating={flow.regenerating}
+            onEnroll={guardCommand(flow.handleEnroll, false)}
+            onRegenerate={guardCommand(flow.handleRegenerate, true)}
+            onDisable={guardCommand(flow.openDisableConfirm, true)}
+          />
+        </fieldset>
       </FadeIn>
 
       <TotpEnrollModal
         open={flow.dialogStep === 'enroll'}
         enrollment={flow.enrollment}
         code={flow.verifyCode}
-        error={flow.verifyError}
+        error={!commandsReady || submissionBlocked ? blockedMessage : flow.verifyError}
         verifying={flow.verifying}
         onCodeChange={flow.changeVerifyCode}
-        onVerify={flow.handleVerify}
+        onVerify={guardCommand(flow.handleVerify, false)}
         onClose={flow.closeDialog}
       />
 
@@ -130,9 +183,11 @@ export function TOTPEnrollmentSection() {
         cancelLabel={t('totp.disable.cancel', 'Keep TOTP enabled')}
         variant="danger"
         loading={flow.revoking}
+        confirmDisabled={!commandsReady}
+        details={!commandsReady || submissionBlocked ? <HelperText>{blockedMessage}</HelperText> : undefined}
         requireTypedConfirmation="DISABLE"
         typedConfirmationLabel={flow.disableTypedLabel}
-        onConfirm={flow.handleConfirmDisable}
+        onConfirm={guardCommand(flow.handleConfirmDisable, true)}
         onCancel={flow.closeDisableConfirm}
       />
     </>

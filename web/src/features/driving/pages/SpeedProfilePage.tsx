@@ -8,21 +8,24 @@ import {
   ChartTooltip,
   BarChart, Bar, ScatterChart, Scatter,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
-  LinearGauge, EmbeddedChart,
+  LinearGauge, EmbeddedChart, axisTick,
 } from '@/components/charts';
 import type { StatMetric } from '@/components/data-display/stat-reference';
 import { DrivingSummaryBrief } from '../components/operationalbrief-n-z/DrivingSummaryBrief';
+import { DynamicsPausedNotice } from '../components/driving-dynamics-modernization/DynamicsPausedNotice';
 import { FadeIn } from '@/components/motion';
 import { Skeleton, EmptyState, QueryError, StaleRefreshWarning, SectionErrorBoundary } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
 
 
 import { useRangeState } from '@/hooks/useRangeState';
-import { useSpeedProfile, useDrives } from '@/api/hooks/useDriving';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { useSpeedProfile, useDriveCalendarHistory } from '@/api/hooks/useDriving';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { cn } from '@/lib/cn';
+import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
 
 import { getEfficiency } from '@/lib/drivesAggregation';
 import { neonColorMap, type NeonColor } from '@/lib/tokens';
@@ -68,29 +71,31 @@ export default function SpeedProfilePage() {
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
 
-  const { start, end } = useRangeState({
-    persistKey: 'speed-profile.range',
-    defaultPresetId: 'all',
-  });
+  const { tz } = useDateFormat();
+  const { start, end, startInstant, endInstantExclusive } = useRangeState({ timezone: tz });
 
-  const profileQuery = useSpeedProfile(vehicleIdStr, start, end);
-  const drivesQuery = useDrives(vehicleIdStr);
+  const profileQuery = useSpeedProfile(vehicleIdStr, startInstant, endInstantExclusive);
+  const drivesQuery = useDriveCalendarHistory(vehicleIdStr, startInstant, endInstantExclusive);
   const profileState = useDataState(profileQuery, { provenance: 'historical' });
   const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
-  const data = profileState.data;
-  const allDrives = drivesState.data;
-  const isLoading = !profileState.hasData && !profileState.fatalError
-    && !profileState.isRefreshBlocked && (profileQuery.isLoading || profileQuery.isFetching);
-  const drivesLoading = !drivesState.hasData && !drivesState.fatalError
-    && !drivesState.isRefreshBlocked && (drivesQuery.isLoading || drivesQuery.isFetching);
-  const error = profileState.fatalError;
-  const drivesError = drivesState.fatalError;
+  const missingSelection = vehicleId == null;
+  const data = missingSelection ? undefined : profileState.data;
+  const allDrives = missingSelection ? undefined : drivesState.data;
+  const profilePaused = !missingSelection && !profileState.hasData
+    && profileState.isRefreshBlocked && !profileState.fatalError;
+  const drivesPaused = !missingSelection && !drivesState.hasData
+    && drivesState.isRefreshBlocked && !drivesState.fatalError;
+  const isLoading = !missingSelection && profileState.status === 'initial' && !profilePaused;
+  const drivesLoading = !missingSelection && drivesState.status === 'initial' && !drivesPaused;
+  const error = missingSelection ? null : profileState.fatalError;
+  const drivesError = missingSelection ? null : drivesState.fatalError;
   const { refetch } = profileQuery;
   const { refetch: refetchDrives } = drivesQuery;
 
   const { unitPrefs } = useUnits();
   const speedUnit = unitPrefs.speed;
   const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
+  const chartTick = { ...axisTick, fontFamily: getChartFontFamily(), fontSize: getChartFontSize() };
 
   const toSpeedDisplay = useCallback(
     (value: number) => convertSpeedFromSI(value, unitPrefs.speed),
@@ -107,14 +112,16 @@ export default function SpeedProfilePage() {
   const drives = useMemo(() => {
     const list = allDrives ?? [];
     if (list.length === 0) return list;
-    const startMs = new Date(`${start}T00:00:00`).getTime();
-    const endMs = new Date(`${end}T23:59:59.999`).getTime();
+    const startMs = Date.parse(startInstant);
+    const endMs = Date.parse(endInstantExclusive);
     return list.filter((d) => {
       if (!d.startTs) return false;
       const ts = new Date(d.startTs).getTime();
-      return ts >= startMs && ts <= endMs;
+      return ts >= startMs && ts < endMs;
     });
-  }, [allDrives, start, end]);
+  }, [allDrives, startInstant, endInstantExclusive]);
+  const authoritativeNoDrives = drivesState.hasData && allDrives?.length === 0;
+  const sampleNoMatch = (allDrives?.length ?? 0) > 0 && drives.length === 0;
 
   const totalReadings = useMemo(
     () => (data?.distribution ?? []).reduce((s, b) => s + (b.readings ?? 0), 0),
@@ -153,8 +160,8 @@ export default function SpeedProfilePage() {
         || raw == null || !Number.isFinite(raw)) continue;
       const eff = toEfficiencyDisplay(raw);
       points.push({
-        speed: Math.round(toSpeedDisplay(d.avgSpeedMps)),
-        efficiency: Math.round(eff),
+        speed: toSpeedDisplay(d.avgSpeedMps),
+        efficiency: eff,
         color: raw < 140 ? 'var(--semantic-success)' : raw < 200 ? 'var(--semantic-info)' : raw < 260 ? 'var(--semantic-warning)' : 'var(--semantic-danger)',
       });
     }
@@ -197,12 +204,27 @@ export default function SpeedProfilePage() {
   }, [drives, data]);
 
   const hasDistribution = distributionChartData.length > 0;
-  const drivesRetained = drivesState.status === 'stale';
-  const driveValueStatus = drivesLoading
-    ? t('driving.brief.loading', 'Loading source')
-    : drivesError || (drivesState.hasData && drives.length === 0)
-      ? t('common.unavailable', 'Unavailable')
-      : t('common.unknown', 'Unknown');
+  const profileRetained = !missingSelection && profileState.hasData
+    && (profileState.status === 'stale' || profileState.refreshError != null || profileState.isRefreshBlocked);
+  const drivesRetained = !missingSelection && drivesState.hasData
+    && (drivesState.status === 'stale' || drivesState.refreshError != null || drivesState.isRefreshBlocked);
+  const selectionMessage = t('driving.brief.selectVehicle', 'Select a vehicle');
+  const pausedMessage = t('dataSources.status.paused', 'Refresh paused');
+  const profilePlaceholder = missingSelection || profilePaused
+    ? <EmptyState message={missingSelection ? selectionMessage : pausedMessage} />
+    : null;
+  const drivesPlaceholder = missingSelection || drivesPaused
+    ? <EmptyState message={missingSelection ? selectionMessage : pausedMessage} />
+    : null;
+  const driveValueStatus = missingSelection
+    ? selectionMessage
+    : drivesPaused
+      ? pausedMessage
+      : drivesLoading
+        ? t('driving.brief.loading', 'Loading source')
+        : drivesError || authoritativeNoDrives
+          ? t('common.unavailable', 'Unavailable')
+          : t('common.unknown', 'Unknown');
 
   const displaySpeed = (mps: number | null | undefined) =>
     mps != null && Number.isFinite(mps) ? toSpeedDisplay(mps) : null;
@@ -218,8 +240,8 @@ export default function SpeedProfilePage() {
     { metricId: 'speed', occurrenceId: 'optimal-speed', rawValue: data?.optimalSpeedMps,
       label: t('speedProfile.optimalSpeed', 'Optimal Speed') },
     { metricId: 'count', occurrenceId: 'samples', rawValue: data ? totalReadings : null,
-      label: t('speedProfile.samples', 'Samples'),
-      context: drivesState.hasData
+      label: t('speedProfile.eligibleDrives', 'Eligible drives'),
+      context: !missingSelection && drivesState.hasData && !sampleNoMatch
         ? t('speedProfile.drivesAnalyzed', '{{count}} drives analysed', { count: drives.length })
         : t('speedProfile.brief.driveCoverageUnknown', 'Drive sample coverage is unavailable independently of the speed profile.') },
   ];
@@ -229,25 +251,33 @@ export default function SpeedProfilePage() {
       title={t('speedProfile.title', 'Speed Profile')}
       subtitle={t('speedProfile.subtitle', 'Speed distribution and driving pattern analysis')}
       query={[profileQuery, drivesQuery]}
-      busy={profileQuery.isFetching || drivesQuery.isFetching}
+      busy={!missingSelection && (profileQuery.isFetching || drivesQuery.isFetching)}
     >
-      <StaleRefreshWarning state={profileState} label={t('speedProfile.title', 'Speed Profile')} />
-      <StaleRefreshWarning state={drivesState} label={t('speedProfile.effVsSpeed', 'Efficiency vs Speed')} />
+      {!missingSelection && (
+        <>
+          <StaleRefreshWarning state={profileState} label={t('speedProfile.title', 'Speed Profile')} />
+          <StaleRefreshWarning state={drivesState} label={t('speedProfile.effVsSpeed', 'Efficiency vs Speed')} />
+          <DynamicsPausedNotice state={profileState} label={t('speedProfile.title', 'Speed Profile')} />
+          <DynamicsPausedNotice state={drivesState} label={t('speedProfile.effVsSpeed', 'Efficiency vs Speed')} />
+        </>
+      )}
       {/* 1 — KPI band */}
       <FadeIn>
         <SectionErrorBoundary name="SpeedProfileSummary">
         <DrivingSummaryBrief
           id="speed-profile-brief"
           title={t('speedProfile.summaryAria', 'Speed summary metrics')}
-          description={t('speedProfile.brief.description', 'Recorded speed statistics and distribution readings; drive evidence is a separately returned sample.')}
+          description={t('speedProfile.brief.description', 'Recorded speed statistics and eligible-drive counts; efficiency evidence comes from a separate drive query.')}
           metrics={summaryMetrics}
           scope={`${start} — ${end}`}
           provenance={t('speedProfile.brief.provenance', 'Speed-profile aggregate and returned vehicle drives; the server does not declare complete drive coverage.')}
           loading={isLoading}
-          unavailable={!profileState.hasData}
-          retained={profileState.status === 'stale'}
-          sourceStatus={!profileState.hasData && !isLoading && !error
-            ? t('common.unknown', 'Unknown') : undefined}
+          unavailable={missingSelection || !profileState.hasData}
+          retained={profileRetained}
+          sourceStatus={missingSelection ? selectionMessage : profileState.isRefreshBlocked && !error && !profileState.refreshError
+            ? t('dataSources.status.paused', 'Refresh paused')
+            : !profileState.hasData && !isLoading && !error
+              ? t('common.unknown', 'Unknown') : undefined}
           actions={error ? <QueryError error={error} onRetry={() => refetch()} /> : undefined}
         />
         </SectionErrorBoundary>
@@ -260,7 +290,8 @@ export default function SpeedProfilePage() {
             <SectionErrorBoundary name="SpeedProfileDistribution">
             <PanelTitle className="mb-3">{t('speedProfile.distribution', 'Speed Distribution')}</PanelTitle>
             <Caption className="mb-3 block">{t('speedProfile.sourceBucketUnit', 'Source speed buckets are in mph; averages use your selected units.')}</Caption>
-            {error ? (
+            <Caption className="mb-3 block">{t('speedProfile.countPopulation', 'Each count is one drive with a recorded average speed greater than zero in the selected vehicle and date range. Shares divide each bucket count by the total eligible-drive count, not by driving time or telemetry samples.')}</Caption>
+            {profilePlaceholder ? profilePlaceholder : error ? (
               <QueryError error={error} onRetry={() => refetch()} />
             ) : isLoading ? (
               <Skeleton height={288} />
@@ -276,21 +307,21 @@ export default function SpeedProfilePage() {
               <div className="h-64 sm:h-72 xl:h-80">
                 <EmbeddedChart
                   title={t('speedProfile.distribution', 'Speed Distribution')}
-                  ariaLabel={t('speedProfile.distributionAria', 'Speed-bucket time-share distribution bar chart')}
+                  ariaLabel={t('speedProfile.distributionAria', 'Eligible-drive counts by average-speed bucket bar chart')}
                   data={distributionChartData}
                   dataColumns={[
                     { key: 'range', label: t('speedProfile.buckets', 'Speed Buckets') },
-                    { key: 'readings', label: t('speedProfile.readings', 'Readings'), kind: 'count' },
+                    { key: 'readings', label: t('speedProfile.driveCount', 'Drive count'), kind: 'count' },
                   ]}
                   fluid
                 >
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={distributionChartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                      <XAxis dataKey="range" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-                      <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} allowDecimals={false} />
+                      <XAxis dataKey="range" tick={chartTick} />
+                      <YAxis tick={chartTick} allowDecimals={false} />
                       <Tooltip content={<ChartTooltip />} />
-                      <Bar dataKey="readings" name={t('speedProfile.readings', 'Readings')} radius={[4, 4, 0, 0]}>
+                      <Bar dataKey="readings" name={t('speedProfile.driveCount', 'Drive count')} radius={[4, 4, 0, 0]}>
                         {distributionChartData.map((b) => (
                           <Cell key={b.range} fill={bucketAccent(b.range).fill} fillOpacity={0.75} />
                         ))}
@@ -309,7 +340,7 @@ export default function SpeedProfilePage() {
             <Caption className="mb-3 block">
               {t('speedProfile.envelopeHint', 'Average, peak and most-efficient speed')}
             </Caption>
-            {error ? (
+            {profilePlaceholder ? profilePlaceholder : error ? (
               <QueryError error={error} onRetry={() => refetch()} />
             ) : isLoading ? (
               <Skeleton height={160} />
@@ -357,7 +388,9 @@ export default function SpeedProfilePage() {
         <section aria-label={t('speedProfile.buckets', 'Speed Buckets')}>
           <SectionTitle className="mb-3">{t('speedProfile.buckets', 'Speed Buckets')}</SectionTitle>
           <Caption className="mb-3 block">{t('speedProfile.sourceBucketUnit', 'Source speed buckets are in mph; averages use your selected units.')}</Caption>
-          {error ? (
+          {profilePlaceholder ? (
+            <GlassPanel className="p-4 sm:p-5">{profilePlaceholder}</GlassPanel>
+          ) : error ? (
             <GlassPanel className="p-4 sm:p-5">
               <QueryError error={error} onRetry={() => refetch()} />
             </GlassPanel>
@@ -402,13 +435,13 @@ export default function SpeedProfilePage() {
                     </div>
                     <dl className="flex-1 space-y-2">
                       <div className="flex items-center justify-between gap-2">
-                        <Text as="dt" variant="caption">{t('speedProfile.timeShare', 'Time share')}</Text>
+                        <Text as="dt" variant="caption">{t('speedProfile.driveCountShare', 'Drive count share')}</Text>
                         <Text as="dd" size="sm" weight="bold" color="secondary" className="tabular-nums">
                           {fmtNumber(bucket.pct)}%
                         </Text>
                       </div>
                       <div className="flex items-center justify-between gap-2">
-                        <Text as="dt" variant="caption">{t('speedProfile.readings', 'Readings')}</Text>
+                        <Text as="dt" variant="caption">{t('speedProfile.driveCount', 'Drive count')}</Text>
                         <Text as="dd" size="sm" weight="bold" color="secondary" className="tabular-nums">
                           {fmtInt(bucket.readings)}
                         </Text>
@@ -453,14 +486,14 @@ export default function SpeedProfilePage() {
             <Caption className="mb-3 block">
               {t('speedProfile.lower', 'Lower')} {efficiencyUnit} = {t('speedProfile.better', 'better')}
             </Caption>
-            {drivesError ? (
+            {drivesPlaceholder ? drivesPlaceholder : drivesError ? (
               <QueryError error={drivesError} onRetry={() => refetchDrives()} />
             ) : drivesLoading ? (
               <Skeleton height={240} />
             ) : scatterData.length === 0 ? (
               <EmptyState
                 icon={<Activity className="h-8 w-8" aria-hidden="true" />}
-                message={drivesState.hasData
+                message={drivesState.hasData && !sampleNoMatch
                   ? t('speedProfile.noScatter', 'Not enough drive data for the efficiency scatter yet')
                   : t('common.unknown', 'Unknown')}
                 actionTo={{ label: t('speedProfile.browseDrives', 'Browse drives'), to: '/drives' }}
@@ -485,13 +518,15 @@ export default function SpeedProfilePage() {
                           dataKey="speed"
                           name={t('speedProfile.speed', 'Speed')}
                           unit={` ${speedUnit}`}
-                          tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                          tickFormatter={fmtNumber}
+                          tick={chartTick}
                         />
                         <YAxis
                           dataKey="efficiency"
                           name={efficiencyUnit}
                           unit={` ${efficiencyUnit}`}
-                          tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                          tickFormatter={fmtNumber}
+                          tick={chartTick}
                         />
                         <Tooltip content={<ChartTooltip />} />
                         <Scatter data={scatterData} fillOpacity={0.75}>
@@ -516,7 +551,7 @@ export default function SpeedProfilePage() {
           <GlassPanel className="p-4 sm:p-5 xl:col-span-1">
             <SectionErrorBoundary name="SpeedProfileInsight">
             <PanelTitle className="mb-3">{t('speedProfile.insightTitle', 'Efficiency Insight')}</PanelTitle>
-            {error ? (
+            {profilePlaceholder ? profilePlaceholder : error ? (
               <QueryError error={error} onRetry={() => refetch()} />
             ) : isLoading ? (
               <Skeleton height={120} />

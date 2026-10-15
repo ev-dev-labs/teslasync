@@ -6,8 +6,8 @@ import type {
   ScienceWeather,
   ScienceWeatherPoint
 } from '@/api/types';
-import { EmptyState, Skeleton, StaleRefreshWarning } from '@/components/feedback';
-import { LayoutCard, SourceContent } from '@/components/layout';
+import { DataSourceNotice, EmptyState, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { SourceContent } from '@/components/layout';
 import {
   DataTable,
   Text,
@@ -15,7 +15,7 @@ import {
 } from '@/components/ui';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { formatEnergyPerDistance } from '@/lib/unitConversion';
 import { Link } from 'react-router-dom';
@@ -26,11 +26,13 @@ import type { StatMetric } from '@/components/data-display/stat-reference/types'
 import { ScienceSummaryBrief } from './operationalbrief-all/ScienceSummaryBrief';
 
 export function WeatherPanel({ window }: { window: ScienceWindow }) {
+  const { formatDateTime } = useDateFormat();
   const { fmtScientificNumber, fmtNumber } = useNumberFormatting();
   const t = useT();
   const query = useScienceWeather(window);
   const state = useDataState(query, { provenance: 'historical' });
   const data: ScienceWeather | undefined = state.data;
+  const initialPaused = !state.hasData && state.isRefreshBlocked && !state.fatalError;
   const { formatSpeed, formatTemperature, unitPrefs } = useUnits();
   const fitGuide = t('science.weather.fitGuide', 'Pearson r requires at least five complete matched drives and variation in both values. An unknown coefficient is not a zero effect; association is not causation.');
   const metrics: StatMetric[] = [
@@ -76,7 +78,7 @@ export function WeatherPanel({ window }: { window: ScienceWindow }) {
 
   const columns: Column<ScienceWeatherPoint>[] = [
     { key: 'drive', header: t('science.weather.drive', 'Drive'), render: (r) =>
-      <Link className="underline underline-offset-4" to={`/drives/${r.drive_id}`}>#{r.drive_id}</Link> },
+      <Link className="inline-flex min-h-11 min-w-11 items-center underline underline-offset-4" to={`/drives/${r.drive_id}`}>#{r.drive_id}</Link> },
     { key: 'at', header: t('science.weather.at', 'Start'), render: (r) => formatDateTime(r.at) },
     { key: 'temp', align: 'right', header: t('science.weather.temp', 'Temperature'), render: (r) => r.temp_c != null ? formatTemperature(r.temp_c) : unknown(t) },
     { key: 'wind', align: 'right', header: t('science.weather.wind', 'Wind'), render: (r) => (r.wind_mps != null ? formatSpeed(r.wind_mps) : unknown(t)) },
@@ -91,8 +93,7 @@ export function WeatherPanel({ window }: { window: ScienceWindow }) {
   ];
 
   return (
-    <section data-testid="science-weather" className="min-w-0">
-      <LayoutCard title={t('science.weather.title', 'Weather coupling (correlation)')}>
+    <section data-testid="science-weather" className="min-w-0 space-y-3">
       <StaleRefreshWarning state={state} />
       <ScienceSummaryBrief
         title={t('science.weather.title', 'Weather coupling (correlation)')}
@@ -102,14 +103,14 @@ export function WeatherPanel({ window }: { window: ScienceWindow }) {
         testId="science-weather-brief"
       />
       <SourceContent
-        state={state.status === 'initial' ? 'loading' : state.fatalError ? 'error' : !data ? 'empty' : 'ready'}
+        state={initialPaused ? 'empty' : state.status === 'initial' ? 'loading' : state.fatalError ? 'error' : !data ? 'empty' : 'ready'}
         label={t('science.weather.title', 'Weather coupling (correlation)')}
         emptyMessage={t('science.empty', 'No fit inputs in this window.')}
         errorMessage={t('error.loadFailed', 'Failed to load data')}
         error={state.fatalError}
         errorRecovery={{ onRetry: () => { void query.refetch(); } }}
         loadingContent={<Skeleton className="h-32" />}
-        emptyContent={<EmptyState title={t('science.weather.title', 'Weather coupling')} message={t('science.empty', 'No fit inputs in this window.')} action={{ label: t('common.retry', 'Retry'), onClick: () => { void query.refetch(); } }} />}
+        emptyContent={initialPaused ? <DataSourceNotice title={t('dataSources.status.paused', 'Refresh paused')} sources={[{ id: 'weather', label: t('science.overview.weather', 'Weather matches'), query }]} /> : <EmptyState title={t('science.weather.title', 'Weather coupling')} message={t('science.empty', 'No fit inputs in this window.')} action={{ label: t('common.retry', 'Retry'), onClick: () => { void query.refetch(); } }} />}
       >
       {data && (
         <>
@@ -126,6 +127,17 @@ export function WeatherPanel({ window }: { window: ScienceWindow }) {
               emptyMessage={t('science.empty', 'No fit inputs in this window.')}
               pagination={{ defaultPageSize: 10, pageSizeOptions: [10, 25, 50] }}
               mobileColumns={['drive', 'temp', 'res']}
+              mobilePresentation={{
+                roles: { drive: 'title', res: 'primary', temp: 'meta' },
+                displayValue: (r, key) => {
+                  const values: Record<string, string> = {
+                    drive: `#${r.drive_id}`,
+                    temp: r.temp_c != null ? formatTemperature(r.temp_c) : unknown(t),
+                    res: r.residual_wh_per_m != null ? formatEnergyPerDistance(r.residual_wh_per_m, unitPrefs) : unknown(t),
+                  };
+                  return values[key];
+                },
+              }}
             />
           ) : (
             <Text as="p" size="sm" color="secondary">{t('science.weather.empty', 'No drives joined archive weather in this window.')}</Text>
@@ -134,7 +146,6 @@ export function WeatherPanel({ window }: { window: ScienceWindow }) {
         </>
       )}
       </SourceContent>
-      </LayoutCard>
     </section>
   );
 }

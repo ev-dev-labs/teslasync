@@ -141,7 +141,6 @@ function tele(o: Partial<DriveTelemetryPoint> = {}): DriveTelemetryPoint {
   return {
     timestamp: '1970-01-01T00:00:00Z',
     speed: null,
-    power: null,
     batteryLevel: null,
     outsideTemp: null,
     insideTemp: null,
@@ -163,8 +162,17 @@ function tele(o: Partial<DriveTelemetryPoint> = {}): DriveTelemetryPoint {
     latitude: null,
     longitude: null,
     ...o,
+    // Scenarios specify kW; the endpoint fixture carries canonical watts.
+    power: o.power == null ? null : o.power * 1000,
   };
 }
+
+it('converts canonical signed fractional watts to drive-detail kW without filling gaps', () => {
+  const { result } = setup(drive({
+    telemetry: [1250.5, -2500.25, 0, null].map(power => ({ ...tele(), power })),
+  }));
+  expect(result.current.chartData.map(point => point.power)).toEqual([1.2505, -2.50025, 0, null]);
+});
 
 // Positions are read through an `any` cast in the hook (snake_case fallback),
 // so the factory accepts arbitrary extra keys and casts the result.
@@ -173,7 +181,6 @@ function pos(o: Record<string, unknown> = {}): DrivePosition {
     latitude: 0,
     longitude: 0,
     speed: null,
-    power: null,
     batteryLevel: 0,
     timestamp: '1970-01-01T00:00:00Z',
     insideTemp: null,
@@ -185,6 +192,7 @@ function pos(o: Record<string, unknown> = {}): DrivePosition {
     fanStatus: null,
     isClimateOn: null,
     ...o,
+    power: typeof o.power === 'number' ? o.power * 1000 : null,
   } as DrivePosition;
 }
 
@@ -477,10 +485,10 @@ describe('useDriveDetailData — speed-coloured segments', () => {
     const segs = result.current.speedSegments;
     expect(segs).toHaveLength(4);
     expect(segs.map((s) => s.color)).toEqual([
-      '#10b981', // green — below low
-      '#00f0ff', // cyan — >= low
-      '#f59e0b', // amber — >= med
-      '#ef4444', // red — >= high
+      chartTokens.series[1], // green — below low
+      chartTokens.series[0], // blue — >= low
+      chartTokens.series[2], // amber — >= med
+      chartTokens.series[3], // rose — >= high
     ]);
     // Each segment spans the previous → current coordinate pair.
     expect(segs[0].positions).toEqual([
@@ -532,9 +540,9 @@ describe('useDriveDetailData — unknown route speed', () => {
         }));
         expect(result.current.routeSource[1].speed).toBe(speed);
         expect(result.current.chartData[1].speed).toBeCloseTo(speed * MPS_TO_KMH);
-        const color = speed >= SPEED_SEGMENT_HIGH_MPS ? '#ef4444'
-          : speed >= SPEED_SEGMENT_MED_MPS ? '#f59e0b'
-          : speed >= SPEED_SEGMENT_LOW_MPS ? '#00f0ff' : '#10b981';
+        const color = speed >= SPEED_SEGMENT_HIGH_MPS ? chartTokens.series[3]
+          : speed >= SPEED_SEGMENT_MED_MPS ? chartTokens.series[2]
+          : speed >= SPEED_SEGMENT_LOW_MPS ? chartTokens.series[0] : chartTokens.series[1];
         expect(result.current.speedSegments[0].color).toBe(color);
         unmount();
       }
@@ -932,6 +940,63 @@ describe('useDriveDetailData — climate status branches', () => {
 });
 
 describe('useDriveDetailData — speed histogram', () => {
+  it('rebuckets raw SI samples when the selected speed unit changes', () => {
+    const raw = drive({ telemetry: [tele({ speed: 20 })] });
+    const { result, rerender } = setup(raw, METRIC);
+    expect(result.current.speedHistData).toEqual([
+      { range: `${fmtNumber(60)}–${fmtNumber(80)}`, pct: 100 },
+    ]);
+    expect(result.current.chartData[0].speed).toBeCloseTo(72);
+
+    H.unitPrefs = IMPERIAL;
+    rerender();
+    expect(result.current.speedHistData).toEqual([
+      { range: `${fmtNumber(40)}–${fmtNumber(60)}`, pct: 100 },
+    ]);
+    expect(result.current.chartData[0].speed).toBeCloseTo(20 * MPS_TO_MPH);
+    expect(result.current.drive?.telemetry?.[0].speed).toBe(20);
+  });
+
+  it.each(['telemetry', 'positions'] as const)('excludes missing and invalid %s speeds but counts measured zero', (source) => {
+    const speeds = [null, undefined, NaN, Infinity, -Infinity];
+    const makeDrive = (values: typeof speeds) => drive(source === 'telemetry'
+      ? { telemetry: values.map((speed) => tele({ speed })) }
+      : { positions: values.map((speed) => pos({ speed })) });
+    const { result, rerender } = setup(makeDrive(speeds));
+    expect(result.current.speedHistData).toEqual([]);
+    expect(result.current.chartData.map((point) => point.speed)).toEqual(speeds.map(() => null));
+
+    H.drive = makeDrive([...speeds, 0]);
+    rerender();
+    expect(result.current.speedHistData).toEqual([
+      { range: `${fmtNumber(0)}–${fmtNumber(20)}`, pct: 100 },
+    ]);
+    expect(result.current.chartData.at(-1)?.speed).toBe(0);
+  });
+
+  it.each(['telemetry', 'positions'] as const)('retains signed, fractional and open-ended %s observations in the denominator', (source) => {
+    for (const prefs of [METRIC, IMPERIAL]) {
+      const factor = prefs.speed === 'km/h' ? MPS_TO_KMH : MPS_TO_MPH;
+      const speeds = [-0.125, 0, 19.75, 20.25, 10000].map((speed) => speed / factor);
+      const raw = drive(source === 'telemetry'
+        ? { telemetry: speeds.map((speed) => tele({ speed })) }
+        : { positions: speeds.map((speed) => pos({ speed })) });
+      const { result, unmount } = setup(raw, prefs);
+      expect(result.current.speedHistData).toEqual([
+        { range: `<${fmtNumber(0)}`, pct: 20 },
+        { range: `${fmtNumber(0)}–${fmtNumber(20)}`, pct: 40 },
+        { range: `${fmtNumber(20)}–${fmtNumber(40)}`, pct: 20 },
+        { range: `${fmtNumber(120)}+`, pct: 20 },
+      ]);
+      result.current.chartData.forEach((point, index) => {
+        expect(point.speed).toBeCloseTo(speeds[index] * factor);
+      });
+      expect((source === 'telemetry' ? raw.telemetry : raw.positions)?.map((point) => point.speed)).toEqual(speeds);
+      expect(result.current.drive).toBe(raw);
+      unmount();
+    }
+  });
+
   it('buckets display-unit speeds, drops empty buckets, and rounds the percentage', () => {
     // Metric speeds must land in the 0–20, 20–40 and 120+ buckets: pick SI m/s
     // that convert to 10, 30 and 130 km/h respectively.

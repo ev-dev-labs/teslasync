@@ -36,9 +36,9 @@ export function AdvantageBreakdown({
   const items = rows ?? [];
 
   return (
-    <GlassPanel className={cn('p-5', className)} data-testid="drive-compare-breakdown">
+    <GlassPanel className={cn('min-w-0 p-4 sm:p-5', className)} data-testid="drive-compare-breakdown">
       <PanelTitle className="mb-1 flex items-center gap-2">
-        <Gauge className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+        <Gauge className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
         {t('driveCompare.breakdown.title', 'What decided it')}
       </PanelTitle>
       <Text as="p" variant="caption" className="mb-4">
@@ -80,19 +80,19 @@ export function AdvantageBreakdown({
             return (
               <div
                 key={metric.key}
-                className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
+                className="flex min-w-0 flex-col items-start gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3 sm:flex-row sm:flex-wrap sm:justify-between"
               >
-                <div className="min-w-0">
-                  <Text as="div" variant="body">
+                <div className="min-w-0 max-w-full">
+                  <Text as="div" variant="body" className="whitespace-normal break-words">
                     {t(metric.labelKey, metric.fallback)}
                   </Text>
-                  <Text as="div" variant="caption" className="truncate">
+                  <Text as="div" variant="caption" className="whitespace-normal break-words">
                     {detail}
                   </Text>
                 </div>
                 <Badge
                   variant={row?.winner ? 'success' : 'neutral'}
-                  className={cn('shrink-0', row?.winner === 'b' && 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200')}
+                  className="max-w-full whitespace-normal break-words"
                 >
                   {outcome}
                 </Badge>
@@ -100,7 +100,7 @@ export function AdvantageBreakdown({
             );
           })}
         </div>
-        <Text as="p" variant="caption" className="mt-4">
+        <Text as="p" variant="caption" className="mt-4 whitespace-normal break-words">
           {t(
             'driveCompare.breakdown.note',
             'Regen is scored only on trips of at least 1 km; total energy and battery drop never award a winner.',

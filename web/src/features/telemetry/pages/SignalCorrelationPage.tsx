@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from 'react';
+import { useCallback, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeftRight, GitCompareArrows, Timer, Waypoints } from 'lucide-react';
 
@@ -17,20 +17,30 @@ import {
 
 import { useSignals, useSignalHistory } from '@/api/hooks/useTelemetry';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useRangeState } from '@/hooks/useRangeState';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { isFiniteNumber } from '@/lib/numberFormat';
 import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
 import { chartTokens } from '@/lib/tokens';
 
-import { crossCorrelate } from '../lib/signalCorrelation';
-
-const HOURS = 24;
+import { analyzeCorrelation } from '../lib/signalCorrelation';
 
 export default function SignalCorrelationPage() {
   const { t } = useTranslation();
   const { formatDateTime, formatTime, tz } = useDateFormat();
+  const { fmtNumber } = useNumberFormatting();
+  const formatMeasurement = useCallback(
+    (value: unknown) => isFiniteNumber(value) ? fmtNumber(value) : '—',
+    [fmtNumber],
+  );
+  const formatLag = useCallback(
+    (value: unknown) => isFiniteNumber(value) ? `${fmtNumber(value)} s` : '—',
+    [fmtNumber],
+  );
   const detrendHintId = useId();
   usePageTitle(t('signalCorrelation.title', 'Signal correlation'));
   const axisTick = {
@@ -41,6 +51,9 @@ export default function SignalCorrelationPage() {
 
   const { vehicleId } = useSelectedVehicle();
   const id = vehicleId ?? 0;
+  const { startInstant, endInstantExclusive } = useRangeState();
+  const hours = (Date.parse(endInstantExclusive) - Date.parse(startInstant)) / 3_600_000;
+  const historyWindow = { startInstant, endInstantExclusive };
 
   const [signalA, setSignalA] = useState('');
   const [signalB, setSignalB] = useState('');
@@ -48,8 +61,8 @@ export default function SignalCorrelationPage() {
   const overlayHidden = useHiddenSeries('signal-correlation-overlay');
 
   const signalsQuery = useSignals(id);
-  const historyA = useSignalHistory(id, signalA, HOURS);
-  const historyB = useSignalHistory(id, signalB, HOURS);
+  const historyA = useSignalHistory(id, signalA, hours, historyWindow);
+  const historyB = useSignalHistory(id, signalB, hours, historyWindow);
   const catalogState = useDataState(signalsQuery);
   const historyAState = useDataState(historyA, { provenance: 'historical' });
   const historyBState = useDataState(historyB, { provenance: 'historical' });
@@ -91,12 +104,11 @@ export default function SignalCorrelationPage() {
     [signalsQuery.data],
   );
 
-  const result = useMemo(() => {
-    const a = historyA.data?.data ?? [];
-    const b = historyB.data?.data ?? [];
-    if (a.length === 0 || b.length === 0) return null;
-    return crossCorrelate(a, b, { detrend });
-  }, [historyA.data, historyB.data, detrend]);
+  const evidence = useMemo(() => {
+    if (!bothChosen || vehicleId == null || historyA.data === undefined || historyB.data === undefined) return null;
+    return analyzeCorrelation(historyA.data.data ?? [], historyB.data.data ?? [], { detrend });
+  }, [bothChosen, vehicleId, historyA.data, historyB.data, detrend]);
+  const result = evidence?.result ?? null;
 
   const correlogram = useMemo(
     () =>
@@ -138,8 +150,8 @@ export default function SignalCorrelationPage() {
   const historyAHasData = historyA.data !== undefined;
   const historyBHasData = historyB.data !== undefined;
   const isLoading = bothChosen && (
-    (!historyAHasData && historyA.isLoading)
-    || (!historyBHasData && historyB.isLoading)
+    (!historyAHasData && (historyA.isLoading || historyA.fetchStatus === 'fetching'))
+    || (!historyBHasData && (historyB.isLoading || historyB.fetchStatus === 'fetching'))
   );
   const isError = bothChosen && (
     historyAState.fatalError != null
@@ -151,6 +163,22 @@ export default function SignalCorrelationPage() {
     if (historyAState.fatalError) historyAState.retry?.();
     if (historyBState.fatalError) historyBState.retry?.();
   };
+  const waitingForHistory = bothChosen && (!historyAHasData || !historyBHasData);
+  const paused = (!historyAHasData && historyA.fetchStatus === 'paused')
+    || (!historyBHasData && historyB.fetchStatus === 'paused');
+  const comparisonMessage = !bothChosen
+    ? t('signalCorrelation.pickTwo', 'Choose two signals above to compute the correlogram.')
+    : waitingForHistory
+      ? paused
+        ? t('signalCorrelation.historyPaused', 'History loading is paused. No comparison evidence has loaded yet.')
+        : t('signalCorrelation.historyPending', 'History availability has not resolved yet.')
+      : evidence?.reason === 'empty'
+        ? t('signalHistory.emptyMessage', 'No signal data matches the selected signals and time range.')
+        : evidence?.reason === 'nonnumeric'
+          ? t('signalCorrelation.nonnumericHistory', 'At least one selected history has no usable numeric or boolean measurements.')
+          : evidence?.reason === 'disjoint'
+            ? t('signalTransportAgreement.overlapTitle', 'Not enough overlapping evidence')
+            : t('signalCorrelation.insufficientEvidence', 'There is not enough comparable evidence to compute a correlation.');
 
   const leadLabel =
     result == null
@@ -252,25 +280,15 @@ export default function SignalCorrelationPage() {
             </PanelTitle>
             <EmptyState /* no-action: the correlogram is computed as soon as two signals with overlapping history are chosen. */
               icon={<GitCompareArrows className="h-8 w-8" />}
-              message={
-                bothChosen
-                  ? t(
-                      'signalCorrelation.noOverlap',
-                      'These two signals have no overlapping window of history in the last day, so there is nothing to compare.',
-                    )
-                  : t(
-                      'signalCorrelation.pickTwo',
-                      'Choose two signals above to compute the correlogram.',
-                    )
-              }
+              message={comparisonMessage}
             />
           </GlassPanel>
         ) : (
           <ChartContainer
             title={t('signalCorrelation.correlogram.title', 'Lagged correlogram')}
             subtitle={t(
-              'signalCorrelation.correlogramHint',
-              'Correlation at every time shift; the dashed lines are the significance threshold',
+              'signalCorrelation.screeningCorrelogramHint',
+              'Correlation at every time shift; the dashed lines are an approximate screening threshold, not a calibrated significance guarantee',
             )}
             ariaLabel={t(
               'signalCorrelation.correlogram.aria',
@@ -280,20 +298,21 @@ export default function SignalCorrelationPage() {
             error={isError ? error : null}
             onRetry={retryBothFailed}
             empty={correlogram.length === 0}
+            emptyMessage={comparisonMessage}
             height={340}
             data={correlogram}
             dataColumns={[
-              { key: 'lag', label: t('signalCorrelation.col.lag', 'Lag (s)') },
-              { key: 'r', label: t('signalCorrelation.col.r', 'r') },
-              { key: 'n', label: t('signalCorrelation.col.n', 'Samples') },
+              { key: 'lag', label: t('signalCorrelation.col.lag', 'Lag (s)'), kind: 'measurement', format: formatLag },
+              { key: 'r', label: t('signalCorrelation.col.r', 'r'), kind: 'measurement', format: formatMeasurement },
+              { key: 'n', label: t('signalCorrelation.col.n', 'Samples'), kind: 'count' },
             ]}
           >
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={correlogram}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                <XAxis dataKey="lag" tick={axisTick} unit=" s" />
-                <YAxis tick={axisTick} domain={[-1, 1]} />
-                <Tooltip content={<ChartTooltip />} />
+                <XAxis dataKey="lag" tick={axisTick} unit=" s" tickFormatter={formatMeasurement} />
+                <YAxis tick={axisTick} domain={[-1, 1]} tickFormatter={formatMeasurement} />
+                <Tooltip content={<ChartTooltip labelFormatter={formatLag} valueFormatter={formatMeasurement} />} />
                 <ReferenceLine y={0} stroke="var(--text-muted)" />
                 {result != null ? (
                   <ReferenceLine
@@ -347,12 +366,13 @@ export default function SignalCorrelationPage() {
           error={isError ? error : null}
           onRetry={retryBothFailed}
           empty={overlay.length === 0}
+          emptyMessage={comparisonMessage}
           height={300}
           data={overlay}
           dataColumns={[
             { key: 'time', label: t('signalCorrelation.col.time', 'Time') },
-            { key: 'a', label: signalA || t('signalCorrelation.signalA', 'Signal A') },
-            { key: 'b', label: signalB || t('signalCorrelation.signalB', 'Signal B') },
+            { key: 'a', label: signalA || t('signalCorrelation.signalA', 'Signal A'), kind: 'measurement', format: formatMeasurement },
+            { key: 'b', label: signalB || t('signalCorrelation.signalB', 'Signal B'), kind: 'measurement', format: formatMeasurement },
           ]}
         >
           <ResponsiveContainer width="100%" height="100%">
@@ -364,8 +384,8 @@ export default function SignalCorrelationPage() {
                 tickFormatter={(ms: number) => formatTime(new Date(ms))}
                 minTickGap={40}
               />
-              <YAxis tick={axisTick} domain={[0, 1]} />
-              <Tooltip content={<ChartTooltip labelFormatter={(ms) =>
+              <YAxis tick={axisTick} domain={[0, 1]} tickFormatter={formatMeasurement} />
+              <Tooltip content={<ChartTooltip valueFormatter={formatMeasurement} labelFormatter={(ms) =>
                 typeof ms === 'number' ? `${formatDateTime(new Date(ms))} (${tz})` : '—'
               } />} />
               <ChartLegend state={overlayHidden} />
@@ -412,10 +432,7 @@ export default function SignalCorrelationPage() {
           ) : result == null ? (
             <EmptyState /* no-action: the interpretation follows from the correlogram above. */
               icon={<ArrowLeftRight className="h-8 w-8" />}
-              message={t(
-                'signalCorrelation.noReading',
-                'Pick two signals to see how the result should be read.',
-              )}
+              message={comparisonMessage}
             />
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
@@ -423,25 +440,32 @@ export default function SignalCorrelationPage() {
                 <div className="mb-1 flex flex-wrap items-center gap-2">
                   <Badge variant={result.significant ? 'success' : 'warning'}>
                     {result.significant
-                      ? t('signalCorrelation.real', 'Real')
-                      : t('signalCorrelation.noise', 'Noise')}
+                      ? t('signalCorrelation.clearsScreen', 'Clears screening threshold')
+                      : t('signalCorrelation.belowScreen', 'Below screening threshold')}
                   </Badge>
-                  <Text variant="caption">
-                    {t('signalCorrelation.coverage', '{{filled}} filled · {{gaps}} gaps', {
-                      filled: result.seriesA.filled,
-                      gaps: result.seriesA.gaps,
-                    })}
-                  </Text>
+                </div>
+                <div className="mb-2 space-y-1">
+                  {[
+                    { key: 'a', label: t('signalCorrelation.signalA', 'Signal A'), name: signalA, series: result.seriesA },
+                    { key: 'b', label: t('signalCorrelation.signalB', 'Signal B'), name: signalB, series: result.seriesB },
+                  ].map(({ key, label, name, series }) => (
+                    <Text key={key} variant="caption">
+                      {label}: {name} — {t('signalCorrelation.coverage', '{{filled}} filled · {{gaps}} gaps', {
+                        filled: series.filled,
+                        gaps: series.gaps,
+                      })}
+                    </Text>
+                  ))}
                 </div>
                 <Text variant="body">
                   {result.significant
                     ? t(
-                        'signalCorrelation.realText',
-                        'The peak clears the threshold adjusted for autocorrelation, so this relationship is unlikely to be an artefact of the two signals simply being smooth.',
+                        'signalCorrelation.clearsScreenText',
+                        'The peak clears the approximate autocorrelation-adjusted screening threshold. This is a candidate for further investigation, not proof of a real relationship or causation.',
                       )
                     : t(
-                        'signalCorrelation.noiseText',
-                        'The peak does not clear the autocorrelation-adjusted threshold. Smooth signals correlate with almost anything, so this is best treated as coincidence.',
+                        'signalCorrelation.belowScreenText',
+                        'The peak does not clear the approximate autocorrelation-adjusted screening threshold. This does not establish that the signals are unrelated or that the observed alignment is noise.',
                       )}
                 </Text>
               </Card>
@@ -464,6 +488,12 @@ export default function SignalCorrelationPage() {
               </Card>
             </div>
           )}
+          <Text variant="body" className="mt-3">
+            {t(
+              'signalCorrelation.screeningMethodology',
+              'Methodology: the screening rule uses a fixed critical value of 1.96 and a lag-1 autocorrelation-adjusted effective sample size. It is not a calibrated 95% significance guarantee: the fixed value is not conservative for small effective samples, resampling and gaps can affect dependence, and selecting the strongest peak across multiple lags is not corrected for multiple testing. The summary labels are screening outcomes only; neither a threshold crossing nor a time lead proves causation.',
+            )}
+          </Text>
         </GlassPanel>
       </FadeIn>
     </PageLayout>

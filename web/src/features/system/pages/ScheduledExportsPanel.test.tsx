@@ -27,8 +27,9 @@
  * never reaches the settings query.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-query';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
@@ -116,7 +117,9 @@ vi.mock('@/api/hooks/useExports', async () => {
     useScheduledExports: () => H.query.current,
     useCreateScheduledExport: () => ({ mutateAsync: H.createFn, isPending: H.createPending.value }),
     useUpdateScheduledExport: () => ({ mutateAsync: H.updateFn, isPending: H.updatePending.value }),
-    useDeleteScheduledExport: () => ({ mutate: H.removeFn, isPending: false }),
+    useDeleteScheduledExport: () => useMutation({
+      mutationFn: (id: number) => H.removeFn(id),
+    }),
     useRunScheduledExportNow: () => ({
       mutate: H.runNowFn,
       isPending: H.runNow.pending,
@@ -152,6 +155,7 @@ function makeRow(overrides: Partial<ScheduledExport> = {}): ScheduledExport {
 interface Query {
   data?: ScheduledExport[];
   isLoading: boolean;
+  fetchStatus?: 'fetching' | 'paused' | 'idle';
   isError: boolean;
   error: unknown;
   refetch: typeof H.refetch;
@@ -174,13 +178,24 @@ function setQuery(q: Partial<Query>) {
 
 function renderPanel() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <ScheduledExportsPanel />
+        {children}
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  return render(<ScheduledExportsPanel />, { wrapper });
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (error: Error) => void;
+  const promise = new Promise<T>((yes, no) => {
+    resolve = yes;
+    reject = no;
+  });
+  return { promise, resolve, reject };
 }
 
 const FUTURE = new Date(Date.now() + 60 * 60 * 1000).toISOString();
@@ -226,7 +241,7 @@ const DATA: ScheduledExport[] = [
 beforeEach(() => {
   H.createFn.mockReset().mockResolvedValue(makeRow());
   H.updateFn.mockReset().mockResolvedValue(makeRow());
-  H.removeFn.mockReset();
+  H.removeFn.mockReset().mockResolvedValue(undefined);
   H.runNowFn.mockReset();
   H.refetch.mockReset().mockResolvedValue(undefined);
   H.createPending.value = false;
@@ -238,6 +253,38 @@ beforeEach(() => {
 });
 
 // ── 1. Data state ─────────────────────────────────────────────────────────────
+describe('Scheduled export responsive callers', () => {
+  it('retains all native fields and keyboard submission with responsive targets', async () => {
+    const user = userEvent.setup();
+    setQuery({ data: [makeRow()] });
+    renderPanel();
+    const trigger = screen.getByRole('button', { name: 'New schedule' });
+    expect(trigger).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'whitespace-normal');
+    trigger.focus();
+    await user.keyboard('{Enter}');
+    const form = screen.getByTestId('scheduled-exports-form');
+    for (const field of within(form).getAllByRole('textbox')) {
+      expect(field).toHaveClass('min-h-11', 'md:min-h-10');
+    }
+    expect(within(form).getAllByRole('combobox')).toHaveLength(3);
+    await user.type(within(form).getByRole('textbox', { name: 'Name' }), 'Keyboard schedule');
+    fireEvent.change(within(form).getByRole('combobox', { name: 'Delivery kind' }), {
+      target: { value: 'email' },
+    });
+    await user.type(within(form).getByRole('textbox', { name: /Delivery target/ }), 'test@example.com');
+    const save = within(form).getByRole('button', { name: 'Save schedule' });
+    expect(save).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'whitespace-normal');
+    save.focus();
+    await user.keyboard('{Enter}');
+    await waitFor(() => expect(H.createFn).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'Keyboard schedule', delivery: { kind: 'email', target: 'test@example.com' },
+    })));
+    for (const action of within(screen.getByTestId('scheduled-exports-row-1')).getAllByRole('button')) {
+      expect(action).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'whitespace-normal');
+    }
+  });
+});
+
 describe('ScheduledExportsPanel — data state', () => {
   beforeEach(() => setQuery({ data: DATA }));
 
@@ -286,6 +333,23 @@ describe('ScheduledExportsPanel — data state', () => {
 
 // ── 2. Loading / error / empty ────────────────────────────────────────────────
 describe('ScheduledExportsPanel — loading / error / empty', () => {
+  it.each(['paused', 'idle'] as const)('does not infer empty schedules from an initial %s source and recovers', (fetchStatus) => {
+    setQuery({ data: undefined, isLoading: false, fetchStatus });
+    const { rerender } = renderPanel();
+    expect(screen.queryByText('No schedules yet')).toBeNull();
+    expect(screen.queryByText("Can't reach server")).toBeNull();
+    expect(screen.getByRole('button', { name: 'New schedule' })).toBeEnabled();
+    if (fetchStatus === 'paused') expect(screen.getByText('Refresh paused')).toBeVisible();
+
+    setQuery({ data: DATA });
+    rerender(<ScheduledExportsPanel />);
+    expect(screen.getByTestId('scheduled-exports-table')).toBeInTheDocument();
+    for (const row of DATA) expect(screen.getByTestId(`scheduled-exports-row-${row.id}`)).toBeInTheDocument();
+    setQuery({ data: [] });
+    rerender(<ScheduledExportsPanel />);
+    expect(screen.getByText('No schedules yet')).toBeInTheDocument();
+  });
+
   it('shows no table or empty state while loading', () => {
     setQuery({ data: undefined, isLoading: true });
     renderPanel();
@@ -315,11 +379,50 @@ describe('ScheduledExportsPanel — loading / error / empty', () => {
     expect(screen.queryByText("Can't reach server")).toBeNull();
   });
 
+  it.each([
+    new Error('Scheduled exports unavailable: upstream rejected the complete source request.'),
+    { error: 'Scheduled exports unavailable: upstream rejected the complete source request.' },
+  ])('exposes the full source error while preserving retry (%j)', async (error) => {
+    const user = userEvent.setup();
+    setQuery({ data: undefined, isError: true, error });
+    renderPanel();
+
+    expect(screen.getByText(
+      'Scheduled exports unavailable: upstream rejected the complete source request.',
+    )).toBeVisible();
+    expect(screen.queryByText('No schedules yet')).toBeNull();
+    screen.getByRole('button', { name: 'Retry' }).focus();
+    await user.keyboard('{Enter}');
+    expect(H.refetch).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps the table when a background refetch errors but data is present', () => {
     setQuery({ data: DATA, isError: true, error: new Error('stale') });
     renderPanel();
     expect(screen.getByTestId('scheduled-exports-table')).toBeInTheDocument();
     expect(screen.queryByText("Can't reach server")).toBeNull();
+  });
+
+  it('retains populated schedules while refresh is paused', () => {
+    setQuery({ data: DATA, fetchStatus: 'paused' });
+    renderPanel();
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
+    for (const row of DATA) expect(screen.getByTestId(`scheduled-exports-row-${row.id}`)).toBeInTheDocument();
+    expect(screen.queryByText('No schedules yet')).toBeNull();
+  });
+
+  it('exposes the full refresh error without replacing populated schedules', async () => {
+    const user = userEvent.setup();
+    const message = 'Scheduled export refresh failed: upstream response could not be decoded.';
+    setQuery({ data: DATA, isError: true, error: new Error(message) });
+    renderPanel();
+
+    expect(within(screen.getByTestId('stale-refresh-warning')).getByText(message)).toBeVisible();
+    for (const row of DATA) {
+      expect(screen.getByTestId(`scheduled-exports-row-${row.id}`)).toBeInTheDocument();
+    }
+    await user.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(H.refetch).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -415,6 +518,91 @@ describe('ScheduledExportsPanel — create form', () => {
 });
 
 // ── 4. Edit form ──────────────────────────────────────────────────────────────
+describe('ScheduledExportsPanel — save settlement identity', () => {
+  beforeEach(() => setQuery({ data: DATA }));
+
+  it.each(['create', 'edit'] as const)(
+    'retains a pending %s draft and original context across row refresh and replacement attempts',
+    async (mode) => {
+      const pending = deferred<ScheduledExport>();
+      const mutation = mode === 'create' ? H.createFn : H.updateFn;
+      mutation.mockReturnValueOnce(pending.promise);
+      const { rerender } = renderPanel();
+      if (mode === 'create') {
+        fireEvent.click(screen.getByTestId('scheduled-exports-new-button'));
+      } else {
+        fireEvent.click(within(screen.getByTestId('scheduled-exports-row-2'))
+          .getByRole('button', { name: 'Edit' }));
+      }
+      fireEvent.change(screen.getByLabelText('Name'), { target: { value: '  retained draft  ' } });
+      const form = screen.getByTestId('scheduled-exports-form');
+      act(() => {
+        fireEvent.submit(form);
+        fireEvent.submit(form);
+        fireEvent.click(screen.getByTestId('scheduled-exports-new-button'));
+        fireEvent.click(within(screen.getByTestId('scheduled-exports-row-1'))
+          .getByRole('button', { name: 'Edit' }));
+        fireEvent.click(within(form).getByRole('button', { name: 'Cancel' }));
+      });
+      expect(mutation).toHaveBeenCalledTimes(1);
+      expect(screen.getByLabelText('Name')).toHaveValue('  retained draft  ');
+      expect(screen.getByLabelText('Name')).toBeDisabled();
+      expect(form).toHaveAttribute('aria-busy', 'true');
+
+      setQuery({ data: [makeRow({ id: 4, name: 'New list scope' })] });
+      rerender(<ScheduledExportsPanel />);
+      expect(screen.getByLabelText('Name')).toHaveValue('  retained draft  ');
+      if (mode === 'edit') {
+        expect(mutation).toHaveBeenCalledWith(expect.objectContaining({ id: 2 }));
+      }
+      await act(async () => pending.reject(new Error('Save failed')));
+      expect(screen.getByLabelText('Name')).toHaveValue('  retained draft  ');
+      expect(screen.getByLabelText('Name')).toBeEnabled();
+      fireEvent.submit(screen.getByTestId('scheduled-exports-form'));
+      await waitFor(() => expect(screen.queryByTestId('scheduled-exports-form')).toBeNull());
+      expect(mutation).toHaveBeenCalledTimes(2);
+      expect(mutation.mock.calls[1]).toEqual(mutation.mock.calls[0]);
+    },
+  );
+
+  it('does not clear a changed local draft when an older successful save settles', async () => {
+    const pending = deferred<ScheduledExport>();
+    H.createFn.mockReturnValueOnce(pending.promise);
+    renderPanel();
+    fireEvent.click(screen.getByTestId('scheduled-exports-new-button'));
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Submitted draft' } });
+    fireEvent.submit(screen.getByTestId('scheduled-exports-form'));
+    // Programmatic change bypasses the disabled fieldset; settlement must still
+    // verify the exact draft rather than destructively clearing newer state.
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Newer draft' } });
+    await act(async () => pending.resolve(makeRow()));
+    expect(screen.getByLabelText('Name')).toHaveValue('Newer draft');
+    expect(screen.getByTestId('scheduled-exports-form-submit')).toBeEnabled();
+    fireEvent.submit(screen.getByTestId('scheduled-exports-form'));
+    await waitFor(() => expect(screen.queryByTestId('scheduled-exports-form')).toBeNull());
+    expect(H.createFn.mock.calls[1][0]).toEqual(expect.objectContaining({ name: 'Newer draft' }));
+  });
+
+  it('does not let an unmounted instance settlement release a new instance save', async () => {
+    const oldSave = deferred<ScheduledExport>();
+    const newSave = deferred<ScheduledExport>();
+    H.createFn.mockReturnValueOnce(oldSave.promise).mockReturnValueOnce(newSave.promise);
+    const oldPanel = renderPanel();
+    fireEvent.click(screen.getByTestId('scheduled-exports-new-button'));
+    fireEvent.submit(screen.getByTestId('scheduled-exports-form'));
+    oldPanel.unmount();
+    renderPanel();
+    fireEvent.click(screen.getByTestId('scheduled-exports-new-button'));
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'New instance draft' } });
+    fireEvent.submit(screen.getByTestId('scheduled-exports-form'));
+    await act(async () => oldSave.resolve(makeRow()));
+    expect(screen.getByLabelText('Name')).toHaveValue('New instance draft');
+    expect(screen.getByTestId('scheduled-exports-form-submit')).toBeDisabled();
+    await act(async () => newSave.resolve(makeRow()));
+    expect(screen.queryByTestId('scheduled-exports-form')).toBeNull();
+  });
+});
+
 describe('ScheduledExportsPanel — edit form', () => {
   beforeEach(() => setQuery({ data: DATA }));
 
@@ -527,6 +715,94 @@ describe('ScheduledExportsPanel — delete flow', () => {
 
     expect(H.removeFn).not.toHaveBeenCalled();
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('keeps confirmation locked until deletion succeeds', async () => {
+    const user = userEvent.setup();
+    let resolveDelete!: () => void;
+    H.removeFn.mockReturnValueOnce(new Promise<void>((resolve) => {
+      resolveDelete = resolve;
+    }));
+    renderPanel();
+    await user.click(screen.getByTestId('scheduled-exports-delete-2'));
+    const dialog = await screen.findByRole('dialog');
+    const confirm = within(dialog).getByRole('button', { name: 'Delete' });
+    await user.click(confirm);
+
+    await waitFor(() => expect(confirm).toBeDisabled());
+    expect(confirm).toHaveAttribute('aria-busy', 'true');
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeDisabled();
+    await user.click(confirm);
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await user.keyboard('{Escape}');
+    await user.click(within(dialog).getByRole('button', { name: 'Close' }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(H.removeFn).toHaveBeenCalledTimes(1);
+    for (const row of DATA) {
+      expect(screen.getByTestId(`scheduled-exports-row-${row.id}`)).toBeInTheDocument();
+      expect(screen.getByTestId(`scheduled-exports-delete-${row.id}`)).toBeDisabled();
+    }
+
+    await act(async () => resolveDelete());
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('retains the selected schedule after rejection and allows a successful retry', async () => {
+    const user = userEvent.setup();
+    let rejectDelete!: (error: Error) => void;
+    H.removeFn.mockReturnValueOnce(new Promise<void>((_resolve, reject) => {
+      rejectDelete = reject;
+    }));
+    renderPanel();
+    await user.click(screen.getByTestId('scheduled-exports-delete-2'));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }));
+    await waitFor(() => expect(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }),
+    ).toBeDisabled());
+
+    await act(async () => rejectDelete(new Error('Deletion failed')));
+    const dialog = screen.getByRole('dialog');
+    await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Delete' })).toBeEnabled());
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeEnabled();
+    expect(within(dialog).getByText('This will stop future runs of Charging weekly.')).toBeVisible();
+    for (const row of DATA) {
+      expect(screen.getByTestId(`scheduled-exports-row-${row.id}`)).toBeInTheDocument();
+    }
+
+    await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(H.removeFn.mock.calls).toEqual([[2], [2]]);
+  });
+
+  it('retains the original deletion context when the list scope changes during pending work', async () => {
+    const pending = deferred<void>();
+    H.removeFn.mockReturnValueOnce(pending.promise);
+    const { rerender } = renderPanel();
+    fireEvent.click(screen.getByTestId('scheduled-exports-delete-2'));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }));
+    setQuery({ data: [makeRow({ id: 2, name: 'Refreshed schedule name' })] });
+    rerender(<ScheduledExportsPanel />);
+    expect(within(screen.getByRole('dialog'))
+      .getByText('This will stop future runs of Charging weekly.')).toBeVisible();
+    fireEvent.click(screen.getByTestId('scheduled-exports-delete-2'));
+    expect(H.removeFn.mock.calls).toEqual([[2]]);
+    await act(async () => pending.resolve());
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('ignores stale deletion completion after a new panel instance opens a confirmation', async () => {
+    const pending = deferred<void>();
+    H.removeFn.mockReturnValueOnce(pending.promise);
+    const oldPanel = renderPanel();
+    fireEvent.click(screen.getByTestId('scheduled-exports-delete-2'));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }));
+    oldPanel.unmount();
+    renderPanel();
+    fireEvent.click(screen.getByTestId('scheduled-exports-delete-1'));
+    await act(async () => pending.resolve());
+    expect(within(screen.getByRole('dialog'))
+      .getByText('This will stop future runs of Drives weekly.')).toBeVisible();
+    expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' })).toBeEnabled();
   });
 });
 

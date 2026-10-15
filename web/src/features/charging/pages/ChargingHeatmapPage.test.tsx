@@ -20,6 +20,7 @@ import type { ChargingSession } from '@/api/types';
 import { setGlobalLocale } from '@/lib/numberFormat';
 import { chartTokens } from '@/lib/tokens';
 import { deriveDataState } from '@/api/dataState';
+import summarySource from '../components/charging-heatmap-modernization/ChargingHeatmapSummary.tsx?raw';
 
 // jsdom lacks matchMedia; chart containers read it on mount.
 vi.hoisted(() => {
@@ -127,6 +128,11 @@ beforeEach(() => {
 });
 
 describe('ChargingHeatmapPage — KPI band branches', () => {
+  it('uses the public data-display type export without a runtime or internal sub-barrel import', () => {
+    expect(summarySource).toMatch(/import type \{ StatMetric \} from '@\/components\/data-display';/);
+    expect(summarySource).not.toMatch(/from ['"]@\/components\/data-display\//);
+  });
+
   it.each([null, 0, -1, Number.NaN, Number.POSITIVE_INFINITY])('blocks history actions for unresolved or invalid vehicle %s', (vehicleId) => {
     const query = makeQuery({ data: [], isError: true, error: new Error('old scope failed') });
     mockSelected.mockReturnValue({

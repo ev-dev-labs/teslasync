@@ -25,6 +25,7 @@ const operationalMetricsSpy = vi.spyOn(operationalBridge, 'useOperationalMetrics
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, fallbackOrOpts?: unknown, opts?: unknown) => {
+      if (key === 'dataSources.status.paused') return 'Paused offline';
       if (typeof fallbackOrOpts === 'string') {
         if (opts && typeof opts === 'object') {
           const o = opts as Record<string, unknown>;
@@ -167,7 +168,7 @@ function LocationProbe({ onLocation }: { onLocation: (search: string) => void })
 
 function renderPage(initialSearch = '?date=2026-09-14', onLocation: (search: string) => void = () => {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const page = () => (
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[`/day-log${initialSearch}`]}>
         <LocationProbe onLocation={onLocation} />
@@ -175,6 +176,8 @@ function renderPage(initialSearch = '?date=2026-09-14', onLocation: (search: str
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  const view = render(page());
+  return { ...view, rerenderPage: () => view.rerender(page()) };
 }
 
 const oneCarFleet = {
@@ -245,6 +248,80 @@ describe('DayLogPage', () => {
     // Timeline + sources announce their own loading regions.
     expect(screen.getByRole('status', { name: 'Loading timeline' })).toBeInTheDocument();
     expect(screen.getByRole('status', { name: 'Loading sources' })).toBeInTheDocument();
+    expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
+    expect(screen.queryByText('Nothing recorded this day.')).not.toBeInTheDocument();
+  });
+
+  it('explains a deferred initial request without inferring offline or an empty day, then recovers', () => {
+    const refetch = vi.fn();
+    useDayLogMock.mockReturnValue(queryState({
+      data: undefined, dataUpdatedAt: 0, isPending: true, isLoading: false,
+      isSuccess: false, status: 'pending', fetchStatus: 'paused', refetch,
+    }));
+    const view = renderPage();
+
+    for (const id of ['daylog-summary', 'daylog-timeline', 'daylog-sources']) {
+      const section = screen.getByTestId(id);
+      expect(section).toBeVisible();
+      expect(within(section).getByRole('status')).toHaveTextContent('Refresh paused');
+      expect(section).toHaveTextContent('missing evidence is not a confirmed empty result');
+    }
+    expect(screen.queryByRole('status', { name: 'Loading timeline' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading sources' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Nothing recorded this day.')).not.toBeInTheDocument();
+    expect(screen.queryByText('No drives or charging sessions this day.')).not.toBeInTheDocument();
+    expect(screen.queryByText('No source information for this day.')).not.toBeInTheDocument();
+    expect(screen.queryByText(/offline|Can't reach server/i)).not.toBeInTheDocument();
+    expect(screen.getByTestId('daylog-date')).toHaveValue('2026-09-14');
+    fireEvent.click(within(screen.getByTestId('daylog-timeline')).getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+
+    useDayLogMock.mockReturnValue(queryState({ data: dayLogResponse([], {
+      summary: { drive_count: 0, charge_count: 0, drive_duration_s: 0,
+        drive_distance_m: 0, energy_added_wh: 0, energy_used_wh: 0 },
+      sources: [{ source: 'drives', status: 'empty', count: 0 }],
+    }) }));
+    view.rerenderPage();
+    expect(screen.queryByText(/missing evidence is not a confirmed empty result/)).not.toBeInTheDocument();
+    expect(screen.getByText('Nothing recorded this day.')).toBeInTheDocument();
+    expect(screen.getByText('No drives or charging sessions this day.')).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Sources' })).toHaveTextContent('0 rows');
+    const brief = screen.getByTestId('day-log-summary');
+    expect(brief.querySelector('[data-operational-metric="distance"]')).toHaveTextContent('0.0 km');
+    expect(brief.querySelector('[data-operational-metric="energy-used"]')).toHaveTextContent('0.0 kWh');
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+  });
+
+  it('keeps retained history and filters through a paused refresh, failure and recovery', () => {
+    const data = dayLogResponse(mixedEvents, {
+      sources: [{ source: 'drives', status: 'ok', count: 2 }],
+      summary: { drive_count: 1, charge_count: 0, drive_duration_s: 3600,
+        drive_distance_m: 25000, energy_added_wh: null, energy_used_wh: 5200 },
+    });
+    const refetch = vi.fn();
+    useDayLogMock.mockReturnValue(queryState({ data, fetchStatus: 'paused', refetch }));
+    const view = renderPage();
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(screen.queryByText(/offline|missing evidence is not a confirmed empty result/i)).not.toBeInTheDocument();
+    fireEvent.change(screen.getByTestId('daylog-search'), { target: { value: 'locked' } });
+
+    useDayLogMock.mockReturnValue(queryState({
+      data, error: new Error('refresh failed'), isError: true, status: 'error', refetch,
+    }));
+    view.rerenderPage();
+    expect(screen.getByTestId('daylog-search')).toHaveValue('locked');
+    expect(screen.getByText('Showing 1 of 5 events')).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Sources' })).toHaveTextContent('2 rows');
+    expect(screen.getByTestId('day-log-summary').querySelector('[data-operational-metric="distance"]')).toHaveTextContent('25.0 km');
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+
+    useDayLogMock.mockReturnValue(queryState({ data, refetch }));
+    view.rerenderPage();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getByTestId('daylog-search')).toHaveValue('locked');
+    expect(screen.getByText('Showing 1 of 5 events')).toBeInTheDocument();
+    expect(screen.getByText('Recorded day summary')).toBeInTheDocument();
   });
 
   it('renders an honest empty day with a live-telemetry CTA', () => {

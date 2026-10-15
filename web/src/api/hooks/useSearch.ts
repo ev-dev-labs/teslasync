@@ -4,10 +4,15 @@ import { STALE_TIMES } from '@/lib/constants';
 import type { SearchHitType, SearchResponse } from '../types';
 
 /**
- * Minimum query length the server enforces. Mirrored here so the hook can
+ * Minimum Unicode code-point count the server enforces. Mirrored here so the hook can
  * skip making a request when it would just bounce back empty.
  */
 export const SEARCH_MIN_QUERY_LENGTH = 2;
+
+/** Match the server's trimmed rune count, not UTF-16 units or graphemes. */
+export function isSearchQueryEnabled(query: string): boolean {
+  return Array.from(query.trim()).length >= SEARCH_MIN_QUERY_LENGTH;
+}
 
 export const searchKeys = {
   global: (query: string, types: readonly SearchHitType[] | undefined, limit: number | undefined) =>
@@ -35,7 +40,7 @@ export interface UseGlobalSearchOptions {
  */
 export function useGlobalSearch(query: string, options: UseGlobalSearchOptions = {}) {
   const trimmed = query.trim();
-  const enabled = !options.disabled && trimmed.length >= SEARCH_MIN_QUERY_LENGTH;
+  const enabled = !options.disabled && isSearchQueryEnabled(trimmed);
   return useQuery({
     queryKey: searchKeys.global(trimmed, options.types, options.limit),
     queryFn: async ({ signal }) => {
@@ -58,7 +63,7 @@ export function useGlobalSearch(query: string, options: UseGlobalSearchOptions =
       }
       // The producer can encode its nil result slice as hits:null, but an
       // absent/malformed envelope must fail without replacing retained data.
-      return { hits: res.hits ?? [], query: res.query } satisfies SearchResponse;
+      return { ...res, hits: res.hits ?? [] } satisfies SearchResponse;
     },
     enabled,
     staleTime: STALE_TIMES.FAST,

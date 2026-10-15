@@ -2,10 +2,11 @@ import { useCallback, useEffect, useId } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useWatchSummary, useWatchCommand } from '@/api/hooks/useWatch';
-import { Skeleton } from '@/components/feedback';
-import { Badge, Heading, Text, Button as ControlButton } from '@/components/ui';
+import { QueryError, Skeleton } from '@/components/feedback';
+import { Accordion, Badge, Heading, Text, Button as ControlButton } from '@/components/ui';
 import { deriveDataState } from '@/api/dataState';
 import { cn } from '@/lib/cn';
+import { isApiError } from '@/lib/resilience';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -77,7 +78,7 @@ export default function WatchFacePage() {
           : t('watch:capability.description', 'Watch readings require a wearable API key in this session. Manage API keys and open your configured watch link to enable readings. Retained readings are not refreshed until access is configured.')}
       </Text>
       {summaryQuery.availability === 'prerequisite-error' ? (
-        <ControlButton wrapLabel variant="secondary" onClick={summaryQuery.recheckAvailability}>
+        <ControlButton wrapLabel variant="secondary" className="min-h-11" onClick={summaryQuery.recheckAvailability}>
           {t('error.retry', 'Retry')}
         </ControlButton>
       ) : (
@@ -147,15 +148,14 @@ export default function WatchFacePage() {
     );
   } else if (source.fatalError || !data) {
     watchContent = (
-      <div className="min-w-0 space-y-2 px-4 text-center">
-        <Text as="p" variant="bodySm" className="break-words text-[var(--text-on-accent)] [overflow-wrap:anywhere]">
-          {source.fatalError ? String(source.fatalError) : t('watch.noVehicle', 'No vehicle found')}
-        </Text>
-        {source.fatalError && source.retry ? (
-          <ControlButton wrapLabel variant="secondary" size="sm" onClick={source.retry}>
-            {t('error.retry', 'Retry')}
-          </ControlButton>
-        ) : null}
+      <div className="min-w-0 space-y-2">
+        {source.fatalError ? (
+          <WatchRecovery error={source.fatalError} onRetry={source.retry ?? undefined} />
+        ) : (
+          <Text as="p" variant="bodySm" className="break-words text-center text-[var(--text-on-accent)]">
+            {t('watch.noVehicle', 'No vehicle found')}
+          </Text>
+        )}
       </div>
     );
   } else {
@@ -178,13 +178,11 @@ export default function WatchFacePage() {
             <Badge variant="warning" size="sm" role="status">
               {t('watch.cached', 'Cached')}
             </Badge>
-            {source.refreshError && source.retry && !accessUnavailable ? (
-              <ControlButton wrapLabel variant="secondary" onClick={source.retry}>
-                {t('error.retry', 'Retry')}
-              </ControlButton>
-            ) : null}
           </div>
         )}
+        {source.refreshError && !accessUnavailable ? (
+          <WatchRecovery error={source.refreshError} onRetry={source.retry ?? undefined} />
+        ) : null}
         {operationalMode.isReadOnly && (
           <div className="flex justify-center pt-1">
             <OperationalModeBadge compact />
@@ -305,6 +303,31 @@ export default function WatchFacePage() {
 
 // --- Sub-components ---
 
+function WatchRecovery({ error, onRetry }: { error: Error; onRetry?: () => void }) {
+  const { t } = useTranslation();
+  // Only the bounded HTTP status is safe to disclose; messages, URLs and stacks
+  // can include the wearable key or private vehicle information.
+  const status = isApiError(error) && Number.isInteger(error.status)
+    && error.status >= 100 && error.status <= 599 ? error.status : null;
+
+  return (
+    <div className="min-w-0 space-y-2">
+      <QueryError error={error} onRetry={onRetry} compact className="mb-0 [&_button]:min-h-11" />
+      {status != null ? (
+        <Accordion
+          title={t('common.learnMore', 'Learn more')}
+          headerClassName="min-h-11 px-3 py-2"
+          bodyClassName="px-3 py-2"
+        >
+          <Text as="p" variant="caption" className="break-words">
+            {t('common.status', 'Status')}: HTTP {status}
+          </Text>
+        </Accordion>
+      ) : null}
+    </div>
+  );
+}
+
 function WatchShell({ children }: { children: React.ReactNode }) {
   return (
     <main className="flex h-dvh min-w-0 flex-col gap-2 overflow-y-auto bg-black p-3 text-[var(--text-on-accent)] forced-colors:bg-[Canvas] forced-colors:text-[CanvasText]">
@@ -373,7 +396,7 @@ export function StatusIcon({ icon: Icon, active, color, label, ariaLabel, onClic
   };
   const activeColor = color ? colorClasses[color] : severityTokens.info.fg;
   const className = cn(
-    'flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-full px-0 py-0',
+    'flex h-auto min-h-11 min-w-11 w-11 shrink-0 flex-col items-center justify-center rounded-full px-0 py-0',
     active ? activeColor : typography.color.muted,
     'bg-[var(--surface-2)] forced-colors:text-[CanvasText]',
   );

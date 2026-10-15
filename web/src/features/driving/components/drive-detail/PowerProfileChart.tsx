@@ -62,13 +62,13 @@ export function PowerProfileChart({ chartData, drive }: PowerProfileChartProps) 
               syncMethod={syncProps.syncMethod}
               onMouseMove={syncProps.onMouseMove}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-              <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} interval="preserveStartEnd" />
-              <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+              <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
+              <XAxis dataKey="time" tick={{ fill: chartTokens.axisStroke, fontSize: 10 }} interval="preserveStartEnd" />
+              <YAxis tick={{ fill: chartTokens.axisStroke, fontSize: 10 }} />
               <Tooltip content={<ChartTooltip />} />
-              <ReferenceLine y={0} stroke="rgba(255,255,255,0.15)" />
-              {areaGradient('powerGrad', '#f59e0b')}
-              <Area {...AREA_DEFAULTS} dataKey="power" stroke="#f59e0b" fill="url(#powerGrad)" name={`${t('driveDetail.power', 'Power')} kW`} />
+              <ReferenceLine y={0} stroke={chartTokens.axisStroke} />
+              {areaGradient('powerGrad', chartTokens.series[2], 0.08)}
+              <Area {...AREA_DEFAULTS} dataKey="power" stroke={chartTokens.series[2]} fill="url(#powerGrad)" name={`${t('driveDetail.power', 'Power')} kW`} />
               {syncedX != null && (
                 <ReferenceLine
                   x={syncedX}

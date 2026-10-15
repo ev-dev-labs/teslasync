@@ -62,7 +62,7 @@ export function RepairDiagnosticsWorkspace({
       <GlassPanel className="overflow-hidden p-0">
         <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <div className="flex min-w-0 items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-shape-lg border border-[var(--border-default)] bg-[var(--surface-2)] text-cyan-300 shadow-e1">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-shape-lg border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-secondary)] shadow-e1">
               <ScanSearch className="h-5 w-5" aria-hidden="true" />
             </div>
             <div className="min-w-0">
@@ -75,7 +75,11 @@ export function RepairDiagnosticsWorkspace({
                     ? t('dataRepair.diagnostics.attention', 'Attention needed')
                     : isRefreshing
                       ? t('dataRepair.diagnostics.scanning', 'Scanning')
-                      : t('dataRepair.diagnostics.ready', 'Ready')}
+                      : suggestionsState.isRefreshBlocked || staleState.isRefreshBlocked
+                        ? t('dataSources.status.paused', 'Refresh paused')
+                        : !suggestionsState.hasData || !staleState.hasData
+                          ? t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')
+                          : t('dataRepair.diagnostics.ready', 'Ready')}
                 </Badge>
               </div>
               <Text as="p" variant="bodySm" className="mt-1 max-w-3xl">
@@ -111,10 +115,17 @@ export function RepairDiagnosticsWorkspace({
       />
       <AIDataRepairSuggestions vehicleId={vehicleId} />
       <StaleRefreshWarning state={suggestionsState} label={t('dataRepair.kpi.suggestions', 'Suggested repairs')} />
+      {!suggestionsState.hasData && !suggestionsState.fatalError ? (
+        <Text as="p" variant="bodySm" role="status">
+          {suggestionsState.isRefreshBlocked
+            ? t('shareCard.states.paused', 'The initial query is paused while the network is unavailable; no empty response is inferred.')
+            : t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}
+        </Text>
+      ) : null}
       <RepairSuggestionWorklists
         driveSuggestions={driveSuggestions}
         chargingSuggestions={chargingSuggestions}
-        isLoading={suggestionsQuery.isLoading && !suggestionsState.hasData}
+        isLoading={!suggestionsState.hasData && !suggestionsState.fatalError}
         isError={!!suggestionsState.fatalError}
         error={suggestionsState.fatalError}
         onRetry={() => { void suggestionsQuery.refetch(); }}
@@ -122,10 +133,17 @@ export function RepairDiagnosticsWorkspace({
         writeBlockReason={writeBlockReason}
       />
       <StaleRefreshWarning state={staleState} label={t('dataRepair.worklist', 'Repair worklist')} />
+      {!staleState.hasData && !staleState.fatalError ? (
+        <Text as="p" variant="bodySm" role="status">
+          {staleState.isRefreshBlocked
+            ? t('shareCard.states.paused', 'The initial query is paused while the network is unavailable; no empty response is inferred.')
+            : t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}
+        </Text>
+      ) : null}
       <RepairManualWorklists
         staleCharging={staleCharging}
         staleDrives={staleDrives}
-        isLoading={staleQuery.isLoading && !staleState.hasData}
+        isLoading={!staleState.hasData && !staleState.fatalError}
         isError={!!staleState.fatalError}
         error={staleState.fatalError}
         onRetry={() => { void staleQuery.refetch(); }}

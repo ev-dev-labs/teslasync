@@ -239,6 +239,10 @@ describe('ChargingThermalTaxPage live modernization (execution NOTRUN)', () => {
     expect(screen.getByText(/Heater-on threshold: 50 W/)).toBeInTheDocument();
     const chart = screen.getByRole('figure', { name: 'Heater vs. Charge Power' });
     expect(within(chart).getByRole('table')).toBeInTheDocument();
+    expect(within(chart).getByRole('columnheader', { name: 'Exact timestamp' })).toBeInTheDocument();
+    for (const sample of samples) {
+      expect(within(chart).getByRole('cell', { name: sample.ts, exact: true })).toBeInTheDocument();
+    }
     expect(container.querySelector('[data-test-series="heaterW"]')).toHaveAttribute('data-hidden', 'false');
     expect(container.querySelector('[data-test-series="chargeW"]')).toHaveAttribute('data-hidden', 'false');
   });

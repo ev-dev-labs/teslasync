@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import userEvent from '@testing-library/user-event';
 import type { DayLogEvent } from '@/api/types';
 import { DayLogTimeline, type DayLogTimelineProps } from './DayLogTimeline';
 
@@ -116,6 +117,44 @@ function history() {
 }
 
 describe('DayLogTimeline assigned receipt correction', () => {
+  it('allocates below-md targets on real search, action, category and link hosts', () => {
+    mount({ events: [event({ type: 'drive_end', ref_kind: 'drive', ref_id: 17 })] });
+    expect(screen.getByRole('textbox', { name: 'Search events' })).toHaveClass(
+      'min-h-11', 'min-w-11', 'md:min-h-10', 'md:min-w-0',
+    );
+    for (const id of ['daylog-show-all', 'daylog-clear-all', 'daylog-filter-driving']) {
+      const button = screen.getByTestId(id);
+      expect(button.tagName).toBe('BUTTON');
+      expect(button).toHaveClass('min-h-11', 'min-w-11', 'md:min-w-0');
+      expect(button).toHaveClass('focus-visible:outline-2', 'focus-visible:outline-offset-2');
+    }
+    const link = screen.getByRole('link', { name: 'Drive ended' });
+    expect(link).toHaveClass('min-h-11', 'min-w-11', 'max-w-full', 'md:inline');
+    expect(link).toHaveAttribute('href', '/drives/17');
+    expect(screen.getByTestId('daylog-search').parentElement?.parentElement?.parentElement)
+      .toHaveClass('min-w-0', 'basis-full');
+  });
+
+  it('operates the real filter and disclosure buttons with Space and Enter while retaining focus', async () => {
+    const user = userEvent.setup();
+    mount();
+    const category = screen.getByRole('button', { name: 'doors (1)' });
+    category.focus();
+    await user.keyboard(' ');
+    expect(category).toHaveFocus();
+    expect(category).toHaveAttribute('aria-pressed', 'false');
+    await user.keyboard('{Enter}');
+    expect(category).toHaveAttribute('aria-pressed', 'true');
+    const disclosure = screen.getByRole('button', { name: 'Show details Door opened 01:30:00 receipt-1' });
+    disclosure.focus();
+    await user.keyboard('{Enter}');
+    expect(disclosure).toHaveFocus();
+    expect(disclosure).toHaveAttribute('aria-expanded', 'true');
+    await user.keyboard(' ');
+    expect(disclosure).toHaveFocus();
+    expect(disclosure).toHaveAttribute('aria-expanded', 'false');
+  });
+
   it('names each disclosure by action, event, local time and exact identity', () => {
     mount({ events: [event(), event({ id: 'receipt-2' })] });
     const first = screen.getByRole('button', { name: 'Show details Door opened 01:30:00 receipt-1' });
@@ -134,6 +173,122 @@ describe('DayLogTimeline assigned receipt correction', () => {
     fireEvent.click(collapse);
     expect(target).not.toBeInTheDocument();
     expect(first).toHaveAccessibleName('Show details Door opened 01:30:00 receipt-1');
+  });
+
+  // Opt in with DAYLOG_NATIVE=1 against the existing Vite server; never start a
+  // server or install a browser. This mounts only synthetic receipts, not fleet data.
+  describe.runIf(process.env.DAYLOG_NATIVE === '1')('DayLogTimeline native Edge regression', () => {
+    it.each([
+      { width: 375, mode: 'dark' },
+      { width: 375, mode: 'light' },
+      { width: 1280, mode: 'dark' },
+      { width: 1280, mode: 'light' },
+    ])('$width px / $mode targets, fields, layout and keyboard', async ({ width, mode }) => {
+      const { chromium } = await import('@playwright/test');
+      const browser = await chromium.launch({ channel: 'msedge', headless: true });
+      try {
+        const page = await browser.newPage({ viewport: { width, height: 900 } });
+        const errors: string[] = [];
+        page.on('pageerror', (error) => errors.push(error.message));
+        await page.route('**/api/**', (route) => route.abort());
+        await page.route('**/__daylog-native', (route) => route.fulfill({
+          contentType: 'text/html',
+          body: `<!doctype html><html class="${mode === 'light' ? 'light-mode' : 'dark'}"><head>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <script type="module">
+              import { injectIntoGlobalHook } from '/@react-refresh';
+              injectIntoGlobalHook(window);
+              window.$RefreshReg$ = () => {};
+              window.$RefreshSig$ = () => (type) => type;
+            </script></head><body><main id="fixture"></main>
+            <script type="module">
+              import '/src/index.css';
+              import React from '/node_modules/.vite/deps/react.js';
+              import { createRoot } from '/node_modules/.vite/deps/react-dom_client.js';
+              import { MemoryRouter } from '/node_modules/.vite/deps/react-router-dom.js';
+              import { QueryClient, QueryClientProvider } from '/node_modules/.vite/deps/@tanstack_react-query.js';
+              import i18next from '/node_modules/.vite/deps/i18next.js';
+              import { I18nextProvider } from '/node_modules/.vite/deps/react-i18next.js';
+              import { DayLogTimeline } from '/src/features/vehicles/components/daylog/DayLogTimeline.tsx';
+              await i18next.init({ lng: 'en', resources: { en: { translation: {} } } });
+              const client = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity, retry: false } } });
+              client.setQueryData(['settings'], { unit_of_length: 'km', locale: 'en-US', decimal_precision: 2 });
+              const events = Array.from({ length: 90 }, (_, i) => ({
+                id: 'native-' + i, ts: new Date(Date.UTC(2026, 10, 1, 5, i)).toISOString(),
+                type: 'drive_end', layer: 'default', source: 'drives', vehicle_id: 1,
+                ref_kind: 'drive', ref_id: 17,
+                payload: { end_place: 'Synthetic destination ' + 'address '.repeat(30),
+                  distance_m: 0, duration_s: 60, energy_used_wh: 1000,
+                  start_soc_pct: 0, end_soc_pct: 50, future_flag: false,
+                  future_text: 'x'.repeat(160) }
+              }));
+              createRoot(document.getElementById('fixture')).render(
+                React.createElement(QueryClientProvider, { client },
+                  React.createElement(I18nextProvider, { i18n: i18next },
+                    React.createElement(MemoryRouter, null,
+                      React.createElement(DayLogTimeline, {
+                        events, timezone: 'UTC', vehicleId: 1, truncated: true,
+                        isLoading: false, error: null, onRetry: () => {}
+                      })))));
+            </script></body></html>`,
+        }));
+        await page.goto('http://localhost:5173/__daylog-native', { waitUntil: 'domcontentloaded' });
+        const first = page.getByTestId('daylog-event-native-0');
+        await first.waitFor();
+        const search = page.getByRole('textbox', { name: 'Search events' });
+        await search.fill('native-0');
+        expect(await page.getByTestId('daylog-count').textContent()).toContain('Showing 1 of 90 events');
+        await page.getByTestId('daylog-show-all').click();
+        const disclosure = first.getByRole('button');
+        await disclosure.focus();
+        await page.keyboard.press('Enter');
+        expect(await disclosure.getAttribute('aria-expanded')).toBe('true');
+        expect(await disclosure.evaluate((element) => element === document.activeElement)).toBe(true);
+        const details = page.locator(`[id="${await disclosure.getAttribute('aria-controls')}"]`);
+        for (const value of ['native-0', 'drives', 'default', '2026-11-01T05:00:00.000Z', '0.00 km', '0.02 h', '1.00 kWh', '0%', '50%', 'false', 'x'.repeat(160)]) {
+          expect(await details.getByText(value, { exact: true }).count()).toBe(1);
+        }
+        expect(await details.getByText('Synthetic destination ' + 'address '.repeat(30), { exact: true }).count()).toBe(1);
+        const geometry = await page.getByTestId('daylog-timeline').evaluate((root) => ({
+          overflow: root.scrollWidth > root.clientWidth + 1,
+          detailsOverflow: [...root.querySelectorAll('[id$="-details"]')].some((element) => element.scrollWidth > element.clientWidth + 1),
+          targets: [...root.querySelectorAll('button, input, a')].map((element) => {
+            const box = element.getBoundingClientRect();
+            return { width: box.width, height: box.height };
+          }),
+        }));
+        expect(geometry.overflow).toBe(false);
+        expect(geometry.detailsOverflow).toBe(false);
+        if (width < 768) {
+          for (const target of geometry.targets) {
+            expect(target.width).toBeGreaterThanOrEqual(44);
+            expect(target.height).toBeGreaterThanOrEqual(44);
+          }
+        }
+        const focus = await disclosure.evaluate((element) => {
+          const style = getComputedStyle(element);
+          return { width: style.outlineWidth, style: style.outlineStyle };
+        });
+        expect(focus).toEqual({ width: '2px', style: 'solid' });
+        await page.keyboard.press('Space');
+        expect(await disclosure.getAttribute('aria-expanded')).toBe('false');
+        await page.keyboard.press('End');
+        const last = page.getByTestId('daylog-event-native-89').getByRole('button');
+        await last.waitFor();
+        await page.waitForFunction(() => document.activeElement?.closest('[data-testid="daylog-event-native-89"]'));
+        await page.keyboard.press('Home');
+        await page.waitForFunction(() => document.activeElement?.closest('[data-testid="daylog-event-native-0"]'));
+        const category = page.getByTestId('daylog-filter-driving');
+        await category.focus();
+        await page.keyboard.press('Space');
+        expect(await category.getAttribute('aria-pressed')).toBe('false');
+        await page.keyboard.press('Enter');
+        expect(await category.getAttribute('aria-pressed')).toBe('true');
+        expect(errors).toEqual([]);
+      } finally {
+        await browser.close();
+      }
+    }, 60_000);
   });
 
   it.each([

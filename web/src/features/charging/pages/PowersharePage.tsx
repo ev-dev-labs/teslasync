@@ -7,7 +7,7 @@ import { Button, Caption } from '@/components/ui';
 import { type StatMetric } from '@/components/data-display';
 import { ChargingSummaryBrief } from '../components/operationalbrief-all/ChargingSummaryBrief';
 import { FadeIn } from '@/components/motion';
-import { EmptyState, StaleRefreshWarning } from '@/components/feedback';
+import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -37,7 +37,7 @@ export default function PowersharePage() {
   const { t } = useTranslation();
   usePageTitle(t('powershare.title', 'Powershare'));
 
-  const { vehicleId: selectedId } = useSelectedVehicle();
+  const { vehicleId: selectedId, vehiclesState } = useSelectedVehicle();
   const vehicleId = selectedId ?? undefined;
 
   const statusQ = useSignalObservations(vehicleId, { signal_name: POWERSHARE_SIGNALS.status, limit: 1 });
@@ -184,10 +184,28 @@ export default function PowersharePage() {
   if (vehicleId == null) {
     return (
       <PageLayout title={title} subtitle={subtitle}>
-        <EmptyState /* no-action: page precondition — no vehicle in scope yet */
-          icon={<Zap className="h-8 w-8" />}
-          message={t('powershare.noVehicle', 'Select a vehicle to view its Powershare telemetry.')}
-        />
+        {vehiclesState.fatalError ? (
+          <QueryError error={vehiclesState.fatalError} onRetry={vehiclesState.retry ?? undefined} />
+        ) : !vehiclesState.hasData ? (
+          <div role="status" aria-busy={!vehiclesState.isRefreshBlocked || undefined}>
+            <Caption as="p">
+              {vehiclesState.isRefreshBlocked
+                ? t('dataSources.status.paused', 'Refresh paused')
+                : t('common.loading', 'Loading...')}
+            </Caption>
+            {!vehiclesState.isRefreshBlocked && <Skeleton className="mt-3 h-24 w-full" />}
+          </div>
+        ) : (
+          <>
+            {(vehiclesState.refreshError || vehiclesState.isRefreshBlocked || vehiclesState.status === 'stale') && (
+              <StaleRefreshWarning state={vehiclesState} />
+            )}
+            <EmptyState /* no-action: page precondition — no vehicle in scope yet */
+              icon={<Zap className="h-8 w-8" />}
+              message={t('powershare.noVehicle', 'Select a vehicle to view its Powershare telemetry.')}
+            />
+          </>
+        )}
       </PageLayout>
     );
   }
@@ -206,6 +224,9 @@ export default function PowersharePage() {
         { id: 'hours', label: t('powershare.kpi.hoursRemaining', 'Hours Remaining'), query: hoursQ },
       ] : undefined}
     >
+      {(vehiclesState.refreshError || vehiclesState.isRefreshBlocked || vehiclesState.status === 'stale') && (
+        <StaleRefreshWarning state={vehiclesState} />
+      )}
       {/* 1 — KPI band */}
       <FadeIn>
         <section

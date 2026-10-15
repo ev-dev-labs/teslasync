@@ -30,7 +30,7 @@ import type { Column } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { isFiniteNumber } from '@/lib/numberFormat';
 
 import type { ModelScorecard, Prediction } from '@/types/ownership';
@@ -88,6 +88,7 @@ type ScoringContext = Readonly<Pick<Prediction,
 const PREDICTION_TARGETS = Object.keys(PREDICTION_TARGET_UNITS) as PredictionTarget[];
 
 export default function ModelTrustPage() {
+  const { formatDateTime, tz } = useDateFormat();
   const { fmtNumber, fmtScientificNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
@@ -509,7 +510,10 @@ export default function ModelTrustPage() {
           <OwnershipBrief
             title={t('ownership.trust.brief.title', 'Recorded model trust and scoring')}
             description={t('ownership.trust.notice.body', 'A prediction only counts once its outcome is recorded. Skill is measured against a naive persistence baseline, so a model that merely repeats the last value scores zero — not high.')}
-            scope={t('ownership.brief.window', 'Selected vehicle · {{count}}-day analysis window; coverage is described below', { count: windowDays })}
+            scope={<>
+              {t('ownership.brief.window', 'Selected vehicle · {{count}}-day analysis window; coverage is described below', { count: windowDays })}
+              {' · '}{tz}
+            </>}
             source={trustQuery} enabled={vehicleId != null}
             window={report?.window}
             metrics={[
@@ -636,6 +640,11 @@ export default function ModelTrustPage() {
                 label: t('ownership.trust.calibration.col.samples', 'Samples'),
                 format: (v) => fmtNumber(v as number),
               },
+              {
+                key: 'coverage',
+                label: t('ownership.quality.coverage', 'Coverage'),
+                format: (v) => isFiniteNumber(v) ? formatPct(v) : '—',
+              },
             ]}
             height={280}
             chartKey="model-trust-calibration"
@@ -667,6 +676,37 @@ export default function ModelTrustPage() {
 
           {selectedCard ? (
             <div className="mt-4 space-y-2">
+              <section aria-label={t('ownership.quality.title', 'Data quality')} className="space-y-2">
+                <Text as="h3" variant="label">{t('ownership.quality.title', 'Data quality')}</Text>
+                {selectedCard.quality ? (
+                  <>
+                    <VerdictBadge value={selectedCard.quality.status} />
+                    <dl className="grid gap-2 sm:grid-cols-3">
+                      <div>
+                        <Text as="dt" variant="caption">{t('ownership.quality.samples', 'Samples')}</Text>
+                        <Text as="dd" variant="bodySm">{isFiniteNumber(selectedCard.quality.sample_count) ? fmtInt(selectedCard.quality.sample_count) : '—'}</Text>
+                      </div>
+                      <div>
+                        <Text as="dt" variant="caption">{t('ownership.quality.coverage', 'Coverage')}</Text>
+                        <Text as="dd" variant="bodySm">{isFiniteNumber(selectedCard.quality.coverage_pct) ? formatPct(selectedCard.quality.coverage_pct) : '—'}</Text>
+                      </div>
+                      <div>
+                        <Text as="dt" variant="caption">{t('ownership.quality.window', 'Observation window')}</Text>
+                        <Text as="dd" variant="bodySm">
+                          {selectedCard.quality.window_start || selectedCard.quality.window_end
+                            ? `${formatDateTime(selectedCard.quality.window_start)} – ${formatDateTime(selectedCard.quality.window_end)}`
+                            : '—'}
+                        </Text>
+                      </div>
+                    </dl>
+                    {(selectedCard.quality.reasons ?? []).map(reason => (
+                      <Text as="p" variant="caption" key={reason}>{reason}</Text>
+                    ))}
+                  </>
+                ) : (
+                  <Text as="p" variant="bodySm">{t('ownership.quality.unavailable', 'Quality metadata has not been computed yet.')}</Text>
+                )}
+              </section>
               <Text as="p" variant="bodySm">
                 {selectedCard.narrative}
               </Text>
@@ -735,6 +775,7 @@ export default function ModelTrustPage() {
             >
               <Input
                 label={t('ownership.trust.form.model', 'Model name')}
+                disabled={recordPrediction.isPending}
                 value={predictDraft.model_name}
                 required
                 maxLength={120}
@@ -744,6 +785,7 @@ export default function ModelTrustPage() {
               />
               <Select
                 label={t('ownership.trust.form.target', 'Target quantity')}
+                disabled={recordPrediction.isPending}
                 value={predictDraft.target}
                 options={PREDICTION_TARGETS.map((target) => ({
                   value: target,
@@ -760,6 +802,7 @@ export default function ModelTrustPage() {
               />
               <Input
                 label={t('ownership.trust.form.unit', 'SI unit')}
+                disabled={recordPrediction.isPending}
                 value={predictDraft.si_unit}
                 readOnly
                 hint={t(
@@ -770,6 +813,7 @@ export default function ModelTrustPage() {
               <Input
                 type="number"
                 label={t('ownership.trust.form.horizon', 'Horizon (days)')}
+                disabled={recordPrediction.isPending}
                 value={predictDraft.horizon_days}
                 min={1}
                 required
@@ -783,6 +827,7 @@ export default function ModelTrustPage() {
               <Input
                 type="number"
                 label={t('ownership.trust.form.value', 'Predicted value')}
+                disabled={recordPrediction.isPending}
                 value={predictDraft.predicted_value}
                 step="any"
                 required
@@ -796,6 +841,7 @@ export default function ModelTrustPage() {
               <Input
                 type="number"
                 label={t('ownership.trust.form.low', 'Interval low')}
+                disabled={recordPrediction.isPending}
                 value={predictDraft.predicted_low ?? ''}
                 step="any"
                 onChange={(event) =>
@@ -808,6 +854,7 @@ export default function ModelTrustPage() {
               <Input
                 type="number"
                 label={t('ownership.trust.form.high', 'Interval high')}
+                disabled={recordPrediction.isPending}
                 value={predictDraft.predicted_high ?? ''}
                 step="any"
                 onChange={(event) =>
@@ -819,6 +866,7 @@ export default function ModelTrustPage() {
               />
               <Input
                 label={t('ownership.trust.form.reference', 'Reference')}
+                disabled={recordPrediction.isPending}
                 value={predictDraft.reference}
                 maxLength={200}
                 hint={t('ownership.trust.form.referenceHint', 'What produced this forecast')}
@@ -871,6 +919,7 @@ export default function ModelTrustPage() {
               <Input
                 type="number"
                 label={t('ownership.trust.outcome.value', 'Observed value')}
+                disabled={recordOutcome.isPending}
                 aria-describedby="model-trust-scoring-context"
                 suffix={outcomeContext.si_unit}
                 value={outcomeDraft.observed_value}

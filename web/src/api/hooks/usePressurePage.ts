@@ -27,18 +27,17 @@ export function usePressurePageLatest(activeVehicleId: number | null) {
   });
 }
 
-// Range ownership/defaults remain in useRangeState at the page. Both literal
-// bounds participate in the URL and identity; this hook invents no window.
+// Workspace instants participate in the URL and identity; this hook invents no window.
 export function usePressurePageHistory(
   activeVehicleId: number | null,
-  start: string,
-  end: string,
+  startInstant: string,
+  endInstantExclusive: string,
 ) {
   return useQuery({
-    queryKey: ['tire-pressure-history', activeVehicleId, start, end],
+    queryKey: ['tire-pressure-history', activeVehicleId, startInstant, endInstantExclusive],
     queryFn: ({ signal }) =>
       request<TirePressureReading[]>(
-        `/tire-pressure?vehicle_id=${activeVehicleId}&start=${start}&end=${end}`,
+        `/tire-pressure?vehicle_id=${activeVehicleId}&start=${encodeURIComponent(startInstant)}&end=${encodeURIComponent(endInstantExclusive)}`,
         { signal },
       ),
     enabled: activeVehicleId !== null,
