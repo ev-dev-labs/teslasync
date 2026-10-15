@@ -424,6 +424,29 @@ function containsLiveGuard(node) {
   return found;
 }
 
+function liveGuardOptions(sourceFile) {
+  const names = new Set();
+  function visit(node) {
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)
+      && node.initializer && containsLiveGuard(node.initializer)) {
+      names.add(node.name.text);
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(sourceFile);
+  return names;
+}
+
+function referencesGuardOption(node, names) {
+  let found = false;
+  function visit(current) {
+    if (ts.isIdentifier(current) && names.has(current.text)) found = true;
+    if (!found) ts.forEachChild(current, visit);
+  }
+  visit(node);
+  return found;
+}
+
 function flattenCatalog(catalog) {
   const keys = new Set();
   for (const [file, symbols] of Object.entries(catalog)) {
@@ -436,6 +459,50 @@ const declarations = new Map();
 const mutationHooks = new Set();
 const guardedDeclarations = new Set();
 
+// These hooks now pass a shared request option or define a direct live guard.
+// Keep the operational policy in sync with the request boundary enforcement.
+const GUARDED_MUTATIONS_RECLASSIFIED = [
+  'hooks/useAdvancedIntelligence.ts#useCreateCausalExperiment',
+  'hooks/useAlertPacks.ts#useInstallAlertPack',
+  'hooks/useAlertPacks.ts#useRemoveAlertPack',
+  'hooks/useAutomations.ts#useInstallRoutine',
+  'hooks/useCharging.ts#useRefreshTeslaChargingHistory',
+  'hooks/useCharging.ts#useOptimizeCharge',
+  'hooks/useCharging.ts#useSaveAutopilotProfile',
+  'hooks/useExports.ts#useBulkExportsDelete',
+  'hooks/useOwnership.ts#useUpsertInsurancePolicy',
+  'hooks/useOwnership.ts#useDeleteInsurancePolicy',
+  'hooks/useOwnership.ts#useCreateInvoice',
+  'hooks/useOwnership.ts#useDeleteInvoice',
+  'hooks/useOwnership.ts#useCreateDispute',
+  'hooks/useOwnership.ts#useCreateWarranty',
+  'hooks/useOwnership.ts#useDeleteWarranty',
+  'hooks/useOwnership.ts#useCreateWarrantyClaim',
+  'hooks/useOwnership.ts#useUpsertRetentionPolicy',
+  'hooks/useOwnership.ts#useDeleteRetentionPolicy',
+  'hooks/useOwnership.ts#useSimulateGovernance',
+  'hooks/useOwnership.ts#useCreateSubscription',
+  'hooks/useOwnership.ts#useDeleteSubscription',
+  'hooks/useSettings.ts#usePollGasPrice',
+  'hooks/useSettings.ts#useToggleGasPrice',
+  'hooks/useSettings.ts#useUpdateGasPriceConfig',
+  'hooks/useTelemetry.ts#useRefreshFleetTelemetryErrorVINs',
+  'hooks/useTelemetry.ts#useRefreshFleetTelemetryErrors',
+  'hooks/useUser.ts#useRefreshTeslaFeatureConfig',
+  'hooks/useUser.ts#useRefreshTeslaRegion',
+  'hooks/useUser.ts#useRefreshTeslaProfile',
+  'hooks/useVehicles.ts#useRefreshVehicleSpecs',
+];
+
+const GUARDED_MUTATION_HELPERS = [
+  'hooks/useFeatureFlags.ts#assertFeatureFlagDeleteResult',
+  'hooks/useFeedback.ts#updateFeedback',
+  'hooks/useIncidents.ts#createIncident',
+  'hooks/useIncidents.ts#patchIncident',
+  'hooks/useIncidents.ts#appendIncidentUpdate',
+  'hooks/useIncidents.ts#deleteIncident',
+];
+
 for (const file of walk(HOOKS_ROOT).concat(path.join(API_ROOT, 'devtools.ts'))) {
   const relative = path.relative(API_ROOT, file).replaceAll('\\', '/');
   const source = readFileSync(file, 'utf8');
@@ -445,6 +512,7 @@ for (const file of walk(HOOKS_ROOT).concat(path.join(API_ROOT, 'devtools.ts'))) 
     ts.ScriptTarget.Latest,
     true,
   );
+  const guardOptions = liveGuardOptions(sourceFile);
 
   function visit(node) {
     const name = declarationName(node);
@@ -458,7 +526,9 @@ for (const file of walk(HOOKS_ROOT).concat(path.join(API_ROOT, 'devtools.ts'))) 
       ) {
         mutationHooks.add(key);
       }
-      if (containsLiveGuard(body)) guardedDeclarations.add(key);
+      if (containsLiveGuard(body) || referencesGuardOption(body, guardOptions)) {
+        guardedDeclarations.add(key);
+      }
     }
     ts.forEachChild(node, visit);
   }
@@ -469,12 +539,17 @@ for (const file of walk(HOOKS_ROOT).concat(path.join(API_ROOT, 'devtools.ts'))) 
 const liveOnly = flattenCatalog(LIVE_ONLY_MUTATIONS);
 const modeIndependent = flattenCatalog(MODE_INDEPENDENT_MUTATIONS);
 const infrastructure = flattenCatalog(INFRASTRUCTURE_MUTATIONS);
+for (const key of GUARDED_MUTATIONS_RECLASSIFIED) {
+  modeIndependent.delete(key);
+  liveOnly.add(key);
+}
 const classified = new Set([
   ...liveOnly,
   ...modeIndependent,
   ...infrastructure,
 ]);
 const approvedGuardTargets = new Set(liveOnly);
+for (const key of GUARDED_MUTATION_HELPERS) approvedGuardTargets.add(key);
 for (const guards of Object.values(DELEGATED_GUARDS)) {
   for (const guard of guards) approvedGuardTargets.add(guard);
 }
@@ -499,7 +574,7 @@ for (const key of liveOnly) {
     const declaration = declarations.get(guard);
     if (!declaration) {
       failures.push(`${key}: guard target ${guard} does not exist`);
-    } else if (!containsLiveGuard(declaration)) {
+    } else if (!guardedDeclarations.has(guard)) {
       failures.push(
         `${key}: guard target ${guard} is missing requiresLiveMode: true`,
       );
@@ -509,7 +584,7 @@ for (const key of liveOnly) {
 
 for (const key of modeIndependent) {
   const declaration = declarations.get(key);
-  if (declaration && containsLiveGuard(declaration)) {
+  if (declaration && guardedDeclarations.has(key)) {
     failures.push(
       `${key}: mode-independent mutation gained a live guard; reclassify it`,
     );

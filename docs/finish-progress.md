@@ -270,3 +270,21 @@ Changed fallback wording that had reused unrelated keys to dedicated catalog key
   The focused plot suite passed **7/7**, and the legend audit now reports **113
   adopted, 5 waived, 0 candidate warnings**. Full lint was stopped at its first
   failing audit; rerun it to verify the remaining sequence.
+
+### Phase 7 gate follow-up: mutation policy audit (2026-10-15)
+
+- The full lint rerun cleared chart frame and chart legend, then found the live
+  mutation policy catalog was out of sync with request-boundary guards already
+  in the hooks. Updated the classification to recognize shared guard options,
+  classify guarded writes as live-only, and allow the guarded helper functions
+  used by mutation hooks. The audit passes with **104 live-only, 145
+  mode-independent, and 1 infrastructure mutation hook**.
+- Full Vitest completed with **55,308 passed, 1,536 failed, 4 skipped** across
+  2,702 files (three unhandled errors). The repository's prior documented
+  baseline was about 1,830 failures. The full report includes substantial
+  existing i18n snapshot/physical-leaf count failures and stale fixture errors;
+  the modified arrival reliability profile suite passed **7/7**.
+- `npx tsc --noEmit` passed. `node scripts/split-i18n-catalog.mjs --check`
+  passed. Root `go build ./...` and `go test ./...` completed successfully.
+- The full lint rerun and `npm run build` are still in progress after the
+  mutation policy update; rerun lint from the beginning to verify all stages.
