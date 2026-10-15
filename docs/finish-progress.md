@@ -324,3 +324,13 @@ Changed fallback wording that had reused unrelated keys to dedicated catalog key
   ESLint, and `npx tsc --noEmit` passed. No other new user-facing copy was
   introduced.
 - Source commits pushed: `325d08d155`, `dc7f7e054f`, and `c5a755613d`.
+
+### Phase 6 group: vehicle-systems (2026-10-15)
+
+- Reviewed and closed the 49 pending vehicle-systems work records against the
+  focused tests named by those items. The 23 resulting test files passed **824
+  tests**. Existing records note the broader vehicle-systems suite passed
+  **939 tests** earlier on this branch.
+- No catalog strings or package files changed in this group. The test output
+  included existing jsdom `scrollTo`, chart sizing, and React `act` warnings;
+  they did not fail the suite.
