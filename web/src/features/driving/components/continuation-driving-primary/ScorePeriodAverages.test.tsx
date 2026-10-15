@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen, within } from '@testing-library/react';
-import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { fmtInt, getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import type { PeriodStats } from '../../pages/DriveScorePage';
 import { ScorePeriodAverages } from './ScorePeriodAverages';
 
@@ -40,8 +40,8 @@ describe('ScorePeriodAverages directional comparisons', () => {
   ])('preserves values and explains %s versus %s', (current, previous, text) => {
     setGlobalPrecision(2);
     render(<ScorePeriodAverages stats={period(current, previous)} />);
-    expect(weekTile().getByText(String(current), { exact: true })).toBeInTheDocument();
-    expect(weekTile().getByText(`vs ${previous} last week`)).toBeInTheDocument();
+    expect(weekTile().getByText(fmtInt(current), { exact: true })).toBeInTheDocument();
+    expect(weekTile().getByText(`vs ${fmtInt(previous)} last week`)).toBeInTheDocument();
     expect(screen.getAllByText(text)).toHaveLength(2);
     for (const label of ['This Week', 'This Month', 'Best Week', 'Best Month', 'Total Drives', 'Rated A+/A']) {
       expect(screen.getByText(label)).toBeInTheDocument();
@@ -93,5 +93,32 @@ describe('ScorePeriodAverages directional comparisons', () => {
     expect(screen.queryByText('No change')).not.toBeInTheDocument();
     expect(screen.getByText('This Week')).toBeInTheDocument();
     expect(screen.getByText('Rated A+/A')).toBeInTheDocument();
+  });
+
+  it('formats every reading and prior-period detail using the saved numeric locale', () => {
+    setGlobalLocale('de-DE');
+    const stats = {
+      ...period(-1234.6, -2345.6),
+      bestWeek: { avg: -3456.6, label: '2026-W40' },
+      bestMonth: { avg: 4567.6, label: '2026-10' },
+      totalDrives: 12345, aOrBetter: 1234,
+    };
+    render(<ScorePeriodAverages stats={stats} />);
+    expect(screen.getAllByText('-1.235')).toHaveLength(2);
+    expect(screen.getByText('vs -2.346 last week')).toBeInTheDocument();
+    expect(screen.getByText('vs -2.346 last month')).toBeInTheDocument();
+    for (const value of ['-3.457', '4.568', '12.345', '1.234', '10% of drives']) {
+      expect(screen.getByText(value)).toBeInTheDocument();
+    }
+  });
+
+  it('keeps a measured zero share distinct from an unavailable count', () => {
+    const { rerender } = render(<ScorePeriodAverages stats={{ ...period(0, 0), aOrBetter: 0 }} />);
+    expect(screen.getByText('0% of drives')).toBeInTheDocument();
+    rerender(<ScorePeriodAverages stats={{ ...period(0, 0), aOrBetter: NaN }} />);
+    expect(screen.queryByText('0% of drives')).not.toBeInTheDocument();
+    expect(screen.queryByText(/NaN|Infinity/)).not.toBeInTheDocument();
+    rerender(<ScorePeriodAverages stats={{ ...period(0, 0), totalDrives: 0, aOrBetter: 0 }} />);
+    expect(screen.getByText('no drives')).toBeInTheDocument();
   });
 });

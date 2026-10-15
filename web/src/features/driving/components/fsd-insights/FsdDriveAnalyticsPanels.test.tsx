@@ -82,7 +82,7 @@ describe('FsdDriveAnalyticsPanels', () => {
   it.each([null, undefined, NaN, Infinity, -Infinity, '', '0'])(
     'preserves populations when shares are unavailable (%s) without fabricating zero',
     (value) => {
-      const insights = fsdInsights();
+      const insights = efficiencyInsights();
       Object.assign(insights.drive_analytics.firmware_spotlight.routes[0], {
         before_fsd_share_pct: value,
         after_fsd_share_pct: 0,
@@ -111,7 +111,7 @@ describe('FsdDriveAnalyticsPanels', () => {
   it('formats integer populations with locale grouping while preserving fractional signed measurements', () => {
     setGlobalLocale('de-DE');
     display.unitPrefs = { distance: 'km', precision: 2, locale: 'de-DE' };
-    const insights = fsdInsights();
+    const insights = efficiencyInsights();
     Object.assign(insights.drive_analytics.repeated_routes[0], { drive_count: 1234.6 });
     Object.assign(insights.drive_analytics.firmware_spotlight.routes[0], {
       before_drive_count: 1234.6,
@@ -163,6 +163,28 @@ describe('FsdDriveAnalyticsPanels', () => {
     expect(within(screen.getByTestId('fsd-commute-identity')).getByText(/point [+-]/)).toBeInTheDocument();
     expect(within(screen.getByTestId('fsd-route-efficiency')).getByText('Wh/km: 1,234.57 across 3 drives')).toBeInTheDocument();
     expect(within(screen.getByTestId('fsd-route-efficiency')).getByText('percent -1.23')).toBeInTheDocument();
+  });
+
+  it('keeps known zero populations and shares distinct from unknown values', () => {
+    const insights = efficiencyInsights();
+    Object.assign(insights.drive_analytics.repeated_routes[0], { drive_count: 0, fsd_share_pct: 0 });
+    Object.assign(insights.drive_analytics.firmware_spotlight.routes[0], {
+      before_drive_count: 0, after_drive_count: 0,
+      before_fsd_share_pct: 0, after_fsd_share_pct: 0, share_change_pct_points: 0,
+    });
+    Object.assign(insights.drive_analytics.commute_identities[0].this_month, { unknown_days: 0, fsd_share_pct: 0 });
+    insights.drive_analytics.commute_identities[0].share_change_pct_points = 0;
+    render(<MemoryRouter><FsdDriveAnalyticsPanels insights={insights} state={readyState} /></MemoryRouter>);
+    const groups = screen.getByTestId('fsd-comparison-groups');
+    expect(within(groups).getByText('0')).toBeInTheDocument();
+    expect(within(groups).getByText('0.00%')).toBeInTheDocument();
+    const spotlight = screen.getByTestId('fsd-firmware-spotlight');
+    expect(within(spotlight).getAllByText('0.00% · 0')).toHaveLength(2);
+    expect(within(spotlight).getByText('+0.00 pts')).toBeInTheDocument();
+    const commute = screen.getByTestId('fsd-commute-identity');
+    expect(within(commute).getByText('0')).toBeInTheDocument();
+    expect(within(commute).getByText('0.00%')).toBeInTheDocument();
+    expect(within(commute).getByText('+0.00 pt')).toBeInTheDocument();
   });
 
   it('keeps extracted attribution buckets distinct for measured zero and unavailable distance', () => {

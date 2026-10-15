@@ -23,6 +23,7 @@ import {
 import { SweetSpotSummaryBrief } from '../components/operationalbrief-n-z/SweetSpotSummaryBrief';
 import { SweetSpotEvidenceBrief } from '../components/operationalbrief-n-z/SweetSpotEvidenceBrief';
 import { SweetSpotMethodBrief } from '../components/operationalbrief-n-z/SweetSpotMethodBrief';
+import { DynamicsPausedNotice } from '../components/driving-dynamics-modernization/DynamicsPausedNotice';
 import { computeSweetSpot } from '../lib/speedSweetSpot';
 
 const DRIVE_WINDOW_LIMIT = 1_000;
@@ -59,9 +60,10 @@ export default function SpeedSweetSpotPage() {
   }
 
   // A failed refresh retains the observed sample, but must not claim a healthy source.
-  const retained = sourceState.refreshError != null || sourceState.isRefreshBlocked;
+  const retained = sourceState.hasData &&
+    (sourceState.refreshError != null || sourceState.isRefreshBlocked);
   const sectionState: SpeedSweetSpotSectionState = {
-    isLoading: sourceState.status === 'initial',
+    isLoading: sourceState.status === 'initial' && !sourceState.isRefreshBlocked,
     error: sourceState.fatalError,
     onRetry: () => {
       void drivesQuery.refetch();
@@ -76,7 +78,9 @@ export default function SpeedSweetSpotPage() {
         'Observed efficiency by whole-drive average speed — not instantaneous cruising speed or a recommended road speed',
       )}
       query={drivesQuery}
+      busy={sectionState.isLoading || sourceState.isRefreshing}
     >
+      <DynamicsPausedNotice state={sourceState} label={t('sweetSpot.title', 'Speed Sweet Spot')} />
       <StaleRefreshWarning state={sourceState} label={t('sweetSpot.title', 'Speed Sweet Spot')} />
       <FadeIn>
         <SweetSpotSummaryBrief summary={summary} {...sectionState}

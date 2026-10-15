@@ -14,7 +14,7 @@ function scoreTextClass(score: number | null): string {
 export function ScorePeriodAverages({ stats, sourceFallback }: { stats: PeriodStats | null; sourceFallback?: ReactNode }) {
   const { t } = useTranslation();
   const { fmtInt, fmtScientificNumber } = useNumberFormatting();
-  const reading = (value: number | null | undefined) => isFiniteNumber(value) ? value : '—';
+  const reading = (value: number | null | undefined) => isFiniteNumber(value) ? fmtInt(value) : '—';
   const comparison = (current: number | null | undefined, previous: number | null | undefined) => {
     if (!isFiniteNumber(current) || !isFiniteNumber(previous)) return null;
     const delta = current - previous;
@@ -56,7 +56,7 @@ export function ScorePeriodAverages({ stats, sourceFallback }: { stats: PeriodSt
       id: 'a-or-better', label: t('driveScore.ratedAPlus', 'Rated A+/A'), value: reading(stats?.aOrBetter),
       color: scoreTextClass(stats?.aOrBetter ?? null),
       detail: !stats || !isFiniteNumber(stats.totalDrives) || !isFiniteNumber(stats.aOrBetter) ? '—' : stats.totalDrives > 0
-        ? `${fmtInt((stats.aOrBetter / stats.totalDrives) * 100)}% ${t('driveScore.ofDrives', 'of drives')}`
+        ? t('driveScore.percentOfDrives', '{{val}}% of drives', { val: reading((stats.aOrBetter / stats.totalDrives) * 100) })
         : t('driveScore.noDrives', 'no drives'),
     },
   ];

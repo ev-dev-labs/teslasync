@@ -118,6 +118,7 @@ export function FsdTopDays({ insights, state }: FsdTopDaysProps) {
           <DataTable
             tableId="fsd-top-days"
             name="FsdTopDays"
+            caption={t('fsd.topDays.title', 'Most active days')}
             columns={columns}
             data={rows}
             keyExtractor={(row) => row.date}

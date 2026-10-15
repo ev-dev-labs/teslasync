@@ -131,7 +131,11 @@ vi.mock('@/components/feedback', async () => {
   const warning = await vi.importActual<typeof import('@/components/feedback/StaleRefreshWarning')>(
     '@/components/feedback/StaleRefreshWarning',
   );
+  const alert = await vi.importActual<typeof import('@/components/feedback/AlertBanner')>(
+    '@/components/feedback/AlertBanner',
+  );
   return {
+    AlertBanner: alert.AlertBanner,
     EmptyState: empty.EmptyState,
     StaleRefreshWarning: warning.StaleRefreshWarning,
     QueryError: ({ error, onRetry }: { error: unknown; onRetry?: () => void }) => (
@@ -742,6 +746,8 @@ describe('SpeedSweetSpotPage', () => {
 
     expect(screen.getByText('No drives were returned for this selected window.')).toBeInTheDocument();
     expect(screen.getByText('Source available')).toBeInTheDocument();
+    expect(screen.queryByText('The initial evidence query is paused; no empty result is inferred.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
     for (const id of SECTION_IDS) {
       expect(screen.getByTestId(id)).toBeInTheDocument();
     }
@@ -752,11 +758,68 @@ describe('SpeedSweetSpotPage', () => {
     render(<SpeedSweetSpotPage />);
 
     expect(screen.getByText('Loading source')).toBeInTheDocument();
+    expect(screen.queryByText('The initial evidence query is paused; no empty result is inferred.')).not.toBeInTheDocument();
     expect(screen.queryByText('No drives were returned for this selected window.')).not.toBeInTheDocument();
     for (const key of ['best-qualified-band', 'band-consumption', 'overall-consumption', 'observed-gap']) {
       expect(screen.getByTestId(`metric-${key}`)).toHaveAttribute('data-value-state', 'missing');
       expect(screen.getByTestId(`metric-${key}`)).not.toHaveAttribute('data-raw-value');
     }
+  });
+
+  it('keeps an initial pause cause-neutral and unknown, retries the same source, and recovers', () => {
+    const paused = query({
+      data: undefined,
+      dataUpdatedAt: 0,
+      isPending: true,
+      fetchStatus: 'paused',
+    });
+    useDrivesMock.mockReturnValue(paused);
+    const { rerender } = render(<SpeedSweetSpotPage />);
+
+    // Chart sections announce their own unavailable state; target the page-level paused notice.
+    const notice = screen.getAllByRole('status').find((el) => el.hasAttribute('data-refresh-blocked'));
+    if (!notice) throw new Error('paused notice not rendered');
+    expect(notice).toHaveTextContent('Speed Sweet Spot');
+    expect(notice).toHaveTextContent('The initial evidence query is paused; no empty result is inferred.');
+    expect(notice).not.toHaveTextContent(/offline|network|failed|empty window/i);
+    expect(screen.queryByText('Retained source')).not.toBeInTheDocument();
+    expect(screen.queryByText('Source available')).not.toBeInTheDocument();
+    expect(screen.queryByText('Loading source')).not.toBeInTheDocument();
+    expect(screen.queryByText('No drives were returned for this selected window.')).not.toBeInTheDocument();
+    expect(screen.getByTestId('speed-sweet-spot-kpi-state')).toHaveAttribute('data-state', 'ready');
+    for (const id of SECTION_IDS) {
+      expect(screen.getByTestId(id)).toBeInTheDocument();
+    }
+    for (const key of ['best-qualified-band', 'band-consumption', 'overall-consumption', 'observed-gap']) {
+      expect(screen.getByTestId(`metric-${key}`)).toHaveAttribute('data-value-state', 'missing');
+      expect(screen.getByTestId(`metric-${key}`)).not.toHaveAttribute('data-raw-value');
+    }
+    fireEvent.click(within(notice).getByRole('button', { name: 'Retry' }));
+    expect(paused.refetch).toHaveBeenCalledTimes(1);
+
+    useDrivesMock.mockReturnValue(query({ data: undefined, isPending: true, isFetching: true, fetchStatus: 'fetching' }));
+    rerender(<SpeedSweetSpotPage />);
+    expect(screen.queryByText('The initial evidence query is paused; no empty result is inferred.')).not.toBeInTheDocument();
+    expect(screen.getByText('Loading source')).toBeInTheDocument();
+
+    useDrivesMock.mockReturnValue(query({ data: [drive(1), drive(2), drive(3)], isSuccess: true }));
+    rerender(<SpeedSweetSpotPage />);
+    expect(screen.queryByText('The initial evidence query is paused; no empty result is inferred.')).not.toBeInTheDocument();
+    expect(screen.getByText('Source available')).toBeInTheDocument();
+    expect(screen.getByTestId('metric-observed-gap')).toHaveAttribute('data-raw-value', '0');
+    expect(screen.getByTestId('metric-observed-gap')).toHaveAttribute('data-value-state', 'value');
+  });
+
+  it('preserves initial errors and retry instead of presenting them as a pause', () => {
+    const failed = query({
+      data: undefined, isError: true, error: new Error('history unavailable'), fetchStatus: 'paused',
+    });
+    useDrivesMock.mockReturnValue(failed);
+    render(<SpeedSweetSpotPage />);
+    expect(screen.queryByText('The initial evidence query is paused; no empty result is inferred.')).not.toBeInTheDocument();
+    expect(screen.getByTestId('speed-sweet-spot-kpi-state')).toHaveAttribute('data-state', 'error');
+    fireEvent.click(within(screen.getByTestId('speed-sweet-spot-kpis')).getByRole('button', { name: 'Retry' }));
+    expect(failed.refetch).toHaveBeenCalledTimes(1);
   });
 
   it('preserves a measured zero observed gap and the positive SI consumption', () => {
@@ -816,8 +879,12 @@ describe('SpeedSweetSpotPage', () => {
 
   it('retains chart evidence on refresh failure and clears retained badges on recovery', () => {
     const data = [drive(1), drive(2), drive(3)];
-    useDrivesMock.mockReturnValue(query({ data, isError: true, error: new Error('refresh failed') }));
+    const failed = query({ data, isError: true, error: new Error('refresh failed') });
+    useDrivesMock.mockReturnValue(failed);
     const { rerender } = render(<SpeedSweetSpotPage />);
+    expect(screen.queryByText('The initial evidence query is paused; no empty result is inferred.')).not.toBeInTheDocument();
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+    expect(failed.refetch).toHaveBeenCalledTimes(1);
     for (const key of ['coverage', 'monthly', 'drive-evidence']) {
       const frame = screen.getByTestId(`speed-sweet-spot-${key}-frame`);
       expect(within(frame).getByText('Retained source')).toBeInTheDocument();
@@ -827,6 +894,7 @@ describe('SpeedSweetSpotPage', () => {
     }
     useDrivesMock.mockReturnValue(query({ data, isSuccess: true }));
     rerender(<SpeedSweetSpotPage />);
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
     expect(screen.queryByText('Retained source')).not.toBeInTheDocument();
     expect(screen.getByText('1 qualified')).toBeInTheDocument();
     expect(screen.getByText('1 observed months')).toBeInTheDocument();

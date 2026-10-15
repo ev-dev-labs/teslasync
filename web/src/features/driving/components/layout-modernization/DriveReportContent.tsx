@@ -24,6 +24,7 @@ export interface DriveReportContentProps {
   fsdInsight?: DriveFsdInsight;
   fsdLoading: boolean;
   fsdError: unknown;
+  onFsdRetry?: () => void;
   speedInsights: ReactNode;
   coaching: ReactNode;
 }
@@ -31,7 +32,7 @@ export interface DriveReportContentProps {
 /** Presentation only: historical sources, charts and panel actions retain
  * their existing owners. Missing data never removes the report outline. */
 export function DriveReportContent({
-  id, data, meaningful, sections, fsdInsight, fsdLoading, fsdError, speedInsights, coaching,
+  id, data, meaningful, sections, fsdInsight, fsdLoading, fsdError, onFsdRetry, speedInsights, coaching,
 }: DriveReportContentProps) {
   const { t } = useTranslation();
   const {
@@ -89,7 +90,7 @@ export function DriveReportContent({
         <PreservedPanelGrid label={label('supervised')} items={[
           { id: 'fsd-evidence', size: 'half', content: (
             <DriveDetailSection id="fsd-evidence" title={label('supervised')}>
-              <SupervisedDrivingPanel insight={fsdInsight} isLoading={fsdLoading} error={fsdError} isOngoing={!!drive && !drive.endTs} />
+              <SupervisedDrivingPanel insight={fsdInsight} isLoading={fsdLoading} error={fsdError} onRetry={onFsdRetry} isOngoing={!!drive && !drive.endTs} />
             </DriveDetailSection>
           ) },
           { id: 'silent-counter', size: 'half', content: (

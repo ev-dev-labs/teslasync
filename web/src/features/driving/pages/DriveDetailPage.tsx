@@ -154,6 +154,7 @@ export default function DriveDetailPage() {
         fsdInsight={fsdInsight}
         fsdLoading={fsdSource.enabled && fsdReadiness === 'loading'}
         fsdError={fsdState.fatalError}
+        onFsdRetry={() => { void fsdQuery.refetch(); }}
         speedInsights={<AISpeedProfileInsights driveId={drive ? id : undefined} />}
         coaching={<AIDriveCoaching driveId={drive ? id : undefined} />}
       />

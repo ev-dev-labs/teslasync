@@ -5,6 +5,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FsdTopDays } from './FsdTopDays';
 import { fsdDay, fsdInsights } from './__tests__/fixtures';
 
+const { translations } = vi.hoisted(() => ({
+  translations: {} as Record<string, string>,
+}));
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, fallback: string, values?: Record<string, unknown>) =>
+      Object.entries(values ?? {}).reduce(
+        (text, [name, value]) => text.replaceAll(`{{${name}}}`, String(value)),
+        translations[key] ?? fallback,
+      ),
+  }),
+}));
+
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({
     unitPrefs: { locale: 'en-US' },
@@ -35,6 +49,7 @@ const insights = fsdInsights({
 });
 
 beforeEach(() => {
+  for (const key of Object.keys(translations)) delete translations[key];
   localStorage.clear();
   observers.length = 0;
   vi.stubGlobal('ResizeObserver', class {
@@ -75,10 +90,22 @@ describe('FsdTopDays mobile full details', () => {
     await user.click(within(screen.getByRole('dialog')).getAllByRole('button', { name: 'Close', exact: true }).at(-1)!);
     resize(1280);
     expect(view.container.querySelector('[data-mobile-table]')).toBeNull();
-    const table = screen.getByRole('table', { name: 'FsdTopDays' });
+    const table = screen.getByRole('table', { name: 'Most active days' });
     expect(within(table).getAllByRole('columnheader')).toHaveLength(5);
     expect(within(table).getAllByRole('row')).toHaveLength(3);
     expect(screen.getByTestId('fsd-top-days')).toBeInTheDocument();
+  });
+
+  it('uses the localized panel title as the populated table caption, not its internal identity', () => {
+    translations['fsd.topDays.title'] = 'Jours les plus actifs';
+    render(<FsdTopDays insights={insights} state={state} />);
+    resize(1280);
+
+    const table = screen.getByRole('table', { name: 'Jours les plus actifs' });
+    expect(table.querySelector('caption')).toHaveTextContent('Jours les plus actifs');
+    expect(screen.getByRole('heading', { name: 'Jours les plus actifs' })).toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: 'FsdTopDays' })).not.toBeInTheDocument();
+    expect(within(table).getAllByRole('row')).toHaveLength(3);
   });
 
   it('keeps the panel and honest empty state when no active distance was reported', () => {
