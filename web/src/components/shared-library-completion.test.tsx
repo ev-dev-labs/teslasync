@@ -34,13 +34,15 @@ vi.mock('@/hooks/useChartExport', () => ({
     exportSVG: external.exportSVG, copyToClipboard: external.copyImage, exporting: false,
   }),
 }));
-vi.mock('@/api/hooks/useAnnotations', () => ({
-  useChartAnnotationsAsData: ({ enabled }: { enabled: boolean }) => ({
-    annotations: enabled ? external.annotations : [],
-  }),
+vi.mock('@/api/hooks/useAnnotations', async () => {
+  const { annotationQueryDouble } = await import('@/test/annotationQueryDouble');
+  return {
+  useChartAnnotations: ({ enabled }: { enabled: boolean }) =>
+    annotationQueryDouble(enabled ? external.annotations : []),
   useCreateAnnotation: () => ({ mutate: vi.fn() }),
   useDeleteAnnotation: () => ({ mutate: external.removeAnnotation }),
-}));
+  };
+});
 vi.mock('@/lib/csvExport', () => ({
   objectsToCSV: external.objectsToCSV, downloadCSV: external.downloadCSV,
   defaultExportFilename: (name: string) => name,

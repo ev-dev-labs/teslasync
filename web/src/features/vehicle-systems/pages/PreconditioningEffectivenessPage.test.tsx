@@ -43,12 +43,24 @@ const h = vi.hoisted(() => ({
   dateTimezone: 'UTC',
 }));
 
-vi.mock('@/hooks/useDateFormat', () => ({
+vi.mock('@/hooks/useDateFormat', async (importOriginal) => {
+  // wrapped-real-hook: keep every real formatter, override only what this file controls.
+  const actual = await importOriginal<typeof import('@/hooks/useDateFormat')>();
+  const overrides = await (() => ({
   useDateFormat: () => ({
     formatDateTime: (value: string | Date | null | undefined) =>
       formatDateTime(value, { locale: h.dateLocale, tz: h.dateTimezone }),
   }),
-}));
+}))();
+  return {
+    ...actual,
+    ...overrides,
+    useDateFormat: (...args: Parameters<typeof actual.useDateFormat>) => ({
+      ...actual.useDateFormat(...args),
+      ...overrides.useDateFormat(...args),
+    }),
+  };
+});
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({

@@ -151,7 +151,19 @@ vi.mock('@/api/hooks/useDriving', async () => {
 vi.mock('@/hooks/useUnits', () => ({ useUnits: () => unitsMock() }));
 vi.mock('@/hooks/useSelectedVehicle', () => ({ useSelectedVehicle: () => selectedVehicleMock() }));
 vi.mock('@/hooks/useRangeState', () => ({ useRangeState: (...args: unknown[]) => rangeStateMock(...args) }));
-vi.mock('@/hooks/useDateFormat', () => ({ useDateFormat: () => dateFormatMock() }));
+vi.mock('@/hooks/useDateFormat', async (importOriginal) => {
+  // wrapped-real-hook: keep every real formatter, override only what this file controls.
+  const actual = await importOriginal<typeof import('@/hooks/useDateFormat')>();
+  const overrides = await (() => ({ useDateFormat: () => dateFormatMock() }))();
+  return {
+    ...actual,
+    ...overrides,
+    useDateFormat: (...args: Parameters<typeof actual.useDateFormat>) => ({
+      ...actual.useDateFormat(...args),
+      ...overrides.useDateFormat(...args),
+    }),
+  };
+});
 
 // Stub the chart primitives: recharts needs a measured container jsdom can't
 // give it. BarChart + Scatter capture the exact derived `data`; LinearGauge

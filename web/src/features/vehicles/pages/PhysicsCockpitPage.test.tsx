@@ -43,12 +43,24 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: () => undefined }));
-vi.mock('@/hooks/useDateFormat', async () => {
+vi.mock('@/hooks/useDateFormat', async (importOriginal) => {
+  // wrapped-real-hook: keep every real formatter, override only what this file controls.
+  const actual = await importOriginal<typeof import('@/hooks/useDateFormat')>();
+  const overrides = await (async () => {
   const { formatDateTime } = await vi.importActual<typeof import('@/lib/dateFormat')>('@/lib/dateFormat');
   return {
     useDateFormat: () => ({
       formatDateTime: (value: string | Date | null | undefined) =>
         formatDateTime(value, { locale: h.dateLocale, tz: h.dateTimezone }),
+    }),
+  };
+})();
+  return {
+    ...actual,
+    ...overrides,
+    useDateFormat: (...args: Parameters<typeof actual.useDateFormat>) => ({
+      ...actual.useDateFormat(...args),
+      ...overrides.useDateFormat(...args),
     }),
   };
 });

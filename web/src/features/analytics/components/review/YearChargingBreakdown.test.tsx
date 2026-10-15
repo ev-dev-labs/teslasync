@@ -86,6 +86,7 @@ vi.mock('react-i18next', async () => {
 // results are unused — stub the hooks to no-ops so the tree doesn't demand a
 // ToastProvider / live query, mirroring the shared ChartContainer test.
 vi.mock('@/api/hooks/useAnnotations', () => ({
+  useChartAnnotations: () => ({ data: [], isPending: false, isLoading: false, isFetching: false, isError: false, error: null, fetchStatus: 'idle', dataUpdatedAt: 0, refetch: vi.fn() }),
   useChartAnnotationsAsData: () => ({ annotations: [] }),
   useCreateAnnotation: () => ({ mutate: vi.fn() }),
   useDeleteAnnotation: () => ({ mutate: vi.fn() }),

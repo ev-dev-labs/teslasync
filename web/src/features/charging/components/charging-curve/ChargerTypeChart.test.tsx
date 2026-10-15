@@ -131,6 +131,7 @@ vi.mock('@/hooks/useChartExport', () => ({
 // <ChartContainer> wires annotation hooks unconditionally; we never pass
 // `annotations`, so stub them to no-ops instead of demanding a live query.
 vi.mock('@/api/hooks/useAnnotations', () => ({
+  useChartAnnotations: () => ({ data: [], isPending: false, isLoading: false, isFetching: false, isError: false, error: null, fetchStatus: 'idle', dataUpdatedAt: 0, refetch: vi.fn() }),
   useChartAnnotationsAsData: () => ({ annotations: [] }),
   useCreateAnnotation: () => ({ mutate: vi.fn() }),
   useDeleteAnnotation: () => ({ mutate: vi.fn() }),

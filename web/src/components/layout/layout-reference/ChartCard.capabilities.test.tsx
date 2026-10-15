@@ -293,11 +293,12 @@ vi.mock('@/components/feedback/Toast', () => ({
 vi.mock('@/lib/broadcast', () => ({ broadcast: canonical.broadcast }));
 vi.mock('@/api/hooks/useAnnotations', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/hooks/useAnnotations')>();
+  const { annotationQueryDouble } = await import('@/test/annotationQueryDouble');
   return {
-  useChartAnnotationsAsData: (params: AnnotationListParams) => {
-    if (canonical.realIntegration) return actual.useChartAnnotationsAsData(params);
+  useChartAnnotations: (params: AnnotationListParams) => {
+    if (canonical.realIntegration) return actual.useChartAnnotations(params);
     canonical.fetchAnnotations(params);
-    return { annotations: params.enabled ? canonical.annotations : [] };
+    return annotationQueryDouble(params.enabled ? canonical.annotations : []);
   },
   useCreateAnnotation: () => canonical.realIntegration
     ? actual.useCreateAnnotation() : { mutateAsync: canonical.createAnnotation },
@@ -530,7 +531,7 @@ describe('ChartCard canonical capability opt-ins', () => {
     expect(canonical.fetchAnnotations).toHaveBeenLastCalledWith({
       vehicleId: 42, scope: 'efficiency', enabled: true,
     });
-    expect(child.mock.calls[child.mock.calls.length - 1]?.[0].annotations).toBe(canonical.annotations);
+    expect(child.mock.calls[child.mock.calls.length - 1]?.[0].annotations).toEqual(canonical.annotations);
     expect(screen.getByTestId('render-state')).toHaveAttribute('data-series-hidden', 'true');
     expect(screen.getByTestId('context-series')).toHaveAttribute('data-hidden', 'true');
     fireEvent.click(screen.getByRole('button', { name: 'Toggle original series' }));
@@ -541,7 +542,7 @@ describe('ChartCard canonical capability opt-ins', () => {
     expect(screen.getByTestId('render-state')).toHaveAttribute('data-hidden', 'true');
     expect(window.localStorage.getItem('teslasync-annotations-hidden:capabilities-source')).toBe('1');
     fireEvent.click(screen.getByRole('button', { name: 'Show annotations' }));
-    expect(child.mock.calls[child.mock.calls.length - 1]?.[0].annotations).toBe(canonical.annotations);
+    expect(child.mock.calls[child.mock.calls.length - 1]?.[0].annotations).toEqual(canonical.annotations);
     expect(screen.getByTestId('render-state')).toHaveAttribute('data-hidden', 'false');
     fireEvent.click(screen.getByRole('button', { name: 'Add annotation' }));
     fireEvent.click(within(screen.getByTestId('canonical-annotation-popover'))

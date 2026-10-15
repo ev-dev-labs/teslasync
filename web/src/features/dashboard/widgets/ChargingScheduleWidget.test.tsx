@@ -112,9 +112,21 @@ vi.mock('@/api/client', async (importOriginal) => ({
   request: (...args: unknown[]) => requestMock(...args),
 }));
 
-vi.mock('@/hooks/useDateFormat', () => ({
+vi.mock('@/hooks/useDateFormat', async (importOriginal) => {
+  // wrapped-real-hook: keep every real formatter, override only what this file controls.
+  const actual = await importOriginal<typeof import('@/hooks/useDateFormat')>();
+  const overrides = await (() => ({
   useDateFormat: () => ({ formatTime: (value: unknown) => formatTimeMock(value) }),
-}));
+}))();
+  return {
+    ...actual,
+    ...overrides,
+    useDateFormat: (...args: Parameters<typeof actual.useDateFormat>) => ({
+      ...actual.useDateFormat(...args),
+      ...overrides.useDateFormat(...args),
+    }),
+  };
+});
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
