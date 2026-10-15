@@ -92,11 +92,29 @@ func (p predictiveProjection) MarshalJSON() ([]byte, error) {
 }
 
 type riskFactor struct {
-	Name      string `json:"name"`
-	Score     int    `json:"score"`
-	Available *bool  `json:"available,omitempty"`
-	Label     string `json:"label"`
-	Detail    string `json:"detail"`
+	LabelCode  string                 `json:"label_code,omitempty"`
+	DetailCode string                 `json:"detail_code,omitempty"`
+	Operands   *healthMessageOperands `json:"operands,omitempty"`
+	Name       string                 `json:"name"`
+	Score      int                    `json:"score"`
+	Available  *bool                  `json:"available,omitempty"`
+	Label      string                 `json:"label"`
+	Detail     string                 `json:"detail"`
+}
+
+// Operands remain numeric SI/domain measurements; clients localize at display.
+type healthMessageOperands struct {
+	Percent               *float64 `json:"percent,omitempty"`
+	AvgCellTempC          *float64 `json:"avg_cell_temp_c,omitempty"`
+	CyclesPerMonth        *float64 `json:"cycles_per_month,omitempty"`
+	TypicalCyclesPerMonth *float64 `json:"typical_cycles_per_month,omitempty"`
+	ThresholdSocPct       *float64 `json:"threshold_soc_pct,omitempty"`
+}
+
+type healthMessage struct {
+	Code     string                 `json:"code"`
+	Fallback string                 `json:"fallback"`
+	Operands *healthMessageOperands `json:"operands,omitempty"`
 }
 
 func (r riskFactor) MarshalJSON() ([]byte, error) {
@@ -237,6 +255,7 @@ type batteryHealthResponse struct {
 	ChargingHabits         chargingHabits              `json:"charging_habits"`
 	RiskFactors            []riskFactor                `json:"risk_factors"`
 	Recommendations        []string                    `json:"recommendations"`
+	RecommendationMessages []healthMessage             `json:"recommendation_messages"`
 	ChargingAnalysis       batteryChargingAnalysis     `json:"charging_analysis"`
 	// Provenance of OriginalCapacityWh, not the observed current-capacity estimator.
 	CapacitySource string `json:"capacity_source"`

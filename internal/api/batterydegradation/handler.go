@@ -690,6 +690,7 @@ func (h *Handler) buildBatteryHealthInRange(ctx context.Context, scope batteryHe
 	tempScore, tempReason := temperatureExposure(summary.avgTempC, summary.tempSamples)
 	riskFactors = healthRiskEvidence(riskFactors, validChargeCount > 0, summary.validEndSocCount > 0,
 		tempScore != nil, observationMonths != nil && *observationMonths > 0 && cyclesAvailable, summary.validStartSocCount > 0)
+	riskFactors = healthRiskMessages(riskFactors, fastChargePct, highSocPct, summary.avgTempC, cyclesPerMonth, deepDischargePct)
 	habitsAvailable := validChargeCount > 0 && summary.validEndSocCount > 0 && summary.validStartSocCount > 0
 
 	habits := chargingHabitsFromSummary(summary)
@@ -749,6 +750,7 @@ func (h *Handler) buildBatteryHealthInRange(ctx context.Context, scope batteryHe
 		ChargingHabits:             habits,
 		RiskFactors:                riskFactors,
 		Recommendations:            recommendations,
+		RecommendationMessages:     generateRecommendationMessages(riskFactors),
 		ChargingAnalysis:           charging,
 		CapacitySource:             capacitySource,
 	}, timings, nil

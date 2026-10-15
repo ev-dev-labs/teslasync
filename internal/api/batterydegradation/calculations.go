@@ -374,6 +374,44 @@ func healthRiskEvidence(factors []riskFactor, available ...bool) []riskFactor {
 			factors[i].Score = 0
 			factors[i].Label = "Unknown"
 			factors[i].Detail = ""
+			factors[i].DetailCode = ""
+			factors[i].Operands = nil
+		}
+		switch factors[i].Label {
+		case "Low":
+			factors[i].LabelCode = "low"
+		case "Moderate":
+			factors[i].LabelCode = "moderate"
+		case "Elevated":
+			factors[i].LabelCode = "elevated"
+		case "High":
+			factors[i].LabelCode = "high"
+		default:
+			factors[i].LabelCode = "unknown"
+		}
+	}
+	return factors
+}
+
+func healthRiskMessages(factors []riskFactor, fastPct, highSocPct float64, tempC *float64, cyclesPerMonth, deepPct float64) []riskFactor {
+	typical, highThreshold, deepThreshold := 25.0, 90.0, 10.0
+	for i := range factors {
+		f := &factors[i]
+		if f.Available == nil || !*f.Available {
+			continue
+		}
+		f.DetailCode = f.Name
+		switch f.Name {
+		case "fast_charge_ratio":
+			f.Operands = &healthMessageOperands{Percent: &fastPct}
+		case "high_soc_charging":
+			f.Operands = &healthMessageOperands{Percent: &highSocPct, ThresholdSocPct: &highThreshold}
+		case "temperature_exposure":
+			f.Operands = &healthMessageOperands{AvgCellTempC: tempC}
+		case "cycle_count_rate":
+			f.Operands = &healthMessageOperands{CyclesPerMonth: &cyclesPerMonth, TypicalCyclesPerMonth: &typical}
+		case "deep_discharge_frequency":
+			f.Operands = &healthMessageOperands{Percent: &deepPct, ThresholdSocPct: &deepThreshold}
 		}
 	}
 	return factors
@@ -381,7 +419,16 @@ func healthRiskEvidence(factors []riskFactor, available ...bool) []riskFactor {
 
 // generateRecommendations produces actionable tips based on elevated risk factors.
 func generateRecommendations(factors []riskFactor) []string {
-	recs := make([]string, 0)
+	messages := generateRecommendationMessages(factors)
+	recs := make([]string, 0, len(messages))
+	for _, message := range messages {
+		recs = append(recs, message.Fallback)
+	}
+	return recs
+}
+
+func generateRecommendationMessages(factors []riskFactor) []healthMessage {
+	recs := make([]healthMessage, 0)
 	for _, f := range factors {
 		if f.Available != nil && !*f.Available {
 			continue
@@ -391,15 +438,17 @@ func generateRecommendations(factors []riskFactor) []string {
 		}
 		switch f.Name {
 		case "fast_charge_ratio":
-			recs = append(recs, "Reduce Supercharging frequency — prefer Level 2 home or destination charging")
+			recs = append(recs, healthMessage{Code: f.Name, Fallback: "Reduce Supercharging frequency — prefer Level 2 home or destination charging"})
 		case "high_soc_charging":
-			recs = append(recs, "Reduce daily charge limit to 80% for everyday driving")
+			threshold := 80.0
+			recs = append(recs, healthMessage{Code: f.Name, Fallback: "Reduce daily charge limit to 80% for everyday driving", Operands: &healthMessageOperands{ThresholdSocPct: &threshold}})
 		case "temperature_exposure":
-			recs = append(recs, "Park in shade or climate-controlled garage to reduce heat exposure")
+			recs = append(recs, healthMessage{Code: f.Name, Fallback: "Park in shade or climate-controlled garage to reduce heat exposure"})
 		case "cycle_count_rate":
-			recs = append(recs, "Combine short trips when possible to reduce charge cycle frequency")
+			recs = append(recs, healthMessage{Code: f.Name, Fallback: "Combine short trips when possible to reduce charge cycle frequency"})
 		case "deep_discharge_frequency":
-			recs = append(recs, "Avoid letting battery drop below 20% regularly — plug in nightly")
+			threshold := 20.0
+			recs = append(recs, healthMessage{Code: f.Name, Fallback: "Avoid letting battery drop below 20% regularly — plug in nightly", Operands: &healthMessageOperands{ThresholdSocPct: &threshold}})
 		}
 	}
 	if len(recs) == 0 {
@@ -410,7 +459,7 @@ func generateRecommendations(factors []riskFactor) []string {
 			}
 		}
 		if complete {
-			recs = append(recs, "Your battery habits are excellent — keep it up!")
+			recs = append(recs, healthMessage{Code: "excellent_habits", Fallback: "Your battery habits are excellent — keep it up!"})
 		}
 	}
 	return recs

@@ -2873,6 +2873,7 @@
       "avgDoD": "Avg depth of discharge",
       "avgDoDLabel": "Avg DoD",
       "baselineSampledAt": "Baseline sample timestamp",
+      "batteryAge": "Battery age",
       "brief": {
         "prediction": "Degradation model evidence",
         "summary": "Battery degradation evidence"
@@ -2880,6 +2881,7 @@
       "capacity": "Capacity",
       "chargeHabits": "Charge habits",
       "chargingImpact": "Charging habits impact",
+      "confidence": "95% Confidence",
       "currentRange": "Current range",
       "currentSoh": "Current SOH",
       "cycleDepth": "Cycle depth",
@@ -2909,6 +2911,7 @@
       "noStress": "Charging impact will appear once charging history is available.",
       "odometer": "Odometer",
       "odometerSampledAt": "Odometer sample timestamp",
+      "originalRange": "Original range",
       "prediction": "Prediction",
       "predictionAndHabits": "Prediction and charging habits",
       "predictionDesc": "At current rate, battery reaches",
@@ -2918,10 +2921,32 @@
       "rangeLossAria": "First retained comparison baseline and estimated driving range over time",
       "rangeSampledAt": "Range sample timestamp",
       "rate": "Degradation rate",
+      "recommendation": {
+        "cycle_count_rate": "Combine short trips when possible to reduce charge cycle frequency",
+        "deep_discharge_frequency": "Avoid letting battery drop below {{threshold}}% regularly — plug in nightly",
+        "excellent_habits": "Your battery habits are excellent — keep it up!",
+        "fast_charge_ratio": "Reduce Supercharging frequency — prefer Level 2 home or destination charging",
+        "high_soc_charging": "Reduce daily charge limit to {{threshold}}% for everyday driving",
+        "temperature_exposure": "Park in shade or climate-controlled garage to reduce heat exposure"
+      },
       "recommendations": "Recommendations",
       "retainedRangeBaseline": "First retained range estimate",
       "retainedRangeEvidence": "The comparison baseline is the range estimate attached to the first retained history row, not new-pack range. Missing baseline values remain unknown. Sample timestamps identify carried-forward telemetry; the history date is the capacity aggregation day.",
+      "riskDetail": {
+        "cycle_count_rate": "{{cycles}} cycles/month vs ~{{typical}} typical",
+        "deep_discharge_frequency": "{{percent}}% of sessions start below {{threshold}}% SOC",
+        "fast_charge_ratio": "{{percent}}% of sessions are DC fast charge",
+        "high_soc_charging": "{{percent}}% of sessions charge above {{threshold}}%",
+        "temperature_exposure": "Average cell temperature: {{temperature}}"
+      },
       "riskFactors": "Risk factors",
+      "riskLabel": {
+        "elevated": "Elevated",
+        "high": "High",
+        "low": "Low",
+        "moderate": "Moderate",
+        "unknown": "Unknown"
+      },
       "riskScore": "Risk score",
       "sampleWindow": "Available battery history",
       "sohPct": "SOH %",
@@ -2941,6 +2966,7 @@
       "title": "Battery degradation",
       "totalCycles": "Total cycles",
       "trendTitle": "Health trend & projection",
+      "trendTitleAria": "Battery health trend and 95% confidence projection chart",
       "warranty": "80% Warranty",
       "years": "years",
       "yearsCount": "{{y}} years",

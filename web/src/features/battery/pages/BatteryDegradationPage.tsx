@@ -8,7 +8,7 @@ import {
 import { PageLayout, LayoutCard, ChartCard } from '@/components/layout';
 import { BatteryDegradationStats, DegradationGrid } from '../components/battery-degradation-modernization';
 import type { BatteryDegradationHealth } from '../components/battery-degradation-modernization/BatteryDegradationStats';
-import { capacityEvidence, observationEvidence, driveDropEvidence, predictionIntervalEvidence, batteryNumber, batteryCount, batteryStress } from '../components/battery-degradation-modernization/BatteryDegradationStats';
+import { capacityEvidence, observationEvidence, driveDropEvidence, predictionIntervalEvidence, batteryNumber, batteryCount, batteryStress, healthMessageText } from '../components/battery-degradation-modernization/BatteryDegradationStats';
 
 import {
   GlassPanel, Badge, DataTable, Text, Caption, HelpTooltip, type Column,
@@ -155,7 +155,7 @@ export default function BatteryDegradationPage() {
   const palette = useChartPalette();
 
   /* Capacity, range, and odometer values remain SI until this display boundary. */
-  const { unitPrefs, formatEnergy } = useUnits();
+  const { unitPrefs, formatEnergy, formatTemperature } = useUnits();
   const fromMeters = useCallback(
     (meters: number): number => convertDistanceFromSI(meters, unitPrefs.distance),
     [unitPrefs.distance],
@@ -246,8 +246,15 @@ export default function BatteryDegradationPage() {
   const riskFactors = (Array.isArray(data?.risk_factors) ? data.risk_factors : [])
     .filter(row => row != null && typeof row === 'object' && !Array.isArray(row) && typeof row.name === 'string' &&
       row.name.trim().length > 0);
-  const recommendations = (Array.isArray(data?.recommendations) ? data.recommendations : [])
-    .filter(row => typeof row === 'string' && row.trim().length > 0);
+  const recommendationMessages = Array.isArray(data?.recommendation_messages)
+    ? data.recommendation_messages : null;
+  const recommendations = recommendationMessages != null
+    ? recommendationMessages
+      .filter(row => row != null && typeof row === 'object' && typeof row.code === 'string' &&
+        typeof row.fallback === 'string' && row.fallback.trim().length > 0)
+      .map(row => healthMessageText(row, 'recommendation', t, fmtNumber, formatTemperature))
+    : (Array.isArray(data?.recommendations) ? data.recommendations : [])
+      .filter(row => typeof row === 'string' && row.trim().length > 0);
   const stressLevel = batteryStress(data);
   const soh = data?.current_soh_available === false ? null : batteryNumber(data?.current_soh, 0, 100);
 
@@ -745,7 +752,8 @@ export default function BatteryDegradationPage() {
                           </Text>
                         </div>
                         <Badge variant={riskBadgeVariant(score)} size="sm">
-                          {Number.isFinite(score) && typeof rf.label === 'string' ? rf.label : '—'}
+                          {Number.isFinite(score) && typeof rf.label === 'string'
+                            ? t(`battery.degradation.riskLabel.${rf.label_code ?? rf.label.toLowerCase()}`, rf.label) : '—'}
                         </Badge>
                       </div>
                       <MetricBar
@@ -756,7 +764,10 @@ export default function BatteryDegradationPage() {
                         fill="solid"
                         sublabel={`${Number.isFinite(score) ? score : '—'}/100`}
                       />
-                      <Caption className="mt-2 block">{Number.isFinite(score) && typeof rf.detail === 'string' ? rf.detail : '—'}</Caption>
+                      <Caption className="mt-2 block">{Number.isFinite(score) && typeof rf.detail === 'string'
+                        ? healthMessageText({
+                          code: rf.detail_code ?? '', fallback: rf.detail, operands: rf.operands,
+                        }, 'riskDetail', t, fmtNumber, formatTemperature) : '—'}</Caption>
                     </GlassPanel>
                   );
                 })}

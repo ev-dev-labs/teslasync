@@ -6,6 +6,66 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDateFormat, type DateFormatter } from '@/hooks/useDateFormat';
 import type { BatteryHealthAnalytics } from '@/types/energy';
 import type { UseRangeStateReturn } from '@/hooks/useRangeState';
+import type { UnitFormatter } from '@/hooks/useUnits';
+
+interface HealthMessageOperands {
+  percent?: number;
+  avg_cell_temp_c?: number;
+  cycles_per_month?: number;
+  typical_cycles_per_month?: number;
+  threshold_soc_pct?: number;
+}
+
+interface HealthMessage {
+  code: string;
+  fallback: string;
+  operands?: HealthMessageOperands | null;
+}
+
+const riskDetailTemplates: Record<string, string> = {
+  fast_charge_ratio: '{{percent}}% of sessions are DC fast charge',
+  high_soc_charging: '{{percent}}% of sessions charge above {{threshold}}%',
+  temperature_exposure: 'Average cell temperature: {{temperature}}',
+  cycle_count_rate: '{{cycles}} cycles/month vs ~{{typical}} typical',
+  deep_discharge_frequency: '{{percent}}% of sessions start below {{threshold}}% SOC',
+};
+const recommendationTemplates: Record<string, string> = {
+  fast_charge_ratio: 'Reduce Supercharging frequency — prefer Level 2 home or destination charging',
+  high_soc_charging: 'Reduce daily charge limit to {{threshold}}% for everyday driving',
+  temperature_exposure: 'Park in shade or climate-controlled garage to reduce heat exposure',
+  cycle_count_rate: 'Combine short trips when possible to reduce charge cycle frequency',
+  deep_discharge_frequency: 'Avoid letting battery drop below {{threshold}}% regularly — plug in nightly',
+  excellent_habits: 'Your battery habits are excellent — keep it up!',
+};
+
+export function healthMessageText(
+  message: HealthMessage,
+  kind: 'riskDetail' | 'recommendation',
+  t: (key: string, fallback: string, options?: Record<string, unknown>) => string,
+  fmtNumber: (value: number) => string,
+  formatTemperature: UnitFormatter,
+): string {
+  const templates = kind === 'riskDetail' ? riskDetailTemplates : recommendationTemplates;
+  const template = Object.prototype.hasOwnProperty.call(templates, message.code) ? templates[message.code] : undefined;
+  if (!template) return message.fallback;
+  const operands = message.operands;
+  const numberText = (value: unknown, min = 0, max = Infinity) => {
+    const number = batteryNumber(value, min, max);
+    return number == null ? undefined : fmtNumber(number);
+  };
+  const temperature = batteryNumber(operands?.avg_cell_temp_c);
+  const values: Record<string, string | undefined> = {
+    percent: numberText(operands?.percent, 0, 100),
+    threshold: numberText(operands?.threshold_soc_pct, 0, 100),
+    temperature: temperature == null ? undefined : formatTemperature(temperature),
+    cycles: numberText(operands?.cycles_per_month),
+    typical: numberText(operands?.typical_cycles_per_month),
+  };
+  if (Array.from(template.matchAll(/\{\{(\w+)\}\}/g)).some(match => values[match[1]] == null)) {
+    return message.fallback;
+  }
+  return t(`battery.degradation.${kind}.${message.code}`, template, values);
+}
 
 export function ageLabel(
   months: number,
@@ -71,9 +131,13 @@ export type BatteryDegradationHealth = Omit<BatteryHealthAnalytics, 'charging_ha
   charge_habits_score?: number | null;
   charge_habits_available?: boolean;
   stress_level?: string | null;
+  recommendation_messages?: HealthMessage[] | null;
   risk_factors: (Omit<BatteryHealthAnalytics['risk_factors'][number], 'score'> & {
     score: number | null;
     available?: boolean;
+    label_code?: string;
+    detail_code?: string;
+    operands?: HealthMessageOperands | null;
   })[];
 };
 

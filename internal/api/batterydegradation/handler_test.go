@@ -504,9 +504,10 @@ func TestHealthMissingEvidenceDoesNotProduceHealthyAdvice(t *testing.T) {
 		response.ValidChargeCount != 0 || response.ValidDoDCount != 0 {
 		t.Fatalf("missing evidence represented as measured health: %+v", response)
 	}
-	if len(response.RiskFactors) != 5 || len(response.Recommendations) != 0 {
+	if len(response.RiskFactors) != 5 || len(response.Recommendations) != 0 || len(response.RecommendationMessages) != 0 {
 		t.Fatalf("risk shells or unavailable advice incorrect: %+v", response)
 	}
+
 	if response.TempExposureAvailable || response.TempSampleCount != 0 ||
 		response.TempExposureScore != nil || response.TempExposureReason == nil {
 		t.Fatalf("missing thermal evidence represented as observed: %+v", response)
@@ -515,6 +516,61 @@ func TestHealthMissingEvidenceDoesNotProduceHealthyAdvice(t *testing.T) {
 		if factor.Available == nil || *factor.Available {
 			t.Fatalf("missing risk evidence marked available: %+v", factor)
 		}
+	}
+}
+
+func TestHealthMessageCodesPreserveFallbacksAndNumericOperands(t *testing.T) {
+	temp := 46.125
+	factors := healthRiskEvidence(computeRiskFactors(80.125, 60.25, &temp, 45.5, 15.75, 10),
+		true, true, true, true, true)
+	factors = healthRiskMessages(factors, 80.125, 60.25, &temp, 45.5, 15.75)
+	messages := generateRecommendationMessages(factors)
+	fallbacks := generateRecommendations(factors)
+	wire, err := json.Marshal(batteryHealthResponse{
+		RiskFactors: factors, Recommendations: fallbacks, RecommendationMessages: messages,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var response batteryHealthResponse
+	if err := json.Unmarshal(wire, &response); err != nil {
+		t.Fatal(err)
+	}
+	if len(response.RecommendationMessages) != 5 || len(response.Recommendations) != 5 {
+		t.Fatalf("populated recommendations lost: %s", wire)
+	}
+	for i, message := range response.RecommendationMessages {
+		if message.Code != factors[i].Name || message.Fallback != fallbacks[i] {
+			t.Fatalf("message and fallback diverged: %s", wire)
+		}
+		if response.RiskFactors[i].DetailCode != factors[i].Name ||
+			response.RiskFactors[i].LabelCode != "high" && response.RiskFactors[i].LabelCode != "elevated" {
+			t.Fatalf("risk message codes missing: %s", wire)
+		}
+	}
+	if *response.RiskFactors[0].Operands.Percent != 80.125 ||
+		*response.RiskFactors[1].Operands.ThresholdSocPct != 90 ||
+		*response.RiskFactors[2].Operands.AvgCellTempC != temp ||
+		*response.RiskFactors[3].Operands.CyclesPerMonth != 45.5 ||
+		*response.RiskFactors[3].Operands.TypicalCyclesPerMonth != 25 ||
+		*response.RiskFactors[4].Operands.Percent != 15.75 ||
+		*response.RecommendationMessages[1].Operands.ThresholdSocPct != 80 ||
+		*response.RecommendationMessages[4].Operands.ThresholdSocPct != 20 {
+		t.Fatalf("numeric operands changed or became display strings: %s", wire)
+	}
+	healthy := healthRiskEvidence(computeRiskFactors(0, 0, &temp, 0, 0, 10),
+		true, true, false, true, true)
+	healthy = healthRiskMessages(healthy, 0, 0, &temp, 0, 0)
+	if healthy[2].DetailCode != "" || healthy[2].Operands != nil || healthy[2].LabelCode != "unknown" ||
+		len(generateRecommendationMessages(healthy)) != 0 {
+		t.Fatalf("missing evidence invented message: %+v", healthy)
+	}
+	cold := 20.0
+	excellent := healthRiskEvidence(computeRiskFactors(0, 0, &cold, 0, 0, 10),
+		true, true, true, true, true)
+	if recs := generateRecommendationMessages(excellent); len(recs) != 1 ||
+		recs[0].Code != "excellent_habits" || recs[0].Fallback != "Your battery habits are excellent — keep it up!" {
+		t.Fatalf("healthy populated case changed: %+v", recs)
 	}
 }
 

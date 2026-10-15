@@ -34,7 +34,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { ApiError } from '@/lib/resilience';
-import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, formatTemperature as formatTemperatureFromSI } from '@/lib/unitConversion';
 import { fmtNumber } from '@/lib/numberFormat';
 import type { BatteryDegradationHealth } from '../components/battery-degradation-modernization/BatteryDegradationStats';
 import type { UseUnitsResult } from '@/hooks/useUnits';
@@ -45,6 +45,7 @@ const savedDatePreferences = vi.hoisted(() => ({
   locale: 'en-US',
   timezone: 'UTC',
 }));
+const messageTranslations = vi.hoisted(() => ({} as Record<string, string>));
 vi.mock('@/lib/timezone', async (importOriginal) => ({
   ...await importOriginal<typeof import('@/lib/timezone')>(),
   useTimezone: () => savedDatePreferences.timezone,
@@ -92,7 +93,7 @@ vi.mock('react-i18next', () => {
   };
   const t = (key: string, second?: unknown, third?: unknown): string => {
     if (typeof second === 'string') {
-      return interpolate(second, third as Record<string, unknown> | undefined);
+      return interpolate(messageTranslations[key] ?? second, third as Record<string, unknown> | undefined);
     }
     if (second && typeof second === 'object') {
       return interpolate(key, second as Record<string, unknown>);
@@ -321,6 +322,7 @@ function metricValue(region: HTMLElement, label: string): string {
 }
 
 beforeEach(() => {
+  for (const key of Object.keys(messageTranslations)) delete messageTranslations[key];
   analysisRange.startInstant = '2024-03-10T15:42:19.125Z';
   analysisRange.endInstantExclusive = '2024-03-11T15:42:19.125Z';
   savedDatePreferences.locale = 'en-US';
@@ -778,6 +780,56 @@ describe('BatteryDegradationPage — populated (km)', () => {
     expect(screen.getByText('82.00/100')).toBeInTheDocument();
     expect(screen.getByText('70.00/100')).toBeInTheDocument();
     expect(screen.getByText('60.00/100')).toBeInTheDocument();
+  });
+
+  it('translates Health message codes and formats typed operands only at display', () => {
+    messageTranslations['battery.degradation.riskLabel.elevated'] = 'Erhöht';
+    messageTranslations['battery.degradation.riskDetail.temperature_exposure'] = 'Zelltemperatur: {{temperature}}';
+    messageTranslations['battery.degradation.recommendation.high_soc_charging'] = 'Ladelimit: {{threshold}}%';
+    const units = unitReturn('mi');
+    units.unitPrefs.temperature = '°F';
+    units.formatTemperature = vi.fn(value => formatTemperatureFromSI(value, units.unitPrefs, { precision: 1 }));
+    mockUnits.mockReturnValue(units);
+    mockHealth.mockReturnValue(makeQuery({ data: {
+      ...HEALTH,
+      risk_factors: [{
+        name: 'temperature_exposure', score: 70, available: true,
+        label: 'Elevated', label_code: 'elevated',
+        detail: 'Average cell temperature: 46.0°C', detail_code: 'temperature_exposure',
+        operands: { avg_cell_temp_c: 46 },
+      }],
+      recommendation_messages: [{
+        code: 'high_soc_charging', fallback: 'Reduce daily charge limit to 80% for everyday driving',
+        operands: { threshold_soc_pct: 80 },
+      }],
+    } }));
+    renderPage();
+    expect(screen.getByText('Erhöht')).toBeInTheDocument();
+    expect(screen.getByText('Zelltemperatur: 114.8°F')).toBeInTheDocument();
+    expect(units.formatTemperature).toHaveBeenCalledWith(46);
+    expect(screen.getByText(`Ladelimit: ${fmtNumber(80)}%`)).toBeInTheDocument();
+    expect(screen.queryByText('Charge to 80% for daily use')).not.toBeInTheDocument();
+    expect(metricValue(kpiRegion(), 'Current SOH')).toBe('91.00%');
+  });
+
+  it('preserves unknown and invalid-operand message fallbacks without inventing measurements', () => {
+    mockHealth.mockReturnValue(makeQuery({ data: {
+      ...HEALTH,
+      risk_factors: [{
+        name: 'fast_charge_ratio', score: 40, label: 'Moderate',
+        detail: 'Existing risk detail', detail_code: 'fast_charge_ratio',
+        operands: { percent: NaN },
+      }],
+      recommendation_messages: [
+        { code: 'future_advice', fallback: 'Advice from a newer server' },
+        { code: 'high_soc_charging', fallback: 'Existing charge limit advice', operands: { threshold_soc_pct: 101 } },
+      ],
+    } }));
+    renderPage();
+    expect(screen.getByText('Existing risk detail')).toBeInTheDocument();
+    expect(screen.getByText('Advice from a newer server')).toBeInTheDocument();
+    expect(screen.getByText('Existing charge limit advice')).toBeInTheDocument();
+    expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
   });
 
   it.each([
