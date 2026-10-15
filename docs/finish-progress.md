@@ -303,6 +303,24 @@ Changed fallback wording that had reused unrelated keys to dedicated catalog key
 - Full `npx vitest run`: **55,308 passed, 1,536 failed, 4 skipped**, 3 errors,
   2,702 files. The earlier recorded baseline was about 1,830 failures; the
   focused arrival reliability chart suite passed **7/7**.
-- The build bundles and PWA contract checks pass except the service worker SHA
-  comparison, because commits advanced during its build. Rebuild after this
-  documentation commit so the worker and postbuild gate use the same SHA.
+- `npm run build` passed on the Phase 7 gate commit `fc1f2c5d3f`, including the
+  service worker SHA and source-map postbuild checks. Phase 6 source changes
+  followed that gate; rerun final gates after the remaining Phase 6 groups.
+
+### Phase 6 group: vehicles (2026-10-15)
+
+- Reviewed and closed the 68 pending vehicle work records against their focused
+  regression coverage. The 34 distinct pending-item test files passed **1,043
+  tests, 4 skipped**. The shared-range and legacy-bookmark follow-up passed its
+  focused workspace-scope, range-hook, and physics-ledger suites (**67/67**).
+- Removed the orphan `/notifications` workspace range registration after its
+  scope invariant test exposed that the route is a disabled-prefix root.
+- Moved Physics Ledger to the shared header range, retaining route quick ranges
+  of 6h and 24h. Legacy `hours/start/end` bookmarks retain their precise bounds,
+  including windows longer than the quick presets; requests use the shared
+  range's half-open instants.
+- Added the catalog sentence `workspace.analysis.presets.6h` and regenerated
+  the split catalog. `node scripts/split-i18n-catalog.mjs --check`, focused
+  ESLint, and `npx tsc --noEmit` passed. No other new user-facing copy was
+  introduced.
+- Source commits pushed: `325d08d155`, `dc7f7e054f`, and `c5a755613d`.
