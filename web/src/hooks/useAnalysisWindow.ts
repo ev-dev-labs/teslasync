@@ -12,7 +12,7 @@ export function useAnalysisWindow(key: 'hours' | 'days', presets: readonly numbe
   const window = useMemo(() => {
     const from = start ? Date.parse(start) : NaN;
     const to = end ? Date.parse(end) : NaN;
-    if (Number.isFinite(from) && Number.isFinite(to) && to > from && to - from <= Math.max(...presets) * scale) {
+    if (Number.isFinite(from) && Number.isFinite(to) && to > from) {
       return { start: new Date(from).toISOString(), end: new Date(to).toISOString() };
     }
     return { start: new Date(anchor - selected * scale).toISOString(), end: new Date(anchor).toISOString() };
