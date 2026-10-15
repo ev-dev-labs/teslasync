@@ -72,8 +72,9 @@ export function toReconstructionMarkers(result: ReconstructionResult): Reconstru
   if (span <= 0) return [];
   const normalize = (seconds: number) => Math.min(1, Math.max(0, (seconds - reconstructionWindow.startSeconds) / span));
   const markers: ReconstructionMarker[] = [
-    { at: normalize(clipWindow.startSeconds), kind: 'start', label: i18n.t('dashcam.reconstruction.clipStart', 'Clip start') },
-    { at: normalize(clipWindow.endSeconds), kind: 'stop', label: i18n.t('dashcam.reconstruction.clipEnd', 'Clip end') },
+    // i18next.t yields '' before init; keep the English default rather than an empty label.
+    { at: normalize(clipWindow.startSeconds), kind: 'start', label: i18n.t('dashcam.reconstruction.clipStart', 'Clip start') || 'Clip start' },
+    { at: normalize(clipWindow.endSeconds), kind: 'stop', label: i18n.t('dashcam.reconstruction.clipEnd', 'Clip end') || 'Clip end' },
   ];
   for (const evt of incidentSequence) {
     markers.push({ at: normalize(evt.atSeconds), kind: 'event', label: evt.description });
