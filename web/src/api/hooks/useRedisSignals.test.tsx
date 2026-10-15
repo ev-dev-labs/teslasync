@@ -26,7 +26,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import { renderHook, waitFor, act } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client');
@@ -40,6 +40,7 @@ import {
   isQueryableVehicleId,
   redisSignalsQueryOptions,
   useRedisSignals,
+  useRedisSignalKeys,
   usePurgeRedisSignals,
   usePurgeAllRedisSignals,
 } from './useRedisSignals';
@@ -49,7 +50,7 @@ import type {
   RedisSignalsPurgeAllResponse,
 } from '@/api/devtools';
 
-const mockedRequest = request as unknown as ReturnType<typeof vi.fn>;
+const mockedRequest = vi.mocked(request);
 
 /**
  * Fresh QueryClient + provider per test (retries off, gcTime 0) so error
@@ -168,16 +169,20 @@ describe('redisSignalsQueryOptions', () => {
   it('polls at the realtime interval only while autoRefresh is on', () => {
     expect(redisSignalsQueryOptions(7, true).refetchInterval).toBe(INTERVALS.REALTIME);
     expect(redisSignalsQueryOptions(7, false).refetchInterval).toBe(false);
+    expect(redisSignalsQueryOptions(7, false)).not.toHaveProperty('staleTime');
+    expect(redisSignalsQueryOptions(7, false)).not.toHaveProperty('retry');
   });
 
   it('wires queryFn to the snake_case, un-prefixed devtools route', async () => {
     mockedRequest.mockResolvedValueOnce(signalsPayload);
     const opts = redisSignalsQueryOptions(7, false);
 
-    await opts.queryFn();
+    const signal = new AbortController().signal;
+    await opts.queryFn({ signal, queryKey: opts.queryKey, client: makeWrapper().qc, meta: undefined });
 
     expect(mockedRequest).toHaveBeenCalledTimes(1);
     expect(callArgs()[0]).toBe('/dev-tools/redis-signals?vehicle_id=7');
+    expect(mockedRequest.mock.calls[0][1]?.signal).toBe(signal);
   });
 });
 
@@ -205,6 +210,8 @@ describe('useRedisSignals', () => {
     await new Promise((r) => setTimeout(r, 10));
     expect(mockedRequest).not.toHaveBeenCalled();
     expect(result.current.fetchStatus).toBe('idle');
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.data).toBeUndefined();
   });
 
   it('refuses to fetch a non-positive id — a 0/NaN would produce a malformed ?vehicle_id request', async () => {
@@ -223,6 +230,106 @@ describe('useRedisSignals', () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toBeInstanceOf(ApiError);
     expect((result.current.error as ApiError).status).toBe(503);
+  });
+
+  it('preserves a real zero signal value in a successful response', async () => {
+    const payload: RedisSignalsResponse = {
+      vehicle_id: 7,
+      signal_count: 1,
+      signals: { Speed: { value: 0, type: 'number' } },
+    };
+    mockedRequest.mockResolvedValueOnce(payload);
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useRedisSignals(7, false), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual(payload);
+    expect(result.current.data?.signals.Speed.value).toBe(0);
+  });
+});
+
+describe.each([
+  {
+    name: 'vehicle signals',
+    useRead: () => useRedisSignals(7, false),
+    path: '/dev-tools/redis-signals?vehicle_id=7',
+    key: redisSignalKeys.detail(7),
+    empty: { vehicle_id: 7, signal_count: 0, signals: {} },
+  },
+  {
+    name: 'signal keys',
+    useRead: useRedisSignalKeys,
+    path: '/dev-tools/redis-signals/keys?limit=50',
+    key: redisSignalKeys.keys,
+    empty: { keys: [], total: 0 },
+  },
+])('$name cancellation and query states', ({ useRead, path, key, empty }) => {
+  it('forwards the active loading signal and aborts it on unmount', async () => {
+    mockedRequest.mockImplementationOnce(() => new Promise(() => {}));
+    const { qc, wrapper } = makeWrapper();
+    const { result, unmount } = renderHook(useRead, { wrapper });
+
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.data).toBeUndefined();
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
+    expect(mockedRequest.mock.calls[0][0]).toBe(path);
+    const signal = mockedRequest.mock.calls[0][1]?.signal;
+    expect(signal).toBeInstanceOf(AbortSignal);
+    expect(signal?.aborted).toBe(false);
+
+    unmount();
+    expect(signal?.aborted).toBe(true);
+    qc.clear();
+  });
+
+  it('is paused without data while offline, then recovers with empty/zero success', async () => {
+    mockedRequest.mockResolvedValueOnce(empty);
+    const { qc, wrapper } = makeWrapper();
+    onlineManager.setOnline(false);
+    const { result, unmount } = renderHook(useRead, { wrapper });
+    try {
+      expect(result.current.fetchStatus).toBe('paused');
+      expect(result.current.isPending).toBe(true);
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.data).toBeUndefined();
+      expect(mockedRequest).not.toHaveBeenCalled();
+
+      act(() => onlineManager.setOnline(true));
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data).toEqual(empty);
+      expect(qc.getQueryData(key)).toEqual(empty);
+      expect(result.current.error).toBeNull();
+    } finally {
+      unmount();
+      onlineManager.setOnline(true);
+      qc.clear();
+    }
+  });
+
+  it('retains successful data on refresh failure and clears the error on recovery', async () => {
+    const error = new ApiError('redis unavailable', 503);
+    mockedRequest.mockResolvedValueOnce(empty).mockRejectedValueOnce(error).mockResolvedValueOnce(empty);
+    const { qc, wrapper } = makeWrapper();
+    const { result, unmount } = renderHook(useRead, { wrapper });
+    try {
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      await act(async () => { await result.current.refetch(); });
+      await waitFor(() => expect(result.current.isRefetchError).toBe(true));
+      expect(result.current.data).toEqual(empty);
+      expect(result.current.error).toBe(error);
+      expect(result.current.isLoading).toBe(false);
+
+      await act(async () => { await result.current.refetch(); });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data).toEqual(empty);
+      expect(result.current.error).toBeNull();
+      expect(mockedRequest).toHaveBeenCalledTimes(3);
+      expect(mockedRequest.mock.calls.every(([url, options]) =>
+        url === path && options?.signal instanceof AbortSignal,
+      )).toBe(true);
+    } finally {
+      unmount();
+      qc.clear();
+    }
   });
 });
 
