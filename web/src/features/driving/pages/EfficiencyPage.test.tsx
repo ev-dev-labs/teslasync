@@ -26,6 +26,7 @@
  * comes from the global stub in src/test-setup.ts.
  */
 
+import { gaugeTone } from '@/lib/tokens';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -289,17 +290,17 @@ beforeEach(() => {
 /* ── efficiencyColor: the 5-stop ramp + its exact boundaries ─────────────── */
 describe('efficiencyColor', () => {
   it('maps Wh/km to the correct colour stop at every threshold boundary', () => {
-    expect(efficiencyColor(100)).toBe('#39ff14');
-    expect(efficiencyColor(139.9)).toBe('#39ff14');
+    expect(efficiencyColor(100)).toBe(gaugeTone.success);
+    expect(efficiencyColor(139.9)).toBe(gaugeTone.success);
     // Boundaries are inclusive on the lower edge of the NEXT stop.
-    expect(efficiencyColor(140)).toBe('#10b981');
-    expect(efficiencyColor(169)).toBe('#10b981');
-    expect(efficiencyColor(170)).toBe('#00f0ff');
-    expect(efficiencyColor(199)).toBe('#00f0ff');
-    expect(efficiencyColor(200)).toBe('#f59e0b');
-    expect(efficiencyColor(239)).toBe('#f59e0b');
-    expect(efficiencyColor(240)).toBe('#ef4444');
-    expect(efficiencyColor(999)).toBe('#ef4444');
+    expect(efficiencyColor(140)).toBe(gaugeTone.info);
+    expect(efficiencyColor(169)).toBe(gaugeTone.info);
+    expect(efficiencyColor(170)).toBe(gaugeTone.neutral);
+    expect(efficiencyColor(199)).toBe(gaugeTone.neutral);
+    expect(efficiencyColor(200)).toBe(gaugeTone.warning);
+    expect(efficiencyColor(239)).toBe(gaugeTone.warning);
+    expect(efficiencyColor(240)).toBe(gaugeTone.danger);
+    expect(efficiencyColor(999)).toBe(gaugeTone.danger);
   });
 
   describe('recorded statistics coverage', () => {
@@ -446,7 +447,7 @@ describe('EfficiencyPage', () => {
     // Each band is a labelled region; the daily-trend chart is an aria-labelled figure.
     expect(screen.getByRole('region', { name: 'Key metrics' })).toBeInTheDocument();
     expect(
-      screen.getByRole('img', { name: 'Daily efficiency trend area chart' }),
+      screen.getByRole('img', { name: 'Per-drive efficiency subset area chart' }),
     ).toBeInTheDocument();
     expect(screen.queryByTestId('efficiency-range')).not.toBeInTheDocument();
   });
@@ -584,7 +585,7 @@ describe('EfficiencyPage', () => {
       const overview = within(screen.getByRole('region', { name: 'Overview and trend' }));
       expect(overview.getByText('Synthetic duration formatter failure')).toBeInTheDocument();
       expect(overview.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
-      expect(screen.getByRole('img', { name: 'Daily efficiency trend area chart' })).toBeInTheDocument();
+      expect(screen.getByRole('img', { name: 'Per-drive efficiency subset area chart' })).toBeInTheDocument();
       expect(screen.getByText('20–30°C')).toBeInTheDocument();
       const kpis = within(screen.getByRole('region', { name: 'Key metrics' }));
       expect(kpis.getByText('42')).toBeInTheDocument();

@@ -8,6 +8,8 @@ import { deriveDataState } from '@/api/dataState';
 import { EfficiencyTemperatureTable } from './EfficiencyTemperatureTable';
 import { buildEfficiencyModel, type TemperatureBucket } from './model';
 import { fakeQuery, fakeUnits } from './fixtures';
+// The table renders through a real I18nextProvider; use the real binding, not the global stub.
+vi.unmock('react-i18next');
 
 interface TableProps {
   data: TemperatureBucket[];

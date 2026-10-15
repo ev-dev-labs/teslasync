@@ -1,4 +1,5 @@
 import type { ChangeEvent, ComponentProps, ReactNode } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -48,6 +49,7 @@ vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
   return {
     ...actual,
+    ...(await import('@/test/chartTestDoubles')).inertCartesianParts,
     BarChart: (props: ComponentProps<typeof actual.BarChart>) => {
       weekdayChartMock(props);
       return <div>{props.children}</div>;
@@ -453,7 +455,8 @@ describe('RecentWeekScorecard mobile adoption', () => {
     await waitFor(() => expect(trigger).toHaveFocus());
     await user.keyboard(' ');
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Close', exact: true }));
+    // The details dialog has both a header and a footer Close control.
+    await user.click(within(screen.getByRole('dialog')).getAllByRole('button', { name: 'Close', exact: true })[0]);
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(screen.getAllByRole('button', { name: 'Quick view' })).toHaveLength(8);
   });
@@ -474,7 +477,7 @@ describe('RecentWeekScorecard mobile adoption', () => {
       rank,
       week: expect.any(String),
       consumption: expect.any(String),
-      target_gap: expect.any(String),
+      gap: expect.any(String),
       distance: `${rank + 9} km`,
       drives: rank - 1,
       status: 'On target',
@@ -614,6 +617,7 @@ describe('EfficiencyTargetPage', () => {
           historyLimit={1000}
           state={{ isLoading: false, error: null, onRetry: vi.fn() }}
         />,
+        { wrapper: MemoryRouter },
       );
     }
 
@@ -630,7 +634,8 @@ describe('EfficiencyTargetPage', () => {
       expect(panel.queryByText('Observed window below API cap')).not.toBeInTheDocument();
       expect(panel.queryByText('Rows returned')).not.toBeInTheDocument();
       expect(panel.queryByText(/Results describe/)).not.toBeInTheDocument();
-      expect(panel.getAllByRole('listitem')).toHaveLength(5);
+      // Initial failures add QueryError's own help list; count only methodology entries.
+      expect(panel.getAllByRole('listitem').filter((item) => !item.closest('[role="alert"], [data-query-error]') && !item.querySelector('a'))).toHaveLength(5);
       expect(panel.getByText(/Weeks run Monday through Sunday/)).toBeInTheDocument();
       expect(panel.getByText(result.isError ? 'Drive history unavailable' : 'Loading drive history')).toBeInTheDocument();
     });
@@ -696,10 +701,11 @@ describe('EfficiencyTargetPage', () => {
       expect(screen.queryByTestId('efficiency-target-paused')).not.toBeInTheDocument();
 
       historyMock.mockReturnValue(query({
-        data: [drive(new Date(2026, 6, 28, 12).toISOString(), 10000, 0)],
+        // Zero energy is not a measurement (eligibility requires energy > 0); recover with a real reading.
+        data: [drive(new Date(2026, 6, 28, 12).toISOString(), 10000, 1500)],
       }));
       rerender(<EfficiencyTargetPage />);
-      expect(screen.getByLabelText('Observed consumption')).toHaveTextContent(/^0$/);
+      expect(screen.getByLabelText('Observed consumption')).toHaveTextContent(/^150$/);
       expect(screen.getByLabelText('Eligible drives')).toHaveTextContent('1');
     });
 

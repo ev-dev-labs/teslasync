@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { ReactNode } from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
@@ -36,7 +37,7 @@ function ratio(element: HTMLElement) {
 
 describe('EfficiencyOverview physical display scales', () => {
   it('adopts the established layout category export and retains the real named card shell', () => {
-    const source = readFileSync(new URL('./EfficiencyOverview.tsx', import.meta.url), 'utf8');
+    const source = readFileSync(join('src', 'features', 'driving', 'components', 'efficiency-modernization', 'EfficiencyOverview.tsx'), 'utf8');
     expect(source).toMatch(/import\s*\{\s*LayoutCard\s*\}\s*from\s*'@\/components\/layout'/);
     expect(source).not.toContain('@/components/layout/layout-reference');
     const { container } = render(<EfficiencyOverview {...presentation()} />);

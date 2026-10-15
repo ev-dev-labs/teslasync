@@ -94,15 +94,18 @@ Order: feature by feature, by primary-file cluster.
 | Drive DNA | dna002/004/005/010 | plural emissions, truthful watts copy |
 | Drive score | ds05/06/07/10/11/12/13 | singular exclusion notice, truthful insights |
 | FSD insights | f01/02/04/05/08/10/13 | icon selector test fix only |
+| Efficiency / target | f003/f008, target f03/f04/f06 | five distinct bands, scorecard export key, boundary labels |
 
 Real product bugs fixed along the way: drive-detail energy/regen estimate was
 1000× too large; (0,0) GPS placeholder stretched routes; TorqueHistory ticks
 lost scalable typography; thermal bands conveyed only by colour; missing CSV
-export on origin concentration; stale "kW ×1000" methodology copy.
+export on origin concentration; stale "kW ×1000" methodology copy; efficiency
+scorecard JSON/CSV dropped the target gap; inline ErrorBoundary rendered blank
+labels without i18n init and was not announced (now role=alert).
 
 ### Next up (driving, then other features)
 
-efficiency (f003/f008/f03/f04, efficiency-target f06) → explorer (exp03/05/09)
+explorer (exp03/05/09)
 → regen (04/05/07/08) → sweet spot (f03/f04/f05) → rhythm (f01/f03, punchcard
 f04, tips f03/04/05/07) → compare (f01/f07, driveCompare f05) → what-if
 (003/006/007) → misc (ShareDriveDialog f03, ElapsedComposition 02, replayMarkers

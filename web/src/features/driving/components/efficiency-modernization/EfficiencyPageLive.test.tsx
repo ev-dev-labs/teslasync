@@ -27,6 +27,8 @@ vi.mock('@/api/hooks/useDriving', async importOriginal => {
   return { ...actual,
     useDrivingStats: (vehicle?: string) => { H.statsCall(vehicle); return H.stats; },
     useDrives: (vehicle?: string) => { H.drivesCall(vehicle); return H.drives; },
+    // The page reads the selected window through the half-open calendar history hook.
+    useDriveCalendarHistory: (vehicle?: string) => { H.drivesCall(vehicle); return H.drives; },
   };
 });
 vi.mock('@/hooks/useUnits', () => ({ useUnits: () => H.units }));

@@ -123,9 +123,9 @@ describe('driving rhythm nested source trust', () => {
       expect(screen.getAllByText('Loading source')).toHaveLength(3);
       expect(screen.queryByText('Complete selected history')).not.toBeInTheDocument();
       if (fetchStatus === 'paused') {
-        expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+        expect(screen.getByText('The initial evidence query is paused; no empty result is inferred.')).toBeInTheDocument();
       } else {
-        expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
+        expect(screen.queryByText('The initial evidence query is paused; no empty result is inferred.')).not.toBeInTheDocument();
       }
     },
   );

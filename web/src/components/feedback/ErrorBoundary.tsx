@@ -5,6 +5,19 @@ import { Button } from '../ui/Button'
 import { Heading, Text } from '../ui/Typography'
 import { reportFrontendError } from '@/lib/errorReporter'
 
+/**
+ * The boundary is a class and may render before (or without) i18n init, when
+ * i18next.t returns an empty string; fall back to the English default then.
+ */
+function label(key: string, fallback: string, options?: Record<string, unknown>): string {
+  const value = i18n.t(key, { defaultValue: fallback, ...options })
+  if (value) return value
+  return Object.entries(options ?? {}).reduce(
+    (text, [name, v]) => text.replace(new RegExp(`{{\\s*${name}\\s*}}`, 'g'), String(v)),
+    fallback,
+  )
+}
+
 interface Props {
   children: ReactNode
   fallback?: ReactNode
@@ -153,16 +166,16 @@ export class ErrorBoundary extends Component<Props, State> {
 
       if (this.props.inline) {
         return (
-          <div className="flex flex-wrap items-center gap-3 rounded-shape-md border border-[var(--semantic-danger-border)] bg-[var(--semantic-danger-bg)] p-4">
+          <div role="alert" className="flex flex-wrap items-center gap-3 rounded-shape-md border border-[var(--semantic-danger-border)] bg-[var(--semantic-danger-bg)] p-4">
             <AlertTriangle className="h-5 w-5 text-[var(--semantic-danger)] shrink-0" aria-hidden="true" />
             <div className="flex-1 min-w-0">
               <Text as="p" variant="bodySm">
-                {i18n.t('errorBoundary.inlineTitle', 'Component failed to load')}
+                {label('errorBoundary.inlineTitle', 'Component failed to load')}
               </Text>
               <Text as="p" variant="caption" className="whitespace-pre-wrap break-words">{this.state.error?.message}</Text>
             </div>
             <Button variant="secondary" size="sm" wrapLabel onClick={this.handleRetry} className="shrink-0 max-md:min-h-11">
-              <RefreshCw className="h-3 w-3 shrink-0" aria-hidden="true" /> {i18n.t('errorBoundary.retry', 'Retry')}
+              <RefreshCw className="h-3 w-3 shrink-0" aria-hidden="true" /> {label('errorBoundary.retry', 'Retry')}
             </Button>
           </div>
         )
@@ -180,21 +193,21 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
             <Heading level="section" className="mb-2 break-words">
               {isChunkError
-                ? i18n.t('errorBoundary.chunkTitle', 'New Version Deployed')
+                ? label('errorBoundary.chunkTitle', 'New Version Deployed')
                 : isNetworkError
-                ? i18n.t('errorBoundary.connectionTitle', 'Connection Lost')
-                : i18n.t('errorBoundary.title', 'Something went wrong')}
+                ? label('errorBoundary.connectionTitle', 'Connection Lost')
+                : label('errorBoundary.title', 'Something went wrong')}
             </Heading>
             <Text as="p" variant="bodySm" className="mb-2 whitespace-pre-wrap break-words">
               {isChunkError
-                ? i18n.t('errorBoundary.chunkBody', 'A new version was deployed. Click Reload to load the latest assets.')
+                ? label('errorBoundary.chunkBody', 'A new version was deployed. Click Reload to load the latest assets.')
                 : isNetworkError
-                ? i18n.t('errorBoundary.connectionBody', 'Unable to reach the server. Check your connection and try again.')
-                : this.state.error?.message || i18n.t('errorBoundary.body', 'An unexpected error occurred. Please try again.')}
+                ? label('errorBoundary.connectionBody', 'Unable to reach the server. Check your connection and try again.')
+                : this.state.error?.message || label('errorBoundary.body', 'An unexpected error occurred. Please try again.')}
             </Text>
             {tooManyRetries && (
               <Text as="p" variant="caption" className="mb-4 break-words">
-                {i18n.t('errorBoundary.retriesExceeded', 'Multiple retries failed. Try refreshing the page or checking system status.')}
+                {label('errorBoundary.retriesExceeded', 'Multiple retries failed. Try refreshing the page or checking system status.')}
               </Text>
             )}
             <div className="flex flex-wrap items-center justify-center gap-3 mt-6">
@@ -206,17 +219,17 @@ export class ErrorBoundary extends Component<Props, State> {
               >
                 <RefreshCw className="h-4 w-4 shrink-0" aria-hidden="true" />
                 {tooManyRetries
-                  ? i18n.t('errorBoundary.tryAgainAnyway', 'Try Again Anyway')
-                  : i18n.t('errorBoundary.tryAgain', 'Try Again')}
+                  ? label('errorBoundary.tryAgainAnyway', 'Try Again Anyway')
+                  : label('errorBoundary.tryAgain', 'Try Again')}
               </Button>
               <Button variant="secondary" wrapLabel className="max-md:min-h-11" onClick={() => { window.location.href = '/' }}>
                 <Home className="h-4 w-4 shrink-0" aria-hidden="true" />
-                {i18n.t('errorBoundary.goHome', 'Go Home')}
+                {label('errorBoundary.goHome', 'Go Home')}
               </Button>
             </div>
             {this.state.retryCount > 0 && (
               <Text as="p" variant="caption" className="mt-4 break-words">
-                {i18n.t('errorBoundary.retryAttempt', { count: this.state.retryCount, defaultValue: 'Retry attempt {{count}}' })}
+                {label('errorBoundary.retryAttempt', 'Retry attempt {{count}}', { count: this.state.retryCount })}
               </Text>
             )}
           </div>

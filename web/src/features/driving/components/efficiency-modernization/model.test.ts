@@ -4,20 +4,21 @@ import { fakeDrive, fakeUnits } from './fixtures';
 import { buildEfficiencyModel, efficiencyColor, EFFICIENCY_GAUGE_MAX_WH_PER_KM } from './model';
 
 describe('efficiencyColor semantic palette', () => {
+  // Five ordered raw-Wh/km bands; every boundary stays visually distinct.
   it.each([
     [100, gaugeTone.success],
     [139.9, gaugeTone.success],
-    [140, gaugeTone.success],
-    [169.9, gaugeTone.success],
-    [170, gaugeTone.info],
-    [199.9, gaugeTone.info],
+    [140, gaugeTone.info],
+    [169.9, gaugeTone.info],
+    [170, gaugeTone.neutral],
+    [199.9, gaugeTone.neutral],
     [200, gaugeTone.warning],
     [239.9, gaugeTone.warning],
     [240, gaugeTone.danger],
     [999, gaugeTone.danger],
-  ])('uses the existing semantic fill for %s Wh/km', (wh, color) => {
+  ])('uses the restrained band tone for %s Wh/km', (wh, color) => {
     expect(efficiencyColor(wh)).toBe(color);
-    expect(efficiencyColor(wh)).toMatch(/^var\(--semantic-/);
+    expect(efficiencyColor(wh)).toMatch(/^var\(--(semantic-|text-secondary)/);
   });
 
   it('keeps the gauge ceiling in Wh/km', () => {
@@ -58,7 +59,7 @@ describe('populated efficiency model preservation', () => {
       avgEff: miles ? 241 : 150,
       count: 1,
     }]);
-    expect(efficiencyColor(model.speedDist[0].avgEffWhKm)).toBe(gaugeTone.success);
+    expect(efficiencyColor(model.speedDist[0].avgEffWhKm)).toBe(gaugeTone.info);
     expect(model.tempBuckets).toEqual([{
       range: miles ? '50–68°F' : '10–20°C',
       count: 1,

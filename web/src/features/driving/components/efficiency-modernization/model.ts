@@ -12,10 +12,11 @@ import { gaugeTone } from '@/lib/tokens';
 export const EFFICIENCY_GAUGE_MAX_WH_PER_KM = 300;
 
 /** Wh/km thresholds use existing theme-aware semantic fills, not series preferences. */
+/** Five ordered raw-Wh/km stops on restrained semantic tones (each band stays distinct). */
 export function efficiencyColor(wh: number): string {
   if (wh < 140) return gaugeTone.success;
-  if (wh < 170) return gaugeTone.success;
-  if (wh < 200) return gaugeTone.info;
+  if (wh < 170) return gaugeTone.info;
+  if (wh < 200) return gaugeTone.neutral;
   if (wh < 240) return gaugeTone.warning;
   return gaugeTone.danger;
 }

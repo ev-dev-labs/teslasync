@@ -212,7 +212,7 @@ export function RecentWeekScorecard(
               rank: row.rank,
               week: row.week,
               consumption: row.consumption,
-              target_gap: row.gap,
+              gap: row.gap,
               distance: row.distance,
               drives: row.drives,
               status: row.status,
