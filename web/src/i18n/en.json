@@ -19918,7 +19918,10 @@
         "good": "good",
         "warning": "warning",
         "critical": "critical"
-      }
+      },
+      "selectedStatisticsBounds": "Drive start: {{start}} (inclusive) to {{end}} (exclusive) · {{timezone}}",
+      "completedStatisticsPopulation": "Server statistics cover all completed drives for the selected vehicle whose start falls within the selected bounds, not just the returned drive subset.",
+      "separateHistoryPolicies": "Motor history uses the existing unbounded 200-snapshot request in source order, independent of the selected range. Drive charts and power use the last 30 returned drives within the selected range; this subset is separate from the full completed-drive statistics."
     },
     "frontMotorTemp": "Front motor temp",
     "rearMotorTemp": "Rear motor temp",
@@ -20040,7 +20043,16 @@
     "powerOutputAria": "Per-drive peak and regen motor power output history area chart",
     "statorTempHistoryAria": "Front, rear-left and rear-right motor stator temperature history line chart",
     "tempHistoryAria": "Outside temperature trend line chart per recent drive",
-    "torqueHistoryAria": "Motor inverter torque output history area chart"
+    "torqueHistoryAria": "Motor inverter torque output history area chart",
+    "health": {
+  "good": "Good",
+  "warning": "Warning",
+  "critical": "Critical"
+},
+    "motorStateValue": {
+  "overheating": "Overheating",
+  "idle": "Idle"
+}
   },
   "dynamics": {
     "modernization": {

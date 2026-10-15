@@ -79,12 +79,12 @@ describe('ChartPanels supported layout composition', () => {
       expect(figures[index]).toContainElement(table(title));
       expect(within(table(title)).getAllByRole('row')).toHaveLength(3);
     });
-    expect(cells(titles[0], 1)).toEqual(['12:00', '0 °C', '—', '20 °C']);
+    expect(cells(titles[0], 1)).toEqual(['12:00', '0.00°C', '—', '20.00°C']);
     expect(cells(titles[1], 1)).toEqual(['12:00', '0.00 Nm']);
     expect(cells(titles[1], 2)).toEqual(['12:01', '—']);
-    expect(cells(titles[2], 1)).toEqual(['Oct 1', '0 °C']);
-    expect(cells(titles[3], 1)).toEqual(['Oct 1', '0 kW', '—']);
-    expect(cells(titles[3], 2)).toEqual(['Oct 2', '2 kW', '—']);
+    expect(cells(titles[2], 1)).toEqual(['Oct 1', '0.00°C']);
+    expect(cells(titles[3], 1)).toEqual(['Oct 1', '0.00 kW', '—']);
+    expect(cells(titles[3], 2)).toEqual(['Oct 2', '2.00 kW', '—']);
   });
 
   it('keeps independent drive charts mounted while only motor history is initially loading', () => {
@@ -93,8 +93,8 @@ describe('ChartPanels supported layout composition', () => {
       motorLoading />, { wrapper: Providers });
     expect(container.querySelectorAll('figure')).toHaveLength(4);
     expect(screen.getAllByLabelText('Loading chart…')).toHaveLength(2);
-    expect(cells(titles[2], 2)).toEqual(['Oct 2', '20 °C']);
-    expect(cells(titles[3], 2)).toEqual(['Oct 2', '2 kW', '—']);
+    expect(cells(titles[2], 2)).toEqual(['Oct 2', '20.00°C']);
+    expect(cells(titles[3], 2)).toEqual(['Oct 2', '2.00 kW', '—']);
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
   });
 
@@ -108,11 +108,11 @@ describe('ChartPanels supported layout composition', () => {
     expect(retries).toHaveLength(2);
     fireEvent.click(retries[0]);
     expect(retry).toHaveBeenCalledTimes(1);
-    expect(cells(titles[2], 1)).toEqual(['Oct 1', '0 °C']);
-    expect(cells(titles[3], 2)).toEqual(['Oct 2', '2 kW', '—']);
+    expect(cells(titles[2], 1)).toEqual(['Oct 1', '0.00°C']);
+    expect(cells(titles[3], 2)).toEqual(['Oct 2', '2.00 kW', '—']);
     rerender(<ChartPanels {...props()} />);
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
-    expect(cells(titles[0], 1)).toEqual(['12:00', '0 °C', '—', '20 °C']);
+    expect(cells(titles[0], 1)).toEqual(['12:00', '0.00°C', '—', '20.00°C']);
     expect(container.querySelectorAll('figure')).toHaveLength(4);
   });
 
@@ -128,9 +128,9 @@ describe('ChartPanels supported layout composition', () => {
     expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
     expect(screen.queryByLabelText('Loading chart…')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
-    expect(cells(titles[0], 1)).toEqual(['12:00', '0 °C', '—', '20 °C']);
+    expect(cells(titles[0], 1)).toEqual(['12:00', '0.00°C', '—', '20.00°C']);
     expect(cells(titles[1], 1)).toEqual(['12:00', '0.00 Nm']);
-    expect(cells(titles[3], 2)).toEqual(['Oct 2', '2 kW', '—']);
+    expect(cells(titles[3], 2)).toEqual(['Oct 2', '2.00 kW', '—']);
     fireEvent.click(screen.getAllByRole('button', { name: 'Refresh' })[0]);
     expect(retry).toHaveBeenCalledTimes(1);
   });
@@ -150,12 +150,12 @@ describe('ChartPanels supported layout composition', () => {
   it('updates real display preferences without scaling SI inputs or replacing chart mounts', () => {
     const { container, rerender } = render(<ChartPanels {...props()} />, { wrapper: Providers });
     const figures = Array.from(container.querySelectorAll('figure'));
-    expect(cells(titles[0], 1)).toEqual(['12:00', '0 °C', '—', '20 °C']);
+    expect(cells(titles[0], 1)).toEqual(['12:00', '0.00°C', '—', '20.00°C']);
     preferences.temperature = 'F';
     rerender(<ChartPanels {...props()} />);
-    expect(cells(titles[0], 1)).toEqual(['12:00', '32 °F', '—', '68 °F']);
-    expect(cells(titles[2], 2)).toEqual(['Oct 2', '68 °F']);
-    expect(cells(titles[3], 2)).toEqual(['Oct 2', '2 kW', '—']);
+    expect(cells(titles[0], 1)).toEqual(['12:00', '32.00°F', '—', '68.00°F']);
+    expect(cells(titles[2], 2)).toEqual(['Oct 2', '68.00°F']);
+    expect(cells(titles[3], 2)).toEqual(['Oct 2', '2.00 kW', '—']);
     figures.forEach((figure, index) => {
       expect(container.querySelectorAll('figure')[index]).toBe(figure);
     });

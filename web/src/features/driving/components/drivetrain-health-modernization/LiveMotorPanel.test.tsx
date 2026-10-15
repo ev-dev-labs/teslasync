@@ -87,7 +87,7 @@ describe('LiveMotorPanel independent isolation trust', () => {
     const { container } = show({ isolationState: deriveDataState<number | null>(source) });
     expect(within(metric(container, 'power')).getByText('0.00 kW')).toBeVisible();
     expect(within(metric(container, 'rpm-front')).getByText('0 RPM')).toBeVisible();
-    expect(within(metric(container, 'temp-front')).getByText('0.00 °C')).toBeVisible();
+    expect(within(metric(container, 'temp-front')).getByText('0.00°C')).toBeVisible();
     expect(record('Source').getByText('reported-source')).toBeVisible();
     expect(record('HV Isolation').getByText('—')).toBeVisible();
     expect(screen.queryByText('650.00 kΩ')).not.toBeInTheDocument();

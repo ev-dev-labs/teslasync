@@ -212,7 +212,7 @@ describe('ThermalPanels truthful thermal readings', () => {
       expect(gauge).not.toHaveAttribute('aria-valuenow');
       expect(gauge).toHaveAccessibleDescription(/Unknown/i);
       expect(within(gauge).getByText('—')).toBeVisible();
-      expect(within(gauge).getByText('unknown')).toBeVisible();
+      expect(within(gauge.parentElement!).getByText('unknown')).toBeVisible();
       expect(gauge.querySelector('[style]')).toBeNull();
     }
     expect(screen.queryByRole('meter', { name: 'Front Motor' })).not.toBeInTheDocument();
@@ -236,7 +236,8 @@ describe('ThermalPanels truthful thermal readings', () => {
     expect(gauges).toHaveLength(2);
     for (const gauge of gauges) {
       expect(within(gauge).getByText(display)).toBeVisible();
-      expect(within(gauge).getByText(band)).toBeVisible();
+      // The band text sits beside the gauge in the same sensor cell.
+      expect(within(gauge.parentElement!).getByText(band)).toBeVisible();
       expect(gauge).toHaveAccessibleDescription(expect.stringContaining(`${display}%`));
       const bar = gauge.querySelector<HTMLElement>('[style]');
       expect(bar).not.toBeNull();

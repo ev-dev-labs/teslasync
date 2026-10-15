@@ -16,6 +16,24 @@ import { DrivingSummaryBrief } from './DrivingSummaryBrief';
 
 type Props = ComponentProps<typeof HealthSummary>;
 
+/**
+ * Motor states the drivetrain health endpoint produces. Recognized values get
+ * their canonical label; any other non-empty source value is shown verbatim.
+ */
+const MOTOR_STATE_LABELS: Record<string, { key: string; fallback: string }> = {
+  normal: { key: 'drivetrain.normal', fallback: 'Normal' },
+  warm: { key: 'drivetrain.warm', fallback: 'Warm' },
+  overheating: { key: 'drivetrain.motorStateValue.overheating', fallback: 'Overheating' },
+  idle: { key: 'drivetrain.motorStateValue.idle', fallback: 'Idle' },
+};
+
+export function motorStateLabel(raw: string | null | undefined, t: (key: string, fallback: string) => string): string {
+  const value = raw?.trim();
+  if (!value) return '—';
+  const known = MOTOR_STATE_LABELS[value.toLowerCase()];
+  return known ? t(known.key, known.fallback) : value;
+}
+
 export function DrivetrainSummary(props: Props) {
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
@@ -76,7 +94,7 @@ export function DrivetrainSummary(props: Props) {
           </Badge>
         </div>
         <KVList items={[
-          { label: t('drivetrain.motorState', 'Motor state'), value: health?.motorStatus?.trim() || '—' },
+          { label: t('drivetrain.motorState', 'Motor state'), value: motorStateLabel(health?.motorStatus, t) },
           { label: t('drivetrain.overallHealth', 'Overall Health'), value: statusLabel },
           { label: t('drivetrain.healthScore', 'Health Score'), value: score != null ? `${fmtNumber(score)}%` : '—' },
         ]} />
@@ -110,7 +128,7 @@ export function DrivetrainSummary(props: Props) {
         <SourceBoundary state={healthState} label={t('drivetrain.motorDetails', 'Motor Details')}
           loading={healthLoading} empty={!health} emptyMessage={noHealth}>
           <KVList items={[
-            { label: t('drivetrain.motorStatus', 'Motor Status'), value: health?.motorStatus?.trim() || '—' },
+            { label: t('drivetrain.motorStatus', 'Motor Status'), value: motorStateLabel(health?.motorStatus, t) },
             { label: t('drivetrain.overallHealth', 'Overall Health'), value: statusLabel },
             { label: t('drivetrain.healthScoreLabel', 'Health Score'), value: score != null ? `${fmtNumber(score)}%` : '—' },
             { label: t('drivetrain.sensorCount', 'Active Sensors'), value: fmtInt(activeSensors) },

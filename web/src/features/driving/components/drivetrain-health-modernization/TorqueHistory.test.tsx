@@ -1,8 +1,9 @@
+import { getChartFontSize } from '@/lib/chartTypography';
 import { cloneElement, type ComponentProps, type ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { deriveDataState } from '@/api/dataState';
-import { chartTokens, typography } from '@/lib/tokens';
+import { chartTokens } from '@/lib/tokens';
 import type { MotorChartRow } from './model';
 import type { PreservedChartFrame } from './PreservedChartFrame';
 import { TorqueHistory } from './TorqueHistory';
@@ -107,7 +108,7 @@ describe('TorqueHistory presentation preservation', () => {
     expect(xTicks.length).toBeGreaterThan(0);
     expect(yTicks.length).toBeGreaterThan(0);
     for (const tick of [...xTicks, ...yTicks]) {
-      expect(tick).toHaveClass(...typography.role.caption.split(' '));
+      expect(tick).toHaveAttribute('font-size', String(getChartFontSize()));
       expect(tick).toHaveAttribute('fill', chartTokens.axisStroke);
       expect(tick).not.toHaveAttribute('font-size', '10');
     }

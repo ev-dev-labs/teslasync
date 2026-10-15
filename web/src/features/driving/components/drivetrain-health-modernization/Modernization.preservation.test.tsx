@@ -174,8 +174,8 @@ describe('drivetrain live modernization preservation (authored)', () => {
     expect(container.querySelectorAll('figure')).toHaveLength(4);
     expect(container.querySelectorAll('[data-recommendation]')).toHaveLength(7);
     expect(sources.healthCall).toHaveBeenCalledWith('7');
-    expect(sources.drivesCall).toHaveBeenCalledWith('7');
-    expect(sources.statsCall).toHaveBeenCalledWith('7');
+    expect(sources.drivesCall).toHaveBeenCalledWith('7', expect.objectContaining({}));
+    expect(sources.statsCall).toHaveBeenCalledWith('7', expect.objectContaining({}));
     expect(sources.latestCall).toHaveBeenCalledWith(7, 5000);
     expect(sources.historyCall).toHaveBeenCalledWith(7, 200);
     expect(container.querySelectorAll('input[type="date"]')).toHaveLength(0);

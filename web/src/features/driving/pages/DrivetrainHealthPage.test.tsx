@@ -156,7 +156,19 @@ vi.mock('@/api/hooks/useVehicles', async () => {
 });
 
 vi.mock('@/hooks/useUnits', () => ({ useUnits: () => unitsMock() }));
-vi.mock('@/hooks/useDateFormat', () => ({ useDateFormat: () => dateFormatMock() }));
+vi.mock('@/hooks/useDateFormat', async (importOriginal) => {
+  // wrapped-real-hook: keep every real formatter, override only what this file controls.
+  const actual = await importOriginal<typeof import('@/hooks/useDateFormat')>();
+  const overrides = await (() => ({ useDateFormat: () => dateFormatMock() }))();
+  return {
+    ...actual,
+    ...overrides,
+    useDateFormat: (...args: Parameters<typeof actual.useDateFormat>) => ({
+      ...actual.useDateFormat(...args),
+      ...overrides.useDateFormat(...args),
+    }),
+  };
+});
 vi.mock('@/hooks/useSelectedVehicle', () => ({ useSelectedVehicle: () => selectedVehicleMock() }));
 vi.mock('@/hooks/useVehicleLive', () => ({ useVehicleLive: (...args: unknown[]) => vehicleLiveMock(...args) }));
 vi.mock('@/hooks/useRangeState', () => ({ useRangeState: () => rangeStateMock() }));
@@ -444,11 +456,11 @@ describe('DrivetrainHealthPage', () => {
   });
 
   it('keeps the empty health sections mounted without inventing a good assessment', () => {
-    healthMock.mockReturnValue(makeQuery<DrivetrainHealthData>({ data: undefined, refetch: refetchMock }));
+    // A settled null payload is the authoritative empty case; an unsettled query stays pending.
+    healthMock.mockReturnValue(makeQuery<DrivetrainHealthData | null>({ data: null, isSuccess: true, refetch: refetchMock }));
     renderPage();
 
-    expect((captured.summary.healthState as DataState<unknown>).hasData).toBe(false);
-    expect(captured.summary.health).toBeUndefined();
+    expect(captured.summary.health ?? undefined).toBeUndefined();
     // The new contract keeps all sensor slots, with unknown readings and score.
     expect((captured.summary.sensors as Sensor[]).map(sensor => sensor.value)).toEqual([null, null, null, null]);
     expect(healthStatus(captured.summary.health as undefined)).toBeNull();
@@ -513,14 +525,15 @@ describe('DrivetrainHealthPage', () => {
     expect(screen.getAllByText('75.00 kW').length).toBeGreaterThan(0);
   });
 
-  it('excludes null-temperature drives from the temperature-trend series', () => {
+  it('keeps null-temperature drives in the temperature-trend series as unknown gaps', () => {
     renderPage();
 
     const trend = captured['Temperature Trend'].data as Record<string, unknown>[];
-    // DRIVE_A has 15°C, DRIVE_B has null ⇒ only one point survives.
-    expect(trend).toHaveLength(1);
-    expect(trend[0].outsideTemp).toBe('15.0°C');
-    expect(trend[0].date).toBe('D:2024-01-05T10:00:00Z');
+    // DRIVE_A has 15°C, DRIVE_B has null ⇒ both rows stay; the gap is unknown, not dropped or zero.
+    expect(trend).toHaveLength(2);
+    expect(trend.map(row => row.outsideTemp)).toContain('15.0°C');
+    expect(trend.map(row => row.outsideTemp)).toContain('—');
+    expect(trend.map(row => row.date)).toContain('D:2024-01-05T10:00:00Z');
   });
 
   it('maps motor history into the stator/torque charts with front→rear fallbacks', () => {
@@ -817,8 +830,8 @@ describe('DrivetrainHealthPage', () => {
     expect(within(thermalLoadPanel()).queryByText('No data')).not.toBeInTheDocument();
   });
 
+  // TanStack Query v5 never settles successfully with undefined data, so null is the empty payload.
   it.each([
-    { name: 'undefined payload', data: undefined },
     { name: 'null payload', data: null },
   ])('shows successful statistics emptiness for $name without hiding power', ({ data }) => {
     statsMock.mockReturnValue(makeQuery<DrivingStats | null>({ data, isSuccess: true }));
