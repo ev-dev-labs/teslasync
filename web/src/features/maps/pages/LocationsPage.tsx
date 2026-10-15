@@ -330,7 +330,7 @@ export default function LocationsPage() {
               actionTo={{ label: t('common.noVehicleSelected.action', 'Set up TeslaSync'), to: '/onboarding' }}
             />
           ) : isUnresolved ? (
-            <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */
+            <EmptyState
               icon={<Icon icon={MapPin} size="xl" />}
               title={unresolvedTitle}
               message={unresolvedMessage}

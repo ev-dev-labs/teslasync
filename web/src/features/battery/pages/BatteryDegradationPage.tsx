@@ -369,7 +369,7 @@ export default function BatteryDegradationPage() {
               <QueryError error={fatalError} onRetry={healthState.retry ?? undefined} />
             </GlassPanel>
           ) : unavailableMessage ? (
-            <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */ message={unavailableMessage} />
+            <EmptyState message={unavailableMessage} />
           ) : (
             <BatteryDegradationStats data={data} loading={initialLoading} retained={healthState.status === 'stale'} range={range} />
           )}
@@ -397,7 +397,7 @@ export default function BatteryDegradationPage() {
               {fatalError ? (
                 <QueryError error={fatalError} onRetry={healthState.retry ?? undefined} />
               ) : unavailableMessage ? (
-                <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */ message={unavailableMessage} />
+                <EmptyState message={unavailableMessage} />
               ) : initialLoading ? (
                 <Skeleton height={200} />
               ) : soh != null && Number.isFinite(soh) ? (
@@ -560,7 +560,7 @@ export default function BatteryDegradationPage() {
             ) : fatalError ? (
               <QueryError error={fatalError} onRetry={healthState.retry ?? undefined} />
             ) : unavailableMessage ? (
-              <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */ message={unavailableMessage} />
+              <EmptyState message={unavailableMessage} />
             ) : data?.prediction?.fit_valid === true && data.prediction.has_enough_data &&
               data.prediction.slope_per_year != null && Number.isFinite(data.prediction.slope_per_year) ? (
               <div className="space-y-4">
@@ -603,7 +603,7 @@ export default function BatteryDegradationPage() {
             ) : fatalError ? (
               <QueryError error={fatalError} onRetry={healthState.retry ?? undefined} />
             ) : unavailableMessage ? (
-              <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */ message={unavailableMessage} />
+              <EmptyState message={unavailableMessage} />
             ) : habits ? (
               <AlertBanner
                 variant={
@@ -644,7 +644,7 @@ export default function BatteryDegradationPage() {
             ) : fatalError ? (
               <QueryError error={fatalError} onRetry={healthState.retry ?? undefined} />
             ) : unavailableMessage ? (
-              <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */ message={unavailableMessage} />
+              <EmptyState message={unavailableMessage} />
             ) : rangeData.length > 0 ? (
               <>
               <Caption className="mb-3 block">
@@ -732,7 +732,7 @@ export default function BatteryDegradationPage() {
             ) : fatalError ? (
               <QueryError error={fatalError} onRetry={healthState.retry ?? undefined} />
             ) : unavailableMessage ? (
-              <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */ message={unavailableMessage} />
+              <EmptyState message={unavailableMessage} />
             ) : riskFactors.length > 0 ? (
               <DegradationGrid
                 label={t('battery.degradation.riskFactors', 'Risk factors')}
@@ -796,7 +796,7 @@ export default function BatteryDegradationPage() {
             ) : fatalError ? (
               <QueryError error={fatalError} onRetry={healthState.retry ?? undefined} />
             ) : unavailableMessage ? (
-              <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */ message={unavailableMessage} />
+              <EmptyState message={unavailableMessage} />
             ) : recommendations.length > 0 ? (
               <ul className="space-y-3">
                 {recommendations.map((rec, i) => (
@@ -821,7 +821,7 @@ export default function BatteryDegradationPage() {
             ) : fatalError ? (
               <QueryError error={fatalError} onRetry={healthState.retry ?? undefined} />
             ) : unavailableMessage ? (
-              <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */ message={unavailableMessage} />
+              <EmptyState message={unavailableMessage} />
             ) : (
               <DegradationGrid
                 label={t('battery.degradation.healthFactors', 'Battery health factors')}
@@ -896,7 +896,7 @@ export default function BatteryDegradationPage() {
           ) : fatalError ? (
             <QueryError error={fatalError} onRetry={healthState.retry ?? undefined} />
           ) : unavailableMessage ? (
-            <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */ message={unavailableMessage} />
+            <EmptyState message={unavailableMessage} />
           ) : history.length > 0 ? (
             <DataTable
               enableValueFilters

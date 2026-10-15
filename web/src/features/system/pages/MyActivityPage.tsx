@@ -168,7 +168,7 @@ function MyActivityContent() {
                   <GlassPanel key={title} className={className}>
                     <div className="p-4 sm:p-5">
                       <PanelTitle className="mb-3">{title}</PanelTitle>
-                      <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */ message={t('common.unknown', 'Unknown')} />
+                      <EmptyState message={t('common.unknown', 'Unknown')} />
                     </div>
                   </GlassPanel>
                 ))}

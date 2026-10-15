@@ -101,7 +101,7 @@ export function RegionEndpointPanel({
         />
       ) : !configured ? (
         <div className="space-y-3">
-          <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */
+          <EmptyState
             icon={<Icon icon={Server} size="xl" />}
             title={t('region.empty.title', 'No region on record')}
             message={t(

@@ -110,7 +110,7 @@ export default function IncidentTimelinePage() {
   const unavailableContent = isLoading ? (
     <Skeleton height={160} />
   ) : (
-    <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */ message={t('incidentTimeline.brief.unknownScope', 'Incident window unavailable until the source resolves.')} />
+    <EmptyState message={t('incidentTimeline.brief.unknownScope', 'Incident window unavailable until the source resolves.')} />
   )
   const unavailablePanels = (
     <>

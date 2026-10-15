@@ -61,7 +61,7 @@ export default function DriveScorePage() {
             resourceName: t('driveScore.resource', 'drive'),
           }}
           loadingContent={<Skeleton height={height} />}
-          emptyContent={<EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */
+          emptyContent={<EmptyState
             /* Recovery is source-local above for deferred requests, or a wider
                header range for successfully loaded empty evidence. */
             icon={emptyIcon}

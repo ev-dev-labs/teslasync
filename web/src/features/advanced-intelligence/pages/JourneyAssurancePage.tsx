@@ -265,7 +265,7 @@ export default function JourneyAssurancePage() {
           emptyMessage={pendingMessage}
         >
           <div className="@container grid min-w-0 gap-4 @2xl:grid-cols-2">
-            {factors.length === 0 ? <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */ message={t('advancedIntelligence.journey.factors.empty', 'No supported readiness factors are available.')} /> : factors.map((factor) => (
+            {factors.length === 0 ? <EmptyState message={t('advancedIntelligence.journey.factors.empty', 'No supported readiness factors are available.')} /> : factors.map((factor) => (
               <article key={factor.factor} className={`min-w-0 break-words ${glassCardClasses.md}`}>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <Text as="h3" variant="label" className="min-w-0 break-words">{factor.factor}</Text>

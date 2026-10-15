@@ -585,7 +585,7 @@ export default function TeslaChargingHistoryPage() {
             ) : error ? (
               <QueryError error={error} onRetry={() => refetch()} />
             ) : monthlyData.length === 0 ? (
-              <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */
+              <EmptyState
                 icon={<Icon icon={Receipt} size="xl" />}
                 message={emptyMessage}
               />
@@ -642,7 +642,7 @@ export default function TeslaChargingHistoryPage() {
             ) : error ? (
               <QueryError error={error} onRetry={() => refetch()} />
             ) : topLocations.length === 0 ? (
-              <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */
+              <EmptyState
                 icon={<Icon icon={MapPin} size="xl" />}
                 message={emptyMessage}
               />
@@ -699,7 +699,7 @@ export default function TeslaChargingHistoryPage() {
             <SitePriceRadar vin={queryVin} enabled={scopeEnabled} />
           ) : (
             <LayoutCard title={t('tesla_charging.priceRadar', 'Price Radar')}>
-              {firstLoading ? <Skeleton height={220} /> : <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */ message={prerequisiteMessage} />}
+              {firstLoading ? <Skeleton height={220} /> : <EmptyState message={prerequisiteMessage} />}
             </LayoutCard>
           )}
           </SectionErrorBoundary>

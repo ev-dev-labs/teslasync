@@ -29,7 +29,7 @@ export function EventEvidencePanel({ clip }: EventEvidencePanelProps) {
     return (
       <LayoutCard title={t('dashcam.events.title', 'Event evidence')}>
         {/* Metadata import and motion analysis live outside this component; Reconstruction is a separate read-only surface. */}
-        <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */
+        <EmptyState
           icon={<AlertTriangle className="h-8 w-8" />}
           title={t('dashcam.events.emptyTitle', 'No event candidates yet')}
           message={t(

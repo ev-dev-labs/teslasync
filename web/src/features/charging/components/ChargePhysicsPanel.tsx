@@ -56,7 +56,7 @@ export function ChargePhysicsPanel({ sessionId }: { sessionId: string | undefine
             ))}
           </ol>
           {(physics.story ?? []).length === 0 && (
-            <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */ message={t('common.noData', 'No data available')} />
+            <EmptyState message={t('common.noData', 'No data available')} />
           )}
           {physics.at_limit_still_plugged_s != null && (
             <Text as="p" variant="bodySm" className="flex items-center gap-2">

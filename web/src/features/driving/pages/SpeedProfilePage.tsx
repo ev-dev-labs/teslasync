@@ -227,10 +227,10 @@ export default function SpeedProfilePage() {
   const selectionMessage = t('driving.brief.selectVehicle', 'Select a vehicle');
   const pausedMessage = t('dataSources.status.paused', 'Refresh paused');
   const profilePlaceholder = missingSelection || profilePaused
-    ? <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */ message={missingSelection ? selectionMessage : pausedMessage} />
+    ? <EmptyState message={missingSelection ? selectionMessage : pausedMessage} />
     : null;
   const drivesPlaceholder = missingSelection || drivesPaused
-    ? <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */ message={missingSelection ? selectionMessage : pausedMessage} />
+    ? <EmptyState message={missingSelection ? selectionMessage : pausedMessage} />
     : null;
   const driveValueStatus = missingSelection
     ? selectionMessage

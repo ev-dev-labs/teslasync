@@ -529,7 +529,7 @@ function VehicleTargetFeedback({ vehiclesState, onRetryVehicles, unknownTarget }
           ? t('dataSources.status.paused', 'Refresh paused')
           : t('statCard.loading', 'Loading')}</Text>
       ) : vehiclesState.data.length === 0 ? (
-        <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */ message={t('palette.noVehicles', 'No vehicles available')} />
+        <EmptyState message={t('palette.noVehicles', 'No vehicles available')} />
       ) : null}
       {unknownTarget && (
         <HelperText>{t('common.unknown', 'Unknown')} — #{unknownTarget}</HelperText>
@@ -805,7 +805,7 @@ function ColumnPickerSection({
       <div className="mb-5" data-testid="export-column-picker">
         <Label className="mb-2 block">{t('dataExport.columns.title', 'STEP 2½ — columns')}</Label>
         <StaleRefreshWarning state={catalogState} label={t('dataExport.columns.title', 'STEP 2½ — columns')} />
-        <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */ message={t('common.noData', 'No data available')} />
+        <EmptyState message={t('common.noData', 'No data available')} />
       </div>
     );
   }

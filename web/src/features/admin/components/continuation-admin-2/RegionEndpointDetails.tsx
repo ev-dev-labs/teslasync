@@ -23,7 +23,7 @@ export function RegionEndpointDetails(props: RegionEndpointPanelProps) {
         : props.isLoading || props.isInitial ? <div className="space-y-3"><Skeleton height={64} /><Skeleton lines={5} height={16} /></div>
         : props.isError ? <QueryError error={props.error} onRetry={props.onRetry} resourceName={t('region.resource', 'Region')} />
         : !configured ? <div className="space-y-3">
-          <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */ icon={<Icon icon={Server} size="xl" />} title={t('region.empty.title', 'No region on record')}
+          <EmptyState icon={<Icon icon={Server} size="xl" />} title={t('region.empty.title', 'No region on record')}
             message={t('region.empty.message', 'TeslaSync has not resolved your account region yet. Refresh to fetch it from Tesla.')}
           />
           <div className="flex flex-col items-center gap-2">
