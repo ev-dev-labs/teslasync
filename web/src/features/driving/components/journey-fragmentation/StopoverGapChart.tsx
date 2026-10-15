@@ -17,11 +17,11 @@ export function StopoverGapChart({ result, state, loading = false }: JourneyFrag
   }));
   const summary = t(
     'journeyFragmentation.gap.summary',
-    'Median {{median}} min; p90 {{p90}} min across {{count}} linked gaps.',
+    'Median {{median}} min; p90 {{p90}} min across {{gapCount}} linked gaps.',
     {
       median: result.linkedGapSummary.median == null ? '—' : fmtNumber(result.linkedGapSummary.median),
       p90: result.linkedGapSummary.p90 == null ? '—' : fmtNumber(result.linkedGapSummary.p90),
-      count: state && !state.hasData ? '—' : result.linkedGapSummary.count,
+      gapCount: state && !state.hasData ? '—' : result.linkedGapSummary.count,
     },
   );
   return (

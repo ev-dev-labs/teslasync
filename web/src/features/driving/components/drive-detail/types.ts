@@ -138,7 +138,7 @@ export interface RoutePoint {
   /** Longitude in decimal degrees. */
   lng: number;
   /** Speed in metres per second (SI, raw). */
-  speed: number;
+  speed?: number;
   /** Source observation time used to place approximate counter evidence. */
   timestamp: string | null;
 }

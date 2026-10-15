@@ -20,7 +20,7 @@ export function SignalEvidenceSourceList({ sources, label }: SignalEvidenceSourc
       {sources.map(({ signal, state }) => {
         const points = state.data?.data;
         const observationTimes = (Array.isArray(points) ? points : [])
-          .map((point) => point.timestamp)
+          .map((point) => point.ts)
           .filter((timestamp) => typeof timestamp === 'string' && Number.isFinite(Date.parse(timestamp)))
           .sort((a, b) => Date.parse(a) - Date.parse(b));
         const firstObservation = observationTimes[0];

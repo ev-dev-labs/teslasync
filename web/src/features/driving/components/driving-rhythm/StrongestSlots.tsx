@@ -116,8 +116,8 @@ export function StrongestSlots({
                       ? t('rhythm.slots.supported', 'sample supported')
                       : t(
                           'rhythm.slots.sparse',
-                          'below {{count}}-drive floor',
-                          { count: fmtInt(summary.minSlotDrives) },
+                          'below {{minimum}}-drive floor',
+                          { minimum: fmtInt(summary.minSlotDrives) },
                         )}
                   </MetricLabel>
                 </div>

@@ -141,8 +141,8 @@ export function ColdStartMethodology({
                     )
                   : t(
                       'coldStart.method.window',
-                      'This analysis uses {{count}} drives returned for the selected observed window (up to {{limit}}). Consumption is distance-weighted; only drives of at least 1 km with measured energy qualify.',
-                      { count: formatCount(observedDrives), limit: formatCount(windowLimit) },
+                      'This analysis uses {{driveCount}} drives returned for the selected observed window (up to {{limit}}). Consumption is distance-weighted; only drives of at least 1 km with measured energy qualify.',
+                      { driveCount: formatCount(observedDrives), limit: formatCount(windowLimit) },
                     )}
               </Text>
             </div>

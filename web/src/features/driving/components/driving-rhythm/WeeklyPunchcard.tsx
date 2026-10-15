@@ -135,8 +135,8 @@ export function WeeklyPunchcard({
                             key={hour}
                             aria-label={t(
                               'rhythm.weeklyPunchcard.cell',
-                              '{{day}} {{hour}} · {{count}} drives',
-                              { day: dayLabel(day), hour: `${hourLabel(hour)}:${hourLabel(0)}`, count: fmtInt(count) },
+                              '{{day}} {{hour}} · {{visits}} drives',
+                              { day: dayLabel(day), hour: `${hourLabel(hour)}:${hourLabel(0)}`, visits: fmtInt(count) },
                             )}
                             className="border border-[var(--border-subtle)] bg-[var(--surface-2)] py-3 text-center"
                             style={{

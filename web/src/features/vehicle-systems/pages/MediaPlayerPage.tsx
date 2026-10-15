@@ -164,11 +164,12 @@ export default function MediaPlayerPage() {
     // Volume KPI above): charting a missing field as 0 drew phantom drops to
     // silence that the KPI deliberately excludes.
     return [...filtered]
-      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
       .filter(
-        (s): s is MediaSnapshot & { audio_volume: number } =>
-          typeof s.audio_volume === 'number' && Number.isFinite(s.audio_volume),
+        (s): s is MediaSnapshot & { audio_volume: number; created_at: string } =>
+          typeof s.created_at === 'string' && Number.isFinite(Date.parse(s.created_at))
+          && typeof s.audio_volume === 'number' && Number.isFinite(s.audio_volume),
       )
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
       .map((s) => ({ time: formatDateTime(s.created_at), volume: s.audio_volume }));
   }, [filtered, formatDateTime]);
 
@@ -729,7 +730,7 @@ export default function MediaPlayerPage() {
               }}
               caption={t('media.playbackHistory', 'Playback history')}
               data={sortedHistory}
-              keyExtractor={(row) => row.id}
+              keyExtractor={(row) => row.id ?? `${row.created_at ?? 'unknown'}-${row.vehicle_id ?? 'vehicle'}`}
               sortKey={tableSortKey}
               sortDir={tableSortDir}
               onSort={handleSort}

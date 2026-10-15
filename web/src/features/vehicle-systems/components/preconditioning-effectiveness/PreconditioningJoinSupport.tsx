@@ -82,8 +82,8 @@ export function PreconditioningJoinSupport({
                 : reusedClimateRows > 0
                 ? t(
                     'preconditioningEffectiveness.join.reuseObserved',
-                    '{{count}} unique climate rows are referenced by more than one overlapping departure window; departures are therefore not row-independent.',
-                    { count: fmtInt(reusedClimateRows) },
+                    '{{rowCount}} unique climate rows are referenced by more than one overlapping departure window; departures are therefore not row-independent.',
+                    { rowCount: fmtInt(reusedClimateRows) },
                   )
                 : t(
                     'preconditioningEffectiveness.join.reuseNone',

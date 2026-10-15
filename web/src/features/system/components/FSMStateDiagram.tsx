@@ -3,14 +3,16 @@ import { useTranslation } from 'react-i18next';
 import { Caption, GlassPanel } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { cn } from '@/lib/cn';
-import { FSM_STATES, FSM_EDGES, getStateColor } from '@/types/fsm';
+import { FSM_STATES, FSM_EDGES, getStateDefinition } from '@/types/fsm';
 import type { FSMTransition } from '@/types/fsm';
 import { VisuallyHidden } from '@/components/a11y';
 import { useA11ySummary } from '@/hooks/useA11ySummary';
 import { neonColorMap, semanticToNeon } from '@/lib/tokens';
 
-const stateCue = (fsmType: string, state: string) =>
-  neonColorMap[semanticToNeon[getStateColor(fsmType, state).variant]];
+const stateCue = (fsmType: string, state: string) => {
+  const semantic = getStateDefinition(fsmType, state).variant;
+  return neonColorMap[semanticToNeon[semantic]];
+};
 
 interface FSMStateDiagramProps {
   fsmType: string;

@@ -43,6 +43,7 @@ export function reportFixture(): DriveReportContentProps {
       stats: {
         maxSpd: 112, avgSpd: 72, minSpd: 8, powerMax: 120, powerMin: -40, avgPower: 15,
         energyWh: 7200, regenWh: 900, consumptionWhKm: 225, elevGain: 120, elevLoss: 90,
+        elevationEvidence: { gainM: 120, lossM: 90, eligiblePairCount: 2, pairCount: 2, coverage: 1 },
         avgOutsideTemp: 14, avgInsideTemp: 21, hasAnyTemp: true, insideTemps: [21],
         outsideTemps: [14], driverTemps: [], passengerTemps: [], climateStatus: 'On',
         avgFanSpeed: 3, maxFanSpeed: 6, startRange: 410, endRange: 365,

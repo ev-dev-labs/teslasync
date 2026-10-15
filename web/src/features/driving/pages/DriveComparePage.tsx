@@ -110,7 +110,7 @@ export default function DriveComparePage() {
   const detailAError = detailAId ? driveAState.fatalError : null;
   const detailBError = detailBId ? driveBState.fatalError : null;
   // A paused first request is neither loading nor empty: report it neutrally.
-  const pausedWithoutData = (state: typeof drivesState) =>
+  const pausedWithoutData = (state: { hasData: boolean; isRefreshBlocked: boolean; fatalError: Error | null }) =>
     !state.hasData && state.isRefreshBlocked && state.fatalError == null;
   const listPaused = pausedWithoutData(drivesState);
   const listLoading = drivesState.status === 'initial' && !listPaused;

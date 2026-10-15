@@ -442,7 +442,7 @@ export default function DigitalTwinPage() {
                           {index === 1
                             ? historical
                               ? typeof stateQ.data?.observedAt === 'number' && Number.isFinite(stateQ.data.observedAt)
-                                ? t('digitalTwin.brief.timestamp', 'Signal timestamp: {{time}}', { time: formatTime(stateQ.data.observedAt) })
+                                ? t('digitalTwin.brief.timestamp', 'Signal timestamp: {{time}}', { time: formatTime(new Date(stateQ.data.observedAt)) })
                                 : t('digitalTwin.brief.timestampUnknown', 'Signal timestamp unknown')
                               : observationAge === null
                               ? t('dashboard.fleetPosture.scope.noObservation', 'No verified observation time for this vehicle')

@@ -82,7 +82,7 @@ export function useDriveDetailData(id: string) {
         .map((tp) => ({
           lat: tp.latitude!,
           lng: tp.longitude!,
-          speed: asFiniteNumber(tp.speed),
+          ...(asFiniteNumber(tp.speed) == null ? {} : { speed: asFiniteNumber(tp.speed)! }),
           timestamp: tp.createdAt ?? tp.created_at ?? tp.timestamp ?? null,
         }));
       if (points.length > 0) return points;
@@ -92,7 +92,7 @@ export function useDriveDetailData(id: string) {
       .map((p) => ({
         lat: p.latitude,
         lng: p.longitude,
-        speed: asFiniteNumber(p.speed),
+        ...(asFiniteNumber(p.speed) == null ? {} : { speed: asFiniteNumber(p.speed)! }),
         timestamp: p.createdAt ?? p.created_at ?? p.timestamp ?? null,
       }));
   }, [drive]);

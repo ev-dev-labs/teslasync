@@ -170,7 +170,7 @@ export default function ServiceEvidencePackPage() {
         'serviceEvidencePack.subtitle',
         'A canonical, offline-verifiable JSON export of this evidence-ranked analysis — signal evidence, ranked hypotheses, limitations, and a SHA-256 integrity digest, never a diagnosis or proof of causation.',
       )}
-      query={[workspace.signalsQuery, workspace.evidenceBundle, updatesQuery]}
+      query={[workspace.signalsQuery, updatesQuery]}
     >
       {/* 1 — Focal signal + analysis window (shared with the Root-Cause page) */}
       <ServiceEvidencePackSources

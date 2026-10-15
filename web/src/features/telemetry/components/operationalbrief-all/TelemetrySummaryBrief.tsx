@@ -60,13 +60,13 @@ export function TelemetrySummaryBrief({
       title={title} description={description}
       scope={<>{scope}{sourceBounds.map((bound, index) => <Caption key={`${bound.signal}-${index}`} className="min-w-0 break-words">
         {' · '}{hasValidBounds(bound)
-          ? t('telemetry.brief.returnedBounds', '{{signal}} source bounds: {{from}} → {{to}}', bound)
+          ? t('telemetry.brief.returnedBounds', '{{signal}} source bounds: {{from}} → {{to}}', { signal: bound.signal, from: bound.from, to: bound.to })
           : t('telemetry.brief.sourceBoundsUnknown', '{{signal}} source bounds not supplied', { signal: bound.signal })}
         {localizedBounds(bound)}
       </Caption>)}
         {requestedBounds.map((bound, index) => <Caption key={`requested-${bound.signal}-${index}`} className="min-w-0 break-words">
           {' · '}{bound.signal}{' · '}{hasValidBounds(bound)
-            ? t('teslaOnly.scopeRequested', 'Requested: {{from}} → {{to}}', bound)
+            ? t('teslaOnly.scopeRequested', 'Requested: {{from}} → {{to}}', { signal: bound.signal, from: bound.from, to: bound.to })
             : <>{t('fleetOps.status.requested', 'Requested')}{' · '}{t('telemetry.brief.sourceBoundsUnknown', '{{signal}} source bounds not supplied', { signal: bound.signal })}</>}
           {localizedBounds(bound)}
         </Caption>)}

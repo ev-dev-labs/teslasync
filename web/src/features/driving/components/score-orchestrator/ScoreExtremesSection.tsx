@@ -12,6 +12,7 @@ type ScoreExtremesSectionProps = ScoreSectionProps<
   | 'noDrivesMsg' | 'efficiencyReading' | 'smoothnessReading' | 'speedReading'
   | 'overallReading' | 'completeDistance' | 'filteredDrives' | 'completeDuration'
   | 'measuredMaxSpeeds' | 'formatSpeed' | 'fmtInt' | 'allScores'
+  | 'refetch' | 'hasDrivePayload' | 'drivesSource' | 'drivesLoading'
 >;
 
 export function ScoreExtremesSection({ model, driveState, scoreState }: ScoreExtremesSectionProps) {

@@ -140,20 +140,23 @@ export function FleetSetupProgress({
   const stepSources = [accountSource, tokenSource, telemetrySource, telemetrySource]
   const steps = baseSteps.map((step, index) => {
     const source = stepSources[index]!
+    const sourceLoading = 'isLoading' in source
+      ? source.isLoading
+      : source.status === 'initial' || source.isRefreshing
     const annotation = source.isRefreshBlocked
       ? sourceT('dataSources.status.paused', 'Refresh paused')
       : source.fatalError
         ? sourceT('dataSources.status.failed', 'Failed')
         : source.status === 'stale'
           ? sourceT('dataState.stale.title', 'Data may be stale')
-          : source.isLoading
+          : sourceLoading
             ? source.hasData
               ? sourceT('dataSources.status.refreshing', 'Refreshing')
               : sourceT('dataSources.status.loading', 'Loading')
             : !source.hasData ? sourceT('common.unknown', 'Unknown') : null
     return {
       ...step,
-      busy: source.isLoading === true && !source.isRefreshBlocked,
+      busy: sourceLoading && !source.isRefreshBlocked,
       description: annotation ? `${step.description} ${annotation}` : step.description,
     }
   })
@@ -164,7 +167,7 @@ export function FleetSetupProgress({
   return (
     <GlassPanel
       className="h-full min-w-0 space-y-4 p-4 sm:p-5"
-      aria-busy={stepSources.some(source => source.isLoading && !source.isRefreshBlocked)}
+      aria-busy={stepSources.some(source => ('isLoading' in source ? source.isLoading : source.status === 'initial' || source.isRefreshing) && !source.isRefreshBlocked)}
     >
       <div className="flex min-w-0 items-center gap-3">
         <IconBox color="green">

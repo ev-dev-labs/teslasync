@@ -477,7 +477,7 @@ export default function TeslaChargingHistoryPage() {
     { metricId: 'currency', occurrenceId: 'spend', label: t('tesla_charging.stats.spend', 'Total spend'),
       rawValue: summary.total_spend,
       context: spendingEvidence.map(loc => `${loc.name} · ${loc.currency ?? '—'}: ${t('tesla_charging.partialSubtotal',
-        'Recorded subtotal: {{subtotal}} · {{missing}} missing · {{count}}×', {
+        'Recorded subtotal: {{subtotal}} · {{missing}} missing · {{sessions}}×', {
           subtotal: formatSourceAmount(loc.recordedTotal, loc.currency), missing: loc.missingCount, count: loc.count,
         })}`).join('; '),
       display: { formatter: raw => ({ value: formatSourceAmount(raw, null), unit: '' }) } },
@@ -593,7 +593,7 @@ export default function TeslaChargingHistoryPage() {
               <>
               {monthlyData.map(month => (
                 <Caption key={month.label}>
-                  {month.label}: {t('tesla_charging.partialSubtotal', 'Recorded subtotal: {{subtotal}} · {{missing}} missing · {{count}}×', {
+                  {month.label}: {t('tesla_charging.partialSubtotal', 'Recorded subtotal: {{subtotal}} · {{missing}} missing · {{sessions}}×', {
                     subtotal: formatSourceAmount(month.recordedTotal, month.currency),
                     missing: month.missingCount,
                     count: month.count,
@@ -665,23 +665,23 @@ export default function TeslaChargingHistoryPage() {
                     color={chartTokens.series[0]}
                     fill="solid"
                     sublabel={loc.missingCount > 0
-                      ? t('tesla_charging.partialSubtotal', 'Recorded subtotal: {{subtotal}} · {{missing}} missing · {{count}}×', {
+                      ? t('tesla_charging.partialSubtotal', 'Recorded subtotal: {{subtotal}} · {{missing}} missing · {{sessions}}×', {
                         subtotal: formatSourceAmount(loc.recordedTotal, loc.currency),
-                        missing: loc.missingCount, count: fmtInt(loc.count),
+                        missing: loc.missingCount, sessions: fmtInt(loc.count),
                       })
                       : `${formatSourceAmount(loc.total, loc.currency)} · ${fmtInt(loc.count)}×`}
                   />
                   )}
                   {loc.recordedTotal != null && loc.recordedTotal < 0 && loc.missingCount > 0 && (
-                    <Caption>{t('tesla_charging.partialSubtotal', 'Recorded subtotal: {{subtotal}} · {{missing}} missing · {{count}}×', {
-                      subtotal: formatSourceAmount(loc.recordedTotal, loc.currency), missing: loc.missingCount, count: fmtInt(loc.count),
+                    <Caption>{t('tesla_charging.partialSubtotal', 'Recorded subtotal: {{subtotal}} · {{missing}} missing · {{sessions}}×', {
+                      subtotal: formatSourceAmount(loc.recordedTotal, loc.currency), missing: loc.missingCount, sessions: fmtInt(loc.count),
                     })}</Caption>
                   )}
                   {loc.missingEnergyCount > 0 && (
                     <Caption>
-                      {t('tesla_charging.col.energy', 'Energy')}: {t('tesla_charging.partialSubtotal', 'Recorded subtotal: {{subtotal}} · {{missing}} missing · {{count}}×', {
+                      {t('tesla_charging.col.energy', 'Energy')}: {t('tesla_charging.partialSubtotal', 'Recorded subtotal: {{subtotal}} · {{missing}} missing · {{sessions}}×', {
                         subtotal: loc.recordedEnergyWh == null ? '—' : formatEnergy(loc.recordedEnergyWh),
-                        missing: loc.missingEnergyCount, count: fmtInt(loc.count),
+                        missing: loc.missingEnergyCount, sessions: fmtInt(loc.count),
                       })}
                     </Caption>
                   )}
