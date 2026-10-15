@@ -2,12 +2,14 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TrendingUp } from 'lucide-react';
 import {
-  ChartLegend, ChartTooltip, EmbeddedChart, chartGrid, axisTickSm, AREA_DEFAULTS, areaGradient,
+  ChartLegend, ChartTooltip, EmbeddedChart, chartGrid, axisTickSm, AREA_DEFAULTS,
   ComposedChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, LineChart, Line, type ChartDataRow,
 } from '@/components/charts';
 import { useChartPalette } from '@/hooks/useChartPalette';
 import { useFormatting } from '@/hooks/useFormatting';
+import { chartTokens } from '@/lib/tokens';
+import { isFiniteNumber } from '@/lib/numberFormat';
 import type { CostForecastData } from '@/types/charging';
 import { CostStatSection } from './CostStatSection';
 import { ForecastDetails } from './ForecastDetails';
@@ -35,6 +37,8 @@ export function CostForecastSection({
 }: CostForecastSectionProps) {
   const { t } = useTranslation();
   const palette = useChartPalette();
+  const actualColor = palette[0] ?? chartTokens.series[0];
+  const forecastColor = palette[1] ?? chartTokens.series[1];
   const { currencySymbol } = useFormatting();
   const period = useIndependentStatPeriod('forecast');
   const historicalData = useMemo(() => forecastData?.historical ?? [], [forecastData?.historical]);
@@ -43,20 +47,26 @@ export function CostForecastSection({
   const hasCostPerKwhTrend = historicalData.length > 1;
 
   const chartData = useMemo<ForecastChartRow[]>(() => [
-    ...historicalData.map((h) => ({ month: h.month, actual: h.cost })),
+    ...historicalData.map((h) => ({ month: h.month, actual: isFiniteNumber(h.cost) ? h.cost : undefined })),
     ...forecast.map((f) => {
       const low = f.cost_low;
       const high = f.cost_high;
-      const hasBand = Number.isFinite(low) && Number.isFinite(high);
+      const hasBand = isFiniteNumber(low) && isFiniteNumber(high);
       return {
         month: f.month,
-        forecast: f.cost,
+        forecast: isFiniteNumber(f.cost) ? f.cost : undefined,
         ci_low: hasBand ? low : undefined,
         ci_band: hasBand ? Math.max(0, high - low) : undefined,
         ci_high: hasBand ? high : undefined,
       };
     }),
   ], [historicalData, forecast]);
+  const trendData = useMemo(() => historicalData.map((row) => ({
+    ...row, cost_per_kwh: isFiniteNumber(row.cost_per_kwh) ? row.cost_per_kwh : undefined,
+  })), [historicalData]);
+  const trendExportData = useMemo(() => trendData.map(({ month, cost_per_kwh }) => ({
+    month, cost_per_kwh,
+  })), [trendData]);
 
   return (
     <div className="space-y-6">
@@ -95,16 +105,14 @@ export function CostForecastSection({
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={chartData}>
                 <CartesianGrid {...chartGrid} />
-                {areaGradient('forecastBand', palette[1], 0.15)}
-                {areaGradient('actualCostFill', palette[0], 0.3)}
                 <XAxis dataKey="month" tick={axisTickSm} tickLine={false} axisLine={false} />
                 <YAxis tick={axisTickSm} tickLine={false} axisLine={false} unit={currencySymbol} />
                 <Tooltip content={<ChartTooltip />} />
                 <ChartLegend />
                 <Area {...AREA_DEFAULTS} dataKey="ci_low" stackId="ci" stroke="none" fill="transparent" fillOpacity={0} legendType="none" connectNulls={false} hide={hiddenSeries?.isHidden('ci_band')} />
-                <Area {...AREA_DEFAULTS} dataKey="ci_band" stackId="ci" stroke="none" fill="url(#forecastBand)" name={t('costAnalysis.forecast.predictionInterval', 'Approximate prediction interval')} connectNulls={false} hide={hiddenSeries?.isHidden('ci_band')} />
-                <Area {...AREA_DEFAULTS} dataKey="actual" stroke={palette[0]} fill="url(#actualCostFill)" name={t('costAnalysis.forecast.actual', 'Actual Cost')} connectNulls={false} hide={hiddenSeries?.isHidden('actual')} />
-                <Line {...AREA_DEFAULTS} dataKey="forecast" stroke={palette[1]} strokeDasharray="8 4" name={t('costAnalysis.forecast.projected', 'Projected Cost')} connectNulls={false} hide={hiddenSeries?.isHidden('forecast')} />
+                <Area {...AREA_DEFAULTS} dataKey="ci_band" stackId="ci" stroke="none" fill={forecastColor} fillOpacity={0.08} name={t('costAnalysis.forecast.predictionInterval', 'Approximate prediction interval')} connectNulls={false} hide={hiddenSeries?.isHidden('ci_band')} />
+                <Area {...AREA_DEFAULTS} dataKey="actual" stroke={actualColor} fill={actualColor} fillOpacity={0.08} name={t('costAnalysis.forecast.actual', 'Actual Cost')} connectNulls={false} hide={hiddenSeries?.isHidden('actual')} />
+                <Line {...AREA_DEFAULTS} dataKey="forecast" stroke={forecastColor} strokeDasharray="8 4" name={t('costAnalysis.forecast.projected', 'Projected Cost')} connectNulls={false} hide={hiddenSeries?.isHidden('forecast')} />
               </ComposedChart>
             </ResponsiveContainer>
           )}
@@ -128,8 +136,8 @@ export function CostForecastSection({
         <EmbeddedChart
           title={t('costAnalysis.forecast.costPerKwhTrend', 'Cost per kWh Trend')}
           ariaLabel={t('costAnalysis.forecast.trendAria', 'Monthly average cost per kilowatt-hour trend')}
-          data={historicalData.map(({ month, cost_per_kwh }) => ({ month, cost_per_kwh }))}
-          exportData={historicalData.map(({ month, cost_per_kwh }) => ({ month, cost_per_kwh }))}
+          data={trendExportData}
+          exportData={trendExportData}
           exportable
           fullscreen
           dataColumns={[
@@ -141,12 +149,12 @@ export function CostForecastSection({
           mobileHeight={208}
         >
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={historicalData}>
+            <LineChart data={trendData}>
               <CartesianGrid {...chartGrid} />
               <XAxis dataKey="month" tick={axisTickSm} tickLine={false} axisLine={false} />
               <YAxis tick={axisTickSm} tickLine={false} axisLine={false} unit={currencySymbol} />
               <Tooltip content={<ChartTooltip />} />
-              <Line {...AREA_DEFAULTS} dataKey="cost_per_kwh" stroke={palette[0]} dot={{ fill: palette[0], r: 3 }} name={t('costAnalysis.forecast.costPerKwh', '$/kWh')} />
+              <Line {...AREA_DEFAULTS} dataKey="cost_per_kwh" stroke={actualColor} dot={{ fill: actualColor, r: 3 }} name={t('costAnalysis.forecast.costPerKwh', '$/kWh')} />
             </LineChart>
           </ResponsiveContainer>
         </EmbeddedChart>
