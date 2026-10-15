@@ -37,7 +37,7 @@ const TWO_COLUMNS = { default: 1, xl: 2 } as const;
 export default function DestinationTransitionsPage() {
   const { t } = useTranslation();
   const { locale } = useNumberFormatting();
-  usePageTitle(t('destinationTransitions.title', 'Destination Transitions'));
+  usePageTitle(t('destinationTransitions.title', 'Destination transitions'));
 
   const { vehicleId } = useSelectedVehicle();
   const selectedTimeZone = useTimezone('vehicle');
@@ -87,7 +87,7 @@ export default function DestinationTransitionsPage() {
   const timeZone = model.timeZone;
   return (
     <PageLayout
-      title={t('destinationTransitions.title', 'Destination Transitions')}
+      title={t('destinationTransitions.title', 'Destination transitions')}
       query={drivesQuery}
       subtitle={t(
         'destinationTransitions.subtitle',
@@ -113,7 +113,7 @@ export default function DestinationTransitionsPage() {
         </AlertBanner>
       )}
       {drivesState.isRefreshBlocked && drivesState.hasData && (
-        <StaleRefreshWarning state={drivesState} hideRetry={drivesState.refreshError != null} label={t('destinationTransitions.title', 'Destination Transitions')} />
+        <StaleRefreshWarning state={drivesState} hideRetry={drivesState.refreshError != null} label={t('destinationTransitions.title', 'Destination transitions')} />
       )}
       <FadeIn>
         <DestinationEvidenceBrief

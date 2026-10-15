@@ -168,10 +168,10 @@
     "matrix": {
       "aria": "Counts and observed outgoing shares in the top destination transition matrix",
       "belowGate": "Below gate",
-      "cellAria": "{{from}} to {{to}}: {{count}} observed, {{share}} of accepted outgoing transitions",
-      "cellUnsupportedAria": "{{from}} to {{to}}: {{count}} observed; origin is below the support gate",
+      "cellAria": "{{from}} to {{to}}: {{value}} observed, {{share}} of accepted outgoing transitions",
+      "cellUnsupportedAria": "{{from}} to {{to}}: {{value}} observed; origin is below the support gate",
       "origin": "Origin",
-      "outgoing": "{{count}} outgoing",
+      "outgoing": "{{value}} outgoing",
       "subtitle": "Counts among the most visited states; shares retain each origin’s full accepted denominator, and dashed cells mark origins below the three-transition support gate.",
       "title": "Top transition matrix"
     },

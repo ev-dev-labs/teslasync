@@ -312,7 +312,7 @@ describe('DestinationTransitionsPage', () => {
     h.history = query({ data });
     const view = renderPage();
 
-    expect(screen.getByRole('heading', { name: 'Destination Transitions' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Destination transitions' })).toBeInTheDocument();
     expect(h.timezoneHook).toHaveBeenCalledWith('vehicle');
     const weekday = within(screen.getByTestId('destination-weekday-profile'));
     expect(weekday.getAllByText('Samstag').length).toBeGreaterThan(0);
@@ -343,7 +343,7 @@ describe('DestinationTransitionsPage', () => {
     view.rerenderPage();
     expect(within(screen.getByTestId('destination-weekday-profile'))
       .getAllByText('samedi').length).toBeGreaterThan(0);
-    expect(screen.getByRole('heading', { name: 'Destination Transitions' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Destination transitions' })).toBeInTheDocument();
     expect(data).toEqual(original);
   });
 
@@ -612,7 +612,7 @@ describe('DestinationTransitionsPage', () => {
     });
     expect(h.metricCapture.mock.calls.flatMap(([metrics]) => metrics)
       .find(metric => metric.label === 'Rows returned')?.rawValue).toBe(8);
-    expect(screen.getAllByRole('button', { name: /Retry|Refresh/ })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: /^(Retry|Refresh)$/ })).toHaveLength(1);
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(historyRefetch).toHaveBeenCalledTimes(1);
 
@@ -629,7 +629,7 @@ describe('DestinationTransitionsPage', () => {
       expect(Array.from(brief.querySelectorAll('[data-operational-value]'), node => node.textContent)).toEqual(before[index]);
     });
     expect(screen.queryByText('Retained source')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Retry|Refresh/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^(Retry|Refresh)$/ })).not.toBeInTheDocument();
     expectEverySection();
   });
 
@@ -852,7 +852,7 @@ describe('DestinationTransitionsPage', () => {
     expect(
       screen.getByRole('heading', {
         level: 1,
-        name: 'Destination Transitions',
+        name: 'Destination transitions',
       }),
     ).toBeInTheDocument();
     expectEverySection();
