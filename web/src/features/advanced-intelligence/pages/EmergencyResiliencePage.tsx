@@ -294,7 +294,7 @@ export default function EmergencyResiliencePage() {
             <div className="min-w-0 space-y-3">
               {priorities.length === 0 ? <EmptyState variant="informational"
                 message={t('advancedIntelligence.panel.empty', 'No supported data is available.')}
-                description={t('advancedIntelligence.resilience.priorities.emptyHelp', 'Priority actions appear after a supported outage plan is generated from current vehicle and energy data.')} /> : priorities.map((item) => (
+                description={t('advancedIntelligence.resilience.actions.prioritiesEmptyHelp', 'Priority actions appear after a supported outage plan is generated from current vehicle and energy data.')} /> : priorities.map((item) => (
                 <article key={`${item.priority}-${item.load}`} className="min-w-0 break-words rounded-shape-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="neutral">#{item.priority}</Badge>
@@ -307,7 +307,7 @@ export default function EmergencyResiliencePage() {
             <div className="min-w-0 space-y-2 break-words">
               {recommendations.length === 0 ? <EmptyState variant="informational"
                 message={t('advancedIntelligence.panel.empty', 'No supported data is available.')}
-                description={t('advancedIntelligence.resilience.recommendations.emptyHelp', 'Recommendations appear when the supported outage plan includes actionable findings.')} /> : recommendations.map((item) => (
+                description={t('advancedIntelligence.resilience.actions.recommendationsEmptyHelp', 'Recommendations appear when the supported outage plan includes actionable findings.')} /> : recommendations.map((item) => (
                 <Text as="p" variant="bodySm" key={item}>• {item}</Text>
               ))}
             </div>

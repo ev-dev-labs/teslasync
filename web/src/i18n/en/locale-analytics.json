@@ -1572,7 +1572,8 @@
       "eligible": "Eligible",
       "apiSavings": "API savings",
       "apiCumulative": "API cumulative",
-      "empty": "No monthly positive-cost rows were returned."
+      "empty": "No monthly positive-cost rows were returned.",
+      "monthlyUnavailableHelp": "Retry the operating-cost source; monthly rows appear when it returns a valid monthly_breakdown array."
     },
     "assumptions": {
       "aria": "True cost assumptions and settings ledger",

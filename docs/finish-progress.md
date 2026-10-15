@@ -248,3 +248,10 @@ preserved for prior cases, and no new no-action comments were added here.
   spread across existing assertions in 19 files; detailed follow-up is needed
   before declaring the full suite result. The standalone `ChartContainer.test.tsx`
   suite passed **21/21** after clarifying its annotation-only fixture.
+
+## English catalog completion (2026-10-15)
+
+Applied the catalog requirement for the new empty-state copy: 25 complete
+English sentences now live under their translated `t()` keys in `web/src/i18n/en.json`.
+Regenerated the split bundles and verified `node scripts/split-i18n-catalog.mjs --check` passes.
+Changed fallback wording that had reused unrelated keys to dedicated catalog keys.

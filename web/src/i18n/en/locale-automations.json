@@ -516,7 +516,9 @@
       "resource": "Geofence routines",
       "title": "Geofence routines",
       "choosePlace": "Choose a place…",
-      "noPlaces": "Create a geofence place first to install routines."
+      "noPlaces": "Create a geofence place first to install routines.",
+      "noTemplates": "No geofence routine templates are available yet.",
+      "createCustomHint": "You can still create a custom automation from the automations page."
     }
   },
   "comfort": {

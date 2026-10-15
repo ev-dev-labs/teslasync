@@ -37,7 +37,8 @@
         "sharp_turn": "Sharp turn (statistical)",
         "motion": "Motion detected",
         "unknown": "Unclassified"
-      }
+      },
+      "emptyHelp": "Candidates appear after metadata import or local motion analysis completes."
     },
     "export": {
       "disclaimer": "Exports are generated entirely in this browser. The still-frame export is a single redacted image, not a redacted video file.",

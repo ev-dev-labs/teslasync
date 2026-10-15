@@ -246,7 +246,9 @@
       "rangeLossAria": "First retained comparison baseline and estimated driving range over time",
       "healthFactors": "Battery health factors",
       "history": "Degradation history",
-      "trendTitleAria": "Battery health trend and 95% confidence projection chart"
+      "trendTitleAria": "Battery health trend and 95% confidence projection chart",
+      "selectVehicleHelp": "Select a vehicle to view its battery history.",
+      "reconnectHelp": "Reconnect to Tesla, then retry to load this vehicle's battery history."
     },
     "health": {
       "excellent": "Excellent",

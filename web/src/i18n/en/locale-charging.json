@@ -716,7 +716,8 @@
       "chargeCurveAria": "Charging power by battery state of charge",
       "socOverTimeAria": "Battery level, energy, and range throughout the charging session",
       "temperatureAria": "Battery, cabin, and ambient temperature throughout the charging session",
-      "voltageCurrentAria": "Charging voltage and current throughout the session"
+      "voltageCurrentAria": "Charging voltage and current throughout the session",
+      "timelineEmptyHelp": "Timeline charts appear when Tesla reports samples during a charging session."
     },
     "heatmap": {
       "title": "Charging patterns",
@@ -786,7 +787,8 @@
       "chargedAnyway": "Charged before the scheduled window",
       "scheduledAt": "Scheduled start {{when}}",
       "waited": "Stopped waited for the scheduled window.",
-      "cockpit": "Open Tesla physics cockpit"
+      "cockpit": "Open Tesla physics cockpit",
+      "emptyHelp": "Physics events appear when the charging session reports energy and power milestones."
     },
     "billTruth": {
       "title": "Bill vs pack",
@@ -1334,7 +1336,10 @@
     "noPriceData": "No priced Supercharger visits yet.",
     "siteVisits": "{{count}} visits · last {{date}}",
     "unpriced": "+{{count}} visits without invoice pricing",
-    "spread": "Cheapest stop saves {{save}}/kWh vs priciest"
+    "spread": "Cheapest stop saves {{save}}/kWh vs priciest",
+    "sessionsAppear": "Sessions appear after Tesla charging history syncs; a selected date range can also exclude older sessions.",
+    "locationsAppear": "Charging locations appear when synced sessions include location evidence.",
+    "selectVehicleHelp": "Choose a vehicle or wait for fleet sync to finish before the price radar can load."
   },
   "tesla_sessions": {
     "title": "Fleet charging sessions",

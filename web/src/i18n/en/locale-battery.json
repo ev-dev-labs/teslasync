@@ -2947,6 +2947,7 @@
         "temperature_exposure": "Park in shade or climate-controlled garage to reduce heat exposure"
       },
       "recommendations": "Recommendations",
+      "reconnectHelp": "Reconnect to Tesla, then retry to load this vehicle's battery history.",
       "retainedRangeBaseline": "First retained range estimate",
       "retainedRangeEvidence": "The comparison baseline is the range estimate attached to the first retained history row, not new-pack range. Missing baseline values remain unknown. Sample timestamps identify carried-forward telemetry; the history date is the capacity aggregation day.",
       "riskDetail": {
@@ -2966,6 +2967,7 @@
       },
       "riskScore": "Risk score",
       "sampleWindow": "Available battery history",
+      "selectVehicleHelp": "Select a vehicle to view its battery history.",
       "sohPct": "SOH %",
       "stress": "Stress level",
       "stressHigh": "High stress detected. Reducing fast charges and deep discharges can improve battery lifespan.",

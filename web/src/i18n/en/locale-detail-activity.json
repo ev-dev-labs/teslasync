@@ -65,7 +65,8 @@
         "description": "Actions, active days, action types, and entities derived from the loaded personal activity feed.",
         "scope": "Loaded recent activity only; not a complete account lifetime total.",
         "lastContext": "Most recent timestamp in the loaded feed."
-      }
+      },
+      "pendingHelp": "This panel fills after the activity feed returns data for the selected period."
     },
     "action": {
       "unknown": "Activity",

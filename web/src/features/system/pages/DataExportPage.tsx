@@ -807,7 +807,7 @@ function ColumnPickerSection({
       <div className="mb-5" data-testid="export-column-picker">
         <Label className="mb-2 block">{t('dataExport.columns.title', 'STEP 2½ — columns')}</Label>
         <StaleRefreshWarning state={catalogState} label={t('dataExport.columns.title', 'STEP 2½ — columns')} />
-        <EmptyState message={t('common.noData', 'No export columns are available for this data type.')}
+        <EmptyState message={t('dataExport.columns.unavailableTitle', 'No export columns are available for this data type.')}
           description={t('dataExport.columnsUnavailableHelp', 'Column choices appear after the export catalog returns supported fields.')}
           action={{ label: t('common.retry', 'Retry'), onClick: () => { void catalogQuery.refetch(); } }} />
       </div>

@@ -436,6 +436,7 @@
       "livenessScope": "Current client-clock age: sending under 5 minutes, slow from 5 to under 30 minutes, stale from 30 minutes; offline means no valid timestamp, not confirmed vehicle disconnection.",
       "livenessFreshness": "Polling and stream timestamps remain independently visible on each vehicle row.",
       "offlineMeaning": "No valid polling or stream timestamp was supplied; missing evidence is not a measured outage."
-    }
+    },
+    "noAttentionHelp": "This panel updates when an incident, maintenance notice, or available update needs attention."
   }
 }

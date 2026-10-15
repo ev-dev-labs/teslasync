@@ -224,7 +224,8 @@
       "energy": "Energy required",
       "factors": {
         "empty": "No supported readiness factors are available.",
-        "title": "Readiness factors"
+        "title": "Readiness factors",
+        "emptyHelp": "Factors appear when the selected vehicle has supported readiness data for this journey."
       },
       "form": {
         "auxiliary": "Auxiliary load (canonical SI, optional)",
@@ -278,7 +279,9 @@
     "resilience": {
       "actions": {
         "empty": "No outage plan has been generated.",
-        "title": "Load priorities and recommendations"
+        "title": "Load priorities and recommendations",
+        "prioritiesEmptyHelp": "Priority actions appear after a supported outage plan is generated from current vehicle and energy data.",
+        "recommendationsEmptyHelp": "Recommendations appear when the supported outage plan includes actionable findings."
       },
       "form": {
         "duration": "Outage duration (canonical SI)",
@@ -491,7 +494,9 @@
         "cost": "Cost projections without complete charging and maintenance evidence",
         "purchase": "Purchases, charging changes, or financial guarantees"
       },
-      "withinBudget": "Within budget"
+      "withinBudget": "Within budget",
+      "noStrategies": "No supported strategies are available for these inputs.",
+      "noStrategiesHelp": "Strategies appear when the submitted vehicle, cost, and distance inputs satisfy the optimizer support rules."
     },
     "toast": {
       "error": "Advanced intelligence request failed"

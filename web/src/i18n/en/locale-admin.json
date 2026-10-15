@@ -2102,7 +2102,9 @@
         "l1LastSeen": "L1 last seen",
         "l2LastSeen": "L2 last seen",
         "vin": "VIN"
-      }
+      },
+      "emptyTitle": "No Redis signal keys are available yet.",
+      "emptyHelp": "Signal keys appear after the backend publishes vehicle telemetry to Redis."
     },
     "headerChip": {
       "mode": "Mode: {{mode}}",

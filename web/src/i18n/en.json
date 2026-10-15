@@ -7489,7 +7489,8 @@
       "chargeCurveAria": "Charging power by battery state of charge",
       "socOverTimeAria": "Battery level, energy, and range throughout the charging session",
       "temperatureAria": "Battery, cabin, and ambient temperature throughout the charging session",
-      "voltageCurrentAria": "Charging voltage and current throughout the session"
+      "voltageCurrentAria": "Charging voltage and current throughout the session",
+      "timelineEmptyHelp": "Timeline charts appear when Tesla reports samples during a charging session."
     },
     "heatmap": {
       "title": "Charging patterns",
@@ -7559,7 +7560,8 @@
       "chargedAnyway": "Charged before the scheduled window",
       "scheduledAt": "Scheduled start {{when}}",
       "waited": "Stopped waited for the scheduled window.",
-      "cockpit": "Open Tesla physics cockpit"
+      "cockpit": "Open Tesla physics cockpit",
+      "emptyHelp": "Physics events appear when the charging session reports energy and power milestones."
     },
     "billTruth": {
       "title": "Bill vs pack",
@@ -12148,7 +12150,8 @@
       "livenessScope": "Current client-clock age: sending under 5 minutes, slow from 5 to under 30 minutes, stale from 30 minutes; offline means no valid timestamp, not confirmed vehicle disconnection.",
       "livenessFreshness": "Polling and stream timestamps remain independently visible on each vehicle row.",
       "offlineMeaning": "No valid polling or stream timestamp was supplied; missing evidence is not a measured outage."
-    }
+    },
+    "noAttentionHelp": "This panel updates when an incident, maintenance notice, or available update needs attention."
   },
   "apiLogs": {
     "services": {
@@ -12474,7 +12477,9 @@
         "l1LastSeen": "L1 last seen",
         "l2LastSeen": "L2 last seen",
         "vin": "VIN"
-      }
+      },
+      "emptyTitle": "No Redis signal keys are available yet.",
+      "emptyHelp": "Signal keys appear after the backend publishes vehicle telemetry to Redis."
     },
     "headerChip": {
       "mode": "Mode: {{mode}}",
@@ -14146,7 +14151,8 @@
       "eligible": "Eligible",
       "apiSavings": "API savings",
       "apiCumulative": "API cumulative",
-      "empty": "No monthly positive-cost rows were returned."
+      "empty": "No monthly positive-cost rows were returned.",
+      "monthlyUnavailableHelp": "Retry the operating-cost source; monthly rows appear when it returns a valid monthly_breakdown array."
     },
     "assumptions": {
       "aria": "True cost assumptions and settings ledger",
@@ -15050,7 +15056,9 @@
       "resource": "Geofence routines",
       "title": "Geofence routines",
       "choosePlace": "Choose a place…",
-      "noPlaces": "Create a geofence place first to install routines."
+      "noPlaces": "Create a geofence place first to install routines.",
+      "noTemplates": "No geofence routine templates are available yet.",
+      "createCustomHint": "You can still create a custom automation from the automations page."
     }
   },
   "energy": {
@@ -15518,7 +15526,9 @@
       "rangeLossAria": "First retained comparison baseline and estimated driving range over time",
       "healthFactors": "Battery health factors",
       "history": "Degradation history",
-      "trendTitleAria": "Battery health trend and 95% confidence projection chart"
+      "trendTitleAria": "Battery health trend and 95% confidence projection chart",
+      "selectVehicleHelp": "Select a vehicle to view its battery history.",
+      "reconnectHelp": "Reconnect to Tesla, then retry to load this vehicle's battery history."
     },
     "health": {
       "excellent": "Excellent",
@@ -16788,7 +16798,10 @@
     "noPriceData": "No priced Supercharger visits yet.",
     "siteVisits": "{{count}} visits · last {{date}}",
     "unpriced": "+{{count}} visits without invoice pricing",
-    "spread": "Cheapest stop saves {{save}}/kWh vs priciest"
+    "spread": "Cheapest stop saves {{save}}/kWh vs priciest",
+    "sessionsAppear": "Sessions appear after Tesla charging history syncs; a selected date range can also exclude older sessions.",
+    "locationsAppear": "Charging locations appear when synced sessions include location evidence.",
+    "selectVehicleHelp": "Choose a vehicle or wait for fleet sync to finish before the price radar can load."
   },
   "tesla_sessions": {
     "title": "Fleet charging sessions",
@@ -17333,7 +17346,8 @@
         "description": "Actions, active days, action types, and entities derived from the loaded personal activity feed.",
         "scope": "Loaded recent activity only; not a complete account lifetime total.",
         "lastContext": "Most recent timestamp in the loaded feed."
-      }
+      },
+      "pendingHelp": "This panel fills after the activity feed returns data for the selected period."
     },
     "action": {
       "unknown": "Activity",
@@ -24330,7 +24344,8 @@
     "filterLabel": {
       "search": "Search"
     },
-    "searchPlaceholder": "Search by action, resource, or details…"
+    "searchPlaceholder": "Search by action, resource, or details…",
+    "noEntriesHelp": "Audit entries appear after system or account activity is recorded."
   },
   "dataExport": {
     "csvPreview": "CSV preview",
@@ -24354,7 +24369,8 @@
       "selectAll": "Select all",
       "clear": "Clear",
       "alwaysIncluded": "Required",
-      "none": "No columns selected"
+      "none": "No columns selected",
+      "unavailableTitle": "No export columns are available for this data type."
     },
     "allVehicles": "All vehicles",
     "customRange": "Custom range",
@@ -24469,7 +24485,9 @@
     "loadError": "Failed to load export jobs",
     "create": {
       "aria": "Create a new export"
-    }
+    },
+    "noVehiclesHelp": "Connect a Tesla account and sync a vehicle before exporting vehicle data.",
+    "columnsUnavailableHelp": "Column choices appear after the export catalog returns supported fields."
   },
   "dbHealth": {
     "rowChartScope": "Showing {{shown}} of {{total}} returned tables by row count. The complete table list is below.",
@@ -28583,7 +28601,8 @@
         "scope": "Selected vehicle outage evidence; no fixed reporting window is supplied.",
         "gapLabel": "Telemetry gap",
         "timestampContext": "Original event time; a missing timestamp does not imply zero traffic."
-      }
+      },
+      "detailsUnavailableHelp": "These details appear only when the outage evidence source supplies replay assurance or notes."
     },
     "page": {
       "title": "System budgets",
@@ -32915,7 +32934,8 @@
         "sharp_turn": "Sharp turn (statistical)",
         "motion": "Motion detected",
         "unknown": "Unclassified"
-      }
+      },
+      "emptyHelp": "Candidates appear after metadata import or local motion analysis completes."
     },
     "export": {
       "disclaimer": "Exports are generated entirely in this browser. The still-frame export is a single redacted image, not a redacted video file.",
@@ -34603,7 +34623,8 @@
       "energy": "Energy required",
       "factors": {
         "empty": "No supported readiness factors are available.",
-        "title": "Readiness factors"
+        "title": "Readiness factors",
+        "emptyHelp": "Factors appear when the selected vehicle has supported readiness data for this journey."
       },
       "form": {
         "auxiliary": "Auxiliary load (canonical SI, optional)",
@@ -34657,7 +34678,9 @@
     "resilience": {
       "actions": {
         "empty": "No outage plan has been generated.",
-        "title": "Load priorities and recommendations"
+        "title": "Load priorities and recommendations",
+        "prioritiesEmptyHelp": "Priority actions appear after a supported outage plan is generated from current vehicle and energy data.",
+        "recommendationsEmptyHelp": "Recommendations appear when the supported outage plan includes actionable findings."
       },
       "form": {
         "duration": "Outage duration (canonical SI)",
@@ -34870,7 +34893,9 @@
         "cost": "Cost projections without complete charging and maintenance evidence",
         "purchase": "Purchases, charging changes, or financial guarantees"
       },
-      "withinBudget": "Within budget"
+      "withinBudget": "Within budget",
+      "noStrategies": "No supported strategies are available for these inputs.",
+      "noStrategiesHelp": "Strategies appear when the submitted vehicle, cost, and distance inputs satisfy the optimizer support rules."
     },
     "toast": {
       "error": "Advanced intelligence request failed"

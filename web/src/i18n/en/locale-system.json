@@ -140,7 +140,8 @@
       "selectAll": "Select all",
       "clear": "Clear",
       "alwaysIncluded": "Required",
-      "none": "No columns selected"
+      "none": "No columns selected",
+      "unavailableTitle": "No export columns are available for this data type."
     },
     "allVehicles": "All vehicles",
     "customRange": "Custom range",
@@ -255,7 +256,9 @@
     "loadError": "Failed to load export jobs",
     "create": {
       "aria": "Create a new export"
-    }
+    },
+    "noVehiclesHelp": "Connect a Tesla account and sync a vehicle before exporting vehicle data.",
+    "columnsUnavailableHelp": "Column choices appear after the export catalog returns supported fields."
   },
   "dbHealth": {
     "rowChartScope": "Showing {{shown}} of {{total}} returned tables by row count. The complete table list is below.",
@@ -879,7 +882,8 @@
         "scope": "Selected vehicle outage evidence; no fixed reporting window is supplied.",
         "gapLabel": "Telemetry gap",
         "timestampContext": "Original event time; a missing timestamp does not imply zero traffic."
-      }
+      },
+      "detailsUnavailableHelp": "These details appear only when the outage evidence source supplies replay assurance or notes."
     },
     "page": {
       "title": "System budgets",
@@ -1084,6 +1088,7 @@
         "lastActive": "Last active",
         "total": "Total actions"
       },
+      "pendingHelp": "This panel fills after the activity feed returns data for the selected period.",
       "subtitle": "Recent actions you have taken in TeslaSync.",
       "title": "My activity",
       "topActions": {
@@ -3873,6 +3878,7 @@
     "manageBackups": "Manage backups",
     "mode": "Mode",
     "needsAttention": "Needs your attention",
+    "noAttentionHelp": "This panel updates when an incident, maintenance notice, or available update needs attention.",
     "noBackups": "No backups recorded",
     "noBackupsDesc": "Configure a schedule or run one now",
     "noComponents": "Current component status is unavailable.",

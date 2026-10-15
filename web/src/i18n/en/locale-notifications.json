@@ -656,7 +656,8 @@
     "filterLabel": {
       "search": "Search"
     },
-    "searchPlaceholder": "Search by action, resource, or details…"
+    "searchPlaceholder": "Search by action, resource, or details…",
+    "noEntriesHelp": "Audit entries appear after system or account activity is recorded."
   },
   "notificationBurnRate": {
     "title": "Notification burn rate",
