@@ -8,6 +8,9 @@ import type { ChargingSession } from '@/types/charging';
 import type { Drive } from '@/types/driving';
 import type { VehicleLiveState } from '@/hooks/useVehicleLive';
 import type { OperationalModeContextValue } from '@/hooks/useOperationalMode';
+import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { ChargeAdvisorChargingTiming } from '../components/charge-advisor/ChargeAdvisorChargingTiming';
+import { computeChargeAdvice } from '../lib/chargeAdvisor';
 
 const FROZEN_NOW = Date.parse('2026-06-02T12:00:00.000Z');
 const h = vi.hoisted(() => ({
@@ -20,6 +23,7 @@ const h = vi.hoisted(() => ({
   drives: undefined as unknown,
   charging: undefined as unknown,
   timeZone: 'America/Los_Angeles',
+  historyWindow: { start: '2026-05-01T07:00:00.000Z', end: '2026-06-02T12:00:00.000Z' },
   driveHook: vi.fn(),
   chargingHook: vi.fn(),
   timezoneHook: vi.fn(),
@@ -58,8 +62,8 @@ vi.mock('@/api/hooks/useDriving', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/hooks/useDriving')>();
   return {
     ...actual,
-    useDriveHistory: (vehicleId?: string, limit?: number) => {
-      h.driveHook(vehicleId, limit);
+    useDriveHistory: (...args: Parameters<typeof actual.useDriveHistory>) => {
+      h.driveHook(...args);
       return h.drives;
     },
   };
@@ -69,8 +73,8 @@ vi.mock('@/api/hooks/useCharging', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/hooks/useCharging')>();
   return {
     ...actual,
-    useChargingHistory: (vehicleId?: string, limit?: number) => {
-      h.chargingHook(vehicleId, limit);
+    useChargingHistory: (...args: Parameters<typeof actual.useChargingHistory>) => {
+      h.chargingHook(...args);
       return h.charging;
     },
   };
@@ -87,6 +91,13 @@ vi.mock('@/hooks/useSelectedVehicle', () => ({
 
 vi.mock('@/hooks/useOperationalMode', () => ({
   useOperationalMode: () => h.operationalMode,
+}));
+
+vi.mock('@/hooks/useRangeState', () => ({
+  useRangeState: () => ({
+    startInstant: h.historyWindow.start,
+    endInstantExclusive: h.historyWindow.end,
+  }),
 }));
 
 vi.mock('@/lib/timezone', async (importOriginal) => {
@@ -293,6 +304,7 @@ beforeEach(() => {
     writeBlockReason: null, canWrite: true,
   };
   h.timeZone = 'America/Los_Angeles';
+  h.historyWindow = { start: '2026-05-01T07:00:00.000Z', end: '2026-06-02T12:00:00.000Z' };
   h.drives = query(readyDrives(), {}, h.driveRefetch);
   h.charging = query([chargingAt('2026-05-30')], {}, h.chargingRefetch);
   h.live = {
@@ -313,6 +325,84 @@ afterEach(() => {
 });
 
 describe('ChargeAdvisorPage', () => {
+  it('formats source-local charging buckets reactively without changing raw values or ranking', () => {
+    const preferences = getFormatterPreferences();
+    const analysis = computeChargeAdvice([], [], null, FROZEN_NOW, 'America/Los_Angeles');
+    analysis.chargingProfile.startsByHour[0] = 2;
+    analysis.chargingProfile.startsByHour[12] = 3;
+    analysis.chargingProfile.startsByHour[23] = 2;
+    const rawHours = [...analysis.chargingProfile.startsByHour];
+    const state = {
+      vehicleSelected: true, isLoading: false, driveLoading: false, chargingLoading: false,
+      driveAvailable: true, chargingAvailable: true, initialError: null, refreshError: null,
+      onRetry: vi.fn(),
+    };
+    try {
+      setGlobalLocale('en-US');
+      const view = render(<ChargeAdvisorChargingTiming analysis={analysis} state={state} />);
+      const timing = within(screen.getByTestId('charge-advisor-charging-timing'));
+      expect(timing.getByText('12:00 PM · 3')).toBeInTheDocument();
+      expect(timing.getByText('12:00 AM · 2')).toBeInTheDocument();
+      expect(timing.getByText('11:00 PM · 2')).toBeInTheDocument();
+      act(() => setGlobalLocale('en-GB'));
+      expect(timing.getByText('12:00 · 3')).toBeInTheDocument();
+      expect(timing.getByText('00:00 · 2')).toBeInTheDocument();
+      expect(timing.getByText('23:00 · 2')).toBeInTheDocument();
+      const badges = timing.getByText('Most common start hours').nextElementSibling;
+      expect(badges?.textContent).toBe('12:00 · 300:00 · 223:00 · 2');
+      expect(analysis.chargingProfile.startsByHour).toEqual(rawHours);
+      view.unmount();
+    } finally {
+      act(() => {
+        setGlobalLocale(preferences.locale);
+        setGlobalPrecision(preferences.precision);
+      });
+    }
+  });
+
+  it('distinguishes missing and invalid charging counts from zero and preserves signed and fractional counts', () => {
+    const analysis = computeChargeAdvice([], [], null, FROZEN_NOW, 'America/Los_Angeles');
+    Object.defineProperty(analysis.chargingProfile.startsByWeekday, 0, { value: null });
+    Object.defineProperty(analysis.chargingProfile.startsByWeekday, 1, { value: undefined });
+    analysis.chargingProfile.startsByWeekday[2] = NaN;
+    analysis.chargingProfile.startsByWeekday[3] = Infinity;
+    analysis.chargingProfile.startsByWeekday[4] = 0;
+    analysis.chargingProfile.startsByWeekday[5] = -2;
+    analysis.chargingProfile.startsByWeekday[6] = 2.75;
+    analysis.chargingProfile.startsByHour[0] = Infinity;
+    analysis.chargingProfile.startsByHour[1] = NaN;
+    analysis.chargingProfile.startsByHour[2] = -2;
+    analysis.chargingProfile.startsByHour[3] = 2.75;
+    const state = {
+      vehicleSelected: true, isLoading: false, driveLoading: false, chargingLoading: false,
+      driveAvailable: true, chargingAvailable: true, initialError: null, refreshError: null,
+      onRetry: vi.fn(),
+    };
+    render(<ChargeAdvisorChargingTiming analysis={analysis} state={state} />);
+    const timing = within(screen.getByTestId('charge-advisor-charging-timing'));
+    expect(timing.getAllByText('—')).toHaveLength(4);
+    expect(timing.getByText('0')).toBeInTheDocument();
+    expect(timing.getByText('-2')).toBeInTheDocument();
+    expect(timing.getByText('3')).toBeInTheDocument();
+    expect(timing.getByText(/03:00.* · 3/)).toBeInTheDocument();
+    expect(timing.queryByText(/Infinity|NaN/)).not.toBeInTheDocument();
+    expect(analysis.chargingProfile.startsByWeekday[6]).toBe(2.75);
+    expect(analysis.chargingProfile.startsByHour[3]).toBe(2.75);
+  });
+
+  it('changes both history bounds without moving tomorrow-first planning dates', () => {
+    const view = renderPage();
+    expect(h.driveHook).toHaveBeenLastCalledWith('7', 1_000, h.historyWindow);
+    expect(h.chargingHook).toHaveBeenLastCalledWith('7', 1_000, h.historyWindow);
+    expect(within(screen.getByTestId('charge-advisor-directory')).getByText('2026-06-03')).toBeInTheDocument();
+    h.historyWindow = { start: '2026-05-10T15:42:19.125Z', end: '2026-05-20T15:42:19.125Z' };
+    view.rerenderPage();
+    expect(h.driveHook).toHaveBeenLastCalledWith('7', 1_000, h.historyWindow);
+    expect(h.chargingHook).toHaveBeenLastCalledWith('7', 1_000, h.historyWindow);
+    expect(within(screen.getByTestId('charge-advisor-directory')).getByText('2026-06-03')).toBeInTheDocument();
+    expect(screen.queryByTestId('range-picker')).not.toBeInTheDocument();
+    expectEveryShell();
+  });
   it.each(['as_of', 'cached'] as const)(
     'blocks live recommendation readiness in %s mode and restores live behavior',
     mode => {
@@ -495,6 +585,8 @@ describe('ChargeAdvisorPage', () => {
   });
 
   it.each([false, true])('passes null for independently missing or invalid live fields (present=%s)', present => {
+    h.drives = query([]);
+    h.charging = query([]);
     h.observations = {
       batteryLevelObservation: { present, valid: false, value: null },
       chargeLimitSocObservation: { present, valid: false, value: null },
@@ -505,9 +597,34 @@ describe('ChargeAdvisorPage', () => {
     expect(h.adviceHook.mock.lastCall?.[2]).toMatchObject({
       batteryPct: null, chargeLimitPct: null, isCharging: null,
     });
+    const current = within(screen.getByTestId('charge-advisor-current'));
+    expect(current.getByText('No valid source')).toBeInTheDocument();
+    expect(current.getByText('Charge limit —')).toBeInTheDocument();
+    expect(current.queryByText('0.00%')).not.toBeInTheDocument();
+    expect(current.getAllByText('—')).toHaveLength(3);
   });
 
-  it.each([0, 0.25, 80.6])('passes exact observed percentage %s without rounding or truthiness defaults', value => {
+  it.each([NaN, Infinity, -Infinity, -0.25, 100.25])(
+    'keeps invalid percentage %s distinct from measured zero',
+    value => {
+      h.drives = query([]);
+      h.charging = query([]);
+      h.observations = {
+        batteryLevelObservation: { present: true, valid: true, value },
+        chargeLimitSocObservation: { present: true, valid: true, value },
+        isChargingObservation: { present: false, valid: false, value: null },
+      };
+      renderPage();
+      const current = within(screen.getByTestId('charge-advisor-current'));
+      expect(current.getByText('No valid source')).toBeInTheDocument();
+      expect(current.getByText('Charge limit —')).toBeInTheDocument();
+      expect(current.getAllByText('—')).toHaveLength(3);
+      expect(current.queryByText('0.00%')).not.toBeInTheDocument();
+      expectEveryShell();
+    },
+  );
+
+  it.each([0, -0, +0.25, +80.6])('passes exact observed percentage %s without rounding or truthiness defaults', value => {
     h.observations = {
       batteryLevelObservation: { present: true, valid: true, value },
       chargeLimitSocObservation: { present: true, valid: true, value },
@@ -517,7 +634,16 @@ describe('ChargeAdvisorPage', () => {
     expect(h.adviceHook.mock.lastCall?.[2]).toMatchObject({
       batteryPct: value, chargeLimitPct: value, isCharging: false,
     });
-    expect(within(screen.getByTestId('charge-advisor-current')).getByText(`${value.toFixed(2)}%`)).toBeInTheDocument();
+    const current = within(screen.getByTestId('charge-advisor-current'));
+    const metric = current.getByText(`${(value === 0 ? 0 : value).toFixed(2)}%`);
+    expect(metric).toHaveClass('text-[var(--text-primary)]', 'tabular-nums');
+    const limit = value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    expect(current.getByText(`Charge limit ${limit}%`)).toBeInTheDocument();
+    expect(current.getByText('Battery SoC')).toHaveClass('text-[var(--text-muted)]');
+    expect(current.getByText('Not charging')).toHaveClass('text-[var(--text-secondary)]');
+    expect(current.getByText('0.00 days')).toBeInTheDocument();
+    expect(current.getByTestId('charge-advisor-source-batteryLevel')).toHaveTextContent('Fresh');
+    expect(current.getByText(/Fresh ≤ 2.00 min/)).toBeInTheDocument();
   });
 
   it('does not fill missing charging fields from a valid battery observation', () => {
@@ -552,8 +678,8 @@ describe('ChargeAdvisorPage', () => {
   it('renders all thirteen persistent shells and both capped analytical hooks', () => {
     renderPage();
     expectEveryShell();
-    expect(h.driveHook).toHaveBeenLastCalledWith('7', 1_000);
-    expect(h.chargingHook).toHaveBeenLastCalledWith('7', 1_000);
+    expect(h.driveHook).toHaveBeenLastCalledWith('7', 1_000, h.historyWindow);
+    expect(h.chargingHook).toHaveBeenLastCalledWith('7', 1_000, h.historyWindow);
     expect(h.timezoneHook).toHaveBeenCalledWith('vehicle');
   });
 
@@ -656,8 +782,8 @@ describe('ChargeAdvisorPage', () => {
     expect(current.getByText('80.00%')).toBeInTheDocument();
     expect(within(screen.getByTestId('charge-advisor-trend')).queryByRole('table', { hidden: true }))
       .not.toBeInTheDocument();
-    expect(h.driveHook).toHaveBeenLastCalledWith('7', 1_000);
-    expect(h.chargingHook).toHaveBeenLastCalledWith('7', 1_000);
+    expect(h.driveHook).toHaveBeenLastCalledWith('7', 1_000, h.historyWindow);
+    expect(h.chargingHook).toHaveBeenLastCalledWith('7', 1_000, h.historyWindow);
   });
 
   it('keeps all daily observations and seven-day scenarios while charging history initially loads', () => {

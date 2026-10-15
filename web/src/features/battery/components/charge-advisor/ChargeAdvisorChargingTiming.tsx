@@ -2,20 +2,21 @@ import { Clock3 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge, Text } from '@/components/ui';
-
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { formatTime } from '@/lib/dateFormat';
+import { isFiniteNumber } from '@/lib/numberFormat';
 
 import { ChargeAdvisorSection } from './ChargeAdvisorSection';
 import type { ChargeAdvisorComponentProps } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ChargeAdvisorChargingTiming({ analysis, state }: ChargeAdvisorComponentProps) {
-  const { fmtInt } = useNumberFormatting();
+  const { fmtInt, locale } = useNumberFormatting();
   const { t } = useTranslation();
   const profile = analysis.chargingProfile;
   const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const hours = profile.startsByHour
     .map((count, hour) => ({ hour, count }))
-    .filter((item) => item.count > 0)
+    .filter((item) => isFiniteNumber(item.count) && item.count > 0)
     .sort((a, b) => b.count - a.count || a.hour - b.hour)
     .slice(0, 8);
 
@@ -26,7 +27,7 @@ export function ChargeAdvisorChargingTiming({ analysis, state }: ChargeAdvisorCo
         'chargeAdvisor.timing.subtitle',
         'Start timing is descriptive routine evidence, not a departure plan.',
       )}
-      icon={<Clock3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+      icon={<Clock3 className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />}
       state={state}
       dependency="charging"
       dataTestId="charge-advisor-charging-timing"
@@ -38,7 +39,7 @@ export function ChargeAdvisorChargingTiming({ analysis, state }: ChargeAdvisorCo
             {profile.startsByWeekday.map((count, weekday) => (
               <div key={weekday} className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-2 text-center">
                 <Text variant="caption">{t(`chargeAdvisor.day.${weekday}`, weekdays[weekday] ?? 'Day')}</Text>
-                <Text className="mt-1 font-semibold text-cyan-300">{fmtInt(count)}</Text>
+                <Text className="mt-1 font-semibold">{isFiniteNumber(count) ? fmtInt(count) : '—'}</Text>
               </div>
             ))}
           </div>
@@ -52,8 +53,9 @@ export function ChargeAdvisorChargingTiming({ analysis, state }: ChargeAdvisorCo
           ) : (
             <div className="mt-2 flex flex-wrap gap-2">
               {hours.map((item) => (
-                <Badge key={item.hour} variant="info">
-                  {String(item.hour).padStart(2, '0')}:00 · {fmtInt(item.count)}
+                <Badge key={item.hour} variant="neutral">
+                  {/* UTC anchors an already-local bucket; it is not an instant to shift. */}
+                  {formatTime(new Date(Date.UTC(2000, 0, 1, item.hour)), { locale, tz: 'UTC' })} · {fmtInt(item.count)}
                 </Badge>
               ))}
             </div>
