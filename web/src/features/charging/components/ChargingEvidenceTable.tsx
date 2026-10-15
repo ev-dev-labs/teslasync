@@ -6,7 +6,8 @@ import { GridMetricIndicator, RouteDisplay } from '@/components/data-display';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import type { TableControls } from '@/components/forms';
-import { formatDateTime, formatDurationMinutes } from '@/lib/dateFormat';
+import { formatDurationMinutes } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { batteryColor, COLOR } from '@/lib/colors';
 
 import { sessionAveragePowerW, batteryFriendlyScore, durationMinutes, getChargerCategory, type ChargingAnomaly } from '@/lib/chargingAggregation';
@@ -46,6 +47,7 @@ export function ChargingEvidenceTable({
   sortBy, sortDir, onSort, density, toolbarHeading, toolbarActions, paginationControls, controls,
 }: ChargingEvidenceTableProps) {
   const { fmtInt } = useNumberFormatting();
+  const { formatDateTime } = useDateFormat();
   const { t } = useTranslation();
   const { formatEnergy, formatPower, formatDistance } = useUnits();
   const { formatCurrency } = useFormatting();
@@ -207,7 +209,7 @@ export function ChargingEvidenceTable({
       };
     });
   }, [t, timezone, anomalies, onPreview, formatCurrency, formatEnergy, formatPower, formatDistance,
-    availableSessions, valueSelections, invalidValueSelection, onValueSelectionChange, onValueFilterClear, fmtInt]);
+    availableSessions, valueSelections, invalidValueSelection, onValueSelectionChange, onValueFilterClear, fmtInt, formatDateTime]);
 
   return (
     <DataTable

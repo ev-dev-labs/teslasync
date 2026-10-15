@@ -7,7 +7,17 @@ import { ChargingEvidenceTable } from './ChargingEvidenceTable';
 import { CHARGING_VALUE_COLUMNS, chargingColumnValue, parseChargingValueSelections } from './chargingGridValues';
 
 type TableProps = Parameters<typeof DataTable<ChargingSession>>[0];
-const capture = vi.hoisted(() => ({ props: null as TableProps | null }));
+const capture = vi.hoisted(() => ({ props: null as TableProps | null, locale: 'en-US' }));
+
+vi.mock('@/hooks/useDateFormat', async () => {
+  const { formatDateTime } = await import('@/lib/dateFormat');
+  return {
+    useDateFormat: () => ({
+      formatDateTime: (value: string | Date | null | undefined, override?: import('@/lib/dateFormat').FormatOptions) =>
+        formatDateTime(value, { locale: capture.locale, tz: 'Asia/Tokyo', ...override }),
+    }),
+  };
+});
 
 vi.mock('@/components/ui', async (importActual) => {
   const actual = await importActual<typeof import('@/components/ui')>();
@@ -35,7 +45,7 @@ const session = (overrides: Partial<ChargingSession> = {}): ChargingSession => (
   ...overrides,
 });
 
-function mount(rows: ChargingSession[], selectedIds = new Set<number>(), availableSessions = rows) {
+function mount(rows: ChargingSession[], selectedIds = new Set<number>(), availableSessions = rows, timezone = 'UTC') {
   const onSelectionChange = vi.fn();
   const onPreview = vi.fn();
   const onSort = vi.fn();
@@ -50,7 +60,7 @@ function mount(rows: ChargingSession[], selectedIds = new Set<number>(), availab
         invalidValueSelection={false}
         onValueSelectionChange={onValueSelectionChange}
         onValueFilterClear={onValueFilterClear}
-        timezone="UTC"
+        timezone={timezone}
         selectedIds={selectedIds}
         onSelectionChange={onSelectionChange}
         onPreview={onPreview}
@@ -68,7 +78,32 @@ function mount(rows: ChargingSession[], selectedIds = new Set<number>(), availab
 }
 
 describe('ChargingEvidenceTable', () => {
-  beforeEach(() => { capture.props = null; });
+  beforeEach(() => { capture.props = null; capture.locale = 'en-US'; });
+
+  it.each(['en-US', 'de-DE'])('uses the preferred %s locale for dates while preserving the supplied timezone and raw instants', (locale) => {
+    capture.locale = locale;
+    const row = session({ started_at: '2026-10-01T00:30:00Z' });
+    const timezone = 'America/Los_Angeles';
+    const other = session({ id: 42, started_at: '2026-10-02T00:30:00Z' });
+    const { onValueSelectionChange } = mount([row], new Set(), [row, other], timezone);
+    const expected = new Date(row.started_at).toLocaleString(locale, {
+      timeZone: timezone, year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+    expect(screen.getByTestId('41-date')).toHaveTextContent(expected);
+    expect(capture.props?.rowLabel?.(row)).toBe(`${expected} · Home`);
+    expect(chargingColumnValue(row, 'date')).toBe('2026-10-01T00:30:00Z');
+    expect(row.started_at).toBe('2026-10-01T00:30:00Z');
+
+    render(<>{capture.props?.columns.find((column) => column.key === 'date')?.filter}</>);
+    expect(screen.getByRole('checkbox', { name: expected })).toBeChecked();
+    const otherLabel = new Date(other.started_at).toLocaleString(locale, {
+      timeZone: timezone, year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+    fireEvent.click(screen.getByRole('checkbox', { name: otherLabel }));
+    expect(onValueSelectionChange).toHaveBeenLastCalledWith('date', [JSON.stringify(row.started_at)]);
+  });
 
   it('uses controlled header filters over the loaded window before page-owned pagination', () => {
     mount([session()]);
