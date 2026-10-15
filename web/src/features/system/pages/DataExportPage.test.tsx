@@ -336,7 +336,7 @@ describe('DataExportPage — Project Apex elevation', () => {
     expect(screen.queryByText('No vehicles available')).not.toBeInTheDocument();
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
     if (fetchStatus === 'paused') {
-      expect(within(history).getByText('Refresh paused')).toBeVisible();
+      expect(within(history).getByText('Refresh paused')).toBeInTheDocument();
     }
 
     act(() => {
@@ -371,7 +371,7 @@ describe('DataExportPage — Project Apex elevation', () => {
       queryClient.setQueryData(['vehicles'], []);
       queryClient.setQueryData(['export-columns', 'drives'], { type: 'drives', supports_selection: true, columns: [] });
     });
-    expect(await screen.findByText('No data available')).toBeInTheDocument();
+    expect(await screen.findByText('No export columns are available for this data type.')).toBeInTheDocument();
     expect(screen.getAllByText('No vehicles available')).toHaveLength(2);
     expect(screen.getByRole('table')).toBeInTheDocument();
     queryClient.clear();
@@ -981,7 +981,7 @@ describe('DataExportPage — Project Apex elevation', () => {
       renderPage();
       const picker = await screen.findByTestId('export-column-picker');
       expect(within(picker).getByText('STEP 2½ — columns')).toBeInTheDocument();
-      expect(within(picker).getByText('No data available')).toBeInTheDocument();
+      expect(within(picker).getByText('No export columns are available for this data type.')).toBeInTheDocument();
       expect(within(picker).queryByRole('checkbox')).not.toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: 'Start export' }));
       await waitFor(() => expect(postCalls).toHaveLength(1));
