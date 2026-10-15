@@ -5307,7 +5307,7 @@
     "Status": "done",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-charging-charging-list-cl02 | focused tests could not complete | done so far: updated web\\src\\features\\charging\\pages\\ChargingListPage.tsx and web\\src\\features\\charging\\pages\\ChargingListPage.test.tsx with numeric guards and 18 regression cases DONE | fix-charging-charging-list-cl02 | no change needed: existing implementation and regression coverage satisfy the item; test execution blocked by external i18n catalog startup failure",
+    "Notes": "Attempt 1: FAILED | fix-charging-charging-list-cl02 | focused tests could not complete | done so far: updated web\\src\\features\\charging\\pages\\ChargingListPage.tsx and web\\src\\features\\charging\\pages\\ChargingListPage.test.tsx with numeric guards and 18 regression cases DONE | fix-charging-charging-list-cl02 | no change needed: existing implementation and regression coverage satisfy the item; test execution blocked by external i18n catalog startup failure | 2026-10-15 checkpoint: bare free search and responsive pagination expectations fixed; ChargingListPage suite now 88 passed, 5 failed. Keep group open for prior-period, filtered empty-state, and loading skeleton failures.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },

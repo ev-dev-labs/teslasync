@@ -210,3 +210,7 @@ Not started.
 
 - `charging-curve/helpers.test.ts` and `ChargingCurvePage.test.tsx` pass (**2 files, 91 tests**).
 - The default charger-category label helper now supplies a safe English fallback when the global translator is uninitialized; the selected-session fixture renders the verified Supercharger category label again. The broader curve/modernization cluster still has open failures.
+### Charging checkpoint: charging-list search and pagination (2026-10-15)
+
+- Updated the bare `free` search token to use the existing recorded-zero-cost filter, and scoped responsive pagination assertions to the loaded session total. The focused page suite improved from 13 failures to 5 failures (**88 passed, 5 failed of 93**).
+- The remaining failures are prior-period copy, filtered empty-state rendering, and loading skeleton counts. Keep the charging-list group open and resolve these before treating charging as complete.

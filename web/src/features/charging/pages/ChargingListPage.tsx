@@ -244,7 +244,11 @@ export default function ChargingListPage() {
   const deferredSearch = useDeferredValue(search);
   const isSearchPending = !Object.is(search, deferredSearch);
   const hasListFilters = deferredSearch.trim().length > 0 || collection !== 'all' || hasValueFilters;
-  const searchTokens = useMemo(() => parseSearchQuery(deferredSearch), [deferredSearch]);
+  const searchTokens = useMemo(() => parseSearchQuery(deferredSearch).map((token) =>
+    token.kind === 'text' && token.value === 'free'
+      ? { kind: 'kv' as const, key: 'free', op: '=' as const, value: '' }
+      : token,
+  ), [deferredSearch]);
   const searchedSessions = useMemo(() => {
     if (searchTokens.length === 0) return collectionFiltered;
     return collectionFiltered.filter((s) =>
