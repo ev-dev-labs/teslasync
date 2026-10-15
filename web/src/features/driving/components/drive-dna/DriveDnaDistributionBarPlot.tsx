@@ -34,6 +34,22 @@ interface DriveDnaDistributionBarPlotProps {
   ariaLabel?: string;
 }
 
+type Translate = (key: string, options: Record<string, unknown>) => string;
+
+/**
+ * Tooltip label for an emission count: i18next plural selection uses the raw
+ * numeric count while the visible number is locale-formatted. Missing or
+ * invalid counts are unknown, never a measured zero.
+ */
+export function emissionLabel(t: Translate, fmtInt: (value: number) => string, value: unknown): string {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return '—';
+  return t('driveDna.distributions.emissionValue', {
+    count: value,
+    value: fmtInt(value),
+    defaultValue: value === 1 ? '{{value}} emission' : '{{value}} emissions',
+  });
+}
+
 export function DriveDnaDistributionBarPlot({
   rows,
   seriesName,
@@ -91,13 +107,7 @@ export function DriveDnaDistributionBarPlot({
           <Tooltip
             content={
               <ChartTooltip
-                valueFormatter={(value) =>
-                  t(
-                    'driveDna.distributions.emissionValue',
-                    '{{value}} emissions',
-                    { value: fmtInt(value) },
-                  )
-                }
+                valueFormatter={(value) => emissionLabel(t, fmtInt, value)}
               />
             }
           />

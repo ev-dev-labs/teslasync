@@ -158,7 +158,9 @@
       "aria": "Bar chart of drive DNA signal distribution",
       "colCount": "Count",
       "colLabel": "Signal",
-      "title": "Drive DNA distribution"
+      "title": "Drive DNA distribution",
+      "emissionValue_one": "{{value}} emission",
+      "emissionValue_other": "{{value}} emissions"
     },
     "coverage": {
       "returnedRows": "Rows returned",
@@ -216,7 +218,7 @@
       "chartBound": "Charts use at most {{limit}} deterministic points while retaining the first and last; evidence metrics use all valid rows.",
       "interpretationTitle": "Interpretation guardrails",
       "changeFeed": "Rows are chronological change-feed emissions with values forward-folded by StateReader, not uniform-time samples.",
-      "powerBoundary": "The legacy response power value is kW and is multiplied by exactly 1,000 once at the model boundary to canonical W.",
+      "powerBoundary": "Response power is already canonical watts (pack voltage × current) and is used without rescaling.",
       "countBasis": "Power states, speed bands, and regen shares are emission-count evidence, never duration or time shares.",
       "noClaim": "Traits are deterministic artistic heuristics—not a score, diagnosis, stable personality assessment, efficiency verdict, or causal claim."
     },
