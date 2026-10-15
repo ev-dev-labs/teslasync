@@ -707,7 +707,6 @@ describe('PreconditioningEffectivenessPage', () => {
     ).toHaveLength(7);
     expect(within(screen.getByTestId('preconditioning-source-coverage'))
       .getAllByText('Loaded')).toHaveLength(2);
-    const coverage = within(screen.getByTestId('preconditioning-source-coverage'));
     expect(screen.getByTestId('preconditioning-source-coverage'))
       .toHaveTextContent(/to .* span 0\.0 min .* median gap/);
     expect(screen.getByTestId('preconditioning-source-coverage'))

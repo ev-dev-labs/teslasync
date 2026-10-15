@@ -67,7 +67,7 @@ vi.mock('@/components/charts', () => {
 vi.mock('@/components/feedback', () => ({
   EmptyState: ({ message }: { message: string }) => <p>{message}</p>,
   QueryError: ({ onRetry }: { onRetry: () => void }) => (
-    <div role="alert" onClick={onRetry}>Retry</div>
+    <button type="button" onClick={onRetry}>Retry</button>
   ),
 }));
 

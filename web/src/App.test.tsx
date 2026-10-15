@@ -67,7 +67,7 @@ vi.mock('./components/layout/Layout', async () => {
   const { Outlet, useLocation } =
     await vi.importActual<typeof import('react-router-dom')>('react-router-dom')
   return {
-    default: () => {
+    default: function LayoutMock() {
       const { pathname, search, hash } = useLocation()
       return (
         <main data-testid="application-layout" data-location={`${pathname}${search}${hash}`}>

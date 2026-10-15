@@ -74,6 +74,7 @@ export function CostHeatmap({ heatmap, peakCostPerKwh }: CostHeatmapProps) {
         <div
           role="region"
           aria-label={chartLabel}
+          // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Allows keyboard users to scroll the chart region.
           tabIndex={0}
           className="min-w-0 max-w-full overflow-x-auto overscroll-x-contain p-1 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
         >
@@ -136,6 +137,7 @@ export function CostHeatmap({ heatmap, peakCostPerKwh }: CostHeatmapProps) {
               <div
                 role="region"
                 aria-label={t('chart.a11y.fallbackTableLabel', '{{title}} — data table', { title })}
+                // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Allows keyboard users to scroll the data table region.
                 tabIndex={0}
                 className="max-h-96 min-w-0 max-w-full overflow-auto overscroll-contain p-1 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
               >

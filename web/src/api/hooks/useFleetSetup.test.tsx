@@ -165,10 +165,10 @@ const readCases: {
     populated: { has_valid_token: true }, empty: { has_valid_token: false } },
   { name: 'public key', hook: usePublicKeyStatus, key: fleetSetupKeys.publicKey,
     populated: { configured: true, fingerprint: 'key' }, empty: { configured: false } },
-  { name: 'telemetry config', hook: () => useFleetTelemetryConfig(' VIN '), key: fleetSetupKeys.telemetryConfig('VIN'),
+  { name: 'telemetry config', hook: function useTelemetryConfig() { return useFleetTelemetryConfig(' VIN '); }, key: fleetSetupKeys.telemetryConfig('VIN'),
     populated: { response: { config: { hostname: 'telemetry.example.com', fields: { Soc: {} } } } },
     empty: { response: { config: null } } },
-  { name: 'telemetry errors', hook: () => useFleetTelemetryErrors(' VIN '), key: fleetSetupKeys.telemetryErrors('VIN'),
+  { name: 'telemetry errors', hook: function useTelemetryErrors() { return useFleetTelemetryErrors(' VIN '); }, key: fleetSetupKeys.telemetryErrors('VIN'),
     populated: { response: { errors: [{ code: 'tls_error', message: 'certificate failed' }] } },
     empty: { response: { errors: [] } } },
 ]

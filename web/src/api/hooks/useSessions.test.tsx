@@ -61,7 +61,7 @@ import {
 const mockedRequest = vi.mocked(request);
 const mockedInvalidate = vi.mocked(invalidateAndBroadcast);
 
-function wrapper({ children }: { children: ReactNode }) {
+function SessionsTestProvider({ children }: { children: ReactNode }) {
   const [qc] = useState(() => new QueryClient({
     defaultOptions: {
       queries: { retry: false, gcTime: 0 },
@@ -106,7 +106,7 @@ describe('sessionKeys', () => {
 describe('useSessions', () => {
   it('maps the backend payload to { mode: "session", sessions } and threads the AbortSignal', async () => {
     mockedRequest.mockResolvedValueOnce({ mode: 'session', sessions: [sessionRow, otherRow] });
-    const { result } = renderHook(() => useSessions(), { wrapper });
+    const { result } = renderHook(() => useSessions(), { wrapper: SessionsTestProvider });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -130,7 +130,7 @@ describe('useSessions', () => {
     { mode: 'session', sessions: [{ ...sessionRow, revoked_at: 123 }] },
   ])('rejects malformed list payload %j without inventing empty data', async (payload) => {
     mockedRequest.mockResolvedValueOnce(payload);
-    const { result } = renderHook(() => useSessions(), { wrapper });
+    const { result } = renderHook(() => useSessions(), { wrapper: SessionsTestProvider });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error?.code).toBe('INVALID_RESPONSE');
@@ -139,7 +139,7 @@ describe('useSessions', () => {
 
   it('preserves a genuine successful empty session list', async () => {
     mockedRequest.mockResolvedValueOnce({ mode: 'session', sessions: [] });
-    const { result } = renderHook(() => useSessions(), { wrapper });
+    const { result } = renderHook(() => useSessions(), { wrapper: SessionsTestProvider });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.isError).toBe(false);
@@ -149,7 +149,7 @@ describe('useSessions', () => {
 
   it('preserves the explicit open-mode discriminator in a successful payload', async () => {
     mockedRequest.mockResolvedValueOnce({ mode: 'open' });
-    const { result } = renderHook(() => useSessions(), { wrapper });
+    const { result } = renderHook(() => useSessions(), { wrapper: SessionsTestProvider });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual({ mode: 'open' });
   });
@@ -157,7 +157,7 @@ describe('useSessions', () => {
   it('keeps data unknown during active initial loading', async () => {
     let resolve!: (value: ActiveSessionsResponse) => void;
     mockedRequest.mockReturnValueOnce(new Promise<ActiveSessionsResponse>((done) => { resolve = done; }));
-    const { result } = renderHook(() => useSessions(), { wrapper });
+    const { result } = renderHook(() => useSessions(), { wrapper: SessionsTestProvider });
     expect(result.current.isLoading).toBe(true);
     expect(result.current.fetchStatus).toBe('fetching');
     expect(result.current.data).toBeUndefined();
@@ -169,7 +169,7 @@ describe('useSessions', () => {
     onlineManager.setOnline(false);
     try {
       mockedRequest.mockResolvedValueOnce({ mode: 'session', sessions: [] });
-      const { result, unmount } = renderHook(() => useSessions(), { wrapper });
+      const { result, unmount } = renderHook(() => useSessions(), { wrapper: SessionsTestProvider });
       expect(result.current.fetchStatus).toBe('paused');
       expect(result.current.isPending).toBe(true);
       expect(result.current.isLoading).toBe(false);
@@ -187,7 +187,7 @@ describe('useSessions', () => {
   it.each(['transport', 'malformed'])('retains sessions through a %s refresh failure and recovers', async (failure) => {
     const initial = { mode: 'session', sessions: [sessionRow, otherRow] };
     mockedRequest.mockResolvedValueOnce(initial);
-    const { result } = renderHook(() => useSessions(), { wrapper });
+    const { result } = renderHook(() => useSessions(), { wrapper: SessionsTestProvider });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     if (failure === 'transport') {
@@ -209,7 +209,7 @@ describe('useSessions', () => {
   it('retains validated sessions during an active refresh before switching to open mode', async () => {
     const initial = { mode: 'session', sessions: [sessionRow] };
     mockedRequest.mockResolvedValueOnce(initial);
-    const { result } = renderHook(() => useSessions(), { wrapper });
+    const { result } = renderHook(() => useSessions(), { wrapper: SessionsTestProvider });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     let reject!: (error: ApiError) => void;
@@ -231,7 +231,7 @@ describe('useSessions', () => {
     mockedRequest.mockRejectedValueOnce(
       new ApiError('feature requires forward-auth', 501, AUTH_MODE_OPEN_CODE),
     );
-    const { result } = renderHook(() => useSessions(), { wrapper });
+    const { result } = renderHook(() => useSessions(), { wrapper: SessionsTestProvider });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.isError).toBe(false);
@@ -240,7 +240,7 @@ describe('useSessions', () => {
 
   it('re-throws a non-open ApiError so the query surfaces isError', async () => {
     mockedRequest.mockRejectedValueOnce(new ApiError('Service Unavailable', 503, 'UPSTREAM_DOWN'));
-    const { result } = renderHook(() => useSessions(), { wrapper });
+    const { result } = renderHook(() => useSessions(), { wrapper: SessionsTestProvider });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error?.status).toBe(503);
@@ -249,7 +249,7 @@ describe('useSessions', () => {
 
   it('re-throws a plain (non-ApiError) transport failure', async () => {
     mockedRequest.mockRejectedValueOnce(new Error('network down'));
-    const { result } = renderHook(() => useSessions(), { wrapper });
+    const { result } = renderHook(() => useSessions(), { wrapper: SessionsTestProvider });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toBeInstanceOf(Error);
@@ -257,7 +257,7 @@ describe('useSessions', () => {
   });
 
   it('does not fire the query when disabled via options.enabled = false', async () => {
-    const { result } = renderHook(() => useSessions({ enabled: false }), { wrapper });
+    const { result } = renderHook(() => useSessions({ enabled: false }), { wrapper: SessionsTestProvider });
     await new Promise((r) => setTimeout(r, 10));
     expect(mockedRequest).not.toHaveBeenCalled();
     expect(result.current.fetchStatus).toBe('idle');
@@ -270,7 +270,7 @@ describe('useSessions', () => {
 describe('useRevokeSession', () => {
   it('DELETEs /auth/sessions/{id} and invalidates the list on success', async () => {
     mockedRequest.mockResolvedValueOnce(undefined);
-    const { result } = renderHook(() => useRevokeSession(), { wrapper });
+    const { result } = renderHook(() => useRevokeSession(), { wrapper: SessionsTestProvider });
 
     await act(async () => {
       await result.current.mutateAsync('sess-1');
@@ -290,7 +290,7 @@ describe('useRevokeSession', () => {
 
   it('URL-encodes an id containing reserved characters', async () => {
     mockedRequest.mockResolvedValueOnce(undefined);
-    const { result } = renderHook(() => useRevokeSession(), { wrapper });
+    const { result } = renderHook(() => useRevokeSession(), { wrapper: SessionsTestProvider });
 
     await act(async () => {
       await result.current.mutateAsync('a b/c#d');
@@ -302,7 +302,7 @@ describe('useRevokeSession', () => {
   it('routes failures to the error toast and does NOT invalidate the list', async () => {
     const err = new ApiError('forbidden', 403, 'SUDO_REQUIRED');
     mockedRequest.mockRejectedValueOnce(err);
-    const { result } = renderHook(() => useRevokeSession(), { wrapper });
+    const { result } = renderHook(() => useRevokeSession(), { wrapper: SessionsTestProvider });
 
     await act(async () => {
       await expect(result.current.mutateAsync('sess-9')).rejects.toThrow(/forbidden/);
@@ -321,7 +321,7 @@ describe('useRevokeAllOtherSessions', () => {
   it('DELETEs /auth/sessions/all-others, invalidates, and pluralises the toast for many devices', async () => {
     const response: RevokeAllOthersResponse = { mode: 'session', revoked: 3 };
     mockedRequest.mockResolvedValueOnce(response);
-    const { result } = renderHook(() => useRevokeAllOtherSessions(), { wrapper });
+    const { result } = renderHook(() => useRevokeAllOtherSessions(), { wrapper: SessionsTestProvider });
 
     let resolved: RevokeAllOthersResult | undefined;
     await act(async () => {
@@ -344,7 +344,7 @@ describe('useRevokeAllOtherSessions', () => {
 
   it('uses the singular noun when exactly one device was revoked', async () => {
     mockedRequest.mockResolvedValueOnce({ mode: 'session', revoked: 1 });
-    const { result } = renderHook(() => useRevokeAllOtherSessions(), { wrapper });
+    const { result } = renderHook(() => useRevokeAllOtherSessions(), { wrapper: SessionsTestProvider });
 
     await act(async () => {
       await result.current.mutateAsync();
@@ -359,7 +359,7 @@ describe('useRevokeAllOtherSessions', () => {
 
   it('preserves a successful explicit zero revoked count', async () => {
     mockedRequest.mockResolvedValueOnce({ mode: 'session', revoked: 0 });
-    const { result } = renderHook(() => useRevokeAllOtherSessions(), { wrapper });
+    const { result } = renderHook(() => useRevokeAllOtherSessions(), { wrapper: SessionsTestProvider });
 
     await act(async () => {
       await result.current.mutateAsync();
@@ -376,7 +376,7 @@ describe('useRevokeAllOtherSessions', () => {
     null, undefined, {}, { mode: 'open', revoked: 0 }, { revoked: 0 },
   ])('rejects malformed revocation payload %j without a success toast', async (payload) => {
     mockedRequest.mockResolvedValueOnce(payload);
-    const { result } = renderHook(() => useRevokeAllOtherSessions(), { wrapper });
+    const { result } = renderHook(() => useRevokeAllOtherSessions(), { wrapper: SessionsTestProvider });
     await act(async () => {
       await expect(result.current.mutateAsync()).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
     });
@@ -394,7 +394,7 @@ describe('useRevokeAllOtherSessions', () => {
     NaN, Infinity, -Infinity, Number.MAX_SAFE_INTEGER + 1,
   ])('separates confirmed success from unknown count %j', async (revoked) => {
     mockedRequest.mockResolvedValueOnce({ mode: 'session', revoked });
-    const { result } = renderHook(() => useRevokeAllOtherSessions(), { wrapper });
+    const { result } = renderHook(() => useRevokeAllOtherSessions(), { wrapper: SessionsTestProvider });
     await act(async () => {
       expect(await result.current.mutateAsync()).toEqual({ mode: 'session', revoked: null });
     });
@@ -409,7 +409,7 @@ describe('useRevokeAllOtherSessions', () => {
 
   it('preserves confirmed success when the count field is missing', async () => {
     mockedRequest.mockResolvedValueOnce({ mode: 'session' });
-    const { result } = renderHook(() => useRevokeAllOtherSessions(), { wrapper });
+    const { result } = renderHook(() => useRevokeAllOtherSessions(), { wrapper: SessionsTestProvider });
     await act(async () => {
       expect(await result.current.mutateAsync()).toEqual({ mode: 'session', revoked: null });
     });
@@ -423,7 +423,7 @@ describe('useRevokeAllOtherSessions', () => {
 
   it.each([+0, -0, +1, +3, Number.MAX_SAFE_INTEGER])('preserves safe nonnegative signed count %s', async (revoked) => {
     mockedRequest.mockResolvedValueOnce({ mode: 'session', revoked });
-    const { result } = renderHook(() => useRevokeAllOtherSessions(), { wrapper });
+    const { result } = renderHook(() => useRevokeAllOtherSessions(), { wrapper: SessionsTestProvider });
     await act(async () => {
       expect(await result.current.mutateAsync()).toEqual({ mode: 'session', revoked });
     });
@@ -439,7 +439,7 @@ describe('useRevokeAllOtherSessions', () => {
   it('routes failures to the error toast without invalidating', async () => {
     const err = new ApiError('boom', 500);
     mockedRequest.mockRejectedValueOnce(err);
-    const { result } = renderHook(() => useRevokeAllOtherSessions(), { wrapper });
+    const { result } = renderHook(() => useRevokeAllOtherSessions(), { wrapper: SessionsTestProvider });
 
     await act(async () => {
       await expect(result.current.mutateAsync()).rejects.toThrow(/boom/);

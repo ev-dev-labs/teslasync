@@ -309,6 +309,7 @@ export function FleetSetupSubscribePanel() {
           <div
             role="region"
             aria-label={t('fleetSetup.subscribe.errorsLabel', 'Tesla telemetry errors')}
+            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Keeps the long error list keyboard-scrollable.
             tabIndex={0}
             className="max-h-80 space-y-2 overflow-y-auto"
           >

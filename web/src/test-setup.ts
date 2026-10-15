@@ -212,7 +212,6 @@ vi.mock('@/api/hooks/useSettings', async () => {
       // The provider is fixed for a mounted tree, so the branch is stable
       // across renders of the same component.
       const client = useContext(QueryClientContext)
-      // eslint-disable-next-line react-hooks/rules-of-hooks
       if (client) return actual.useSettings()
       return idle as unknown as ReturnType<typeof actual.useSettings>
     },

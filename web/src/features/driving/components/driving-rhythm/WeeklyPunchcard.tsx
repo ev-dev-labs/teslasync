@@ -90,6 +90,7 @@ export function WeeklyPunchcard({
           <div
             className="max-w-full overflow-x-auto overscroll-x-contain rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
             role="region"
+            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Allows keyboard users to scroll through all hours.
             tabIndex={0}
             aria-label={t(
               'rhythm.weeklyPunchcard.scroll',

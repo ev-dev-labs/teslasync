@@ -838,7 +838,7 @@ describe('TirePressurePage — restrained semantic presentation and preservation
     setHistory([makeReading({ id: 1, front_left: 400_000 }),
       makeReading({ id: 2, front_left: 200_000 })]);
     renderPage();
-    const header = await historyTable().findByRole('columnheader', { name: /Front left/ });
+    await historyTable().findByRole('columnheader', { name: /Front left/ });
     const sortFrontLeft = historyTable().getAllByRole('button', { name: /Front left/ })[0]!;
     fireEvent.click(sortFrontLeft);
     fireEvent.click(sortFrontLeft);

@@ -293,7 +293,7 @@ export function useAlertHistory(limit = 1000, scope: AlertListScope = {}, enable
       }
       const alerts: Alert[] = [];
       let cursor: Pick<Alert, 'created_at' | 'id'> | undefined;
-      while (true) {
+      for (;;) {
         const query = serializeAlertListScope(scope, {
           limit: boundedLimit,
           before_created_at: cursor?.created_at,
