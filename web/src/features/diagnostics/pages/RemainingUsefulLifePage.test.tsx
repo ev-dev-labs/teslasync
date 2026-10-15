@@ -6,17 +6,28 @@ import { Children, isValidElement, type ComponentProps, type ReactNode } from 'r
 import type { ComponentRUL, ComponentDetailResponse } from '@/api/hooks/useRUL';
 import type { FormatOptions } from '@/hooks/useUnits';
 import { formatDistance, type DistanceUnitPref } from '@/lib/unitConversion';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import RemainingUsefulLifePage from './RemainingUsefulLifePage';
 
 const sources = vi.hoisted(() => ({ board: vi.fn(), detail: vi.fn() }));
 const units = vi.hoisted((): { distance: DistanceUnitPref } => ({ distance: 'km' }));
-const preferences = vi.hoisted(() => ({ reduce: false, vehicleId: 7 as number | null }));
-const chart = vi.hoisted(() => ({ line: vi.fn(), area: vi.fn() }));
+const preferences = vi.hoisted(() => ({
+  reduce: false, vehicleId: 7 as number | null, locale: 'en-US', timezone: 'UTC',
+}));
+const chart = vi.hoisted(() => ({
+  line: vi.fn(), area: vi.fn(), axis: vi.fn(), tooltip: vi.fn(), data: vi.fn(),
+}));
 const translations = vi.hoisted(() => ({ values: {} as Record<string, string> }));
 vi.mock('@/hooks/useMotionPreference', () => ({
   useMotionPreference: () => ({ reduce: preferences.reduce, durationMs: preferences.reduce ? 0 : 250 }),
 }));
 vi.mock('@/hooks/useFormatting', () => ({ useFormatting: () => ({ currencySymbol: '$' }) }));
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({
+    locale: preferences.locale,
+    settings: { tz_display_default: 'user', timezone_user: preferences.timezone },
+  }),
+}));
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({
     unitPrefs: {
@@ -52,10 +63,13 @@ vi.mock('@/components/charts', async (importActual) => {
   return {
     ...actual, ...chartTestDoubles, EmbeddedChart: actual.EmbeddedChart,
     ComposedChart: (props: ComponentProps<typeof actual.ComposedChart>) => {
+      chart.data(props.data);
       Children.forEach(props.children, (child) => {
         if (!isValidElement(child)) return;
         if (child.type === actual.Line) chart.line(child.props);
         if (child.type === actual.Area) chart.area(child.props);
+        if (child.type === actual.XAxis) chart.axis(child.props);
+        if (child.type === actual.Tooltip) chart.tooltip(child.props);
       });
       return <actual.ComposedChart {...props} />;
     },
@@ -98,8 +112,15 @@ beforeEach(() => {
   units.distance = 'km';
   preferences.reduce = false;
   preferences.vehicleId = 7;
+  preferences.locale = 'en-US';
+  preferences.timezone = 'UTC';
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
   chart.line.mockClear();
   chart.area.mockClear();
+  chart.axis.mockClear();
+  chart.tooltip.mockClear();
+  chart.data.mockClear();
   sources.board.mockReturnValue(query({
     vehicle_id: 7, components: [component], next_service: { component: 'tires', date: '2026-08-01' },
   }));
@@ -107,6 +128,83 @@ beforeEach(() => {
 });
 
 describe('RemainingUsefulLifePage independent sources', () => {
+  it.each(['America/Los_Angeles', 'Pacific/Kiritimati'])(
+    'honors saved locale and precision without shifting calendar days in %s', (timezone) => {
+      preferences.locale = 'de-DE';
+      preferences.timezone = timezone;
+      setGlobalLocale('de-DE');
+      setGlobalPrecision(3);
+      const measured = { ...component, confidence: 0.751, health_pct: 75.125 };
+      const projection = Object.freeze({
+        date: '2026-08-01', projected_health: 20.125, confidence_low: 15.125, confidence_high: 25.125,
+      });
+      sources.board.mockReturnValue(query({
+        vehicle_id: 7, components: [measured], next_service: { component: 'tires', date: projection.date },
+      }));
+      sources.detail.mockReturnValue(query({ ...detail, projection: [projection] }));
+      renderPage();
+      const expectedDate = '1. Aug. 2026';
+      expect(screen.getByRole('button', { name: 'Show forecast for Tires' })).toHaveTextContent(expectedDate);
+      expect(screen.getAllByText('Measured health: 75,125%')).toHaveLength(1);
+      expect(screen.getByRole('table')).toHaveTextContent('20,125%');
+      expect(screen.getByRole('table')).toHaveTextContent(expectedDate);
+      const brief = screen.getByTestId('rul-next-service-summary');
+      expect(brief).toHaveTextContent(expectedDate);
+      fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+      expect(screen.getByRole('dialog')).toHaveTextContent(expectedDate);
+      const axis: ComponentProps<typeof import('@/components/charts').XAxis> = chart.axis.mock.lastCall?.[0];
+      expect(axis.tickFormatter?.(projection.date, 0)).toBe(expectedDate);
+      const tooltip: ComponentProps<typeof import('@/components/charts').Tooltip> = chart.tooltip.mock.lastCall?.[0];
+      expect(isValidElement<{ labelFormatter: (value: string) => string }>(tooltip.content)).toBe(true);
+      if (isValidElement<{ labelFormatter: (value: string) => string }>(tooltip.content)) {
+        expect(tooltip.content.props.labelFormatter(projection.date)).toBe(expectedDate);
+      }
+      expect(chart.data).toHaveBeenLastCalledWith([{
+        date: projection.date, projected_health: 20.125, band: [15.125, 25.125],
+      }]);
+      expect(projection.date).toBe('2026-08-01');
+    },
+  );
+
+  it('formats true instants in the saved timezone separately from business days', () => {
+    preferences.locale = 'de-DE';
+    preferences.timezone = 'America/Los_Angeles';
+    const instant = '2026-08-01T00:30:00Z';
+    sources.board.mockReturnValue(query({
+      vehicle_id: 7, components: [{ ...component, projected_eol_date: instant }],
+      next_service: { component: 'tires', date: instant },
+    }));
+    sources.detail.mockReturnValue(query({
+      ...detail, projection: [{ ...detail.projection[0], date: instant }],
+    }));
+    renderPage();
+    const expected = '31. Juli 2026, 17:30';
+    expect(screen.getByRole('button', { name: 'Show forecast for Tires' })).toHaveTextContent(expected);
+    expect(screen.getByTestId('rul-next-service-summary')).toHaveTextContent(expected);
+    expect(screen.getByRole('table')).toHaveTextContent(expected);
+    expect(chart.data.mock.lastCall?.[0][0].date).toBe(instant);
+  });
+
+  it.each([null, undefined, '', 'not-a-date', '2026-02-30', '2026-13-01', 'invalidTinstant'])(
+    'shows an unknown date for %s without losing forecast readings', (date) => {
+      sources.board.mockReturnValue(query({
+        vehicle_id: 7, components: [{ ...component, projected_eol_date: date }],
+        next_service: { component: 'tires', date },
+      }));
+      sources.detail.mockReturnValue(query({
+        ...detail, projection: [{ ...detail.projection[0], date }],
+      }));
+      renderPage();
+      const table = screen.getByRole('table');
+      expect(within(table).getAllByRole('cell').map((cell) => cell.textContent))
+        .toEqual(['—', '20.00%', '15.00%', '25.00%']);
+      const brief = screen.getByTestId('rul-next-service-summary');
+      expect(brief.querySelector('[data-value-state="missing"]')).toBeInTheDocument();
+      expect(brief).not.toHaveTextContent('Invalid Date');
+      expect(screen.getByRole('button', { name: 'Show forecast for Tires' })).not.toHaveTextContent('Invalid Date');
+    },
+  );
+
   it.each([
     ['hv_battery', 'High-voltage battery'],
     ['lv_battery', 'Low-voltage battery'],
@@ -305,7 +403,7 @@ describe('RemainingUsefulLifePage independent sources', () => {
     const drawer = screen.getByRole('dialog');
     expect(within(drawer).getByText('Service component')).toBeInTheDocument();
     expect(drawer).toHaveTextContent('Tires');
-    expect(drawer).toHaveTextContent('2026-08-01');
+    expect(drawer).toHaveTextContent('Aug 1, 2026');
     expect(drawer).toHaveTextContent('not a guaranteed failure date');
     expect(drawer).toHaveTextContent('component forecasts retain their own confidence and basis below');
     expect(drawer).toHaveTextContent('Existing next-service projection from the component health board.');
@@ -404,8 +502,8 @@ describe('RemainingUsefulLifePage independent sources', () => {
     expect(within(table).getAllByRole('row').slice(1).map((row) =>
       within(row).getAllByRole('cell').map((cell) => cell.textContent),
     )).toEqual([
-      ['2026-08-01', '20.00%', '15.00%', '25.00%'],
-      ['2026-09-01', '10.00%', '5.00%', '16.00%'],
+      ['Aug 1, 2026', '20.00%', '15.00%', '25.00%'],
+      ['Sep 1, 2026', '10.00%', '5.00%', '16.00%'],
     ]);
     expect(screen.getByText('Observed trend only')).toBeInTheDocument();
     expect(detail.projection[0]).toEqual({
@@ -450,7 +548,7 @@ describe('RemainingUsefulLifePage independent sources', () => {
     expect(chart.area).toHaveBeenLastCalledWith(expect.objectContaining({
       dataKey: 'band', fillOpacity: 0.08, isAnimationActive: false,
     }));
-    expect(screen.getByRole('table')).toHaveTextContent('2026-08-01');
+    expect(screen.getByRole('table')).toHaveTextContent('Aug 1, 2026');
   });
 
   it('retains all section shells when workspace vehicle selection is absent', () => {

@@ -467,16 +467,39 @@ describe('ExplorePage — operational evidence', () => {
       .toBeGreaterThan(0);
   });
 
-  it('reports a failed empty fleet source without replacing the independent discovery results', () => {
+  it('retries a fatal initial fleet failure and recovers without replacing independent discovery results', () => {
     state.vehicles = undefined;
     state.vehicleError = new Error('Fleet unavailable');
-    renderPage('/explore?q=powershare');
+    const { rerenderPage, getLocation } = renderPage('/explore?q=powershare');
     const overview = screen.getByTestId('explore-operational-brief');
     expect(within(overview).getAllByText('Fleet unavailable').length).toBeGreaterThan(0);
     expect(kpiValue('Vehicles')).toBe('—');
     expect(kpiValue('Showing')).toBe('1');
     expect(screen.getByTestId('explore-card-/powershare')).toBeInTheDocument();
     expect(screen.getByRole('searchbox')).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry · Vehicles' }));
+    expect(state.vehicleRetry).toHaveBeenCalledOnce();
+    expect(state.authRetry).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+
+    state.vehicleError = null;
+    state.vehiclePending = true;
+    state.vehicleFetchStatus = 'fetching';
+    rerenderPage();
+    expect(kpiValue('Vehicles')).toBe('—');
+    expect(overview).toHaveTextContent('Fleet pending');
+    expect(screen.queryByRole('button', { name: 'Retry · Vehicles' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('explore-card-/powershare')).toBeInTheDocument();
+
+    state.vehicles = [];
+    state.vehiclePending = false;
+    state.vehicleFetchStatus = 'idle';
+    rerenderPage();
+    expect(kpiValue('Vehicles')).toBe('0');
+    expect(overview).toHaveTextContent('Catalog ready');
+    expect(screen.queryByRole('button', { name: 'Retry · Vehicles' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('explore-card-/powershare')).toBeInTheDocument();
+    expect(getLocation().search).toBe('?q=powershare');
   });
 
   it('keeps retained counts during an active refresh and closes the actual details drawer with Escape', () => {

@@ -32,6 +32,7 @@ import { act, render, screen, fireEvent, waitFor, within } from '@testing-librar
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
+import { createInstance } from 'i18next'
 
 vi.unmock('@/api/hooks/useAnnotations')
 
@@ -281,6 +282,11 @@ describe('formatDurationSeconds', () => {
     expect(formatDurationSeconds(3600)).toBe('1h 0m')
     expect(formatDurationSeconds(3660)).toBe('1h 1m')
     expect(formatDurationSeconds(7325)).toBe('2h 2m') // 2h2m5s
+    expect(formatDurationSeconds(+90.5)).toBe('1m')
+    expect(formatDurationSeconds(3599.99)).toBe('59m')
+    expect(formatDurationSeconds(3660.5)).toBe('1h 1m')
+    expect(formatDurationSeconds(3_600_060.5)).toBe('1000h 1m')
+    expect(formatDurationSeconds(-0)).toBe('0m')
   })
 
   it('returns an em dash for null/undefined/NaN/Infinity/negative input', () => {
@@ -288,7 +294,29 @@ describe('formatDurationSeconds', () => {
     expect(formatDurationSeconds(undefined)).toBe('—')
     expect(formatDurationSeconds(Number.NaN)).toBe('—')
     expect(formatDurationSeconds(Number.POSITIVE_INFINITY)).toBe('—')
+    expect(formatDurationSeconds(Number.NEGATIVE_INFINITY)).toBe('—')
     expect(formatDurationSeconds(-120)).toBe('—')
+    expect(formatDurationSeconds(-0.5)).toBe('—')
+    expect(formatDurationSeconds('60' as unknown as number)).toBe('—')
+  })
+
+  it('uses localized duration templates and numbers without treating missing timing as measured zero', async () => {
+    const i18n = createInstance()
+    await i18n.init({
+      lng: 'de',
+      resources: { de: { translation: { tesla_sessions: {
+        durationHoursMinutes: '{{hours}} Std. {{minutes}} Min.',
+        durationMinutes: '{{minutes}} Min.',
+      } } } },
+    })
+    const t = i18n.getFixedT('de')
+    expect(formatDurationSeconds(0, t, 'de-DE')).toBe('0 Min.')
+    expect(formatDurationSeconds(-0, t, 'de-DE')).toBe('0 Min.')
+    expect(formatDurationSeconds(+90.5, t, 'de-DE')).toBe('1 Min.')
+    expect(formatDurationSeconds(3_600_060.5, t, 'de-DE')).toBe('1.000 Std. 1 Min.')
+    for (const value of [null, undefined, NaN, Infinity, -Infinity, -60, -0.5]) {
+      expect(formatDurationSeconds(value, t, 'de-DE')).toBe('—')
+    }
   })
 })
 
@@ -492,7 +520,7 @@ describe('TeslaChargingSessionsPage', () => {
   })
 
   it('preserves the separate raw selected CSV with Wh, seconds and source currency', async () => {
-    install({ sessions: [makeSession({ currency_code: 'EUR', total_cost: -5 })] })
+    install({ sessions: [makeSession({ currency_code: 'EUR', total_cost: -5, charge_duration_s: 1800.5 })] })
     const createUrl = vi.fn<(blob: Blob) => string>().mockReturnValue('blob:selected-sessions')
     vi.stubGlobal('URL', class extends URL {
       static createObjectURL = createUrl
@@ -513,7 +541,7 @@ describe('TeslaChargingSessionsPage', () => {
       reader.readAsText(blob)
     })
     expect(csv).toContain('energy_wh,peak_power_kw,duration_seconds,cost,currency,per_kwh_rate')
-    expect(csv).toContain('"20000","120","1800","-5","EUR","0.25"')
+    expect(csv).toContain('"20000","120","1800.5","-5","EUR","0.25"')
     expect(downloadCSV).not.toHaveBeenCalled()
   })
 
@@ -678,11 +706,13 @@ describe('TeslaChargingSessionsPage', () => {
       total_cost: 1234.5678,
       per_kwh_rate: 0.12345,
       currency_code: 'EUR',
+      charge_duration_s: 3_600_060.5,
     })
     install({ sessions: [session] })
     renderPage()
     const table = await screen.findByRole('region', { name: 'Charging sessions table' })
     await waitFor(() => expect(table.textContent).toContain('€1,234.57'))
+    expect(within(table).getByText('1,000h 1m')).toBeInTheDocument()
     fireEvent.click(within(table).getByRole('button', { name: /(?:reorder|show).*hide columns/i }))
     fireEvent.click(screen.getByRole('checkbox', { name: 'Show or hide Rate/kWh' }))
     fireEvent.click(within(table).getByRole('button', { name: /(?:reorder|show).*hide columns/i }))
@@ -695,6 +725,7 @@ describe('TeslaChargingSessionsPage', () => {
     expect(within(table).getByText('€0.1235')).toBeInTheDocument()
     expect(screen.getByRole('checkbox', { name: '€1,234.5678' })).toBeChecked()
     act(() => setGlobalLocale('de-DE'))
+    expect(within(table).getByText('1.000h 1m')).toBeInTheDocument()
     expect(within(table).getByText('1.234,5678 €')).toBeInTheDocument()
     expect(within(table).getByText('0,1235 €')).toBeInTheDocument()
     expect(screen.getByRole('checkbox', { name: '1.234,5678\u00a0€' })).toBeChecked()

@@ -86,7 +86,7 @@ function sourceCurrency(sessions: TeslaChargingSession[]): string | null {
 export function formatDurationSeconds(seconds: number | null | undefined, t?: TFunction, locale?: string): string {
   if (seconds == null || !Number.isFinite(seconds) || seconds < 0) return '—';
   const h = Math.floor(seconds / 3600);
-  const hours = formatNumber(h, 0, locale);
+  const hours = t || locale ? formatNumber(h, 0, locale) : String(h);
   const minutes = formatNumber(Math.floor((seconds % 3600) / 60), 0, locale);
   if (h > 0) return t
     ? t('tesla_sessions.durationHoursMinutes', '{{hours}}h {{minutes}}m', { hours, minutes })
