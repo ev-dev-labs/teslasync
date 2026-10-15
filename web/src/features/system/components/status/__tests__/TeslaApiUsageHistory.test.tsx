@@ -292,8 +292,10 @@ describe('Tesla usage selected history', () => {
     expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument()
   })
 
-  it.each([[], [{ ...point, signals: 0, commands: 0, data_requests: 0, wakes: 0, estimated_usd: 0 }]])(
-    'shows confirmed zero totals separately from empty observed buckets: %s', points => {
+  it.each([
+    { points: [] },
+    { points: [{ ...point, signals: 0, commands: 0, data_requests: 0, wakes: 0, estimated_usd: 0 }] },
+  ])('shows confirmed zero totals separately from empty observed buckets: %s', ({ points }) => {
       const total = { ...point, signals: 0, commands: 0, data_requests: 0, wakes: 0, estimated_usd: 0 }
       useHistory.mockReturnValue({
         data: { points, total }, isSuccess: true, isPending: false,
