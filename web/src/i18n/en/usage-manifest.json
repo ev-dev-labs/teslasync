@@ -5959,6 +5959,7 @@
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
       "vehicleSelect.aria",
+      "workspace.analysis.presets.6h",
       "workspace.analysis.title"
     ],
     "system": [
@@ -10128,6 +10129,7 @@
       "watchFaceNL.placeholder",
       "watchFaceNL.title",
       "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",
@@ -13312,6 +13314,7 @@
       "webpush.unsupported.pushApi",
       "webpush.unsupported.serverDisabled",
       "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",
@@ -16081,6 +16084,7 @@
       "watchFaceNL.placeholder",
       "watchFaceNL.title",
       "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",
@@ -20343,6 +20347,7 @@
       "watchFaceNL.placeholder",
       "watchFaceNL.title",
       "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h",
       "workspace.analysis.range",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
@@ -22961,6 +22966,7 @@
       "watchFaceNL.placeholder",
       "watchFaceNL.title",
       "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",
@@ -26655,6 +26661,7 @@
       "watchFaceNL.placeholder",
       "watchFaceNL.title",
       "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h",
       "yearReview.acOther",
       "yearReview.activity",
       "yearReview.aiNarration.badge",
@@ -29074,6 +29081,7 @@
       "watchFaceNL.placeholder",
       "watchFaceNL.title",
       "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",
@@ -30944,7 +30952,6 @@
       "physicsLedger.unknown.reason",
       "physicsLedger.unknown.start",
       "physicsLedger.unknown.title",
-      "physicsLedger.window.hours",
       "physicsLedger.window.label",
       "pin.pin",
       "pin.pinned",
@@ -33062,6 +33069,7 @@
       "watchFaceNL.placeholder",
       "watchFaceNL.title",
       "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",
@@ -35562,6 +35570,7 @@
       "watchFaceNL.placeholder",
       "watchFaceNL.title",
       "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",
@@ -39083,6 +39092,7 @@
       "watchFaceNL.placeholder",
       "watchFaceNL.title",
       "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",
@@ -43301,6 +43311,7 @@
       "widgets.search",
       "widgets.searchLabel",
       "widgets.searchResults",
+      "workspace.analysis.presets.6h",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",
@@ -46501,6 +46512,7 @@
       "watchFaceNL.inputLabel",
       "watchFaceNL.placeholder",
       "watchFaceNL.title",
+      "workspace.analysis.presets.6h",
       "workspaceContext.ranges.1y",
       "workspaceContext.ranges.24h",
       "workspaceContext.ranges.30d",
@@ -50862,6 +50874,7 @@
       "watchFaceNL.placeholder",
       "watchFaceNL.title",
       "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",
@@ -54389,6 +54402,7 @@
       "widget.doorWindow.rl",
       "widget.doorWindow.rr",
       "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",
@@ -56675,6 +56689,7 @@
       "watchFaceNL.placeholder",
       "watchFaceNL.title",
       "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",
@@ -59245,6 +59260,7 @@
       "watchFaceNL.placeholder",
       "watchFaceNL.title",
       "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",
@@ -61628,6 +61644,7 @@
       "watchFaceNL.placeholder",
       "watchFaceNL.title",
       "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",
@@ -69225,7 +69242,8 @@
       "upstream.banner",
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
-      "vehicleSelect.aria"
+      "vehicleSelect.aria",
+      "workspace.analysis.presets.6h"
     ],
     "fleet-ops": [
       "a11y.breadcrumb",
@@ -71045,7 +71063,8 @@
       "vehicles.emptyMessage",
       "vehicles.emptyTitle",
       "vehicles.loadError",
-      "widget.motorPerformance.outsideScale"
+      "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h"
     ],
     "home-energy": [
       "a11y.breadcrumb",
@@ -72739,7 +72758,8 @@
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
       "vehicleSelect.aria",
-      "widget.motorPerformance.outsideScale"
+      "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h"
     ],
     "intelligence-packs": [
       "a11y.breadcrumb",
@@ -74448,7 +74468,8 @@
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
       "vehicleSelect.aria",
-      "widget.motorPerformance.outsideScale"
+      "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h"
     ],
     "resale-vault": [
       "a11y.breadcrumb",
@@ -79618,7 +79639,8 @@
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
       "vehicleSelect.aria",
-      "widget.motorPerformance.outsideScale"
+      "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h"
     ],
     "service-intelligence": [
       "a11y.breadcrumb",
@@ -88160,7 +88182,8 @@
       "upstream.banner",
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
-      "widget.motorPerformance.outsideScale"
+      "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h"
     ],
     "driving-departure-forecast": [
       "a11y.breadcrumb",
@@ -96346,7 +96369,8 @@
       "upstream.banner",
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
-      "widget.motorPerformance.outsideScale"
+      "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h"
     ],
     "driving-drivetrain-health": [
       "a11y.breadcrumb",
@@ -97990,7 +98014,8 @@
       "upstream.banner",
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
-      "widget.motorPerformance.outsideScale"
+      "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h"
     ],
     "driving-driving-dynamics": [
       "a11y.breadcrumb",
@@ -99685,7 +99710,8 @@
       "upstream.banner",
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
-      "widget.motorPerformance.outsideScale"
+      "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h"
     ],
     "driving-driving-rhythm": [
       "a11y.breadcrumb",
@@ -101287,7 +101313,8 @@
       "upstream.banner",
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
-      "widget.motorPerformance.outsideScale"
+      "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h"
     ],
     "driving-efficiency": [
       "a11y.breadcrumb",
@@ -102837,7 +102864,8 @@
       "upstream.banner",
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
-      "widget.motorPerformance.outsideScale"
+      "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h"
     ],
     "driving-efficiency-target": [
       "a11y.breadcrumb",
@@ -106034,7 +106062,8 @@
       "upstream.banner",
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
-      "widget.motorPerformance.outsideScale"
+      "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h"
     ],
     "driving-fsdinsights": [
       "a11y.breadcrumb",
@@ -107777,7 +107806,8 @@
       "upstream.banner",
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
-      "widget.motorPerformance.outsideScale"
+      "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h"
     ],
     "driving-journey-fragmentation": [
       "a11y.breadcrumb",
@@ -110897,7 +110927,8 @@
       "transitionArrow.label",
       "upstream.banner",
       "vehiclePicker.aria",
-      "vehiclePicker.fallbackName"
+      "vehiclePicker.fallbackName",
+      "workspace.analysis.presets.6h"
     ],
     "driving-range-buffer": [
       "a11y.breadcrumb",
@@ -112559,7 +112590,8 @@
       "upstream.banner",
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
-      "widget.motorPerformance.outsideScale"
+      "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h"
     ],
     "driving-regen-efficiency": [
       "a11y.breadcrumb",
@@ -114186,7 +114218,8 @@
       "upstream.banner",
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
-      "widget.motorPerformance.outsideScale"
+      "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h"
     ],
     "driving-route-efficiency": [
       "a11y.breadcrumb",
@@ -116236,6 +116269,7 @@
       "watchFaceNL.placeholder",
       "watchFaceNL.title",
       "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",
@@ -120894,6 +120928,7 @@
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
       "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h",
       "yearReview.goToVehicles"
     ],
     "driving-speed-sweet-spot": [
@@ -122487,7 +122522,8 @@
       "upstream.banner",
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
-      "widget.motorPerformance.outsideScale"
+      "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h"
     ],
     "driving-trip-planner": [
       "a11y.breadcrumb",
@@ -124684,6 +124720,7 @@
       "watchFaceNL.placeholder",
       "watchFaceNL.title",
       "widget.motorPerformance.outsideScale",
+      "workspace.analysis.presets.6h",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",

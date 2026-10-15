@@ -16,7 +16,7 @@ import { useProductPreferences } from '@/hooks/useProductPreferences'
 import { getCurrentDensity } from '@/hooks/useDensitySync'
 import { getDatePreset } from '@/lib/datePresets'
 import { civilDateInTimeZone } from '@/lib/dateRange'
-import { getWorkspaceQuickRangePresets, isWorkspaceRangePresetAvailable } from '@/lib/workspaceScope'
+import { getWorkspaceQuickRangePresets, isWorkspaceRangePresetAvailable, type WorkspaceQuickRangePreset } from '@/lib/workspaceScope'
 import { formatDate, formatDateShort } from '@/lib/dateFormat'
 import { cn } from '@/lib/cn'
 import { typography } from '@/lib/tokens'
@@ -27,12 +27,12 @@ import {
   isWorkspaceDensity,
   isWorkspaceRangePreset,
   type WorkspaceDensity,
-  type WorkspaceRangePreset,
 } from '@/lib/workspacePreferences'
 import { useStatusBarPopover } from './status-bar/StatusBarContext'
 
-const SHORT_PRESET_LABELS: Record<WorkspaceRangePreset | 'ytd', string> = {
+const SHORT_PRESET_LABELS: Record<WorkspaceQuickRangePreset, string> = {
   live: 'Last 5 min',
+  '6h': 'Last 6 hours.',
   '24h': '24 hours',
   today: 'Today',
   '7d': '7 days',
@@ -151,7 +151,7 @@ export function WorkspaceContextControl({
     isWorkspaceRangePresetAvailable(pathname, range.presetId)
     ? range.presetId
     : undefined
-  const presetButton = (id: WorkspaceRangePreset | 'ytd') => (
+  const presetButton = (id: WorkspaceQuickRangePreset) => (
     <Button
       key={id}
       type="button"

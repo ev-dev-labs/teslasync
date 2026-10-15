@@ -6,6 +6,7 @@ export interface WorkspaceRouteScope {
 }
 
 export type WorkspaceScopedControlKind = keyof WorkspaceRouteScope;
+export type WorkspaceQuickRangePreset = WorkspaceRangePreset | '6h' | 'ytd';
 
 export const WORKSPACE_SCOPED_CONTROL = Symbol('teslasync.workspace-scoped-control');
 
@@ -62,6 +63,7 @@ export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set([
   '/notifications/archived',
   '/notifications/inbox',
   '/parking',
+  '/tesla-physics/ledger',
   '/power-flow',
   '/preconditioning-effectiveness',
   '/range-buffer',
@@ -94,14 +96,18 @@ export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set([
 const STANDARD_QUICK_PRESETS = ['24h', '7d', '30d', '90d'] as const;
 const CALENDAR_QUICK_PRESETS = ['7d', '30d', '90d', 'ytd'] as const;
 
-export function getWorkspaceQuickRangePresets(pathname: string): readonly (WorkspaceRangePreset | 'ytd')[] {
-  return normalizePathname(pathname) === '/drive-calendar'
+export function getWorkspaceQuickRangePresets(pathname: string): readonly WorkspaceQuickRangePreset[] {
+  const normalized = normalizePathname(pathname);
+  if (normalized === '/tesla-physics/ledger') return ['6h', '24h'];
+  return normalized === '/drive-calendar'
     ? CALENDAR_QUICK_PRESETS
     : STANDARD_QUICK_PRESETS;
 }
 
 export function isWorkspaceRangePresetAvailable(pathname: string, id: string): boolean {
-  if (normalizePathname(pathname) === '/drive-calendar') {
+  const normalized = normalizePathname(pathname);
+  if (id === '6h') return normalized === '/tesla-physics/ledger';
+  if (normalized === '/drive-calendar') {
     return id !== 'live' && id !== '24h' && id !== 'today' && id !== '1y';
   }
   return id !== '1y' && id !== 'ytd';

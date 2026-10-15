@@ -7,13 +7,15 @@ import { QueryError, StaleRefreshWarning } from '@/components/feedback';
 
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { VehicleEvidenceBrief } from '../components/operationalbrief-n-z/VehicleEvidenceBrief';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { useDataState } from '@/hooks/useDataState';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useAnalysisWindow } from '@/hooks/useAnalysisWindow';
+import { useRangeState } from '@/hooks/useRangeState';
+import { useSearchParams } from 'react-router-dom';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { cn } from '@/lib/cn';
 import { neonColorMap } from '@/lib/tokens';
@@ -34,7 +36,7 @@ import {
 
 type Translate = (key: string, fallback: string, options?: Record<string, unknown>) => string;
 
-const WINDOW_PRESETS = [6, 24] as const;
+const LEGACY_WINDOW_PRESETS = [6, 24] as const;
 
 const UNRESOLVED_SECTIONS = [
   ['ledger-summary', 'physicsLedger.briefTitle', 'Returned ledger evidence'],
@@ -55,7 +57,14 @@ export default function PhysicsLedgerPage() {
   const { formatDateTime } = useDateFormat();
   const { t: translate } = useTranslation();
   const t: Translate = (key, fallback, options) => String(translate(key, fallback, options));
-  const { selected: hours, window, pickWindow } = useAnalysisWindow('hours', WINDOW_PRESETS, 24);
+  const [params] = useSearchParams();
+  const range = useRangeState();
+  const legacyWindow = useAnalysisWindow('hours', LEGACY_WINDOW_PRESETS, 24);
+  const hasSharedRange = params.has('from') || params.has('to') || params.has('time_scope');
+  const hasLegacyRange = !hasSharedRange && (params.has('hours') || params.has('start') || params.has('end'));
+  const window = hasLegacyRange
+    ? legacyWindow.window
+    : { start: range.startInstant, end: range.endInstantExclusive };
 
   const title = t('physicsLedger.title', 'Physics ledger');
   usePageTitle(title);
@@ -106,19 +115,6 @@ export default function PhysicsLedgerPage() {
       </Text>
 
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t('physicsLedger.window.label', 'Window')}>
-        {WINDOW_PRESETS.map((preset) => (
-          <Button
-            key={preset}
-            variant={preset === hours ? 'primary' : 'secondary'}
-            size="sm"
-            wrapLabel
-            className="min-h-11 min-w-11 md:min-h-9"
-            onClick={() => { pickWindow(preset); }}
-            aria-pressed={preset === hours}
-          >
-            {t('physicsLedger.window.hours', 'Last {{hours}}h', { hours: preset })}
-          </Button>
-        ))}
         <Text as="span" size="sm" color="secondary">
           {formatDateTime(window.start)} → {formatDateTime(window.end)}
         </Text>

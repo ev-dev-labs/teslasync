@@ -654,9 +654,9 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
   ]);
 
   const { startInstant, endInstantExclusive } = useMemo(() => {
-    if (presetId === 'live' || presetId === '24h') {
+    if (presetId === 'live' || presetId === '6h' || presetId === '24h') {
       const durationMs =
-        presetId === 'live' ? LIVE_WINDOW_MS : 24 * 60 * 60_000;
+        presetId === 'live' ? LIVE_WINDOW_MS : presetId === '6h' ? 6 * 60 * 60_000 : 24 * 60 * 60_000;
       return {
         startInstant: new Date(rollingNow - durationMs).toISOString(),
         endInstantExclusive: new Date(rollingNow).toISOString(),

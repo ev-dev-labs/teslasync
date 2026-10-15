@@ -2194,6 +2194,7 @@
       "custom": "Custom",
       "presets": {
         "live": "Last 5 min",
+        "6h": "Last 6 hours.",
         "24h": "24 hours",
         "today": "Today",
         "7d": "7 days",

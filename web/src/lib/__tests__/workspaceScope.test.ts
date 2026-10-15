@@ -154,6 +154,12 @@ describe('getWorkspaceRouteScope', () => {
     expect(getWorkspaceRouteScope('/driving/explorer').range).toBe(false);
     expect(getWorkspaceQuickRangePresets('/explorer')).toEqual(['24h', '7d', '30d', '90d']);
   });
+  it('offers the six and twenty-four hour shared ranges on physics ledger', () => {
+    expect(getWorkspaceRouteScope('/tesla-physics/ledger')).toEqual({ range: true, vehicle: true });
+    expect(getWorkspaceQuickRangePresets('/tesla-physics/ledger')).toEqual(['6h', '24h']);
+    expect(isWorkspaceRangePresetAvailable('/tesla-physics/ledger', '6h')).toBe(true);
+    expect(isWorkspaceRangePresetAvailable('/drives', '6h')).toBe(false);
+  });
   it('owns the root-cause analysis range without changing the service evidence workspace', () => {
     for (const path of ['/diagnostics/root-cause', '/diagnostics/root-cause/', '/diagnostics/root-cause?from=2026-01-01']) {
       expect(getWorkspaceRouteScope(path)).toEqual({ range: true, vehicle: true });

@@ -253,7 +253,7 @@ function ledgerResponse(over: Partial<PhysicsLedger> = {}): PhysicsLedger {
   };
 }
 
-function renderPage(initialEntry = '/tesla-only/ledger') {
+function renderPage(initialEntry = '/tesla-physics/ledger') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const Wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>
@@ -777,18 +777,18 @@ describe('PhysicsLedgerPage', () => {
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 
-  it('preserves both URL-backed investigation windows and the selected vehicle scope', () => {
-    renderPage();
-    expect(screen.getByRole('button', { name: 'Last 24h' })).toHaveAttribute('aria-pressed', 'true');
-    fireEvent.click(screen.getByRole('button', { name: 'Last 6h' }));
-    expect(screen.getByRole('button', { name: 'Last 6h' })).toHaveAttribute('aria-pressed', 'true');
-    const scope = usePhysicsLedgerMock.mock.lastCall?.[0] as {
+  it('uses shared rolling presets and preserves the vehicle scope', () => {
+    renderPage('/tesla-physics/ledger?time_scope=6h');
+    const sixHourScope = usePhysicsLedgerMock.mock.lastCall?.[0] as {
       vehicleId: string; start: string; end: string;
     };
-    expect(scope.vehicleId).toBe('1');
-    expect(Date.parse(scope.end) - Date.parse(scope.start)).toBe(6 * 3600 * 1000);
-    fireEvent.click(screen.getByRole('button', { name: 'Last 24h' }));
-    const restoredScope = usePhysicsLedgerMock.mock.lastCall?.[0] as typeof scope;
-    expect(Date.parse(restoredScope.end) - Date.parse(restoredScope.start)).toBe(24 * 3600 * 1000);
+    expect(sixHourScope.vehicleId).toBe('1');
+    expect(Date.parse(sixHourScope.end) - Date.parse(sixHourScope.start)).toBe(6 * 3600 * 1000);
+    expect(screen.queryByRole('button', { name: 'Last 6h' })).not.toBeInTheDocument();
+
+    renderPage('/tesla-physics/ledger?time_scope=24h');
+    const twentyFourHourScope = usePhysicsLedgerMock.mock.lastCall?.[0] as typeof sixHourScope;
+    expect(twentyFourHourScope.vehicleId).toBe('1');
+    expect(Date.parse(twentyFourHourScope.end) - Date.parse(twentyFourHourScope.start)).toBe(24 * 3600 * 1000);
   });
 });
