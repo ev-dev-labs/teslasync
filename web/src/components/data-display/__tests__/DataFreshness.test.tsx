@@ -67,6 +67,32 @@ describe('FRESHNESS_COLORS', () => {
   })
 })
 
+describe('DataFreshness widget variant', () => {
+  it('renders one status dot and a separate icon-only refresh action', () => {
+    const onRefresh = vi.fn()
+    const { container } = render(
+      <DataFreshness
+        updatedAt={Date.now()}
+        isFetching={false}
+        isStale={false}
+        isError={false}
+        onRefresh={onRefresh}
+        variant="widget"
+      />,
+    )
+
+    const status = screen.getByRole('status', { name: /Refresh data/ })
+    expect(status.querySelectorAll('span.rounded-full')).toHaveLength(1)
+    expect(status.querySelector('span.rounded-full')).toHaveClass('bg-[var(--semantic-success)]')
+    const refresh = screen.getByRole('button', { name: /Refresh data/ })
+    expect(refresh).toHaveAttribute('aria-describedby')
+    expect(refresh).not.toHaveTextContent('Refresh data')
+    fireEvent.click(refresh)
+    expect(onRefresh).toHaveBeenCalledOnce()
+    expect(container.querySelector('svg.lucide-wifi, svg.lucide-wifi-off')).not.toBeInTheDocument()
+  })
+})
+
 describe('DataFreshness', () => {
   beforeEach(() => {
     vi.useFakeTimers()

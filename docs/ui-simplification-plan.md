@@ -30,7 +30,7 @@ pm run build` passed (one existing CSS parse warning and a non-failing startup-J
 |---|---|---|---|---|---|---|---|---|---:|---|
 | 0 | `OperationalBrief.tsx`, `OperationalNarrativeDetails.tsx`, shared tests | shared | Evidence card | todo | todo | todo | todo | inspect existing freshness contract | 0 | todo |
 | 1 | `components/ui/IconButton.tsx`, shared tooltip, button | shared | IconButton | n/a | done | n/a | n/a | none | 1 | done |
-| 2 | shared widget header and freshness primitives | dashboard | WidgetShell | n/a | todo | todo | n/a | inspect query freshness fields | 0 | todo |
+| 2 | shared widget header and freshness primitives | dashboard | WidgetShell | n/a | in-progress | in-progress | n/a | single shared ticker and stale thresholds remain | 1 | in-progress |
 | 3 | `features/dashboard/widgets/**` | dashboard | all dashboard widgets | todo | todo | todo | todo | per widget during inventory | 0 | todo |
 | 4 | `features/vehicles/**` | vehicle routes | evidence cards and repeated actions | todo | todo | todo | todo | per row | 0 | todo |
 | 5 | `features/charging/**` | charging routes | evidence cards and nested panels | todo | todo | todo | todo | per row | 0 | todo |
@@ -44,6 +44,8 @@ pm run build` passed (one existing CSS parse warning and a non-failing startup-J
 ## Progress checkpoints
 
 - Row 1 complete: added IconButton with caller-provided accessible label, tooltip, variants, route-link mode, busy/disabled behavior and menu ARIA props. Focused suite passed 3/3; standalone typecheck, full lint, and production build passed. No catalog key was needed because every label is passed in by the caller.
+
+- Row 2 partial: WidgetShell now renders its freshness status after other header actions, with a compact state dot, age text, and a separate icon-only refresh action. No new copy was added. DataFreshness still uses per-instance timers and existing query stale state; central ticker and interval-derived thresholds remain to implement.
 
 ## Decision log
 
@@ -61,6 +63,7 @@ pm run build` passed (one existing CSS parse warning and a non-failing startup-J
 
 ## Summary
 
-In progress. Row 1 shared IconButton is complete. Current branch is `ui/simplification`; started from `fix/dashboard-followups` at `7570c940ec`.
+In progress. Row 1 shared IconButton is complete. Row 2 freshness header is in progress. Current branch is `ui/simplification`; started from `fix/dashboard-followups` at `7570c940ec`.
+
 
 

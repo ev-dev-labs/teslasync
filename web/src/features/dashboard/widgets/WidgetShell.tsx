@@ -116,11 +116,12 @@ export function WidgetShell({
           isError={isError ?? false}
           onRefresh={onRefresh}
           compact={freshnessCompact}
+          variant="widget"
         />
       );
     } else if (query) {
-      freshnessEl = (
-        <DataFreshnessAuto query={query} compact={freshnessCompact} />
+        freshnessEl = (
+        <DataFreshnessAuto query={query} compact={freshnessCompact} variant="widget" />
       );
     }
   }
@@ -158,7 +159,6 @@ export function WidgetShell({
           </div>
           <div className="flex max-w-full flex-wrap items-center gap-2">
             {status}
-            {freshnessEl}
             {widgetId && dashboardId && (
               <PinButton
                 itemType="widget"
@@ -168,6 +168,7 @@ export function WidgetShell({
               />
             )}
             {actions}
+            {freshnessEl}
           </div>
         </div>
       ) : (

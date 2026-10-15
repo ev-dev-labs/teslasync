@@ -6,6 +6,7 @@ import { cn } from '@/lib/cn';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { Button } from '@/components/ui/Button';
+import { IconButton } from '@/components/ui/IconButton';
 
 /**
  * `<DataFreshness>` — query-result-driven freshness indicator.
@@ -39,6 +40,8 @@ export interface DataFreshnessProps {
   onRefresh?: () => void;
   /** Compact mode (condensed icon, no text) for small widgets */
   compact?: boolean;
+  /** Dashboard widget header: a single freshness dot with optional age and a separate refresh action. */
+  variant?: 'chip' | 'widget';
   /** Optional data-source label shown in the hover and accessible detail. */
   source?: string;
   /** Force stale once the successful update is older than this duration. */
@@ -126,6 +129,7 @@ export function DataFreshness({
   isError,
   onRefresh,
   compact = false,
+  variant = 'chip',
   source,
   forceStaleAfterMs,
 }: DataFreshnessProps) {
@@ -235,6 +239,44 @@ export function DataFreshness({
     </>
   );
 
+  if (variant === 'widget') {
+    return (
+      <span className="inline-flex min-w-0 items-center gap-2">
+        {onRefresh && (
+          <IconButton
+            icon={<RefreshCw className={cn('h-4 w-4', isFetching && !reduce && 'animate-spin')} aria-hidden="true" />}
+            label={ariaLabel}
+            aria-label={ariaLabel}
+            variant="ghost"
+            onClick={handleClick}
+            busy={isFetching}
+            disabled={isFetching}
+            className="!h-8 !w-8"
+          />
+        )}
+        <span
+          className="inline-flex min-w-0 items-center gap-1.5 text-xs text-[var(--text-secondary)]"
+          title={title}
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          aria-label={ariaLabel}
+          data-bg-refetch={isBackgroundRefetch ? 'true' : undefined}
+        >
+          {!compact && relativeTime && <span className="tabular-nums">{relativeTime}</span>}
+          <span
+            className={cn('relative h-2 w-2 shrink-0 rounded-full', cfg.dotColor)}
+            aria-hidden="true"
+          >
+            {status === 'fetching' && !reduce && (
+              <span className={cn('absolute inset-0 animate-ping rounded-full opacity-60', cfg.dotColor)} />
+            )}
+          </span>
+        </span>
+      </span>
+    );
+  }
+
   if (onRefresh) {
     return (
       <Button
@@ -290,6 +332,7 @@ export interface DataFreshnessAutoProps {
   query: FreshnessQuery;
   /** Compact mode (icon-only, no relative time text). */
   compact?: boolean;
+  variant?: DataFreshnessProps['variant'];
   /**
  * Default `true`: clicking the indicator triggers `query.refetch()`. Set
  * `false` for read-only displays where a manual refresh would be confusing
@@ -324,6 +367,7 @@ export interface DataFreshnessAutoProps {
 export function DataFreshnessAuto({
   query,
   compact,
+  variant,
   refetchable = true,
   forceStaleAfterMs,
   source,
@@ -336,6 +380,7 @@ export function DataFreshnessAuto({
       isError={query.isError}
       onRefresh={refetchable ? () => { void query.refetch(); } : undefined}
       compact={compact}
+      variant={variant}
       source={source}
       forceStaleAfterMs={forceStaleAfterMs}
     />
