@@ -62,7 +62,7 @@ describe('secondary detail charts using the actual shared chart-card chain', () 
   it.each([
     { title: 'SOC % over time', element: <SocChart chartData={points} /> },
     { title: 'Elevation profile', element: <ElevationChart chartData={points} stats={stats} /> },
-    { title: 'Speed histogram', element: <SpeedHistogramChart speedHistData={[{ range: '0–20', pct: 100 }]} /> },
+    { title: 'Speed histogram (km/h)', element: <SpeedHistogramChart speedHistData={[{ range: '0–20', pct: 100 }]} /> },
   ])('preserves one named card, canonical export controls and 220px sizing for $title', ({ title, element }) => {
     const { container } = mount(element);
     expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
@@ -75,7 +75,8 @@ describe('secondary detail charts using the actual shared chart-card chain', () 
     expect(viewport).toHaveStyle('--chart-height-desktop: 220px');
     fireEvent.click(screen.getByRole('button', { name: 'Export chart' }));
     expect(screen.getByText(/PNG/)).toBeInTheDocument();
-    expect(screen.getByText(/SVG/)).toBeInTheDocument();
+    // jsdom draws no plot <svg>, so the menu correctly withholds SVG capture.
+    expect(screen.queryByText(/SVG/)).not.toBeInTheDocument();
   });
 
   it('keeps all supplied histogram buckets and the sample-share basis in the accessible alternative', () => {

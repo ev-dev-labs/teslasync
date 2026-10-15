@@ -82,7 +82,8 @@ describe('Energy and range evidence', () => {
   });
 
   it('shows eligible power coverage and a fractional estimate without counting missing or invalid samples as zero', () => {
-    const telemetry = [-0.5, 0.25, 0, null, NaN, Infinity].map((power) => ({ power } as DriveTelemetryPoint));
+    // Row power is watts (pack voltage × current).
+    const telemetry = [-500, 250, 0, null, NaN, Infinity].map((power) => ({ power } as DriveTelemetryPoint));
     render(<MoreDetailsPanel drive={driveFixture({
       durationS: 3600, energyUsedWh: null, regenEnergyWh: null, avgPowerW: null, telemetry,
     })} stats={statsFixture()} />);

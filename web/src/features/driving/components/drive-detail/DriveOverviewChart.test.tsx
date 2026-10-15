@@ -31,6 +31,7 @@ import { chartTokens } from '@/lib/tokens';
 
 vi.mock('@/components/charts', async () => ({
   ...await vi.importActual<typeof import('@/components/charts')>('@/components/charts'),
+  ...(await import('@/test/chartTestDoubles')).inertCartesianParts,
   ResponsiveContainer: ({ children }: { children: ReactNode }) => <>{children}</>,
   ComposedChart: ({ children, data }: { children: ReactNode; data: ChartDataPoint[] }) =>
     <div data-testid="overview-plot" data-powers={JSON.stringify(data.map((point) => point.power))}>{children}</div>,

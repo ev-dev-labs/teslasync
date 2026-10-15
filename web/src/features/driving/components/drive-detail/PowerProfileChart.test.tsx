@@ -10,6 +10,7 @@ import type { ReactNode } from 'react';
 import { chartTokens } from '@/lib/tokens';
 vi.mock('@/components/charts', async () => ({
   ...await vi.importActual<typeof import('@/components/charts')>('@/components/charts'),
+  ...(await import('@/test/chartTestDoubles')).inertCartesianParts,
   ResponsiveContainer: ({ children }: { children: ReactNode }) => <>{children}</>,
   AreaChart: ({ children, data }: { children: ReactNode; data: ChartDataPoint[] }) =>
     <div data-testid="power-plot" data-values={JSON.stringify(data.map((point) => point.power))}>{children}</div>,

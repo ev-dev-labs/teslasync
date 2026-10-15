@@ -33,6 +33,7 @@ import { chartTokens } from '@/lib/tokens';
 
 vi.mock('@/components/charts', async () => ({
   ...await vi.importActual<typeof import('@/components/charts')>('@/components/charts'),
+  ...(await import('@/test/chartTestDoubles')).inertCartesianParts,
   ResponsiveContainer: ({ children }: { children: ReactNode }) => <>{children}</>,
   LineChart: ({ children }: { children: ReactNode }) => <>{children}</>,
   Line: ({ dataKey, stroke }: { dataKey: string; stroke: string }) =>

@@ -35,8 +35,9 @@ export function driveEnergyEvidence(drive: DriveDetail, stats?: DriveEnergyStats
   const hasPower = powers.length > 0;
   const durationS = finite(drive.durationS);
   const durationH = durationS != null && durationS >= 0 ? durationS / 3600 : null;
+  // Row power is signed watts (pack voltage × current), like avgPowerW.
   const avgPowerW = finite(drive.avgPowerW)
-    ?? (hasPower ? finite(powers.reduce((sum, power) => sum + power, 0) / powers.length * 1000) : null);
+    ?? (hasPower ? finite(powers.reduce((sum, power) => sum + power, 0) / powers.length) : null);
   const observedEnergy = finite(drive.energyUsedWh);
   const observedRegen = finite(drive.regenEnergyWh);
   // Average pack power is signed net energy, not gross consumption.
@@ -46,7 +47,7 @@ export function driveEnergyEvidence(drive: DriveDetail, stats?: DriveEnergyStats
   // missing readings do not. This remains a uniform-sampling estimate.
   const regenWh = observedRegen
     ?? (hasPower && durationH != null
-      ? finite(powers.reduce((sum, power) => sum + Math.max(-power, 0), 0) / powers.length * durationH * 1000)
+      ? finite(powers.reduce((sum, power) => sum + Math.max(-power, 0), 0) / powers.length * durationH)
       : null);
   return {
     energyWh, regenWh, hasPower,

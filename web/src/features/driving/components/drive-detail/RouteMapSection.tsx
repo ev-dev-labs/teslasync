@@ -14,7 +14,7 @@ import {
 import { useUnits } from '@/hooks/useUnits';
 import { useDateFormat } from '@/hooks/useDateFormat';
 
-import { hasMeaningfulRoute, firstValidIndex } from '@/lib/geo';
+import { hasMeaningfulRoute, firstValidIndex, isGpsFix } from '@/lib/geo';
 import type { DriveDetail } from '@/types/driving';
 import type { FsdEvidenceInterval } from '@/types/fsd';
 import type { RoutePoint, SpeedSegment } from './types';
@@ -121,9 +121,12 @@ export function RouteMapSection({
   const positionLatLngs = useMemo(
     () => (routePoints?.length ? routePoints.map((point) => ({
       latitude: point.lat, longitude: point.lng,
-    })) : (drive.positions ?? []).map((p) => ({
-      latitude: p.latitude, longitude: p.longitude,
-    }))),
+    })) : (drive.positions ?? [])
+      // Drop the (0, 0) no-fix placeholder so it neither anchors nor stretches the route.
+      .filter((p) => isGpsFix(p.latitude, p.longitude))
+      .map((p) => ({
+        latitude: p.latitude, longitude: p.longitude,
+      }))),
     [drive.positions, routePoints],
   );
   const hasRoute = useMemo(() => hasMeaningfulRoute(positionLatLngs), [positionLatLngs]);

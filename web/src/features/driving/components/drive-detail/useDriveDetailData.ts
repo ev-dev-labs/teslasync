@@ -19,7 +19,7 @@ import type { ChartDataPoint, RoutePoint, SpeedSegment, SpeedHistogramBucket } f
 import { SPEED_SEGMENT_LOW_MPS, SPEED_SEGMENT_MED_MPS, SPEED_SEGMENT_HIGH_MPS } from './constants';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { asFiniteNumber } from '@/lib/typeGuards';
-import { isValidLatLng } from '@/lib/geo';
+import { isGpsFix } from '@/lib/geo';
 import { driveEnergyEvidence, type DriveEnergyStats } from './energyEvidence';
 
 function displaySpeed(value: unknown, unit: 'km/h' | 'mph'): number | null {
@@ -78,7 +78,7 @@ export function useDriveDetailData(id: string) {
     const pos = drive.positions ?? [];
     if (tele.length > 0) {
       const points = tele
-        .filter((tp) => tp.latitude != null && tp.longitude != null && isValidLatLng(tp.latitude, tp.longitude))
+        .filter((tp) => tp.latitude != null && tp.longitude != null && isGpsFix(tp.latitude, tp.longitude))
         .map((tp) => ({
           lat: tp.latitude!,
           lng: tp.longitude!,
@@ -88,7 +88,7 @@ export function useDriveDetailData(id: string) {
       if (points.length > 0) return points;
     }
     return pos
-      .filter((p) => isValidLatLng(p.latitude, p.longitude))
+      .filter((p) => isGpsFix(p.latitude, p.longitude))
       .map((p) => ({
         lat: p.latitude,
         lng: p.longitude,
@@ -211,8 +211,9 @@ export function useDriveDetailData(id: string) {
     const movingSpeeds = chartData.map((d) => d.speed).filter((s): s is number => s != null && Number.isFinite(s) && s > 0);
     const minSpd = movingSpeeds.length > 0 ? movingSpeeds.reduce((min, value) => Math.min(min, value), Infinity) : 0;
     // Compute power max (drive) and min (regen) from per-row chart data.
-    // Backend derives power = pack_voltage * pack_current / 1000 per row;
-    // sign is preserved (positive = drive, negative = regen).
+    // Backend derives power = pack_voltage * pack_current in watts per row and
+    // the chart rows carry it converted to kW; sign is preserved
+    // (positive = drive, negative = regen).
     const powerValues = chartData.map((d) => d.power).filter((p): p is number => p != null && Number.isFinite(p));
     const powerMax = powerValues.length > 0 ? powerValues.reduce((max, value) => Math.max(max, value), -Infinity) : 0;
     const powerMin = powerValues.length > 0 ? powerValues.reduce((min, value) => Math.min(min, value), Infinity) : 0;

@@ -220,9 +220,17 @@ vi.mock('@/lib/timezone', async () => {
   const actual = await vi.importActual<typeof import('@/lib/timezone')>(
     '@/lib/timezone',
   )
+  // Resolves through the (possibly file-mocked) settings so a test that saves
+  // a user timezone sees it. No vehicle is selected in bare renders, and the
+  // browser zone is replaced by UTC so results never depend on the host TZ.
+  const { useSettings } = await import('@/hooks/useSettings')
   return {
     ...actual,
-    useTimezone: () => 'UTC',
+    useTimezone: (mode: Parameters<typeof actual.useTimezone>[0] = 'vehicle') => {
+      const settings = (useSettings() as { settings?: { timezone_user?: string | null } } | undefined)?.settings
+      const userTz = settings?.timezone_user?.trim() ? settings.timezone_user : 'UTC'
+      return actual.resolveTimezone(mode, undefined, userTz)
+    },
   }
 })
 
