@@ -446,7 +446,7 @@ describe('StatisticsPage', () => {
     renderPage();
     await screen.findByText('500 km');
     expect(document.querySelectorAll('[data-chart-state="loading"]')).toHaveLength(2);
-    expect(screen.getAllByText('Loading chart…')).toHaveLength(2);
+    expect(screen.getAllByRole('status', { name: 'Loading chart…' })).toHaveLength(2);
     expect(screen.queryByRole('button', { name: 'Export chart' })).not.toBeInTheDocument();
     expect(screen.queryByText('No state distribution data')).not.toBeInTheDocument();
     expect(screen.queryByText('Add more vehicles to compare')).not.toBeInTheDocument();
