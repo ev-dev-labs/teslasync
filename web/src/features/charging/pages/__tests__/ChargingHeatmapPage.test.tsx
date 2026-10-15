@@ -623,10 +623,11 @@ describe('ChargingHeatmapPage — precise server range contract', () => {
 
     expect(bounds(chargingCalls()[0]).get('start')).toBe('2026-03-08T08:00:00.000Z');
     expect(bounds(chargingCalls()[0]).get('end')).toBe('2026-03-10T07:00:00.000Z');
-    const figure = screen.getByRole('figure', { name: GRID_ARIA });
-    const rows = within(figure).getAllByRole('row');
-    expect(rows[1]).toHaveTextContent('Sun');
-    expect(rows[25]).toHaveTextContent('Mon');
+    const grid = screen.getByRole('img', { name: GRID_ARIA });
+    const slots = Array.from(grid.querySelectorAll<HTMLElement>('[title]'));
+    expect(slots).toHaveLength(168);
+    expect(slots[0].title).toMatch(/^Sun /);
+    expect(slots[24].title).toMatch(/^Mon /);
     // Returned SI rows remain untouched; the server, not loaded-row filtering,
     // owns the range (the fixture dates intentionally precede this window).
     expect(kpiValue('Total Sessions')).toBe('6');
@@ -807,7 +808,7 @@ describe('ChargingHeatmapPage — loading / error / empty branches', () => {
     renderPage();
     await screen.findByText('No vehicle selected');
     expect(chargingCalls()).toHaveLength(0);
-    expect(screen.getByRole('button', { name: 'Refresh' })).toBeDisabled();
+    expect(screen.getAllByRole('button', { name: 'Refresh' }).some((button) => (button as HTMLButtonElement).disabled)).toBe(true);
     expect(kpiValue('Total Sessions')).toBe('—');
     expect(screen.queryByText('No charging sessions in this range')).not.toBeInTheDocument();
   });
@@ -864,8 +865,9 @@ describe('ChargingHeatmapPage — loading / error / empty branches', () => {
     const { client } = renderPage();
     await screen.findByRole('img', { name: GRID_ARIA });
     installRequest({ chargingMode: 'reject', chargingError: new ApiError('history down', 500) });
+    onlineManager.setOnline(true);
     await client.refetchQueries({ queryKey: ['charging'] });
-    await waitFor(() => expect(client.getQueryCache().find({ queryKey: ['charging'] })?.state.status).toBe('error'));
+    await waitFor(() => expect(client.getQueryCache().find({ queryKey: ['charging', 10], exact: false })?.state.status).toBe('error'));
     expect(screen.getByRole('img', { name: GRID_ARIA })).toBeInTheDocument();
     expect(kpiValue('Total Energy')).toMatch(/^55(?:\.0+)?\s*kWh$/);
 
@@ -879,7 +881,7 @@ describe('ChargingHeatmapPage — loading / error / empty branches', () => {
     fireEvent.click(refresh);
     await waitFor(() => expect(kpiValue('Total Sessions')).toBe('1'));
     expect(screen.getByRole('img', { name: GRID_ARIA })).toBeInTheDocument();
-    expect(client.getQueryCache().find({ queryKey: ['charging'] })?.state.status).toBe('success');
+    expect(client.getQueryCache().find({ queryKey: ['charging', 10], exact: false })?.state.status).toBe('success');
   });
 
   it.each([null, 0, -1, Number.NaN, Number.POSITIVE_INFINITY])('guards forced typed-query refetch for vehicle %s', async (vehicleId) => {
