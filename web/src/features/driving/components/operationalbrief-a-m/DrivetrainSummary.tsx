@@ -93,7 +93,7 @@ export function DrivetrainSummary(props: Props) {
       description={powerSource} scope={t('drivetrain.modernization.driveSubset', 'Recent drives within the selected range')}
       provenance={powerSource} preferences={preferences}
       loading={drivesState.status === 'initial'} error={drivesState.fatalError ?? drivesState.refreshError}
-      statusLabel={drivesState.refreshError != null ? t('driving.brief.retained', 'Retained evidence') : undefined}
+      statusLabel={drivesState.refreshError != null ? t('driving.brief.retained', 'Retained source') : undefined}
       retained={drivesState.status === 'stale' || drivesState.refreshError != null}
       onRetry={() => { drivesState.retry?.(); }} />
     <CardGrid label={t('drivetrain.modernization.healthDetails', 'Health and drive details')} items={[

@@ -15,7 +15,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
-import type { ReactNode } from 'react'
+import type { ComponentProps, ReactNode } from 'react'
 import type { DataStateSource } from '@/api/dataState'
 import type { FsdDriveAnalytics } from '@/types/fsd'
 import { BUTTON_BASE, BUTTON_VARIANTS } from '@/components/ui'
@@ -99,7 +99,10 @@ function synthesiseDriveQuery(state: HookReturn): NonNullable<HookReturn['driveQ
   }
 }
 
-vi.mock('../components/drive-detail', () => {
+vi.mock('../components/drive-detail', async () => {
+  const { SupervisedDrivingPanel } = await vi.importActual<
+    typeof import('../components/drive-detail/SupervisedDrivingPanel')
+  >('../components/drive-detail/SupervisedDrivingPanel')
   const stub = (testid: string) => () => <div data-testid={testid} />
   return {
     useDriveDetailData: () => ({
@@ -112,8 +115,10 @@ vi.mock('../components/drive-detail', () => {
     DrivePhysicsDebriefPanel: stub('physics-debrief'),
     DriveTimeline: stub('drive-timeline'),
     DriveStatCards: stub('stat-cards'),
-    SupervisedDrivingPanel: ({ isLoading }: { isLoading: boolean }) => (
-      <div data-testid="fsd-panel" data-loading={String(isLoading)} />
+    SupervisedDrivingPanel: (props: ComponentProps<typeof SupervisedDrivingPanel>) => (
+      <div data-testid="fsd-panel" data-loading={String(props.isLoading)}>
+        <SupervisedDrivingPanel {...props} />
+      </div>
     ),
     GearTheaterPanel: stub('gear-theater'),
     SilentCounterPanel: stub('silent-counter'),
@@ -408,13 +413,17 @@ describe('DriveDetailPage', () => {
     useFsdInsightsForDriveMock.mockReturnValueOnce({
       isPending: true, fetchStatus: 'paused', refetch,
     })
-    renderPage()
+    const { rerenderPage } = renderPage()
 
     expect(screen.getByText('Refresh paused')).toBeInTheDocument()
     expect(screen.getByTestId('fsd-panel')).toHaveAttribute('data-loading', 'false')
     expect(screen.getByTestId('hero-gauges')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Supervised driving' }))
     expect(refetch).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('button', { name: 'Retry supervised-driving evidence' })).toBeNull()
+    rerenderPage()
+    expect(screen.queryByText('Refresh paused')).toBeNull()
+    expect(screen.getByTestId('hero-gauges')).toBeInTheDocument()
   })
 
   it('does not disclose paused FSD before its drive prerequisite exists', () => {
@@ -438,6 +447,33 @@ describe('DriveDetailPage', () => {
     rerenderPage()
     expect(screen.getByTestId('fsd-panel')).toHaveAttribute('data-loading', 'false')
     expect(screen.queryByText('Refresh paused')).toBeNull()
+    expect(screen.getByTestId('hero-gauges')).toBeInTheDocument()
+    expect(screen.getByText('Unknown')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Retry supervised-driving evidence' })).toBeNull()
+  })
+
+  it('retries a cold FSD failure without refetching the drive and recovers', () => {
+    const driveRefetch = vi.fn()
+    const fsdRefetch = vi.fn()
+    const loaded = loadedState()
+    hookState.current = {
+      ...loaded,
+      driveQuery: { data: loaded.drive, isSuccess: true, fetchStatus: 'idle', refetch: driveRefetch },
+    }
+    useFsdInsightsForDriveMock.mockReturnValueOnce({
+      isError: true, error: new Error('FSD failed'), fetchStatus: 'idle', refetch: fsdRefetch,
+    })
+    const { rerenderPage } = renderPage()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry supervised-driving evidence' }))
+    expect(fsdRefetch).toHaveBeenCalledOnce()
+    expect(driveRefetch).not.toHaveBeenCalled()
+    expect(screen.getByTestId('hero-gauges')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Route' })).toBeInTheDocument()
+
+    rerenderPage()
+    expect(screen.queryByText(/could not be loaded/)).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Retry supervised-driving evidence' })).toBeNull()
+    expect(screen.getByText('Unknown')).toBeInTheDocument()
     expect(screen.getByTestId('hero-gauges')).toBeInTheDocument()
   })
 
@@ -525,6 +561,7 @@ describe('DriveDetailPage', () => {
 
   it('warns when retained FSD evidence could not be refreshed', () => {
     hookState.current = loadedState()
+    const refetch = vi.fn()
     useFsdInsightsForDriveMock.mockReturnValueOnce({
       data: {
         drive_analytics: {
@@ -537,14 +574,22 @@ describe('DriveDetailPage', () => {
       isFetching: false,
       fetchStatus: 'idle',
       dataUpdatedAt: 1_000,
-      refetch: vi.fn(),
+      refetch,
       isStale: true,
     })
 
-    renderPage()
+    const { rerenderPage } = renderPage()
 
     expect(screen.getByText('Supervised driving may be out of date')).toBeInTheDocument()
     expect(screen.getByTestId('fsd-panel')).toBeInTheDocument()
+    expect(screen.getByText('Unknown')).toBeInTheDocument()
+    expect(screen.queryByText(/could not be loaded/)).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+    expect(refetch).toHaveBeenCalledOnce()
+    expect(screen.getByTestId('hero-gauges')).toBeInTheDocument()
+    rerenderPage()
+    expect(screen.queryByText('Supervised driving may be out of date')).toBeNull()
+    expect(screen.getByText('Unknown')).toBeInTheDocument()
   })
 
   it('still loads drive-scoped FSD analytics for an in-progress drive', () => {

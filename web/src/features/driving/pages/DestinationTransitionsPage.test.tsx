@@ -145,7 +145,7 @@ import { DestinationTransitionProfilePlot } from '../components/destination-tran
 import { OriginConcentrationPlot } from '../components/destination-transitions/OriginConcentrationPlot';
 import { TopTransitionMatrix } from '../components/destination-transitions/TopTransitionMatrix';
 import { buildDestinationTransitions } from '../lib/destinationTransitions';
-import { getGlobalPrecision } from '@/lib/numberFormat';
+import { getGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat';
 
 let nextId = 1;
 
@@ -294,11 +294,88 @@ beforeEach(() => {
   h.vehicleId = 7;
   h.timeZone = 'UTC';
   h.distanceUnit = 'km';
+  setGlobalLocale('en-US');
   h.history = query({ data: readyHistory() });
   vi.spyOn(Date, 'now').mockReturnValue(FROZEN_NOW);
 });
 
 describe('DestinationTransitionsPage', () => {
+  it('uses the saved formatter locale independently of copy and preserves vehicle-calendar boundaries and raw instants', () => {
+    setGlobalLocale('de-DE');
+    h.timeZone = 'America/Los_Angeles';
+    const data = [
+      driveAt('2026-02-01T06:00:00.000Z', 'Home', 'A'),
+      driveAt('2026-02-01T07:00:00.000Z', 'A', 'B'),
+      driveAt('2026-02-01T08:00:00.000Z', 'B', 'A'),
+    ];
+    const original = structuredClone(data);
+    h.history = query({ data });
+    const view = renderPage();
+
+    expect(screen.getByRole('heading', { name: 'Destination Transitions' })).toBeInTheDocument();
+    expect(h.timezoneHook).toHaveBeenCalledWith('vehicle');
+    const weekday = within(screen.getByTestId('destination-weekday-profile'));
+    expect(weekday.getAllByText('Samstag').length).toBeGreaterThan(0);
+    expect(weekday.getAllByText('Sonntag').length).toBeGreaterThan(0);
+    const month = within(screen.getByTestId('destination-month-trend'));
+    for (const instant of [data[1].startTs, data[2].startTs]) {
+      const label = new Intl.DateTimeFormat('de-DE', {
+        month: 'short', year: 'numeric', timeZone: h.timeZone,
+      }).format(new Date(instant));
+      expect(month.getAllByText(label).length).toBeGreaterThan(0);
+    }
+    const firstStart = Date.parse(data[0].startTs);
+    const expectedDate = new Date(firstStart).toLocaleString('de-DE', {
+      year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit', timeZone: h.timeZone,
+    });
+    expect(within(screen.getByTestId('destination-coverage-recency-brief'))
+      .getAllByText(expectedDate).length).toBeGreaterThan(0);
+    expect(h.metricCapture.mock.calls.flatMap(([metrics]) => metrics)
+      .find(metric => metric.label === 'First parseable returned start')?.rawValue).toBe(firstStart);
+    expect(within(screen.getByTestId('destination-methodology')).getByText(
+      /Only the latest 1\.000 returned rows are requested/,
+    )).toBeInTheDocument();
+    expect(data).toEqual(original);
+    expectEverySection();
+
+    setGlobalLocale('fr-FR');
+    view.rerenderPage();
+    expect(within(screen.getByTestId('destination-weekday-profile'))
+      .getAllByText('samedi').length).toBeGreaterThan(0);
+    expect(screen.getByRole('heading', { name: 'Destination Transitions' })).toBeInTheDocument();
+    expect(data).toEqual(original);
+  });
+
+  it.each(['invalid', 'missing'] as const)(
+    'keeps %s dates unavailable without inventing timestamps in a non-default locale and timezone',
+    (kind) => {
+      setGlobalLocale('de-DE');
+      h.timeZone = 'Asia/Tokyo';
+      const data = [driveAt('2026-01-01T00:00:00.000Z', 'Home', 'A', {
+        startTs: kind === 'invalid' ? 'not-a-date' : '',
+        endTs: kind === 'invalid' ? 'not-a-date' : null,
+      })];
+      const original = structuredClone(data);
+      h.history = query({ data });
+      renderPage();
+
+      const metrics = h.metricCapture.mock.calls.flatMap(([values]) => values);
+      for (const label of [
+        'First parseable returned start', 'Last parseable returned start',
+        'First included visit', 'Last included visit',
+        'First accepted transition', 'Last accepted transition',
+      ]) {
+        expect(metrics.find(metric => metric.label === label)?.rawValue).toBeNull();
+      }
+      expect(within(screen.getByTestId('destination-coverage-recency-brief'))
+        .getAllByText('—').length).toBeGreaterThanOrEqual(6);
+      expect(screen.queryByText(/Invalid Date|NaN/)).not.toBeInTheDocument();
+      expect(data).toEqual(original);
+      expectEverySection();
+    },
+  );
+
   it('uses neutral methodology roles and retains all nine explanations and the warning', () => {
     renderPage();
 

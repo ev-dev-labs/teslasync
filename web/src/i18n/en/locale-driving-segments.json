@@ -576,6 +576,7 @@
     "selectVehicle": "Select a vehicle to find its route segments.",
     "subtitle": "Race your most-repeated routes against your own personal best",
     "table": {
+      "attemptLabel": "{{attempt}} · {{date}} · #{{driveId}}",
       "date": "Date",
       "delta": "Δ to best",
       "eff": "Wh/km",

@@ -1,5 +1,14 @@
 {
   "fsd": {
+    "analytics": {
+      "routePlaces": "{{start}} to {{end}}",
+      "share": "{{approximate}}{{value}}%",
+      "sharePopulation": "{{share}} · {{drives}}",
+      "shareChangePoints": "{{delta}} pts",
+      "shareChangePoint": "{{delta}} pt",
+      "efficiencyValue": "{{value}} {{unit}}",
+      "efficiencyPopulation": "{{drives}} / {{efficiency}}"
+    },
     "observatory": {
       "columns": {
         "date": "Date / time",
@@ -39,7 +48,7 @@
       "resetHint": "Break in the stitch — not travelled FSD{{field}}.",
       "approximate": "Approximate counter increase"
     },
-    "title": "FSD insights",
+    "title": "FSD Insights",
     "subtitle": "Reported supervised self-driving distance and its share of observed driving, with the counter evidence behind every metric.",
     "noVehicle": "Select a vehicle to see supervised self-driving telemetry.",
     "chooseVehicle": "Choose a vehicle",
@@ -190,13 +199,13 @@
       "clamped": "A raw share exceeded 100% because the two counters were reset independently, so it was capped at 100%.",
       "shareBasisWarning": "Usage share is unavailable because the two counters begin from different provable points. Standalone distances are not affected.",
       "historicalGuardWarning": "{{count}} legacy distance-counter observations were excluded because their unit-normalization provenance cannot be proven.",
-      "scopeNote": "This is supervised self-driving distance telemetry. It cannot describe interventions, disengagements, safety performance, or per-drive attribution.",
+      "scopeNote": "This telemetry cannot describe interventions, disengagements, safety performance, or exact FSD-active segments. Per-drive values are interval attribution with explicit confidence.",
       "timezoneNote": "Days are your browser’s local calendar days; each observed change is attributed to the day of the later reading.",
       "unitNote": "The API stores and returns canonical SI meters; values are converted to your display unit only when rendered."
     },
     "method": {
-      "delta": "Tesla only transmits a signal when it changes. Distance is the difference between consecutive readings of the counter, never the counter value itself.",
-      "absence": "A day shows “not reported” when the self-driving counter has nothing to say about it. A measured zero means at least one distance counter reported that day and the self-driving counter did not move — the two are never collapsed together.",
+      "delta": "Distance is the difference between consecutive counter readings, never the counter value itself. New subscriptions request both counters together; historical observations may still be sparse.",
+      "absence": "A day shows “not reported” when the self-driving counter has nothing to say about it. A measured zero requires an actual unchanged self-driving counter observation; driving-only silence is never converted to zero.",
       "absenceActive": "The self-driving counter produced no derivable reading in this window, so its distances read “not reported”. Absence of a derivable counter reading is not evidence of zero supervised self-driving distance.",
       "reset": "The counters are user-resettable trip meters. When a value drops, the decrease is recorded as a reset and contributes zero distance rather than a negative or inflated number.",
       "resetSeen": "A counter reset was detected in this period. The drop contributes zero distance — the distance travelled between the reset and the next reading cannot be known.",
@@ -204,7 +213,7 @@
       "share": "Usage share divides supervised self-driving distance by observed-driving distance only when both counters cover the same provable span. An unavailable share is never rendered as zero.",
       "shareUnavailable": "The two counters do not cover the same provable span in this period. Their standalone distances remain available, but dividing them would be misleading, so usage share is not reported.",
       "provenance": "Only signal-history rows carrying a proven canonical normalization version are used. Legacy rows with unknown unit provenance are excluded rather than guessed or silently rescaled.",
-      "limits": "No intervention, disengagement, safety, or autonomy-quality metric is available from this telemetry, and a day’s distance cannot be tied to a specific drive."
+      "limits": "No intervention, disengagement, safety, autonomy-quality, or exact FSD-active route segment is available. Drive attribution is bounded by observation intervals, includes only completed drives fully inside the period, and always carries confidence."
     },
     "notMeasured": "Not measured",
     "brief": {

@@ -70,6 +70,21 @@ describe('WeeklyPunchcard', () => {
       expect(cells[index + 1]).toHaveAccessibleName(`Mon 0${index + 1}:00 · ${index + 1} drives`);
     });
 
+    preference.neon = true;
+    view.rerender(
+      <MemoryRouter>
+        <WeeklyPunchcard summary={summary} state={ready} />
+      </MemoryRouter>,
+    );
+    levels.forEach((percent, index) => {
+      expect(cells[index + 1]).toHaveStyle({
+        backgroundColor: `color-mix(in srgb, ${CHART_COLORS_NEON[0]} ${percent}%, var(--surface-2))`,
+      });
+    });
+    expect(summary.matrix).toEqual(originalMatrix);
+    expect(preference.neon).toBe(true);
+  });
+
     it('exposes every weekday/hour/count to touch and keyboard in a contained semantic table', () => {
       const summary = populatedSummary();
       render(<MemoryRouter><WeeklyPunchcard summary={summary} state={ready} /></MemoryRouter>);
@@ -116,21 +131,6 @@ describe('WeeklyPunchcard', () => {
         setGlobalLocale(previousLocale);
       }
     });
-
-    preference.neon = true;
-    view.rerender(
-      <MemoryRouter>
-        <WeeklyPunchcard summary={summary} state={ready} />
-      </MemoryRouter>,
-    );
-    levels.forEach((percent, index) => {
-      expect(cells[index + 1]).toHaveStyle({
-        backgroundColor: `color-mix(in srgb, ${CHART_COLORS_NEON[0]} ${percent}%, var(--surface-2))`,
-      });
-    });
-    expect(summary.matrix).toEqual(originalMatrix);
-    expect(preference.neon).toBe(true);
-  });
 
   it('keeps the empty shell and browse action', () => {
     render(

@@ -32,6 +32,7 @@ import { DrivetrainSummary } from './DrivetrainSummary';
 import { sensorsFor } from '../drivetrain-health-modernization/model';
 import { deriveDataState } from '@/api/dataState';
 import { useUnits } from '@/hooks/useUnits';
+import en from '@/i18n/en.json';
 
 const h = vi.hoisted(() => ({
   distance: 'km' as 'km' | 'mi',
@@ -148,10 +149,28 @@ describe('DrivingSummaryBrief — real OperationalBrief and numerical bridge', (
       const staleHealth = deriveDataState({ data: health, dataUpdatedAt: received, error: new Error('Health refresh failed'), isError: true });
       render(<MemoryRouter><DrivetrainSummary {...props} healthState={staleHealth} /></MemoryRouter>);
       const temperature = screen.getByRole('region', { name: 'Temperature Details' });
-      expect(within(temperature).getByText('Retained evidence')).toBeVisible();
+      expect(within(temperature).getByText(en.driving.brief.retained)).toBeVisible();
       expect(within(temperature).getByText('55.00°C', { selector: '[data-operational-value]' })).toBeVisible();
       expect(screen.getByText('75.00 kW', { selector: '[data-operational-value]' })).toBeVisible();
       expect(screen.getByText('500.00 km', { selector: '[data-operational-value]' })).toBeVisible();
+    });
+
+    it('uses canonical retained copy for a recent-power refresh failure without changing independent populated sources', () => {
+      const staleDrives = deriveDataState({
+        data: [], dataUpdatedAt: received, error: new Error('Drives refresh failed'), isError: true,
+      });
+      const view = render(<MemoryRouter><DrivetrainSummary {...props} drivesState={staleDrives} /></MemoryRouter>);
+      const power = screen.getByRole('region', { name: 'Power Summary' });
+      expect(within(power).getByText(en.driving.brief.retained)).toHaveClass('text-[var(--semantic-danger)]');
+      expect(within(power).queryByText('Retained evidence')).toBeNull();
+      expect(within(power).getByText('75.00 kW', { selector: '[data-operational-value]' })).toBeVisible();
+      expect(within(screen.getByRole('region', { name: 'Temperature Details' })).getByText(en.driving.brief.returned)).toBeVisible();
+      expect(screen.getByText('500.00 km', { selector: '[data-operational-value]' })).toBeVisible();
+
+      view.rerender(<MemoryRouter><DrivetrainSummary {...props} /></MemoryRouter>);
+      expect(within(power).getByText(en.driving.brief.returned)).toBeVisible();
+      expect(within(power).queryByText(en.driving.brief.retained)).toBeNull();
+      expect(within(power).getByText('75.00 kW', { selector: '[data-operational-value]' })).toBeVisible();
     });
   });
 
@@ -170,7 +189,7 @@ describe('DrivingSummaryBrief — real OperationalBrief and numerical bridge', (
     expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(container.querySelector('[data-operational-value]')).toBeNull();
     expect(screen.getByText('Returned drive totals, not lifetime travel.')).toBeVisible();
-    expect(screen.getByText('Loading source')).toBeVisible();
+    expect(screen.getByText(en.driving.brief.loading)).toBeVisible();
     expect(screen.queryByText('Loading evidence')).toBeNull();
   });
 
@@ -204,7 +223,7 @@ describe('DrivingSummaryBrief — real OperationalBrief and numerical bridge', (
 
   it('uses the canonical retained fallback without changing warning semantics or populated evidence', () => {
     const view = render(summary({ retained: true }));
-    expect(screen.getByText('Retained source')).toHaveClass('text-[var(--semantic-warning)]');
+    expect(screen.getByText(en.driving.brief.retained)).toHaveClass('text-[var(--semantic-warning)]');
     expect(screen.queryByText('Retained evidence')).toBeNull();
     expect(screen.getByText('1.00 km', { selector: '[data-operational-value]' })).toBeVisible();
 

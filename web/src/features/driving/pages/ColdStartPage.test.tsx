@@ -642,7 +642,7 @@ describe('ColdStartPage', () => {
           expect(screen.getByText(reading)).toBeInTheDocument();
         }
         expect(screen.getByText(/1 usable drives could not be classified/)).toBeInTheDocument();
-        expect(screen.getByText(`This analysis uses ${count} drives returned for the selected observed window (up to 1000). Consumption is distance-weighted; only drives of at least 1 km with measured energy qualify.`)).toBeInTheDocument();
+        expect(screen.getByText(`This analysis uses ${count} drives returned for the selected observed window (up to 1,000). Consumption is distance-weighted; only drives of at least 1 km with measured energy qualify.`)).toBeInTheDocument();
       });
     });
 

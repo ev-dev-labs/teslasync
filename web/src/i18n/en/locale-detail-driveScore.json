@@ -91,6 +91,7 @@
     "drivesScored": "drives scored",
     "ratedAPlus": "Rated A+/A",
     "ofDrives": "of drives",
+    "percentOfDrives": "{{val}}% of drives",
     "noPeriodStats": "No weekly/monthly averages available yet",
     "breakdown": "Score breakdown",
     "speedLabel": "Speed discipline",

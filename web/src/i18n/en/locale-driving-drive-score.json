@@ -372,7 +372,6 @@
     "noPeriodStats": "No weekly/monthly averages available yet",
     "noTips": "Tips appear once drives are scored",
     "noTrend": "No scored drives to chart yet",
-    "ofDrives": "of drives",
     "overall": "Overall score",
     "partial": {
       "invalid": "{{displayCount}} with invalid inputs.",
@@ -383,6 +382,7 @@
       "title": "Score evidence is partial"
     },
     "pausedRecovery": "Retry this source now, or wait for the request to resume. No result has been received yet.",
+    "percentOfDrives": "{{val}}% of drives",
     "periodAverages": "Period averages",
     "periodDecrease": "Decreased by {{val}}",
     "periodEqual": "No change",
