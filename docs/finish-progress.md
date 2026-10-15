@@ -287,4 +287,9 @@ Changed fallback wording that had reused unrelated keys to dedicated catalog key
 - `npx tsc --noEmit` passed. `node scripts/split-i18n-catalog.mjs --check`
   passed. Root `go build ./...` and `go test ./...` completed successfully.
 - The full lint rerun and `npm run build` are still in progress after the
-  mutation policy update; rerun lint from the beginning to verify all stages.
+  mutation policy update. Its next failure was the virtualization inventory:
+  `RecommendationDetails` was missing from the acknowledged set even though
+  it fetches fixed 25-record server pages. Added the specific bounded-page
+  justification; the standalone virtualization audit now passes with **17/17
+  long-list surfaces acknowledged**, and the area test run completed. Lint and
+  the second build run remain in progress.

@@ -72,6 +72,9 @@ const HOT_TABLE_PAGES = [
 // that starts rendering a long list is caught even though nobody touched this
 // array, and an entry that has since migrated must be pruned.
 const ACKNOWLEDGED_LONG_LIST_SURFACES = [
+  // Action history is server paginated in fixed pages of 25 records; the
+  // component never mounts an unbounded client-side collection.
+  'features/action-center/components/RecommendationDetails.tsx',
   'features/advanced-intelligence/pages/BehavioralSentinelPage.tsx',
   'features/advanced-intelligence/pages/CausalExperimentationPage.tsx',
   'features/advanced-intelligence/pages/ComponentSurvivalPage.tsx',
