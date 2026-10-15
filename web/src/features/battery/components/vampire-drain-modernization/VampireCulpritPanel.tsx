@@ -8,37 +8,9 @@ import { EmptyState, Skeleton } from '@/components/feedback';
 import { useParkTruth, useVampireSplit } from '@/api/hooks/useTeslaPhysics';
 import { useDataState } from '@/hooks/useDataState';
 import type { StatPeriod } from '@/lib/metric-reference';
-import { deriveVampireCulprits, type VampireCulpritId } from '../../lib/vampireCulprits';
+import { deriveVampireCulprits } from '../../lib/vampireCulprits';
 import { SourceRecovery } from './SourceRecovery';
 
-const ACTION: Record<VampireCulpritId, { key: string; fallback: string }> = {
-  sentry: {
-    key: 'vampireDrain.culprit.action.sentry',
-    fallback: 'Turn Sentry off at home tonight. It is counted only because the car is in Park.',
-  },
-  cabin_overheat: {
-    key: 'vampireDrain.culprit.action.overheat',
-    fallback: 'Cabin Overheat is HVAC, not a pack leak. Turn it off if the car sits in shade.',
-  },
-  precondition: {
-    key: 'vampireDrain.culprit.action.precondition',
-    fallback: 'Preconditioning is warming the pack/cabin on purpose. Leave it on only before a drive.',
-  },
-  plugged_complete: {
-    key: 'vampireDrain.culprit.action.plugged',
-    fallback: 'Charge reached Complete and stayed plugged. Unplug after DC Complete to stop idle draw.',
-  },
-  unplugged_leak: {
-    key: 'vampireDrain.culprit.action.leak',
-    fallback: 'Unplugged parked drain remains after Sentry/HVAC. That is 12V upkeep or a genuine leak.',
-  },
-  unknown: {
-    key: 'vampireDrain.culprit.action.unknown',
-    fallback: 'No confirmed Park culprit yet. Missing is not zero watts.',
-  },
-};
-
-/** Derivation remains byte-preserved in the existing private domain utility. */
 export function VampireCulpritPanel({ vehicleId }: { vehicleId: string | undefined }) {
   const { t } = useTranslation();
   const parkQuery = useParkTruth(vehicleId);
@@ -46,6 +18,9 @@ export function VampireCulpritPanel({ vehicleId }: { vehicleId: string | undefin
   const parkState = useDataState(parkQuery, { provenance: 'live' });
   const splitState = useDataState(splitQuery, { provenance: 'historical' });
   const report = deriveVampireCulprits(parkState.data, splitState.data);
+  const limitation = t('vampireDrain.observed.causeLimit',
+    'Cause unconfirmed. Current Park truth is independent of historical SOC-loss windows; correlation does not establish a cause or a residual after Sentry/HVAC.');
+  const description = [parkState.data?.honesty, splitState.data?.honesty, limitation].filter(Boolean).join(' ');
   const loading = parkState.status === 'initial' && splitState.status === 'initial';
   const period: StatPeriod = {
     kind: 'unknown',
@@ -58,22 +33,24 @@ export function VampireCulpritPanel({ vehicleId }: { vehicleId: string | undefin
     rawValue: row.drainPct != null ? row.drainPct
       : row.evidence === 'missing' ? null
       : row.active ? t('vampireDrain.culprit.on', 'On') : t('vampireDrain.culprit.off', 'Off'),
-    label: t(`vampireDrain.culprit.${row.id}`, row.id.replace(/_/g, ' ')),
+    label: row.id === 'unplugged_leak'
+      ? t('vampireDrain.observed.unpluggedSocLoss', 'Observed unplugged SOC loss')
+      : t(`vampireDrain.culprit.${row.id}`, row.id.replace(/_/g, ' ')),
     missingReason: t('vampireDrain.modernization.evidenceMissing', 'No confirmed measurement supplied by this source.'),
     context: row.evidence === 'missing'
       ? t('vampireDrain.modernization.evidenceMissing', 'No confirmed measurement supplied by this source.')
       : row.drainPct != null
         ? t('vampireDrain.modernization.historicalEvidence', 'Historical parked-window measurement')
-        : t('vampireDrain.modernization.parkEvidence', 'Confirmed Park evidence'),
+        : t('vampireDrain.observed.currentParkTruth', 'Current Park truth; not historical cause attribution'),
   }));
   return (
     <div data-testid="vampire-culprits" className="min-w-0">
       <LayoutCard
-        title={t('vampireDrain.culprit.title', 'Vampire culprit')}
+        title={t('vampireDrain.observed.title', 'Observed parked SOC loss')}
         actions={<DataProvenanceBadge provenance={parkState.provenance} status={parkState.status} />}
       >
         <Text as="p" variant="caption">
-          {t('vampireDrain.culprit.subtitle', 'What to turn off tonight — Sentry, Cabin Overheat, precondition, plugged-Complete, or genuine leak. Not another 12 W tile.')}
+          {limitation}
         </Text>
         <SourceRecovery state={parkState} label={t('vampireDrain.modernization.parkSource', 'Confirmed Park evidence')} />
         <SourceRecovery state={splitState} label={t('vampireDrain.modernization.splitSource', 'Plugged and unplugged drain')} />
@@ -86,15 +63,13 @@ export function VampireCulpritPanel({ vehicleId }: { vehicleId: string | undefin
           <Skeleton className="h-28" />
         ) : (
           <>
-            <Text as="p" variant="bodySm">{t(ACTION[report.tonight].key, ACTION[report.tonight].fallback)}</Text>
-            <BatteryEvidenceBrief title={t('vampireDrain.modernization.culpritSummary', 'Observed culprit evidence')} description={report.honesty} metrics={metrics} period={period}
+            <BatteryEvidenceBrief title={t('vampireDrain.observed.summary', 'Independent Park and historical SOC-loss evidence')} description={description} metrics={metrics} period={period}
               retained={(parkState.hasData && parkState.status !== 'ok') || (splitState.hasData && splitState.status !== 'ok')} />
             <div className="flex flex-wrap gap-2">
-              <Badge variant={report.tonight === 'unknown' ? 'neutral' : 'warning'} size="sm">
-                {t('vampireDrain.culprit.tonight', 'Tonight: {{id}}', { id: t(`vampireDrain.culprit.${report.tonight}`, report.tonight.replace(/_/g, ' ')) })}
+              <Badge variant="neutral" size="sm">
+                {t('vampireDrain.observed.causeUnconfirmed', 'Cause unconfirmed')}
               </Badge>
             </div>
-            <Text as="p" variant="caption">{report.honesty}</Text>
           </>
         )}
       </LayoutCard>

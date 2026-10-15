@@ -458,6 +458,9 @@
       "percentagePoints": "{{value}} pp"
     },
     "verification": {
+      "retry": "Retry verification",
+      "paused": "Verification is paused. No current digest comparison is available.",
+      "errorNotice": "Verification failed. Any displayed hashes are from the previous response, not a current digest comparison. Certificate evidence and export remain available.",
       "error": "Verification unavailable",
       "expectedPrefix": "Expected hash prefix",
       "loading": "Verification in progress",
@@ -1231,6 +1234,8 @@
     "summary": {
       "noData": "No energy summary available.",
       "trailingWindow": "Trailing {{days}} days",
+      "trailingWindow_one": "Trailing {{days}} day",
+      "trailingWindow_other": "Trailing {{days}} days",
       "windowReason": "The energy endpoint uses a trailing day count; custom calendar bounds are not applied by this source."
     },
     "metrics": {
@@ -1262,6 +1267,8 @@
       "whPerMi": "Wh/mi",
       "kg": "kg",
       "days": "days",
+      "days_one": "day",
+      "days_other": "days",
       "kgCo2": "kg CO₂",
       "kw": "kW",
       "kwh": "kWh"
@@ -1704,7 +1711,8 @@
     "noCurve": "Range projection curve will appear once this vehicle logs drives.",
     "projectionCurveAria": "Rated versus projected range across battery level",
     "whPerKm": "Wh/km",
-    "drivesCount": "{{count}} drives",
+    "drivesCount_one": "{{count}} drive",
+    "drivesCount_other": "{{count}} drives",
     "noFactors": "Range factors will appear once enough driving data is collected.",
     "speedBucket": {
       "city": "City",
@@ -2099,6 +2107,14 @@
     }
   },
   "vampireDrain": {
+    "observed": {
+      "causeLimit": "Cause unconfirmed. Current Park truth is independent of historical SOC-loss windows; correlation does not establish a cause or a residual after Sentry/HVAC.",
+      "causeUnconfirmed": "Cause unconfirmed",
+      "currentParkTruth": "Current Park truth; not historical cause attribution",
+      "summary": "Independent Park and historical SOC-loss evidence",
+      "title": "Observed parked SOC loss",
+      "unpluggedSocLoss": "Observed unplugged SOC loss"
+    },
     "modernization": {
       "sampleWindow": "{{count}}-day sample window",
       "sampleUnknown": "Sample window unavailable",
@@ -2198,6 +2214,7 @@
     },
     "culprit": {
       "title": "Vampire culprit",
+      "honesty": "Sentry, cabin overheat, and preconditioning only count after confirmed Park. Drain percentages are parked windows, not invented watt-hours.",
       "subtitle": "What to turn off tonight — Sentry, Cabin Overheat, precondition, plugged-Complete, or genuine leak. Not another 12 W tile.",
       "on": "On",
       "off": "Off",
@@ -3135,11 +3152,13 @@
   "chargePlanner": {
     "aiAgent": {
       "badge": "Helix",
+      "departureAssumption": "No departure was supplied. This standalone draft assumes departure at the current time.",
       "description": "Ask Helix to propose a time-of-use-optimized charge schedule grounded in your selected rate plan and target departure. The schedule is never saved automatically — review the proposed window and click Schedule below to apply it.",
       "emptyHint": "Select a vehicle and a rate plan to draft a schedule.",
       "generateButton": "Draft a schedule",
       "title": "Draft a schedule with Helix"
-    }
+    },
+    "invalidDepartBy": "Enter a valid departure date and time."
   },
   "charging": {
     "aiClustering": {
@@ -3165,6 +3184,9 @@
     }
   },
   "chart": {
+    "a11y": {
+      "metricSelector": "{{title}} metric"
+    },
     "col": {
       "date": "Date",
       "value": "Value"
