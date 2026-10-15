@@ -20,7 +20,10 @@ vi.mock('react-i18next', () => {
     }
     if (second && typeof second === 'object') {
       const bag = second as Record<string, unknown>
-      const tpl = typeof bag.defaultValue === 'string' ? bag.defaultValue : key
+      // Mirror i18next's plural defaults: defaultValue_one applies when count is 1.
+      const tpl = bag.count === 1 && typeof bag.defaultValue_one === 'string'
+        ? bag.defaultValue_one
+        : typeof bag.defaultValue === 'string' ? bag.defaultValue : key
       return interpolate(tpl, bag)
     }
     return key

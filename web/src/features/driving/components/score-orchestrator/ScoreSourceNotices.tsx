@@ -71,6 +71,7 @@ export function ScoreSourceNotices({ model }: ScoreSourceNoticesProps) {
           message={`${t('driveScore.partial.message', {
             count: excluded,
             displayCount: fmtInt(excluded),
+            defaultValue_one: '{{displayCount}} drive is excluded from the local heuristic. Reason counts may overlap.',
             defaultValue: '{{displayCount}} drives are excluded from the local heuristic. Reason counts may overlap.',
           })} ${reasons}`}
         />

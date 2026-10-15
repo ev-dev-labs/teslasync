@@ -92,6 +92,7 @@ Order: feature by feature, by primary-file cluster.
 | Arrival reliability | arr-003–006 | canonical labels, settled motion |
 | Departure forecast | df02/05/06/08 | refresh fixture |
 | Drive DNA | dna002/004/005/010 | plural emissions, truthful watts copy |
+| Drive score | ds05/06/07/10/11/12/13 | singular exclusion notice, truthful insights |
 
 Real product bugs fixed along the way: drive-detail energy/regen estimate was
 1000× too large; (0,0) GPS placeholder stretched routes; TorqueHistory ticks
@@ -100,7 +101,7 @@ export on origin concentration; stale "kW ×1000" methodology copy.
 
 ### Next up (driving, then other features)
 
-Drive score (ds05/06/07/10/11/12/13) → FSD insights (f01/02/04/05/08/10/13) →
+FSD insights (f01/02/04/05/08/10/13) →
 efficiency (f003/f008/f03/f04, efficiency-target f06) → explorer (exp03/05/09)
 → regen (04/05/07/08) → sweet spot (f03/f04/f05) → rhythm (f01/f03, punchcard
 f04, tips f03/04/05/07) → compare (f01/f07, driveCompare f05) → what-if

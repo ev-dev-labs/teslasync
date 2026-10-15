@@ -29,6 +29,7 @@
  * English fallback with {{placeholder}} interpolation applied.
  */
 
+import { gaugeTone } from '@/lib/tokens';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -64,7 +65,8 @@ vi.mock('react-i18next', async () => {
           if (arg3 && typeof arg3 === 'object') options = arg3 as Record<string, unknown>;
         } else if (arg2 && typeof arg2 === 'object') {
           options = arg2 as Record<string, unknown>;
-          if (typeof options.defaultValue === 'string') template = options.defaultValue;
+          if (options.count === 1 && typeof options.defaultValue_one === 'string') template = options.defaultValue_one;
+          else if (typeof options.defaultValue === 'string') template = options.defaultValue;
         }
         if (options) {
           template = template.replace(/\{\{\s*(\w+)\s*\}\}/g, (_m, name: string) =>
@@ -500,14 +502,14 @@ describe('DriveScorePage', () => {
 
     // Best / worst drive insight copy is derived from the real scoring.
     expect(
-      screen.getByText('Outstanding energy efficiency — minimal energy wasted!'),
+      screen.getByText('Local heuristic: low recorded energy per distance contributes to the efficiency score.'),
     ).toBeInTheDocument();
     expect(
-      screen.getByText('High energy consumption — possibly high speeds or cold weather.'),
+      screen.getByText('Local heuristic: high recorded energy per distance lowers the efficiency score; the cause is not established.'),
     ).toBeInTheDocument();
 
-    // With no server score the client average is used → "Stable" trend.
-    expect(screen.getAllByText('Stable').length).toBeGreaterThanOrEqual(1);
+    // Trend comes only from the server score; without one it stays unknown, not "Stable".
+    expect(screen.queryByText('Stable')).not.toBeInTheDocument();
 
     // Achievements render and "First Drive" unlocks with any scored drive.
     expect(screen.getByText('First Drive')).toBeInTheDocument();
@@ -558,7 +560,7 @@ describe('DriveScorePage', () => {
     // No resolved insight / achievement copy leaks while loading.
     expect(screen.queryByText('First Drive')).not.toBeInTheDocument();
     expect(
-      screen.queryByText('Outstanding energy efficiency — minimal energy wasted!'),
+      screen.queryByText('Local heuristic: low recorded energy per distance contributes to the efficiency score.'),
     ).not.toBeInTheDocument();
   });
 
@@ -604,7 +606,7 @@ describe('DriveScorePage', () => {
     expect(screen.getByText('Avg Score')).toBeInTheDocument();
     expect(screen.queryByText('First Drive')).not.toBeInTheDocument();
     expect(
-      screen.queryByText('Outstanding energy efficiency — minimal energy wasted!'),
+      screen.queryByText('Local heuristic: low recorded energy per distance contributes to the efficiency score.'),
     ).not.toBeInTheDocument();
   });
 
@@ -621,7 +623,7 @@ describe('DriveScorePage', () => {
     expect(screen.getByText('Score evidence is partial')).toBeInTheDocument();
     expect(
       screen.getByText(
-        '1 drive is excluded because measured energy, average power, or maximum speed is unavailable.',
+        '1 drive is excluded from the local heuristic. Reason counts may overlap. 1 with missing inputs.',
       ),
     ).toBeInTheDocument();
     expect(screen.getByText('Best Drive')).toBeInTheDocument();
@@ -635,7 +637,7 @@ describe('DriveScorePage', () => {
     ).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('No drives found for the selected period.')).toBeInTheDocument();
     expect(
-      screen.queryByText('Outstanding energy efficiency — minimal energy wasted!'),
+      screen.queryByText('Local heuristic: low recorded energy per distance contributes to the efficiency score.'),
     ).not.toBeInTheDocument();
   });
 
@@ -711,8 +713,8 @@ describe('DriveScorePage', () => {
 
     expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
     expect(screen.getByText('Grade: A')).toBeInTheDocument();
-    expect(screen.getByText('Outstanding energy efficiency — minimal energy wasted!')).toBeInTheDocument();
-    expect(screen.getByText('High energy consumption — possibly high speeds or cold weather.')).toBeInTheDocument();
+    expect(screen.getByText('Local heuristic: low recorded energy per distance contributes to the efficiency score.')).toBeInTheDocument();
+    expect(screen.getByText('Local heuristic: high recorded energy per distance lowers the efficiency score; the cause is not established.')).toBeInTheDocument();
     expect(within(screen.getByRole('region', { name: 'Drive History' })).getAllByText('Home → Office')).toHaveLength(2);
     expect(screen.queryByText('Drive score evidence could not be loaded')).not.toBeInTheDocument();
     expect(screen.getByText('First Drive')).toBeInTheDocument();
@@ -959,9 +961,9 @@ describe('gradeVariant / gradeColor', () => {
   });
 
   it('maps grades to gauge fill colors and falls back for unknown grades', () => {
-    expect(gradeColor('A+')).toBe('#39ff14');
-    expect(gradeColor('F')).toBe('#f87171');
-    expect(gradeColor('Z')).toBe('#94a3b8');
+    expect(gradeColor('A+')).toBe(gaugeTone.success);
+    expect(gradeColor('F')).toBe(gaugeTone.danger);
+    expect(gradeColor('Z')).toBe(gaugeTone.neutral);
   });
 });
 
