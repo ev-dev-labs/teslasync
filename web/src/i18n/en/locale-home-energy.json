@@ -154,7 +154,15 @@
       "panelExportExceeded": "Grid export limit exceeded in slot #{{slot}}.",
       "powerwallReserveBreach": "Powerwall dropped below its reserve floor in slot #{{slot}}.",
       "invalidInput": "Some plan inputs were invalid and were adjusted or dropped: {{detail}}",
-      "unknownVehicle": "A vehicle"
+      "unknownVehicle": "A vehicle",
+      "reasons": {
+        "slotMinutesInvalid": "Slot duration must be positive; {{defaultMinutes}} minutes was used instead.",
+        "horizonSlotsInvalid": "The planning horizon must contain a positive number of slots.",
+        "vehicleIdMissing": "A vehicle without a valid identifier was excluded.",
+        "vehicleCapacityInvalid": "A vehicle with invalid usable battery capacity was excluded.",
+        "powerwallCapacityInvalid": "The home battery was ignored because its capacity must be positive.",
+        "unspecified": "Review the plan inputs for invalid values."
+      }
     },
     "violations": {
       "clean": "This plan satisfies every hard constraint modeled.",

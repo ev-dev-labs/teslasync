@@ -36,6 +36,9 @@
     "takeawaySave": "This would save {{wh}} — arriving with {{soc}} more battery.",
     "takeawayCost": "This would cost an extra {{wh}} — arriving with {{soc}} less battery.",
     "telemetryAssumptions": "Telemetry is incomplete; elevation and climate use model assumptions, not complete observations.",
+    "modelHelp": "The recorded energy total anchors an estimated decomposition using generic vehicle constants. Aero, rolling, elevation and climate are modeled, not separately measured. Other is a signed unexplained residual; a negative value means the model exceeds the recorded total.",
+    "fieldCoverage": "Valid telemetry fields in {{total}} returned samples: elevation {{elevation}}, climate state {{climate}}, ambient temperature {{ambient}}. Field presence does not establish complete drive observations. Missing elevation yields no modeled climb; missing climate state assumes HVAC on; missing ambient temperature assumes {{temperature}}.",
+    "packAssumptions": "Arrival battery is modeled using a pack inferred from recorded energy and a valid battery drop when the inferred capacity is within model bounds; otherwise it uses the default pack. Current modeled capacity: {{capacity}}. Neither capacity nor arrival battery is a direct pack measurement.",
     "brief": {
       "description": "Scenario estimates compared with the selected recorded drive; these are model outputs, not observed savings.",
       "noDrive": "No selected recorded drive",

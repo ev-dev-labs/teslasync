@@ -1339,6 +1339,8 @@
   "tesla_sessions": {
     "title": "Fleet charging sessions",
     "allVehicles": "All vehicles",
+    "durationHoursMinutes": "{{hours}}h {{minutes}}m",
+    "durationMinutes": "{{minutes}}m",
     "col": {
       "date": "Date",
       "location": "Location",

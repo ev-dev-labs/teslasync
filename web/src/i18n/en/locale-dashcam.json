@@ -16,7 +16,7 @@
     },
     "events": {
       "atSeconds": "t={{seconds}}s",
-      "emptyMessage": "Import metadata (event.json / folder), run local motion analysis, or connect telemetry in the Reconstruction tab to derive event candidates.",
+      "emptyMessage": "Import metadata (event.json / folder) or run local motion analysis to derive clip event candidates. View telemetry-derived incidents separately in the Reconstruction tab; they are not added to this clip’s event evidence.",
       "emptyTitle": "No event candidates yet",
       "basis": {
         "reason": "event.json reason: \"{{reason}}\"",

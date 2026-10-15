@@ -369,6 +369,15 @@
     "seconds": "{{s}}s ago"
   },
   "fsd": {
+    "analytics": {
+      "efficiencyPopulation": "{{drives}} / {{efficiency}}",
+      "efficiencyValue": "{{value}} {{unit}}",
+      "routePlaces": "{{start}} to {{end}}",
+      "share": "{{approximate}}{{value}}%",
+      "shareChangePoint": "{{delta}} pt",
+      "shareChangePoints": "{{delta}} pts",
+      "sharePopulation": "{{share}} · {{drives}}"
+    },
     "attribution": {
       "ambiguous": "Ambiguous between drives",
       "attributed": "High-confidence attributed",
@@ -446,7 +455,7 @@
       "resetsValue": "{{fsd}} self-driving / {{driving}} driving",
       "samples": "Counter observations used",
       "samplesValue": "{{fsd}} self-driving / {{driving}} driving",
-      "scopeNote": "This is supervised self-driving distance telemetry. It cannot describe interventions, disengagements, safety performance, or per-drive attribution.",
+      "scopeNote": "This telemetry cannot describe interventions, disengagements, safety performance, or exact FSD-active segments. Per-drive values are interval attribution with explicit confidence.",
       "section": "Data confidence and methodology",
       "shareBasis": "Usage-share counter basis",
       "shareBasisNo": "Not aligned — standalone distances remain visible, but usage share is unavailable",
@@ -549,11 +558,11 @@
     },
     "loading": "Loading supervised self-driving telemetry",
     "method": {
-      "absence": "A day shows “not reported” when the self-driving counter has nothing to say about it. A measured zero means at least one distance counter reported that day and the self-driving counter did not move — the two are never collapsed together.",
+      "absence": "A day shows “not reported” when the self-driving counter has nothing to say about it. A measured zero requires an actual unchanged self-driving counter observation; driving-only silence is never converted to zero.",
       "absenceActive": "The self-driving counter produced no derivable reading in this window, so its distances read “not reported”. Absence of a derivable counter reading is not evidence of zero supervised self-driving distance.",
       "baseline": "Attribution needs a reading from before the window. Without one, the first in-window reading is an anchor, not distance travelled. Usage share is shown only when both counters have the same provable basis.",
-      "delta": "Tesla only transmits a signal when it changes. Distance is the difference between consecutive readings of the counter, never the counter value itself.",
-      "limits": "No intervention, disengagement, safety, or autonomy-quality metric is available from this telemetry, and a day’s distance cannot be tied to a specific drive.",
+      "delta": "Distance is the difference between consecutive counter readings, never the counter value itself. New subscriptions request both counters together; historical observations may still be sparse.",
+      "limits": "No intervention, disengagement, safety, autonomy-quality, or exact FSD-active route segment is available. Drive attribution is bounded by observation intervals, includes only completed drives fully inside the period, and always carries confidence.",
       "provenance": "Only signal-history rows carrying a proven canonical normalization version are used. Legacy rows with unknown unit provenance are excluded rather than guessed or silently rescaled.",
       "reset": "The counters are user-resettable trip meters. When a value drops, the decrease is recorded as a reset and contributes zero distance rather than a negative or inflated number.",
       "resetSeen": "A counter reset was detected in this period. The drop contributes zero distance — the distance travelled between the reset and the next reading cannot be known.",
@@ -621,7 +630,7 @@
       "title": "Usage share trend"
     },
     "subtitle": "Reported supervised self-driving distance and its share of observed driving, with the counter evidence behind every metric.",
-    "title": "FSD insights",
+    "title": "FSD Insights",
     "topDays": {
       "colDate": "Local day",
       "colDistance": "Self-driving",
