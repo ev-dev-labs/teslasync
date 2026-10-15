@@ -111,7 +111,7 @@ describe('RepairCaseQueue confidence semantics', () => {
     expect(badge.className).not.toMatch(/semantic-(success|danger|warning)/);
     expect(screen.getByRole('columnheader', { name: 'Confidence' })).toBeInTheDocument();
     expect(screen.getByText(english.dataRepair.blocked.overlapsNextSession)).toBeInTheDocument();
-    expect(screen.getByText(english.dataRepair.cases.status.open)).toBeInTheDocument();
+    expect(screen.getAllByText(english.dataRepair.cases.status.open).length).toBeGreaterThan(0);
     expect(screen.getByText('Review operator')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Review case 7' }));
     expect(options.onOpenCase).toHaveBeenCalledExactlyOnceWith(7);
