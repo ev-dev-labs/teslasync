@@ -7,7 +7,7 @@ import { STALE_TIMES } from '@/lib/constants';
 import { browserTimezone } from '@/lib/timezone';
 import { useMutationToast } from './_toastHelpers';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
-import type { AnalyticsSummary, MileageStats, CostBreakdown, TimelineEvent, StateSummary, WeeklyDigestData, MonthlyMileageBucket, MonthlyMileageResponse, DailyMileageBucket, DailyMileageResponse, TcoLedgerResponse, TcoLedgerCreate, TcoLedgerEntry } from '@/types/analytics';
+import type { AnalyticsSummary, MileageStats, CostBreakdown, TimelineEvent, WeeklyDigestData, MonthlyMileageBucket, MonthlyMileageResponse, DailyMileageBucket, DailyMileageResponse, TcoLedgerResponse, TcoLedgerCreate, TcoLedgerEntry } from '@/types/analytics';
 import { FSD_DEFAULT_PERIOD_DAYS, type FsdInsights } from '@/types/fsd';
 import type { FleetAnalytics } from '@/api/types';
 
@@ -45,6 +45,9 @@ export function useAnalyticsSummary(days = 30) {
  *
  * Backend `/analytics/fleet` precedence: `start`/`end` win over `days`; if no
  * bound is supplied the handler returns full history (no hard-coded window).
+ * A resolved query may still have `partial_result.is_partial`; consumers must
+ * retain the returned aggregates and disclose those reasons independently of
+ * query errors. Refetch retries this fleet source, not unrelated page queries.
  */
 export function useFleetAnalytics(
   arg: number | { days?: number; start?: string; end?: string } = {},
@@ -177,13 +180,29 @@ export function useTimeline(vehicleId: string) {
   });
 }
 
-/** @deprecated See `useTimeline` — `/vehicle-states/summary` was removed by Phase-42 / Prompt 0077. */
+export interface VehicleStateSummaryRow {
+  state: string;
+  total_seconds: number;
+  percentage: number;
+  transition_count: number;
+}
+
+export interface VehicleStateSummaryResponse {
+  vehicle_id: number;
+  days: number;
+  start: string;
+  end: string;
+  total_seconds: number;
+  by_state: VehicleStateSummaryRow[];
+}
+
+/** Restored signal-log summary; unwrap rows without converting seconds or percentages. */
 export function useStateSummary(vehicleId: string) {
   return useQuery({
     queryKey: analyticsKeys.stateSummary(vehicleId),
-    queryFn: ({ signal }) => request<StateSummary[]>(`/vehicle-states/summary?vehicle_id=${encodeURIComponent(vehicleId)}`, { signal }),
+    queryFn: ({ signal }) => request<VehicleStateSummaryResponse>(`/vehicle-states/summary?vehicle_id=${encodeURIComponent(vehicleId)}`, { signal }),
     enabled: !!vehicleId,
-    select: safeArray,
+    select: (data) => safeArray(data?.by_state),
   });
 }
 

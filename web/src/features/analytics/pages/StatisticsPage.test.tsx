@@ -25,7 +25,7 @@
  *   - Loading / error / empty branches for the period-stats query.
  *   - Battery, mileage, state-distribution and fleet-comparison each: loaded +
  *     empty (+ error where the source surfaces one).
- *   - `total_min` snake_case fallback for the deleted state-summary endpoint.
+ *   - Raw seconds/percentage rows from the restored state-summary envelope.
  *   - Bug-fix regression guard: the fleet comparison is scoped by BOTH the URL
  *     header instants, including the exclusive end and rolling 24-hour scope.
  *   - Request contract: snake_case `vehicle_id`, no `/api/v1` double-prefix.
@@ -259,9 +259,9 @@ function makeMileage(over: Record<string, unknown> = {}) {
 
 function makeStateSummary() {
   return [
-    { state: 'driving', totalMin: 120, count: 10 },
-    { state: 'parked', totalMin: 300, count: 5 },
-    { state: 'charging', totalMin: 60, count: 3 },
+    { state: 'driving', total_seconds: 7200, percentage: 25, transition_count: 10 },
+    { state: 'parked', total_seconds: 18000, percentage: 62.5, transition_count: 5 },
+    { state: 'charging', total_seconds: 3600, percentage: 12.5, transition_count: 3 },
   ];
 }
 
@@ -576,7 +576,7 @@ describe('StatisticsPage', () => {
 
   it('keeps raw state identities and measured zero while leaving shares unknown when a duration is missing', async () => {
     mockStateSummary.mockReturnValue(qr({ data: [
-      { state: 'driving', totalMin: 0, count: 1 },
+      { state: 'driving', total_seconds: 0, transition_count: 1 },
       { state: 'charging', count: 1 },
     ] }));
     renderPage();
@@ -591,8 +591,8 @@ describe('StatisticsPage', () => {
 
   it('preserves a measured zero share and every unknown state row in the accessible chart table', async () => {
     mockStateSummary.mockReturnValue(qr({ data: [
-      { state: 'driving', totalMin: 0, count: 1 },
-      { state: 'new_source_state', totalMin: 30, count: 1 },
+      { state: 'driving', total_seconds: 0, percentage: 0, transition_count: 1 },
+      { state: 'new_source_state', total_seconds: 1800, percentage: 100, transition_count: 1 },
     ] }));
     renderPage();
     await screen.findByText('500 km');
@@ -606,9 +606,9 @@ describe('StatisticsPage', () => {
 
   it('treats prototype property names as unknown state identities without dropping their measured shares', async () => {
     mockStateSummary.mockReturnValue(qr({ data: [
-      { state: 'constructor', totalMin: 10, count: 1 },
-      { state: 'toString', totalMin: 20, count: 1 },
-      { state: '__proto__', totalMin: 70, count: 1 },
+      { state: 'constructor', total_seconds: 600, percentage: 10, transition_count: 1 },
+      { state: 'toString', total_seconds: 1200, percentage: 20, transition_count: 1 },
+      { state: '__proto__', total_seconds: 4200, percentage: 70, transition_count: 1 },
     ] }));
     renderPage();
     await screen.findByText('500 km');
@@ -1147,14 +1147,14 @@ describe('StatisticsPage', () => {
     expect(screen.queryByText('No state distribution data')).not.toBeInTheDocument();
   });
 
-  it('reads the snake_case total_min fallback for state summary rows', async () => {
+  it('reads the source percentage for state summary rows', async () => {
     mockStateSummary.mockReturnValue(
-      qr({ data: [{ state: 'driving', total_min: 90, count: 4 }] }),
+      qr({ data: [{ state: 'driving', total_seconds: 5400, percentage: 100, transition_count: 4 }] }),
     );
     renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
 
-    // total_min is read via fallback → the chart branch renders (no empty state).
+    // The restored raw row renders without a minute-shape adapter.
     expect(screen.queryByText('No state distribution data')).not.toBeInTheDocument();
     expect(
       screen.getByRole('img', { name: 'Vehicle state distribution pie chart' }),
