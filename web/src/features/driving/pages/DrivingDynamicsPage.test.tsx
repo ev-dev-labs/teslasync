@@ -87,6 +87,19 @@ describe('Driving dynamics layout import boundary', () => {
     if (file.includes('driving-dynamics-modernization') || file.startsWith('pages/')) {
       expect(source).toMatch(/from\s+['"]@\/components\/layout['"]/);
     }
+    if (file.endsWith('DynamicsTripToolbar.tsx')) {
+      expect(source).toContain('className="max-md:min-h-11 max-md:min-w-11"');
+      expect(source).toContain('id="dynamics-drive"');
+      expect(source).toContain('size="auto"');
+      expect(source).toContain('onChange={event => onSelectDrive(event.target.value)}');
+    } else if (file.endsWith('RideOverview.tsx')) {
+      expect(source).toContain('min-h-11 min-w-11');
+      expect(source).toContain('md:min-h-6 md:min-w-0');
+      expect(source).toContain('to={`/drives/${drive.id}`}');
+    } else {
+      expect(source).toContain('max-md:[&_button]:min-h-11');
+      expect(source).toContain('max-md:[&_button]:min-w-11');
+    }
   });
 });
 

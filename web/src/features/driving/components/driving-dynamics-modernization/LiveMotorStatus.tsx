@@ -7,11 +7,13 @@ import { LinearGauge, temperatureGaugeRange } from '@/components/charts';
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
 import { useMotorLatest } from '@/api/hooks/useVehicles';
 import { useDataState } from '@/hooks/useDataState';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { INTERVALS } from '@/lib/constants';
 import type { TemperatureUnitPref } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { isFiniteNumber } from '@/lib/numberFormat';
 import { SignedMotorReading } from './SignedMotorReading';
+import { DynamicsPausedNotice } from './DynamicsPausedNotice';
 
 interface LiveMotorStatusProps {
   vehicleId: number | null | undefined;
@@ -27,14 +29,15 @@ const MOTOR_TEMP_FULL_SCALE_C = 150;
 const MOTOR_TEMP_WARN_C = 80;
 const MOTOR_TEMP_HOT_C = 120;
 function motorTempColor(tempC: number): string {
-  if (tempC >= MOTOR_TEMP_HOT_C) return '#f43f5e';
-  if (tempC >= MOTOR_TEMP_WARN_C) return '#f59e0b';
-  return '#10b981';
+  if (tempC >= MOTOR_TEMP_HOT_C) return 'var(--semantic-danger)';
+  if (tempC >= MOTOR_TEMP_WARN_C) return 'var(--semantic-warning)';
+  return 'var(--semantic-success)';
 }
 
 export default function LiveMotorStatus({ vehicleId, toTemperatureDisplay, tempUnit }: LiveMotorStatusProps) {
   const { fmtNumber, precision: displayPrecision } = useNumberFormatting();
   const { t } = useTranslation();
+  const palette = useChartPalette();
   const query = useMotorLatest(vehicleId ?? 0, INTERVALS.REALTIME);
   const state = useDataState(query);
   const motorLatest = state.data;
@@ -51,10 +54,13 @@ export default function LiveMotorStatus({ vehicleId, toTemperatureDisplay, tempU
   const tempCandidates = [motorLatest?.motor_temp_c_front, motorLatest?.motor_temp_c_rear]
     .filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
   const motorTempC = tempCandidates.length > 0 ? Math.max(...tempCandidates) : null;
-  const hasAny = torqueTotal != null || rpmFront != null || rpmRear != null || motorTempC != null;
+  const hasAny = torqueTotal != null || rpmFront != null || rpmRear != null || motorTempC != null
+    || motorLatest?.shift_state != null;
 
   return (
+    <div className="h-full min-w-0 max-md:[&_button]:min-h-11 max-md:[&_button]:min-w-11">
     <LayoutCard title={t('dynamics.liveMotor', 'Live Motor Status')}>
+      <DynamicsPausedNotice state={state} label={t('dynamics.motorResource', 'Motor telemetry')} />
       {query.isLoading && !state.hasData ? (
         <div role="status" aria-busy="true"
           aria-label={t('dynamics.motorLoading', 'Loading motor telemetry…')}
@@ -102,25 +108,26 @@ export default function LiveMotorStatus({ vehicleId, toTemperatureDisplay, tempU
           <div className="flex min-w-0 flex-col gap-4">
             <SignedMotorReading value={torqueTotal} min={TORQUE_REGEN_MAX_NM} max={TORQUE_DRIVE_MAX_NM}
               label={t('dynamics.torque', 'Torque')} unit={torqueTotal != null ? ' Nm' : ''}
-              positiveColor="#3b82f6" negativeColor="#10b981"
+              positiveColor={palette[0]} negativeColor={palette[1]}
               negativeLabel={t('dynamics.regen', 'Regen')} positiveLabel={t('dynamics.drive', 'Drive')} />
             <SignedMotorReading value={rpmFront} min={RPM_REVERSE_MAX} max={RPM_FORWARD_MAX}
               label={t('dynamics.rpmFront', 'Front RPM')} unit={rpmFront != null ? ' RPM' : ''}
-              positiveColor="#a855f7" negativeColor="#f59e0b"
+              positiveColor={palette[0]} negativeColor={palette[1]}
               negativeLabel={t('dynamics.reverse', 'Reverse')} positiveLabel={t('dynamics.forward', 'Forward')} />
             <SignedMotorReading value={rpmRear} min={RPM_REVERSE_MAX} max={RPM_FORWARD_MAX}
               label={t('dynamics.rpmRear', 'Rear RPM')} unit={rpmRear != null ? ' RPM' : ''}
-              positiveColor="#a855f7" negativeColor="#f59e0b"
+              positiveColor={palette[0]} negativeColor={palette[1]}
               negativeLabel={t('dynamics.reverse', 'Reverse')} positiveLabel={t('dynamics.forward', 'Forward')} />
           </div>
         </div>
       ) : state.fatalError ? (
         <QueryError error={state.fatalError} onRetry={handleRetry} resourceName={t('dynamics.motorResource', 'Motor telemetry')} />
-      ) : (
+      ) : state.isRefreshBlocked && !state.hasData ? null : (
         // no-action: Without a selected vehicle, the workspace picker owns selection.
         <EmptyState message={t('dynamics.noLiveMotor', 'Awaiting live motor data')}
           action={vehicleId ? { label: t('common.retry', 'Retry'), onClick: handleRetry } : undefined} />
       )}
     </LayoutCard>
+    </div>
   );
 }

@@ -39,7 +39,7 @@ export function MotorSamplesBrief({ vehicleId, historyQuery, showSourceNotice = 
     { metricId: 'temperature', occurrenceId: 'motor-average-temperature', rawValue: motorStats?.avgMotorTemp,
       label: t('dynamics.avgMotorTemp', 'Avg Motor Temp'), display: { precision, units: { locale } } },
   ];
-  return <FadeIn delay={0.05} className="min-w-0 space-y-3">
+  return <FadeIn delay={0.05} className="min-w-0 space-y-3 max-md:[&_button]:min-h-11 max-md:[&_button]:min-w-11">
     {showSourceNotice ? <DynamicsPausedNotice state={state} label={t('dynamics.modernization.sampleMetrics', 'Selected-drive motor samples')} /> : null}
     {showSourceNotice ? <StaleRefreshWarning state={state} label={t('dynamics.modernization.sampleMetrics', 'Selected-drive motor samples')} /> : null}
     <DrivingSummaryBrief metrics={metrics}

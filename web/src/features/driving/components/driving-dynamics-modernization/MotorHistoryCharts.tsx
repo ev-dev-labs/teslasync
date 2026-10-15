@@ -56,7 +56,7 @@ export default function MotorHistoryCharts({ vehicleId, historyQuery, showSource
         ? { label: t('common.retry', 'Retry'), onClick: () => void query.refetch() } : undefined} />
   );
   return (
-    <div className="min-w-0 space-y-3">
+    <div className="min-w-0 space-y-3 max-md:[&_button]:min-h-11 max-md:[&_button]:min-w-11">
       {showSourceNotice ? <StaleRefreshWarning state={state} label={t('dynamics.modernization.sampleMetrics', 'Selected-drive motor samples')} /> : null}
       {showSourceNotice ? <DynamicsPausedNotice state={state} label={t('dynamics.modernization.sampleMetrics', 'Selected-drive motor samples')} /> : null}
       <CardGrid label={t('dynamics.review.evidence', 'Inside this ride')} items={[

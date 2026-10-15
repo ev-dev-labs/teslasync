@@ -197,7 +197,7 @@ export default function DrivingDynamicsPage() {
       query={rangeDrivesQuery}
       busy={rangeDrivesQuery.isLoading}
     >
-      <div className="min-w-0 space-y-8 sm:space-y-10">
+      <div className="min-w-0 space-y-8 sm:space-y-10 max-md:[&_button]:min-h-11 max-md:[&_button]:min-w-11">
         <section aria-label={t('dynamics.section.trip', 'Trip review')} className="space-y-4">
           <SectionErrorBoundary name="DynamicsTripToolbar">
             <DynamicsTripToolbar

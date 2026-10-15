@@ -40,6 +40,7 @@ export default function DrivingTips({ vehicleId, historyQuery, showSourceNotice 
   }, [motorStats, t]);
 
   return (
+    <div className="h-full min-w-0 max-md:[&_button]:min-h-11 max-md:[&_button]:min-w-11">
     <LayoutCard title={t('dynamics.guidance.title', 'How to read this ride')}>
       {showSourceNotice ? <StaleRefreshWarning state={state} label={t('dynamics.guidance.title', 'How to read this ride')} /> : null}
       {showSourceNotice ? <DynamicsPausedNotice state={state} label={t('dynamics.guidance.title', 'How to read this ride')} /> : null}
@@ -60,5 +61,6 @@ export default function DrivingTips({ vehicleId, historyQuery, showSourceNotice 
             ? { label: t('common.retry', 'Retry'), onClick: () => void query.refetch() } : undefined} />
       )}
     </LayoutCard>
+    </div>
   );
 }

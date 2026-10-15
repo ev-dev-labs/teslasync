@@ -43,7 +43,7 @@ export default function PowertrainSummary({ vehicleId, historyQuery, showSourceN
   ];
 
   return (
-    <div data-testid="dynamics-powertrain-summary" className="h-full min-w-0">
+    <div data-testid="dynamics-powertrain-summary" className="h-full min-w-0 max-md:[&_button]:min-h-11 max-md:[&_button]:min-w-11">
       <LayoutCard title={t('dynamics.powertrain.title', 'Powertrain summary')}
         actions={<Badge variant="neutral" size="sm">{t('dynamics.powertrain.scope', 'Selected-drive evidence')}</Badge>}>
         <Text as="p" variant="caption">

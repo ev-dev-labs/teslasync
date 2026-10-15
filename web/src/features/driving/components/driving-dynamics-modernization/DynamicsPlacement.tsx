@@ -10,7 +10,7 @@ export function DynamicsPlacement({ children }: { children: ReactNode }) {
     <div
       data-dynamics-placement
       data-card-resolved-span={placement?.span ?? 1}
-      className={cn('h-full w-full min-w-0', placement?.className ?? 'col-span-1')}
+      className={cn('h-full w-full min-w-0 max-md:[&_button]:min-h-11 max-md:[&_button]:min-w-11', placement?.className ?? 'col-span-1')}
     >
       {children}
     </div>

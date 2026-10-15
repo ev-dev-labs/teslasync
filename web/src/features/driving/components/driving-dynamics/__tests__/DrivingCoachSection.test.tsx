@@ -25,15 +25,34 @@
  */
 
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
+import type { DataStateSource } from '@/api/dataState'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
+const paletteState = vi.hoisted(() => ({ colors: ['var(--semantic-info)', 'var(--semantic-purple)'] }))
+vi.mock('@/hooks/useChartPalette', () => ({
+  useChartPalette: () => paletteState.colors,
+}))
+
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>()
   const { chartTestDoubles } = await import('@/test/chartTestDoubles')
-  return { ...actual, ...chartTestDoubles }
+  return {
+    ...actual, ...chartTestDoubles,
+    ResponsiveContainer: ({ children }: { children: ReactNode }) => <>{children}</>,
+    LineChart: ({ children, data }: { children: ReactNode; data: unknown[] }) =>
+      <div data-testid="coach-trend-points" data-points={JSON.stringify(data)}>{children}</div>,
+    Line: ({ stroke, dataKey, dot, connectNulls }: {
+      stroke: string; dataKey: string; dot: { fill: string; r: number }; connectNulls: boolean;
+    }) => <div data-testid="coach-trend-series" data-stroke={stroke} data-key={dataKey}
+      data-dot={JSON.stringify(dot)} data-connect-nulls={String(connectNulls)} />,
+    XAxis: () => null,
+    YAxis: ({ domain }: { domain: number[] }) =>
+      <div data-testid="coach-trend-domain" data-domain={JSON.stringify(domain)} />,
+    Tooltip: () => null,
+  }
 })
 
 vi.mock('react-i18next', async () => {
@@ -91,6 +110,8 @@ function renderSection(ui: ReactNode) {
 // refreshes as drives complete. The hook is stubbed and driven by
 // `renderCoach`.
 let mockCoachData: DrivingCoachData | undefined
+let mockCoachState: DataStateSource<DrivingCoachData> = {}
+const retryCoach = vi.fn()
 
 vi.mock('@/api/hooks/useDriving', () => ({
   useDrivingCoach: () => ({
@@ -98,11 +119,13 @@ vi.mock('@/api/hooks/useDriving', () => ({
     isLoading: false,
     isError: false,
     error: null,
-    refetch: () => {},
+    refetch: retryCoach,
+    ...mockCoachState,
   }),
 }))
 
 function renderCoach(coachData: DrivingCoachData | undefined) {
+  mockCoachState = {}
   mockCoachData = coachData
   return renderSection(<DrivingCoachSection vehicleId="1" />)
 }
@@ -165,7 +188,7 @@ describe('DrivingCoachSection — empty / undefined data', () => {
 
     // Gauge + caption render zeros rather than NaN/undefined.
     expect(screen.getByText('No vehicle-wide score available.')).toBeInTheDocument()
-    expect(screen.getByText('0 drives analyzed')).toBeInTheDocument()
+    expect(screen.queryByText('0 drives analyzed')).toBeNull()
   })
 
   it('still renders the driving-pattern rows (at 0%) when there is no data', () => {
@@ -179,6 +202,88 @@ describe('DrivingCoachSection — empty / undefined data', () => {
 })
 
 describe('DrivingCoachSection — full data', () => {
+  it('keeps every score field available on mobile without changing desktop density', () => {
+    const { container } = renderCoach(makeCoachData())
+    expect(container.querySelector('.space-y-4')).toHaveClass(
+      'max-md:[&_button]:min-h-11', 'max-md:[&_button]:min-w-11',
+      'max-md:[&_input]:min-h-11', 'max-md:[&_select]:min-h-11',
+    )
+    for (const label of ['Date', 'Score', 'Style', 'Wh/km', 'Distance']) {
+      const header = screen.getByRole('columnheader', { name: new RegExp(label) })
+      expect(header).not.toHaveClass('hidden')
+    }
+  })
+
+  it('recolors the populated score gauge without changing its reading or scale', () => {
+    const view = renderCoach(makeCoachData())
+    const gauge = screen.getByRole('meter', { name: /Efficiency comparison/ })
+    expect(gauge).toHaveAttribute('aria-valuenow', '82')
+    expect(gauge).toHaveAttribute('aria-valuemax', '100')
+    expect(gauge.querySelector('[style]')).toHaveStyle({ backgroundColor: paletteState.colors[0] })
+    expect(screen.getByTestId('coach-trend-points')).toHaveAttribute('data-points', JSON.stringify(WEEKLY_TREND))
+    expect(screen.getByTestId('coach-trend-series')).toHaveAttribute('data-stroke', paletteState.colors[0])
+    paletteState.colors = ['var(--semantic-purple)', 'var(--semantic-info)']
+    view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}>
+      <DrivingCoachSection vehicleId="1" />
+    </QueryClientProvider></MemoryRouter>)
+    const recolored = screen.getByRole('meter', { name: /Efficiency comparison/ })
+    expect(recolored).toHaveAttribute('aria-valuenow', '82')
+    expect(recolored).toHaveAttribute('aria-valuemax', '100')
+    expect(recolored.querySelector('[style]')).toHaveStyle({ backgroundColor: paletteState.colors[0] })
+    expect(screen.getByTestId('coach-trend-points')).toHaveAttribute('data-points', JSON.stringify(WEEKLY_TREND))
+    expect(screen.getByTestId('coach-trend-series')).toHaveAttribute('data-stroke', paletteState.colors[0])
+    expect(screen.getByTestId('coach-trend-series')).toHaveAttribute('data-key', 'score')
+    expect(screen.getByTestId('coach-trend-series')).toHaveAttribute('data-dot', JSON.stringify({ fill: paletteState.colors[0], r: 3 }))
+    expect(screen.getByTestId('coach-trend-series')).toHaveAttribute('data-connect-nulls', 'false')
+    expect(screen.getByTestId('coach-trend-domain')).toHaveAttribute('data-domain', '[0,100]')
+  })
+
+  it.each([undefined, null, NaN, Infinity, -1, 1.5, '0'])(
+    'keeps an invalid analyzed count unknown (%s)', value => {
+      renderCoach(Object.assign(makeCoachData(), { total_drives_analyzed: value }))
+      expect(screen.queryByText(/drives analyzed/)).toBeNull()
+      expect(screen.queryByText('82')).toBeNull()
+      expect(screen.getByText('No vehicle-wide score available.')).toBeInTheDocument()
+    },
+  )
+
+  it('keeps missing style counts unknown and uses the original analyzed denominator', () => {
+    renderCoach(makeCoachData({ total_drives_analyzed: 20, style_breakdown: { efficient: 5, moderate: 0 } }))
+    const panel = screen.getByText('Style Breakdown').closest('div') as HTMLElement
+    expect(within(panel).getByText('5')).toBeInTheDocument()
+    expect(within(panel).getByText('0')).toBeInTheDocument()
+    expect(within(panel).getByText('—')).toBeInTheDocument()
+    expect(within(panel).getByTitle('efficient: 5 drives')).toHaveStyle({ width: '25%' })
+    expect(within(panel).queryByTitle(/aggressive:/)).toBeNull()
+  })
+
+  it.each([null, NaN, Infinity, -1, 0.5, '0'])(
+    'does not substitute zero for an invalid style count (%s)', value => {
+      renderCoach(makeCoachData({
+        style_breakdown: Object.assign({ efficient: 5, moderate: 2 }, { aggressive: value }),
+      }))
+      const panel = screen.getByText('Style Breakdown').closest('div') as HTMLElement
+      expect(within(panel).getByText('—')).toBeInTheDocument()
+      expect(within(panel).queryByText('0')).toBeNull()
+      expect(within(panel).queryByTitle(/aggressive:/)).toBeNull()
+    },
+  )
+
+  it('preserves valid signed and fractional measurements, including measured zero', () => {
+    renderCoach(makeCoachData({
+      overall_score: 0,
+      efficiency_wh_km: -12.5,
+      best_efficiency_wh_km: 0,
+      patterns: { hard_accel_pct: 0, hard_brake_pct: 1.25, highway_pct: NaN, short_trip_pct: Infinity, cold_start_pct: 9 },
+    }))
+    expect(screen.getByText('-12.50 Wh/km')).toBeInTheDocument()
+    expect(screen.getByText('0.00 Wh/km')).toBeInTheDocument()
+    expect(screen.getByText('0.00%')).toBeInTheDocument()
+    expect(screen.getByText('1.25%')).toBeInTheDocument()
+    expect(screen.queryByText('NaN%')).toBeNull()
+    expect(screen.queryByText('Infinity%')).toBeNull()
+  })
+
   it('renders the overall score gauge, drives-analyzed caption, and efficiency stats', () => {
     renderCoach(makeCoachData())
 
@@ -277,6 +382,58 @@ describe('DrivingCoachSection — null-safety regressions', () => {
     // Pattern rows still render, degraded to 0%.
     expect(screen.getByText('No driving-pattern evidence available.')).toBeInTheDocument()
     expect(screen.queryByText('0.00%')).toBeNull()
+  })
+
+  describe('DrivingCoachSection — source lifecycle', () => {
+    it.each([
+      { isLoading: true, isFetching: true, fetchStatus: 'fetching' as const },
+      { isError: true, error: new Error('initial coach failure') },
+    ])('does not infer empty coaching results before resolved evidence', state => {
+      mockCoachData = undefined
+      mockCoachState = state
+      renderSection(<DrivingCoachSection vehicleId="1" />)
+      expect(screen.queryByText('0 drives analyzed')).toBeNull()
+      expect(screen.queryByText('No vehicle-wide score available.')).toBeNull()
+      expect(screen.queryByText('Drive more to see your style breakdown.')).toBeNull()
+      expect(screen.queryByText('Recommendations will appear after more drives.')).toBeNull()
+    })
+
+    it('distinguishes active loading, initial pause and a successful zero-drive response', () => {
+      mockCoachData = undefined
+      mockCoachState = { isLoading: true, isFetching: true, fetchStatus: 'fetching' }
+      const view = renderSection(<DrivingCoachSection vehicleId="1" />)
+      expect(screen.queryByText(/initial evidence query is paused/)).toBeNull()
+      mockCoachState = { isPending: true, fetchStatus: 'paused' }
+      view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}>
+        <DrivingCoachSection vehicleId="1" />
+      </QueryClientProvider></MemoryRouter>)
+      expect(screen.getByText('The initial evidence query is paused; no empty result is inferred.')).toBeInTheDocument()
+      expect(screen.queryByText(/device is offline/i)).toBeNull()
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+      expect(retryCoach).toHaveBeenCalled()
+      mockCoachState = {}
+      mockCoachData = makeCoachData({ total_drives_analyzed: 0, recommendations: [], weekly_trend: [], per_drive_scores: [] })
+      view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}>
+        <DrivingCoachSection vehicleId="1" />
+      </QueryClientProvider></MemoryRouter>)
+      expect(screen.queryByText(/initial evidence query is paused/)).toBeNull()
+      expect(screen.getByText('0 drives analyzed')).toBeInTheDocument()
+    })
+
+    it('retains readings after a refresh failure and removes the warning on recovery', () => {
+      mockCoachData = makeCoachData()
+      mockCoachState = { isError: true, error: new Error('coach refresh failed') }
+      const client = new QueryClient()
+      const content = <MemoryRouter><QueryClientProvider client={client}><DrivingCoachSection vehicleId="1" /></QueryClientProvider></MemoryRouter>
+      const view = renderSection(<DrivingCoachSection vehicleId="1" />)
+      expect(screen.getByText('82')).toBeInTheDocument()
+      fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }))
+      expect(retryCoach).toHaveBeenCalled()
+      mockCoachState = {}
+      view.rerender(content)
+      expect(screen.queryByTestId('stale-refresh-warning')).toBeNull()
+      expect(screen.getByText('82')).toBeInTheDocument()
+    })
   })
 
   it('does not crash when style_breakdown is missing but drives were analyzed', () => {

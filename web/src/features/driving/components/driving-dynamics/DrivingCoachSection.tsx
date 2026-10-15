@@ -26,11 +26,18 @@ import { formatDateShort } from '@/lib/dateFormat';
 import { cn } from '@/lib/cn';
 import { useDrivingCoach } from '@/api/hooks/useDriving';
 import { useDataState } from '@/hooks/useDataState';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { INTERVALS } from '@/lib/constants';
 import type { CoachDriveScore } from '@/types/driving';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { DynamicsPausedNotice } from '../driving-dynamics-modernization/DynamicsPausedNotice';
+import { isFiniteNumber } from '@/lib/numberFormat';
+
+function measuredCount(value: unknown): number | null {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : null;
+}
 
 interface DrivingCoachSectionProps {
   vehicleId: string | undefined;
@@ -41,6 +48,7 @@ interface DrivingCoachSectionProps {
 export default function DrivingCoachSection({ vehicleId, showPerDriveScores = true }: DrivingCoachSectionProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  const palette = useChartPalette();
   const { unitPrefs } = useUnits();
   const efficiency = (value: number | null | undefined) => value != null
     ? `${fmtNumber(value / convertDistanceFromSI(1000, unitPrefs.distance))} Wh/${unitPrefs.distance}`
@@ -52,6 +60,11 @@ export default function DrivingCoachSection({ vehicleId, showPerDriveScores = tr
   const coachQuery = useDrivingCoach(vehicleId, 30, INTERVALS.ANALYTICS);
   const coachState = useDataState(coachQuery, { provenance: 'historical' });
   const coachData = coachState.data;
+  const initialPaused = !coachState.hasData
+    && (coachState.isRefreshBlocked || coachQuery.isLoading || coachState.fatalError != null);
+  const totalDrives = measuredCount(coachData?.total_drives_analyzed);
+  const analyzedCaption = totalDrives == null ? '—'
+    : t('dynamics.coach.drivesAnalyzed', '{{count}} drives analyzed', { count: totalDrives });
 
   const coachColumns: Column<CoachDriveScore>[] = useMemo(
     () => [
@@ -93,19 +106,19 @@ export default function DrivingCoachSection({ vehicleId, showPerDriveScores = tr
   );
   const intensityMetrics: StatMetric[] = [
     { metricId: 'efficiency', occurrenceId: 'coach-average',
-      rawValue: coachData && coachData.total_drives_analyzed > 0 && coachData.efficiency_wh_km != null
+      rawValue: coachData && totalDrives != null && totalDrives > 0 && isFiniteNumber(coachData.efficiency_wh_km)
         ? coachData.efficiency_wh_km / 1000 : null,
       label: t('dynamics.coach.avgEfficiency', 'Avg Efficiency'),
       display: { formatter: raw => ({ value: efficiency(raw * 1000), unit: '' }) } },
     { metricId: 'efficiency', occurrenceId: 'coach-best',
-      rawValue: coachData && coachData.total_drives_analyzed > 0 && coachData.best_efficiency_wh_km != null
+      rawValue: coachData && totalDrives != null && totalDrives > 0 && isFiniteNumber(coachData.best_efficiency_wh_km)
         ? coachData.best_efficiency_wh_km / 1000 : null,
       label: t('dynamics.coach.bestEfficiency', 'Best Efficiency'),
       display: { formatter: raw => ({ value: efficiency(raw * 1000), unit: '' }) } },
   ];
 
   return (
-    <div className="space-y-4 sm:space-y-5">
+    <div className="space-y-4 sm:space-y-5 max-md:[&_button]:min-h-11 max-md:[&_button]:min-w-11 max-md:[&_input]:min-h-11 max-md:[&_select]:min-h-11">
       {/* Section heading */}
       <FadeIn delay={0.42}>
         <SectionTitle className="mt-2">
@@ -118,22 +131,23 @@ export default function DrivingCoachSection({ vehicleId, showPerDriveScores = tr
       {coachQuery.isLoading ? <Skeleton className="h-12" /> : null}
       {coachState.fatalError ? <QueryError error={coachState.fatalError} onRetry={() => void coachQuery.refetch()} /> : null}
       <StaleRefreshWarning state={coachState} label={t('dynamics.coach.vehicleTitle', 'Vehicle coaching · last 30 days')} />
+      <DynamicsPausedNotice state={coachState} label={t('dynamics.coach.vehicleTitle', 'Vehicle coaching · last 30 days')} />
 
       {/* Score + Style + Efficiency */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 xl:gap-5">
         <FadeIn delay={0.43} className="h-full">
           <GlassPanel className="flex h-full flex-col items-center justify-center p-4 sm:p-5">
-            {coachData?.overall_score != null && coachData.total_drives_analyzed > 0 ? <LinearGauge
-              value={coachData?.overall_score ?? 0}
+            {isFiniteNumber(coachData?.overall_score) && totalDrives != null && totalDrives > 0 ? <LinearGauge
+              value={coachData.overall_score}
               max={100}
               label={t('dynamics.coach.overallScore', 'Efficiency comparison')}
-              color="var(--theme-primary)"
+              color={palette[0]}
               size={160}
-            /> : <EmptyState /* no-action: vehicle coaching needs recorded drives */
+            /> : initialPaused ? null : <EmptyState /* no-action: vehicle coaching needs recorded drives */
               message={t('dynamics.coach.noScore', 'No vehicle-wide score available.')}
             />}
             <Caption className="mt-2">
-              {t('dynamics.coach.drivesAnalyzed', '{{count}} drives analyzed', { count: coachData?.total_drives_analyzed ?? 0 })}
+              {analyzedCaption}
             </Caption>
           </GlassPanel>
         </FadeIn>
@@ -143,19 +157,21 @@ export default function DrivingCoachSection({ vehicleId, showPerDriveScores = tr
             <PanelTitle className="mb-4">
               {t('dynamics.coach.styleBreakdown', 'Style Breakdown')}
             </PanelTitle>
-            {coachData?.style_breakdown && coachData.total_drives_analyzed > 0 ? (
+            {coachData?.style_breakdown ? (
               <>
                 <div className="flex h-4 rounded-full overflow-hidden mb-4">
                   {(['efficient', 'moderate', 'aggressive'] as const).map((style) => {
-                    const count = coachData.style_breakdown?.[style] ?? 0;
-                    const pct = (count / coachData.total_drives_analyzed) * 100;
+                    const count = measuredCount(coachData.style_breakdown?.[style]);
+                    if (count == null || totalDrives == null || totalDrives <= 0 || count > totalDrives) return null;
+                    const pct = (count / totalDrives) * 100;
                     if (pct <= 0) return null;
                     return (
                       <div
                         key={style}
                         className={cn(
-                          style === 'efficient' ? 'bg-neon-green' :
-                          style === 'moderate' ? 'bg-neon-amber' : 'bg-red-500',
+                          'shrink-0',
+                          style === 'efficient' ? 'bg-[var(--semantic-success)]' :
+                          style === 'moderate' ? 'bg-[var(--semantic-warning)]' : 'bg-[var(--semantic-danger)]',
                         )}
                         style={{ width: `${pct}%` }}
                         title={t('dynamics.coach.styleCount', '{{style}}: {{count}} drives', {
@@ -168,23 +184,24 @@ export default function DrivingCoachSection({ vehicleId, showPerDriveScores = tr
                 </div>
                 <div className="space-y-2">
                   {([
-                    { key: 'efficient', color: 'bg-neon-green', text: 'text-emerald-300' },
-                    { key: 'moderate', color: 'bg-neon-amber', text: 'text-amber-300' },
-                    { key: 'aggressive', color: 'bg-red-500', text: 'text-red-400' },
-                  ] as const).map(({ key, color, text }) => (
+                    { key: 'efficient', color: 'bg-[var(--semantic-success)]' },
+                    { key: 'moderate', color: 'bg-[var(--semantic-warning)]' },
+                    { key: 'aggressive', color: 'bg-[var(--semantic-danger)]' },
+                  ] as const).map(({ key, color }) => (
                     <div key={key} className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2">
                         <span className={cn('inline-block h-2 w-2 rounded-full', color)} />
                         <Text as="span" color="secondary">{t(`dynamics.coach.styles.${key}`, key)}</Text>
                       </div>
-                      <Text as="span" weight="bold" className={cn('tabular-nums', text)}>
-                        {fmtNumber(coachData.style_breakdown?.[key] ?? 0, 0)}
+                      <Text as="span" weight="bold" className="tabular-nums">
+                        {measuredCount(coachData.style_breakdown?.[key]) == null ? '—'
+                          : fmtNumber(coachData.style_breakdown[key], 0)}
                       </Text>
                     </div>
                   ))}
                 </div>
               </>
-            ) : (
+            ) : initialPaused ? null : (
               <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('dynamics.coach.noData', 'Drive more to see your style breakdown.')} />
             )}
           </GlassPanel>
@@ -198,7 +215,7 @@ export default function DrivingCoachSection({ vehicleId, showPerDriveScores = tr
               loading={coachQuery.isLoading && !coachState.hasData}
               unavailable={coachState.fatalError != null} retained={coachState.refreshError != null}
               period={{ kind: 'unknown', label: t('dynamics.coach.vehicleTitle', 'Vehicle coaching · last 30 days'),
-                reason: t('dynamics.coach.drivesAnalyzed', '{{count}} drives analyzed', { count: coachData?.total_drives_analyzed ?? 0 }) }} />
+                reason: analyzedCaption }} />
           </GlassPanel>
         </FadeIn>
       </div>
@@ -224,11 +241,11 @@ export default function DrivingCoachSection({ vehicleId, showPerDriveScores = tr
                     <XAxis dataKey="week" tick={axisTick} tickLine={false} axisLine={false} />
                     <YAxis domain={[0, 100]} tick={axisTick} tickLine={false} axisLine={false} />
                     <Tooltip content={<ChartTooltip />} />
-                    <Line {...AREA_DEFAULTS} dataKey="score" stroke="#22c55e" dot={{ fill: '#22c55e', r: 3 }} name={t('dynamics.coach.score', 'Score')} />
+                    <Line {...AREA_DEFAULTS} dataKey="score" stroke={palette[0]} dot={{ fill: palette[0], r: 3 }} name={t('dynamics.coach.score', 'Score')} />
                   </LineChart>
                 </ResponsiveContainer>
               </EmbeddedChart>
-            ) : (
+            ) : initialPaused ? null : (
               <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('dynamics.coach.needWeeks', 'Need at least 2 weeks of data for trend analysis.')} />
             )}
           </GlassPanel>
@@ -246,10 +263,10 @@ export default function DrivingCoachSection({ vehicleId, showPerDriveScores = tr
                   <div className="flex items-center justify-between text-xs">
                     <Text as="span" color="secondary">{p.label}</Text>
                     <Text as="span" weight="bold" className="tabular-nums">
-                      {p.value != null ? `${fmtNumber(p.value)}%` : '—'}
+                      {isFiniteNumber(p.value) ? `${fmtNumber(p.value)}%` : '—'}
                     </Text>
                   </div>
-                  {p.value != null ? <div className="h-1.5 rounded-full bg-[var(--surface-3)] overflow-hidden">
+                  {isFiniteNumber(p.value) ? <div className="h-1.5 rounded-full bg-[var(--surface-3)] overflow-hidden">
                     <div
                       className="h-full rounded-full bg-[var(--theme-primary)]"
                       style={{ width: `${Math.max(0, Math.min(100, p.value))}%` }}
@@ -257,7 +274,7 @@ export default function DrivingCoachSection({ vehicleId, showPerDriveScores = tr
                   </div> : null}
                 </div>
               ))}
-            </div> : <EmptyState /* no-action: patterns require recorded coaching evidence */
+            </div> : initialPaused ? null : <EmptyState /* no-action: patterns require recorded coaching evidence */
               message={t('dynamics.coach.noPatterns', 'No driving-pattern evidence available.')}
             />}
           </GlassPanel>
@@ -269,7 +286,7 @@ export default function DrivingCoachSection({ vehicleId, showPerDriveScores = tr
         <FadeIn delay={0.48} className="h-full">
           <GlassPanel className="h-full p-4 sm:p-5">
             <PanelTitle className="mb-4 flex items-center gap-2">
-              <Lightbulb className="h-4 w-4 text-amber-300" aria-hidden="true" />
+              <Lightbulb className="h-4 w-4 text-[var(--semantic-warning)]" aria-hidden="true" />
               {t('dynamics.coach.recommendations', 'Recommendations')}
             </PanelTitle>
             {(coachData?.recommendations ?? []).length > 0 ? (
@@ -290,7 +307,7 @@ export default function DrivingCoachSection({ vehicleId, showPerDriveScores = tr
                   </div>
                 ))}
               </div>
-            ) : (
+            ) : initialPaused ? null : (
               <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('dynamics.coach.noRecs', 'Recommendations will appear after more drives.')} />
             )}
           </GlassPanel>
@@ -306,14 +323,14 @@ export default function DrivingCoachSection({ vehicleId, showPerDriveScores = tr
               <DataTable
                 tableId="driving:coach-per-drive"
                 columns={coachColumns}
-                mobileColumns={['date', 'score', 'style']}
+                mobileColumns={['date', 'score', 'style', 'efficiency', 'distance']}
                 data={coachData?.per_drive_scores ?? []}
                 keyExtractor={(row: CoachDriveScore) => String(row.drive_id)}
                 compact
                 pagination
                 emptyMessage={t('dynamics.coach.noDrives', 'No drives found.')}
               />
-            ) : (
+            ) : initialPaused ? null : (
               <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('dynamics.coach.noDrives', 'Drive data will appear after your first trip.')} />
             )}
           </GlassPanel>

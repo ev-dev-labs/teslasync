@@ -7,11 +7,14 @@ import { LinearGauge } from '@/components/charts';
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
 import { useDriveDynamicsLatest } from '@/api/hooks/useVehicles';
 import { useDataState } from '@/hooks/useDataState';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { INTERVALS } from '@/lib/constants';
 import { isFiniteNumber } from '@/lib/numberFormat';
+import { DynamicsPausedNotice } from './DynamicsPausedNotice';
 
 export default function PedalUsage({ vehicleId }: { vehicleId: number | null | undefined }) {
   const { t } = useTranslation();
+  const palette = useChartPalette();
   const query = useDriveDynamicsLatest(vehicleId ?? 0, INTERVALS.REALTIME);
   const state = useDataState(query);
   const data = state.data;
@@ -27,7 +30,9 @@ export default function PedalUsage({ vehicleId }: { vehicleId: number | null | u
       : { variant: 'success' as const, label: t('dynamics.brakeInactive', 'Brake Inactive') };
 
   return (
+    <div className="h-full min-w-0 max-md:[&_button]:min-h-11 max-md:[&_button]:min-w-11">
     <LayoutCard title={t('dynamics.pedalUsage', 'Pedal Usage')}>
+      <DynamicsPausedNotice state={state} label={t('dynamics.pedalResource', 'Pedal telemetry')} />
       {query.isLoading && !state.hasData ? (
         <div role="status" aria-busy="true"
           aria-label={t('dynamics.pedalLoading', 'Loading pedal telemetry…')}
@@ -44,13 +49,13 @@ export default function PedalUsage({ vehicleId }: { vehicleId: number | null | u
           <div className="flex flex-col items-center gap-2">
             <LinearGauge value={throttle} max={100}
               label={t('dynamics.throttle', 'Throttle')} unit={throttle != null ? '%' : '—'}
-              tone="info" size={120} />
+              color={palette[0]} size={120} />
             <Caption>{t('dynamics.throttlePosition', 'Throttle Position')}</Caption>
           </div>
           <div className="flex flex-col items-center gap-2">
             <LinearGauge value={brakePos} max={100}
               label={t('dynamics.brake', 'Brake')} unit={brakePos != null ? '%' : '—'}
-              tone="danger" size={120} />
+              color={palette[1]} size={120} />
             <Caption>{t('dynamics.brakePedalPosition', 'Brake Pedal Position')}</Caption>
           </div>
           <div className="flex flex-col items-center justify-center gap-3">
@@ -61,11 +66,12 @@ export default function PedalUsage({ vehicleId }: { vehicleId: number | null | u
         </div>
       ) : state.fatalError ? (
         <QueryError error={state.fatalError} onRetry={handleRetry} resourceName={t('dynamics.pedalResource', 'Pedal telemetry')} />
-      ) : (
+      ) : state.isRefreshBlocked && !state.hasData ? null : (
         // no-action: Without a selected vehicle, the workspace picker owns selection.
         <EmptyState message={t('dynamics.pedalNoData', 'No pedal telemetry received yet')}
           action={vehicleId ? { label: t('common.retry', 'Retry'), onClick: handleRetry } : undefined} />
       )}
     </LayoutCard>
+    </div>
   );
 }

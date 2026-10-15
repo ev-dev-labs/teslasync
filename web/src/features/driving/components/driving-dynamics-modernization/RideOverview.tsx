@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { LayoutCard } from '@/components/layout';
 import type { StatMetric } from '@/components/data-display/stat-reference';
 import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
-import { EmptyState } from '@/components/feedback';
+import { EmptyState, Skeleton } from '@/components/feedback';
 import { Badge, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -12,7 +12,11 @@ import type { Drive } from '@/types/driving';
 import { isOpenDrive } from '../driving-dynamics/pickDynamicsDrive';
 
 /** Drive-record facts remain independent of the current vehicle snapshot. */
-export default function RideOverview({ drive }: { drive: Drive | null }) {
+export default function RideOverview({ drive, loading = false, unresolved = false }: {
+  drive: Drive | null;
+  loading?: boolean;
+  unresolved?: boolean;
+}) {
   const { t } = useTranslation();
   const { formatSpeed, unitPrefs } = useUnits();
   const { fmtNumber } = useNumberFormatting();
@@ -34,7 +38,8 @@ export default function RideOverview({ drive }: { drive: Drive | null }) {
         title={t('dynamics.brief.rideTotals', 'Recorded ride totals')}
         actions={
           <Badge variant={drive && isOpenDrive(drive) ? 'info' : 'neutral'} size="sm">
-            {!drive ? t('dynamics.ride.unselected', 'No trip selected') : isOpenDrive(drive)
+            {!drive ? unresolved ? t('dynamics.awaiting', 'Awaiting data')
+              : t('dynamics.ride.unselected', 'No trip selected') : isOpenDrive(drive)
               ? t('dynamics.ride.open', 'In progress · totals may change')
               : t('dynamics.ride.recorded', 'Recorded trip')}
           </Badge>
@@ -57,7 +62,7 @@ export default function RideOverview({ drive }: { drive: Drive | null }) {
                 </Text>
               </div>
               <Link to={`/drives/${drive.id}`}
-                className="inline-flex min-h-11 shrink-0 items-center text-sm font-medium text-[var(--theme-primary)] underline-offset-4 hover:underline">
+                className="inline-flex min-h-11 min-w-11 shrink-0 items-center text-sm font-medium text-[var(--theme-primary)] underline-offset-4 hover:underline md:min-h-6 md:min-w-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]">
                 {t('dynamics.ride.details', 'Open trip details')}
               </Link>
             </div>
@@ -94,6 +99,8 @@ export default function RideOverview({ drive }: { drive: Drive | null }) {
               {t('dynamics.ride.energyMeaning', 'Energy recovered is recorded regeneration, not peak regen power. Missing measurements remain unknown; these totals do not rate driving style.')}
             </Text>
           </div>
+        ) : loading ? <Skeleton className="h-24" /> : unresolved ? (
+          <Text as="p" variant="caption">{t('dynamics.awaiting', 'Awaiting data')}</Text>
         ) : (
           // no-action: The trip selector immediately above this card already owns ride selection.
           <EmptyState message={t('dynamics.ride.empty', 'Choose a trip with recorded data to review its outcome.')} />

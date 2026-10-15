@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Lightbulb, ShieldCheck, Activity, type LucideIcon } from 'lucide-react';
@@ -6,9 +6,9 @@ import { AlertTriangle, Lightbulb, ShieldCheck, Activity, type LucideIcon } from
 import { MetricBar } from '@/components/data-display';
 import type { StatMetric } from '@/components/data-display/stat-reference';
 import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
-import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
+import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
-import { CHART_COLORS } from '@/components/charts';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { useDriveDynamicsLatest, useMotorLatest } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { INTERVALS } from '@/lib/constants';
@@ -21,6 +21,8 @@ import {
   type GrokTone,
 } from './grokDynamics';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDataState } from '@/hooks/useDataState';
+import { DynamicsPausedNotice } from '../driving-dynamics-modernization/DynamicsPausedNotice';
 
 interface GrokDynamicsBriefingProps {
   vehicleId: number | null | undefined;
@@ -33,9 +35,9 @@ const TONE_ICON: Record<GrokTone, LucideIcon> = {
 };
 
 const TONE_ICON_CLASS: Record<GrokTone, string> = {
-  info: 'text-sky-300',
-  positive: 'text-emerald-300',
-  caution: 'text-amber-300',
+  info: 'text-[var(--text-secondary)]',
+  positive: 'text-[var(--semantic-success)]',
+  caution: 'text-[var(--semantic-warning)]',
 };
 
 /**
@@ -48,15 +50,14 @@ const TONE_ICON_CLASS: Record<GrokTone, string> = {
 export default function GrokDynamicsBriefing({ vehicleId }: GrokDynamicsBriefingProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  const palette = useChartPalette();
   const { formatPower, formatTemperature } = useUnits();
 
   const motorQuery = useMotorLatest(vehicleId ?? 0, INTERVALS.REALTIME);
   const dynamicsQuery = useDriveDynamicsLatest(vehicleId ?? 0, INTERVALS.REALTIME);
 
-  const handleRetry = useCallback(() => {
-    void motorQuery.refetch();
-    void dynamicsQuery.refetch();
-  }, [dynamicsQuery, motorQuery]);
+  const motorTrust = useDataState(motorQuery);
+  const dynamicsTrust = useDataState(dynamicsQuery);
 
   const read = useMemo(
     () => interpretGrokDynamics(motorQuery.data, dynamicsQuery.data),
@@ -64,7 +65,8 @@ export default function GrokDynamicsBriefing({ vehicleId }: GrokDynamicsBriefing
   );
 
   const isLoading = (motorQuery.isLoading || dynamicsQuery.isLoading) && !read.hasSignal;
-  const isError = (motorQuery.isError || dynamicsQuery.isError) && !read.hasSignal;
+  const unresolved = !motorTrust.hasData && (motorTrust.isRefreshBlocked || motorTrust.fatalError != null)
+    || !dynamicsTrust.hasData && (dynamicsTrust.isRefreshBlocked || dynamicsTrust.fatalError != null);
   const hasBothAxles = Number.isFinite(motorQuery.data?.torque_nm_front)
     && Number.isFinite(motorQuery.data?.torque_nm_rear);
   const findings = read.findings.filter((finding) => hasBothAxles || !finding.id.startsWith('awd_'));
@@ -84,7 +86,7 @@ export default function GrokDynamicsBriefing({ vehicleId }: GrokDynamicsBriefing
   ];
 
   return (
-    <GlassPanel className="p-4 sm:p-5" data-testid="grok-dynamics-briefing">
+    <GlassPanel className="p-4 sm:p-5 max-md:[&_button]:min-h-11 max-md:[&_button]:min-w-11" data-testid="grok-dynamics-briefing">
       <PanelTitle className="mb-1 flex items-center gap-2">
         <Activity className="h-4 w-4 text-[var(--theme-primary)]" aria-hidden="true" />
         {t('dynamics.liveInterpretation.title', 'Live powertrain interpretation')}
@@ -96,6 +98,12 @@ export default function GrokDynamicsBriefing({ vehicleId }: GrokDynamicsBriefing
         )}
       </Text>
 
+      <DynamicsPausedNotice state={motorTrust} label={t('dynamics.motorResource', 'Motor telemetry')} />
+      <DynamicsPausedNotice state={dynamicsTrust} label={t('dynamics.pedalResource', 'Pedal telemetry')} />
+      <StaleRefreshWarning state={motorTrust} label={t('dynamics.motorResource', 'Motor telemetry')} />
+      <StaleRefreshWarning state={dynamicsTrust} label={t('dynamics.pedalResource', 'Pedal telemetry')} />
+      {motorTrust.fatalError ? <QueryError error={motorTrust.fatalError} onRetry={() => void motorQuery.refetch()} /> : null}
+      {dynamicsTrust.fatalError ? <QueryError error={dynamicsTrust.fatalError} onRetry={() => void dynamicsQuery.refetch()} /> : null}
       {isLoading ? (
         <div
           role="status"
@@ -105,12 +113,7 @@ export default function GrokDynamicsBriefing({ vehicleId }: GrokDynamicsBriefing
           <Skeleton className="mb-3 h-8 w-2/3" />
           <Skeleton className="h-28" />
         </div>
-      ) : isError ? (
-        <QueryError
-          error={motorQuery.error ?? dynamicsQuery.error}
-          onRetry={handleRetry}
-        />
-      ) : !read.hasSignal ? (
+      ) : !read.hasSignal && unresolved ? null : !read.hasSignal ? (
         <EmptyState /* no-action: informational empty — no CTA */
           icon={<Activity className="h-8 w-8" aria-hidden="true" />}
           message={t(
@@ -142,7 +145,8 @@ export default function GrokDynamicsBriefing({ vehicleId }: GrokDynamicsBriefing
               label={t('dynamics.grok.rearShare', 'Rear axle share')}
               value={read.rearTorqueSharePct}
               max={100}
-              color={CHART_COLORS[0]}
+              color={palette[0]}
+              fill="solid"
               sublabel={t('dynamics.grok.rearShareValue', '{{value}}% of |torque|', {
                 value: fmtNumber(read.rearTorqueSharePct),
               })}
@@ -194,7 +198,7 @@ export default function GrokDynamicsBriefing({ vehicleId }: GrokDynamicsBriefing
 
           <Link
             to="/physics-cockpit"
-            className="text-sm text-cyan-300 underline-offset-2 hover:underline"
+            className="inline-flex min-h-11 min-w-11 items-center text-sm text-[var(--theme-primary)] underline-offset-2 hover:underline md:min-h-6 md:min-w-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
           >
             {t('dynamics.grok.cockpit', 'Open Tesla physics cockpit')}
           </Link>
@@ -229,25 +233,25 @@ function findingText(
       return t(
         'dynamics.grok.find.cornering',
         'Lateral accelerometer {{g}} g. That is chassis load, not a grip percentage.',
-        { g: read.lateralG == null ? '—' : fmtNumber(Math.abs(read.lateralG)) },
+        { g: read.lateralG == null ? '—' : fmtNumber(read.lateralG) },
       );
     case 'awd_rear':
       return t(
         'dynamics.liveInterpretation.axleShare',
         'Rear axle accounts for {{share}}% of reported absolute axle torque. This does not establish traction or grip.',
-        { share: fmtNumber(read.rearTorqueSharePct ?? 0) },
+        { share: read.rearTorqueSharePct == null ? '—' : fmtNumber(read.rearTorqueSharePct) },
       );
     case 'awd_front':
       return t(
         'dynamics.liveInterpretation.axleShare',
         'Rear axle accounts for {{share}}% of reported absolute axle torque. This does not establish traction or grip.',
-        { share: fmtNumber(read.rearTorqueSharePct ?? 0) },
+        { share: read.rearTorqueSharePct == null ? '—' : fmtNumber(read.rearTorqueSharePct) },
       );
     case 'awd_balanced':
       return t(
         'dynamics.liveInterpretation.axleShare',
         'Rear axle accounts for {{share}}% of reported absolute axle torque. This does not establish traction or grip.',
-        { share: fmtNumber(read.rearTorqueSharePct ?? 0) },
+        { share: read.rearTorqueSharePct == null ? '—' : fmtNumber(read.rearTorqueSharePct) },
       );
     case 'thermal_hot':
       return t(

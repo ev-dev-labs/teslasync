@@ -13,11 +13,12 @@ interface DynamicsTripToolbarProps {
   drives: Drive[];
   selectedDriveId: string;
   onSelectDrive: (driveId: string) => void;
+  unresolved?: boolean;
 }
 
 /** Drive is an independent business selector, not another workspace scope. */
 export default function DynamicsTripToolbar({
-  startDate, endDate, drives, selectedDriveId, onSelectDrive,
+  startDate, endDate, drives, selectedDriveId, onSelectDrive, unresolved = false,
 }: DynamicsTripToolbarProps) {
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
@@ -53,9 +54,10 @@ export default function DynamicsTripToolbar({
           options={options}
           value={selectedDriveId}
           onChange={event => onSelectDrive(event.target.value)}
-          placeholder={t('dynamics.trip.noDrives', 'No drives in this range')}
+          placeholder={unresolved ? t('dynamics.awaiting', 'Awaiting data') : t('dynamics.trip.noDrives', 'No drives in this range')}
           disabled={options.length === 0}
           size="auto"
+          className="max-md:min-h-11 max-md:min-w-11"
         />
       </LayoutCard>
     </div>

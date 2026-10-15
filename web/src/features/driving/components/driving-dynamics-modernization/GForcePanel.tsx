@@ -10,6 +10,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { INTERVALS } from '@/lib/constants';
 import { isFiniteNumber } from '@/lib/numberFormat';
+import { DynamicsPausedNotice } from './DynamicsPausedNotice';
 
 /** Signed axes stay in g. Magnitude still requires BOTH measured axes. */
 export default function GForcePanel({ vehicleId }: { vehicleId: number | null | undefined }) {
@@ -40,8 +41,10 @@ export default function GForcePanel({ vehicleId }: { vehicleId: number | null | 
       label: t('dynamics.combined', 'Combined'), display: { formatter: raw => ({ value: fmtNumber(raw), unit: 'g' }) }, context: t('dynamics.modernization.gUnit', 'g') },
   ];
   return (
+    <div className="h-full min-w-0 max-md:[&_button]:min-h-11 max-md:[&_button]:min-w-11">
     <LayoutCard title={t('dynamics.gForce', 'Acceleration G-Force')}>
       <StaleRefreshWarning state={state} label={t('dynamics.gForce', 'Acceleration G-Force')} />
+      <DynamicsPausedNotice state={state} label={t('dynamics.gForce', 'Acceleration G-Force')} />
       {state.fatalError ? <QueryError error={state.fatalError} onRetry={() => void query.refetch()} /> : null}
       {hasAny || query.isLoading ? (
         <NestedDrivingBrief
@@ -62,11 +65,12 @@ export default function GForcePanel({ vehicleId }: { vehicleId: number | null | 
             provenance: t('dynamics.modernization.gSource', 'Latest reported acceleration; missing axes are not zero.'),
           }}
         />
-      ) : state.fatalError ? null : (
+      ) : state.fatalError || state.isRefreshBlocked && !state.hasData ? null : (
         // no-action: Without a selected vehicle, the workspace picker owns selection.
         <EmptyState message={t('dynamics.gForceNoData', 'No G-force telemetry received yet')}
           action={vehicleId ? { label: t('common.retry', 'Retry'), onClick: () => void query.refetch() } : undefined} />
       )}
     </LayoutCard>
+    </div>
   );
 }

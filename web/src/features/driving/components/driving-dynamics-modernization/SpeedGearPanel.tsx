@@ -11,12 +11,14 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { INTERVALS } from '@/lib/constants';
 import { cn } from '@/lib/cn';
 import type { Drive } from '@/types/driving';
+import { DynamicsPausedNotice } from './DynamicsPausedNotice';
+import { isFiniteNumber } from '@/lib/numberFormat';
 
 function shiftColor(shift: string | null | undefined): string {
   switch (shift) {
-    case 'D': return 'text-emerald-400';
-    case 'R': return 'text-red-400';
-    case 'N': return 'text-yellow-400';
+    case 'D': return 'text-[var(--semantic-success)]';
+    case 'R': return 'text-[var(--semantic-danger)]';
+    case 'N': return 'text-[var(--semantic-warning)]';
     case 'P': return 'text-[var(--text-muted)]';
     default: return 'text-[var(--text-secondary)]';
   }
@@ -32,19 +34,23 @@ function shiftBadgeVariant(shift: string | null | undefined): 'success' | 'dange
 interface SpeedGearPanelProps {
   vehicleId: number | null | undefined;
   filteredDrives: Drive[];
+  drivesLoading?: boolean;
+  drivesUnavailable?: boolean;
 }
 
 /** Same arithmetic means/max in SI; display conversion happens only in tiles.
  * Separate periods prevent loaded-trip speeds being labelled current. */
-export default function SpeedGearPanel({ vehicleId, filteredDrives }: SpeedGearPanelProps) {
+export default function SpeedGearPanel({
+  vehicleId, filteredDrives, drivesLoading = false, drivesUnavailable = false,
+}: SpeedGearPanelProps) {
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const { precision, locale } = useNumberFormatting();
   const query = useMotorLatest(vehicleId ?? 0, INTERVALS.REALTIME);
   const state = useDataState(query);
   const motorLatest = state.data;
-  const averages = (filteredDrives ?? []).flatMap(drive => drive.avgSpeedMps != null ? [drive.avgSpeedMps] : []);
-  const peaks = (filteredDrives ?? []).flatMap(drive => drive.maxSpeedMps != null ? [drive.maxSpeedMps] : []);
+  const averages = (filteredDrives ?? []).flatMap(drive => isFiniteNumber(drive.avgSpeedMps) ? [drive.avgSpeedMps] : []);
+  const peaks = (filteredDrives ?? []).flatMap(drive => isFiniteNumber(drive.maxSpeedMps) ? [drive.maxSpeedMps] : []);
   const avgDriveSpeedMps = averages.length > 0
     ? averages.reduce((sum, speed) => sum + speed, 0) / averages.length : null;
   const topDriveSpeedMps = peaks.length > 0 ? Math.max(...peaks) : null;
@@ -59,11 +65,13 @@ export default function SpeedGearPanel({ vehicleId, filteredDrives }: SpeedGearP
     currency: { kind: 'symbol' as const, value: '' },
   };
   return (
+    <div className="h-full min-w-0 max-md:[&_button]:min-h-11 max-md:[&_button]:min-w-11">
     <LayoutCard title={t('dynamics.speedGear', 'Speed & Gear')}>
       <Text as="p" variant="caption">
         {t('dynamics.review.speedGearScope', 'Gear and motor power: latest vehicle signals. Average and top speed: loaded trips in the date range, not just the selected ride.')}
       </Text>
       <StaleRefreshWarning state={state} label={t('dynamics.speedGear', 'Speed & Gear')} />
+      <DynamicsPausedNotice state={state} label={t('dynamics.speedGear', 'Speed & Gear')} />
       {state.fatalError ? <QueryError error={state.fatalError} onRetry={() => void query.refetch()} /> : null}
       <div className="flex min-w-0 flex-wrap items-center gap-3">
         <Text as="span" weight="bold" className={cn('text-5xl tabular-nums', shiftColor(motorLatest?.shift_state))}>
@@ -99,6 +107,8 @@ export default function SpeedGearPanel({ vehicleId, filteredDrives }: SpeedGearP
         title={t('dynamics.review.rangeAnalytics', 'Date-range trip context')}
         description={t('dynamics.modernization.loadedSpeeds', 'Average and maximum of the loaded trips, including any current drive; not a complete-range aggregate.')}
         metrics={speeds}
+        loading={drivesLoading}
+        unavailable={drivesUnavailable}
         preferences={preferences}
         period={{
           kind: 'unknown',
@@ -107,5 +117,6 @@ export default function SpeedGearPanel({ vehicleId, filteredDrives }: SpeedGearP
         }}
       />
     </LayoutCard>
+    </div>
   );
 }
