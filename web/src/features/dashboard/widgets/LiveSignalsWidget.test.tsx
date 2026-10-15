@@ -286,7 +286,7 @@ describe('LiveSignalsWidget — rendering', () => {
 
     expect(screen.getByText('No live signal data')).toBeInTheDocument();
     // EmptyState is a semantic status region for screen readers.
-    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.getByText('No live signal data').closest('[role="status"]')).toBeInTheDocument();
     // Every data section is withheld.
     expect(screen.queryByText('Motor')).not.toBeInTheDocument();
     expect(screen.queryByText('Security')).not.toBeInTheDocument();

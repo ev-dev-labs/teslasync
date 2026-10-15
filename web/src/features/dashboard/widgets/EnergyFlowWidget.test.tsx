@@ -246,7 +246,7 @@ describe('EnergyFlowWidget — loading & empty states', () => {
     setState({ state: undefined });
     renderWidget();
 
-    expect(screen.getByRole('status')).toHaveTextContent('No energy data available');
+    expect(screen.getByText('No energy data available').closest('[role="status"]')).toBeInTheDocument();
     expect(screen.queryByTestId('flow-diagram')).toBeNull();
     expect(flowSpy).not.toHaveBeenCalled();
   });

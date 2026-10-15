@@ -283,7 +283,7 @@ describe('ChargeStatusLiveWidget', () => {
     renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />);
 
     expect(screen.getByText('No charge data')).toBeInTheDocument();
-    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.getByText('No charge data').closest('[role="status"]')).toBeInTheDocument();
     expect(screen.queryByText('Charging')).not.toBeInTheDocument();
   });
 

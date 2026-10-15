@@ -1,4 +1,4 @@
-import { useCallback, useSyncExternalStore } from 'react';
+import { useCallback, useRef, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import type { UseQueryResult } from '@tanstack/react-query';
@@ -46,6 +46,10 @@ export interface DataFreshnessProps {
   source?: string;
   /** Force stale once the successful update is older than this duration. */
   forceStaleAfterMs?: number;
+  /** Expected polling cadence; data becomes stale after two missed intervals. */
+  refreshIntervalMs?: number;
+  /** Use the 15-minute fallback when the source has no polling cadence. */
+  manual?: boolean;
 }
 
 export type FreshnessStatus = 'fresh' | 'fetching' | 'stale' | 'error';
@@ -156,6 +160,8 @@ export function DataFreshness({
   variant = 'chip',
   source,
   forceStaleAfterMs,
+  refreshIntervalMs,
+  manual = false,
 }: DataFreshnessProps) {
   const { t } = useTranslation();
   const { reduce } = useMotionPreference();
@@ -167,10 +173,13 @@ export function DataFreshness({
     getFreshnessTick,
   );
 
+  const staleAfterMs = forceStaleAfterMs ?? (
+    refreshIntervalMs != null ? refreshIntervalMs * 2 : manual ? 15 * 60_000 : null
+  );
   const forcedStale =
-    forceStaleAfterMs != null &&
+    staleAfterMs != null &&
     updatedAt != null &&
-    Date.now() - updatedAt > forceStaleAfterMs;
+    Date.now() - updatedAt >= staleAfterMs;
   const status: FreshnessStatus = isError
     ? 'error'
     : isFetching
@@ -178,6 +187,9 @@ export function DataFreshness({
       : isStale || forcedStale
         ? 'stale'
         : 'fresh';
+  const previousStatus = useRef<FreshnessStatus | null>(null);
+  const statusChanged = previousStatus.current != null && previousStatus.current !== status;
+  previousStatus.current = status;
 
   const cfg = STATUS_CONFIG[status];
   const Icon = cfg.icon;
@@ -288,7 +300,7 @@ export function DataFreshness({
             className={cn('relative h-2 w-2 shrink-0 rounded-full', cfg.dotColor)}
             aria-hidden="true"
           >
-            {status === 'fetching' && !reduce && (
+            {statusChanged && !reduce && (
               <span className={cn('absolute inset-0 animate-ping rounded-full opacity-60', cfg.dotColor)} />
             )}
           </span>
@@ -369,6 +381,10 @@ export interface DataFreshnessAutoProps {
   forceStaleAfterMs?: number;
   /** Optional data-source label shown in the hover and accessible detail. */
   source?: string;
+  /** Expected polling cadence; data becomes stale after two missed intervals. */
+  refreshIntervalMs?: number;
+  /** Use the 15-minute fallback when the source has no polling cadence. */
+  manual?: boolean;
 }
 
 /**
@@ -391,6 +407,8 @@ export function DataFreshnessAuto({
   refetchable = true,
   forceStaleAfterMs,
   source,
+  refreshIntervalMs,
+  manual,
 }: DataFreshnessAutoProps) {
   return (
     <DataFreshness
@@ -403,6 +421,8 @@ export function DataFreshnessAuto({
       variant={variant}
       source={source}
       forceStaleAfterMs={forceStaleAfterMs}
+      refreshIntervalMs={refreshIntervalMs}
+      manual={manual}
     />
   );
 }

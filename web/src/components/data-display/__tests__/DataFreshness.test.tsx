@@ -109,6 +109,46 @@ describe('DataFreshness widget variant', () => {
     vi.useRealTimers()
     setIntervalSpy.mockRestore()
   })
+
+  it('pulses the widget dot once when its status changes', () => {
+    const props = { updatedAt: Date.now(), isFetching: false, isStale: false, isError: false, variant: 'widget' as const }
+    const { container, rerender } = render(<DataFreshness {...props} />)
+    expect(container.querySelector('.animate-ping')).not.toBeInTheDocument()
+    rerender(<DataFreshness {...props} isError />)
+    expect(container.querySelector('.animate-ping')).toBeInTheDocument()
+    rerender(<DataFreshness {...props} isError />)
+    expect(container.querySelector('.animate-ping')).not.toBeInTheDocument()
+  })
+})
+
+describe('DataFreshness age thresholds', () => {
+  it('marks automatically refreshed data stale at exactly two intervals', () => {
+    const now = Date.now()
+    const { container } = render(
+      <DataFreshness
+        updatedAt={now - 2 * 60_000}
+        isFetching={false}
+        isStale={false}
+        isError={false}
+        refreshIntervalMs={60_000}
+      />,
+    )
+    expect(container.getElementsByClassName(FRESHNESS_COLORS.stale.dot)[0]).toBeInTheDocument()
+  })
+
+  it('uses the 15-minute manual freshness window when no polling cadence is supplied', () => {
+    const now = Date.now()
+    const { container } = render(
+      <DataFreshness
+        updatedAt={now - 15 * 60_000}
+        isFetching={false}
+        isStale={false}
+        isError={false}
+        manual
+      />,
+    )
+    expect(container.getElementsByClassName(FRESHNESS_COLORS.stale.dot)[0]).toBeInTheDocument()
+  })
 })
 
 describe('DataFreshness', () => {

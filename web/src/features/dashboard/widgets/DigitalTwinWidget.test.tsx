@@ -278,7 +278,7 @@ describe('DigitalTwinWidget — loading & empty states', () => {
     setVehicles([]);
     renderWidget(SMALL);
 
-    expect(screen.getByRole('status')).toHaveTextContent('No vehicle data');
+    expect(screen.getByText('No vehicle data').closest('[role="status"]')).toBeInTheDocument();
     expect(screen.queryByTestId('vehicle-twin')).toBeNull();
   });
 

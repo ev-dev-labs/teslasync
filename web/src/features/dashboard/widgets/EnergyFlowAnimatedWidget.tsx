@@ -121,6 +121,7 @@ export default function EnergyFlowAnimatedWidget({ vehicleId, size, config }: Wi
       loadingContent={<Skeleton className="h-full min-h-16 rounded-shape-sm" />}
       dataState={dataState}
       updatedAt={dataUpdatedAt}
+      refreshIntervalMs={5_000}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}

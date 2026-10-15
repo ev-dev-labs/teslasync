@@ -193,7 +193,7 @@ describe('EnergyFlowAnimatedWidget — empty state', () => {
     renderWidget();
 
     expect(screen.getByText('No energy data available')).toBeInTheDocument();
-    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.getByText('No energy data available').closest('[role="status"]')).toBeInTheDocument();
     expect(diagram()).not.toBeInTheDocument();
   });
 });

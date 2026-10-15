@@ -127,6 +127,7 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
       // HIDE the freshness + refresh control entirely — exactly when the user
       // most needs it.
       updatedAt={observedAt ?? 0}
+      refreshIntervalMs={recoveryInterval || undefined}
       isFetching={isFetching}
       isStale={!trusted}
       isError={isError}

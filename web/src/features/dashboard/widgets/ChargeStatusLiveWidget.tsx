@@ -94,6 +94,7 @@ export default function ChargeStatusLiveWidget({ vehicleId, size }: WidgetProps)
         error: error ?? sessionQuery.error,
       }, { provenance: stateData.live ? 'live' : 'cached' }) : undefined}
       updatedAt={dataUpdatedAt}
+      refreshIntervalMs={5_000}
       isFetching={isFetching || sessionQuery.isFetching}
       isStale={isStale}
       isError={isError || sessionQuery.isError}

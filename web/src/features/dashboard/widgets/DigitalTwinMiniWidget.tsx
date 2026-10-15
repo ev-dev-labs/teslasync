@@ -74,6 +74,7 @@ export default function DigitalTwinMiniWidget({ vehicleId, size }: WidgetProps) 
       loadingContent={<div className="flex flex-col gap-2"><Skeleton className="h-28" /><Skeleton className="h-11" /></div>}
       loading={isLoading}
       updatedAt={combined.updatedAt ?? stateUpdatedAt}
+      refreshIntervalMs={REFRESH_INTERVAL}
       isFetching={combined.isRefreshing || stateFetching}
       isStale={stateStale}
       isError={stateError}

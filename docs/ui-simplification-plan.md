@@ -30,8 +30,8 @@ pm run build` passed (one existing CSS parse warning and a non-failing startup-J
 |---|---|---|---|---|---|---|---|---|---:|---|
 | 0 | `OperationalBrief.tsx`, `OperationalNarrativeDetails.tsx`, shared tests | shared | Evidence card | todo | todo | todo | todo | inspect existing freshness contract | 0 | todo |
 | 1 | `components/ui/IconButton.tsx`, shared tooltip, button | shared | IconButton | n/a | done | n/a | n/a | none | 1 | done |
-| 2 | shared widget header and freshness primitives | dashboard | WidgetShell | n/a | in-progress | in-progress | n/a | single shared ticker and stale thresholds remain | 1 | in-progress |
-| 3 | `features/dashboard/widgets/**` | dashboard | all dashboard widgets | todo | todo | todo | todo | per widget during inventory | 0 | todo |
+| 2 | shared widget header and freshness primitives | dashboard | WidgetShell | n/a | done | done | n/a | known polling cadences supplied by eight polling widgets; other shell data is manual | 2 | done |
+| 3 | `features/dashboard/widgets/**` | dashboard | all dashboard widgets | todo | in-progress | in-progress | todo | review remaining custom freshness and nested surfaces | 1 | in-progress |
 | 4 | `features/vehicles/**` | vehicle routes | evidence cards and repeated actions | todo | todo | todo | todo | per row | 0 | todo |
 | 5 | `features/charging/**` | charging routes | evidence cards and nested panels | todo | todo | todo | todo | per row | 0 | todo |
 | 6 | remaining `features/*/**` | all remaining routes | evidence cards, repeated actions, nested cards | todo | todo | todo | todo | per row | 0 | todo |
@@ -45,7 +45,8 @@ pm run build` passed (one existing CSS parse warning and a non-failing startup-J
 
 - Row 1 complete: added IconButton with caller-provided accessible label, tooltip, variants, route-link mode, busy/disabled behavior and menu ARIA props. Focused suite passed 3/3; standalone typecheck, full lint, and production build passed. No catalog key was needed because every label is passed in by the caller.
 
-- Row 2 partial: WidgetShell now renders its freshness status after other header actions, with a compact state dot, age text, and a separate icon-only refresh action. No new copy was added. DataFreshness still uses per-instance timers and existing query stale state; central ticker and interval-derived thresholds remain to implement.
+- Row 2 complete: WidgetShell renders freshness after other header actions, with a state dot, age, and a separate icon-only refresh action. Eight widgets with known poll intervals now pass those cadences; manual indicators go stale after 15 minutes and automatic ones after two missed intervals. All indicators share one 30-second ticker, and the dot pulses once only when status changes. The DataFreshness and WidgetShell tests pass 69/69; the eight affected widget tests pass 218/218; `tsc --noEmit`, full lint, and build pass. No new copy or catalog keys were needed. Existing empty-state tests now identify the specific empty-state status region after the shared freshness status was added.
+- Row 3 started: the eight widgets with existing automatic polling now provide their refresh interval to the shared header. Continue the dashboard inventory and apply A–D to every applicable widget.
 
 ## Decision log
 
@@ -63,7 +64,7 @@ pm run build` passed (one existing CSS parse warning and a non-failing startup-J
 
 ## Summary
 
-In progress. Row 1 shared IconButton is complete. Row 2 freshness header is in progress. Current branch is `ui/simplification`; started from `fix/dashboard-followups` at `7570c940ec`.
+In progress. Row 1 IconButton and row 2 shared widget freshness are complete. Row 3 dashboard widget rollout is in progress. Current branch is `ui/simplification`; started from `fix/dashboard-followups` at `7570c940ec`.
 
 
 

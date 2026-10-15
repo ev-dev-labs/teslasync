@@ -86,6 +86,7 @@ export default function WeatherAtCarWidget({ vehicleId, size }: WidgetProps) {
       icon={!isCompact ? <CloudSun className="h-3.5 w-3.5 text-[var(--text-secondary)]" /> : undefined}
       dataState={{ ...dataState, retry: handleRefresh }}
       updatedAt={dataUpdatedAt}
+      refreshIntervalMs={30_000}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}

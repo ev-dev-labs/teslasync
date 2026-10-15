@@ -482,7 +482,7 @@ describe('VehicleHeroWidget — state, freshness and degraded states', () => {
     const { container } = render(<VehicleHeroWidget size={STANDARD} />);
 
     expect(screen.getByText('No vehicle data')).toBeInTheDocument();
-    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.getByText('No vehicle data').closest('[role="status"]')).toBeInTheDocument();
     expect(screen.queryByTestId('vehicle-hero')).not.toBeInTheDocument();
     expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
   });

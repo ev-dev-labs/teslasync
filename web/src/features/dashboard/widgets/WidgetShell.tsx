@@ -45,6 +45,8 @@ export interface WidgetShellProps {
   isError?: boolean;
   /** Callback to manually refetch the widget data */
   onRefresh?: () => void;
+  /** Automatic polling cadence for the widget query. Omit for manual 15-minute freshness. */
+  refreshIntervalMs?: number;
   /**
    * Optional help metadata. When provided AND the widget has a visible
    * `title`, a small "?" tooltip is rendered next to the title with the
@@ -65,7 +67,7 @@ export function WidgetShell({
   title, description, status, footer, className, loadingContent,
   dataState, icon, loading, error, children, noPadding, actions,
   query,
-  updatedAt, isFetching, isStale, isError, onRefresh, help,
+  updatedAt, isFetching, isStale, isError, onRefresh, refreshIntervalMs, help,
   widgetId, dashboardId,
 }: WidgetShellProps) {
   const { t } = useTranslation();
@@ -115,13 +117,15 @@ export function WidgetShell({
           isStale={isStale ?? false}
           isError={isError ?? false}
           onRefresh={onRefresh}
+          refreshIntervalMs={refreshIntervalMs}
+          manual={refreshIntervalMs == null}
           compact={freshnessCompact}
           variant="widget"
         />
       );
     } else if (query) {
         freshnessEl = (
-        <DataFreshnessAuto query={query} compact={freshnessCompact} variant="widget" />
+        <DataFreshnessAuto query={query} compact={freshnessCompact} variant="widget" refreshIntervalMs={refreshIntervalMs} manual={refreshIntervalMs == null} />
       );
     }
   }

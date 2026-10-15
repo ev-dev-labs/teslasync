@@ -159,7 +159,7 @@ describe('DigitalTwinMiniWidget — empty state', () => {
     renderWidget();
 
     expect(screen.getByText('No vehicle data')).toBeInTheDocument();
-    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.getByText('No vehicle data').closest('[role="status"]')).toBeInTheDocument();
   });
 
   it('does not render the digital twin or status badges when there is no vehicle', () => {

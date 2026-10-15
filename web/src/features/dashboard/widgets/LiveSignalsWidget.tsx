@@ -84,6 +84,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
         fatalError: hasData ? null : motorState.fatalError ?? climateState.fatalError ?? securityState.fatalError ?? tiresState.fatalError,
       }}
       updatedAt={dataState.updatedAt ?? 0}
+      refreshIntervalMs={opts.refetchInterval}
       isFetching={dataState.isRefreshing}
       isStale={dataState.status === 'stale'}
       isError={Boolean(dataState.refreshError || dataState.fatalError)}

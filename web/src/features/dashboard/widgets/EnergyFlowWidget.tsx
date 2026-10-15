@@ -129,6 +129,7 @@ export default function EnergyFlowWidget({ vehicleId, config }: WidgetProps) {
       loadingContent={<Skeleton className="h-full min-h-24 rounded-shape-sm" />}
       dataState={dataState}
       updatedAt={dataUpdatedAt}
+      refreshIntervalMs={REFRESH_INTERVAL}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
